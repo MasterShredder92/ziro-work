@@ -34,11 +34,18 @@ export default function ChatSidebar({ agent, onClose }: ChatSidebarProps) {
   const [tab, setTab] = useState<"chat" | "tasks">("chat");
   const [loadingHistory, setLoadingHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Load conversation history when agent changes
   useEffect(() => {
     if (!agent) return;
     setTab("chat");
+    // Abort any in-flight request when switching agents
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setSending(false);
     setLoadingHistory(true);
     supabase
       .from("agent_conversations")
@@ -60,7 +67,15 @@ export default function ChatSidebar({ agent, onClose }: ChatSidebarProps) {
   }, [messages]);
 
   async function handleSend() {
+    console.log("[ChatSidebar] handleSend called", { input: input.trim(), agent: agent?.slug, sending });
     if (!input.trim() || !agent || sending) return;
+
+    // Abort any previous in-flight request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const userMessage = input.trim();
     setInput("");
@@ -73,22 +88,80 @@ export default function ChatSidebar({ agent, onClose }: ChatSidebarProps) {
       { id: tempId, role: "user", content: userMessage, created_at: new Date().toISOString() },
     ]);
 
+    const assistantId = `resp-${Date.now()}`;
+    let started = false;
+
     try {
+      console.log("[ChatSidebar] Firing fetch to /api/chat", { agentId: agent.id, message: userMessage });
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: agent.id, message: userMessage }),
+        signal: controller.signal,
       });
 
-      const data = await res.json();
+      if (!res.ok || !res.body) {
+        throw new Error("Stream failed");
+      }
 
-      if (data.reply) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE lines from the buffer
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+
+          try {
+            const payload = JSON.parse(trimmed.slice(6));
+
+            if (payload.type === "text") {
+              if (!started) {
+                started = true;
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: assistantId,
+                    role: "assistant",
+                    content: payload.text,
+                    created_at: new Date().toISOString(),
+                  },
+                ]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, content: m.content + payload.text }
+                      : m
+                  )
+                );
+              }
+            }
+            // "done" and "error" — just stop reading
+          } catch {
+            // skip malformed SSE lines
+          }
+        }
+      }
+
+      // If no text was ever streamed, show fallback
+      if (!started) {
         setMessages((prev) => [
           ...prev,
           {
-            id: `resp-${Date.now()}`,
+            id: assistantId,
             role: "assistant",
-            content: data.reply,
+            content: "No response generated.",
             created_at: new Date().toISOString(),
           },
         ]);
@@ -104,6 +177,10 @@ export default function ChatSidebar({ agent, onClose }: ChatSidebarProps) {
         },
       ]);
     } finally {
+      // Clear the abort ref if this is still the active request
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       setSending(false);
     }
   }

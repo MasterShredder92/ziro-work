@@ -10,6 +10,8 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import AgentNode from "./AgentNode";
 
+const nodeTypes = { agent: AgentNode };
+
 interface Agent {
   id: string;
   slug: string;
@@ -27,7 +29,6 @@ interface AgentChartProps {
 }
 
 export default function AgentChart({ agents, onAgentClick }: AgentChartProps) {
-  const nodeTypes = useMemo(() => ({ agent: AgentNode }), []);
 
   const star = agents.find((a) => a.slug === "star");
   const others = agents.filter((a) => a.slug !== "star");

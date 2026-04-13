@@ -6,16 +6,22 @@ import { LayoutDashboard, Bot, Users, Settings } from "lucide-react";
 import clsx from "clsx";
 import MrrTracker from "./MrrTracker";
 
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { label: "Agents", icon: Bot, href: "/" },
-  { label: "Contacts", icon: Users, href: "/" },
-  { label: "Settings", icon: Settings, href: "/" },
+export type ViewName = "dashboard" | "agents" | "contacts" | "settings";
+
+const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard }[] = [
+  { label: "Dashboard", view: "dashboard", icon: LayoutDashboard },
+  { label: "Agents", view: "agents", icon: Bot },
+  { label: "Contacts", view: "contacts", icon: Users },
+  { label: "Settings", view: "settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  activeView: ViewName;
+  setActiveView: (view: ViewName) => void;
+}
+
+export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const [phase, setPhase] = useState<string>("1");
-  const [activeNav, setActiveNav] = useState("Dashboard");
 
   useEffect(() => {
     supabase
@@ -57,11 +63,11 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeNav === item.label;
+          const isActive = activeView === item.view;
           return (
             <button
-              key={item.label}
-              onClick={() => setActiveNav(item.label)}
+              key={item.view}
+              onClick={() => setActiveView(item.view)}
               className={clsx(
                 "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 isActive
