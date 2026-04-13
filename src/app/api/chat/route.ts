@@ -3,6 +3,8 @@ import { anthropic } from "@/lib/anthropic";
 import { getServiceClient } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
+import { routeTask } from "@/lib/routing/routeTask";
+import { isRouteDecision, isTemplateProposal } from "@/types/orchestrator";
 
 // Lessonpreneur Supabase client
 function getLessonpreneurClient() {
@@ -191,29 +193,60 @@ async function executeToolCall(
     const input = block.input as { title: string; description: string };
 
     try {
-      const { data: starAgent, error: starErr } = await supabase
-        .from("agents")
-        .select("id")
-        .eq("slug", "star")
-        .single();
+      // Route the task through the orchestrator
+      let routeInfo: Awaited<ReturnType<typeof routeTask>> | null = null;
+      try {
+        routeInfo = await routeTask(input.title, input.description);
+        console.log(`[ROUTE] ${input.title} → ${routeInfo.route.reason}`);
+      } catch (routeErr) {
+        console.warn(`[ROUTE] Routing failed, using fallback: ${routeErr}`);
+      }
 
-      if (starErr || !starAgent) {
-        return {
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: `Error: Could not find STAR agent: ${starErr?.message ?? "not found"}`,
-          is_error: true,
-        };
+      // Determine agent_id — routed agent or fallback to STAR
+      let agentId: string;
+      if (routeInfo?.agentId) {
+        agentId = routeInfo.agentId;
+      } else {
+        const { data: starAgent, error: starErr } = await supabase
+          .from("agents")
+          .select("id")
+          .eq("slug", "star")
+          .single();
+
+        if (starErr || !starAgent) {
+          return {
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: `Error: Could not find STAR agent: ${starErr?.message ?? "not found"}`,
+            is_error: true,
+          };
+        }
+        agentId = starAgent.id;
+      }
+
+      // Build task insert — include orchestrator fields when routing succeeded
+      const taskInsert: Record<string, unknown> = {
+        agent_id: agentId,
+        title: input.title,
+        description: input.description,
+        status: "pending",
+      };
+
+      if (routeInfo && isRouteDecision(routeInfo.route)) {
+        taskInsert.task_type = routeInfo.route.template?.task_types?.[0] || null;
+        taskInsert.agent_template_id = routeInfo.route.template?.id || null;
+        taskInsert.skill_ids = routeInfo.route.skills.map((s) => s.id);
+        taskInsert.runtime = routeInfo.route.runtime;
+        taskInsert.priority = 0;
+        taskInsert.budget_tokens = routeInfo.estimatedTokens;
+      } else if (routeInfo && !isTemplateProposal(routeInfo.route)) {
+        // Fallback — set runtime from classification
+        taskInsert.runtime = routeInfo.route.runtime || "claude_code";
       }
 
       const { data: insertData, error: insertErr } = await supabase
         .from("agent_tasks")
-        .insert({
-          agent_id: starAgent.id,
-          title: input.title,
-          description: input.description,
-          status: "pending",
-        })
+        .insert(taskInsert)
         .select("id");
 
       console.log(
@@ -229,10 +262,20 @@ async function executeToolCall(
         };
       }
 
+      // Build response with routing context
+      let responseMsg = `Task "${input.title}" has been queued successfully.`;
+      if (routeInfo && isRouteDecision(routeInfo.route)) {
+        responseMsg += ` Routed to template "${routeInfo.route.template.name}" with ${routeInfo.route.skills.length} skill(s) via ${routeInfo.route.runtime} runtime.`;
+      } else if (routeInfo && isTemplateProposal(routeInfo.route)) {
+        responseMsg += ` No matching template found — proposal: "${routeInfo.route.suggested_name}". Task will execute with default behavior.`;
+      } else {
+        responseMsg += ` The lessonpreneur worker will pick it up and execute it.`;
+      }
+
       return {
         type: "tool_result",
         tool_use_id: block.id,
-        content: `Task "${input.title}" has been queued successfully. The lessonpreneur worker will pick it up and execute it.`,
+        content: responseMsg,
       };
     } catch (taskErr) {
       return {
@@ -267,6 +310,8 @@ async function executeToolCall(
           description:
             "Run: cd D:\\music-school-os\\app && git push origin main",
           status: "pending",
+          task_type: "ops",
+          runtime: "claude_code",
         })
         .select("id");
 
@@ -426,14 +471,13 @@ export async function POST(request: NextRequest) {
 
             // ── HANDLE: max_tokens ──
             if (stopReason === "max_tokens") {
-              // Stream whatever partial text we got, then send error
               for (const block of contentBlocks) {
                 if (block.type === "text" && block.text) {
                   fullText += block.text;
                   send({ type: "text", text: block.text });
                 }
               }
-              send({ type: "text", text: "\n\n⚠️ Response was too long and was cut off. Please try a more specific question." });
+              send({ type: "text", text: "\n\n[Response truncated — max_tokens reached]" });
               fullText += "\n\n[Response truncated — max_tokens reached]";
               console.log(`[LOOP] max_tokens — partial text length: ${fullText.length}`);
               break;
@@ -445,7 +489,6 @@ export async function POST(request: NextRequest) {
               for (const block of contentBlocks) {
                 if (block.type === "text" && block.text) {
                   send({ type: "text", text: block.text });
-                  // Don't accumulate pre-tool text into fullText — only final response matters
                 }
               }
 
@@ -469,7 +512,6 @@ export async function POST(request: NextRequest) {
                   if (executed) {
                     result = executed;
                   } else {
-                    // executeToolCall returned null — should not happen for tool_use blocks
                     result = {
                       type: "tool_result",
                       tool_use_id: block.id,
@@ -502,8 +544,6 @@ export async function POST(request: NextRequest) {
 
               // Reset fullText — only the FINAL text response after all tools matters
               fullText = "";
-
-              // Continue the loop — next iteration will call Claude with tool results
               continue;
             }
 

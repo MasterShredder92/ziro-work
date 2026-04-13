@@ -5,6 +5,12 @@ import { supabase } from "@/lib/supabase";
 import Sidebar, { type ViewName } from "@/components/Sidebar";
 import AgentChart from "@/components/AgentChart";
 import ChatSidebar from "@/components/ChatSidebar";
+import SkillsView from "@/components/SkillsView";
+import TemplatesView from "@/components/TemplatesView";
+import RunsView from "@/components/RunsView";
+import ReviewsView from "@/components/ReviewsView";
+import TaskBankView from "@/components/TaskBankView";
+import ArchivedView from "@/components/ArchivedView";
 import {
   DollarSign,
   Users,
@@ -36,7 +42,9 @@ export default function Dashboard() {
   useEffect(() => {
     supabase
       .from("agents")
-      .select("id, slug, name, role, status, color, position_x, position_y")
+      .select("id, slug, name, role, status, color, position_x, position_y, mode, is_visible_in_ui, is_archived, business_context")
+      .eq("is_visible_in_ui", true)
+      .eq("is_archived", false)
       .order("position_x", { ascending: true })
       .then(({ data }) => {
         setAgents(data || []);
@@ -83,6 +91,12 @@ export default function Dashboard() {
           <AgentChart agents={agents} onAgentClick={handleAgentClick} />
         )}
         {activeView === "contacts" && <ContactsView />}
+        {activeView === "skills" && <SkillsView />}
+        {activeView === "templates" && <TemplatesView />}
+        {activeView === "runs" && <RunsView />}
+        {activeView === "reviews" && <ReviewsView />}
+        {activeView === "taskbank" && <TaskBankView />}
+        {activeView === "archived" && <ArchivedView />}
         {activeView === "settings" && <SettingsView />}
       </main>
 

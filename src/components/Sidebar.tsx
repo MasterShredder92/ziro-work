@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { LayoutDashboard, Bot, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Bot, Users, Settings, Zap, Layers, Play, Star, FileText, Archive } from "lucide-react";
 import clsx from "clsx";
 import MrrTracker from "./MrrTracker";
 
-export type ViewName = "dashboard" | "agents" | "contacts" | "settings";
+export type ViewName = "dashboard" | "agents" | "contacts" | "skills" | "templates" | "runs" | "reviews" | "taskbank" | "archived" | "settings";
 
-const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard }[] = [
+const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard; section?: string }[] = [
   { label: "Dashboard", view: "dashboard", icon: LayoutDashboard },
   { label: "Agents", view: "agents", icon: Bot },
   { label: "Contacts", view: "contacts", icon: Users },
+  { label: "Skills", view: "skills", icon: Zap, section: "orchestrator" },
+  { label: "Templates", view: "templates", icon: Layers, section: "orchestrator" },
+  { label: "Runs", view: "runs", icon: Play, section: "orchestrator" },
+  { label: "Reviews", view: "reviews", icon: Star, section: "orchestrator" },
+  { label: "Task Bank", view: "taskbank", icon: FileText, section: "orchestrator" },
+  { label: "Archived", view: "archived", icon: Archive, section: "orchestrator" },
   { label: "Settings", view: "settings", icon: Settings },
 ];
 
@@ -60,24 +66,32 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       <div className="h-px bg-[#1a1a1a] mx-5" />
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => {
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {navItems.map((item, idx) => {
           const Icon = item.icon;
           const isActive = activeView === item.view;
+          const prevItem = navItems[idx - 1];
+          const showDivider = item.section === "orchestrator" && prevItem?.section !== "orchestrator";
           return (
-            <button
-              key={item.view}
-              onClick={() => setActiveView(item.view)}
-              className={clsx(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-[#00ff88]/10 text-[#00ff88]"
-                  : "text-[#888] hover:text-white hover:bg-white/5"
+            <div key={item.view}>
+              {showDivider && (
+                <div className="pt-3 pb-2 px-3">
+                  <div className="text-[10px] font-semibold text-[#444] uppercase tracking-wider">Orchestrator</div>
+                </div>
               )}
-            >
-              <Icon size={18} />
-              {item.label}
-            </button>
+              <button
+                onClick={() => setActiveView(item.view)}
+                className={clsx(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-[#00ff88]/10 text-[#00ff88]"
+                    : "text-[#888] hover:text-white hover:bg-white/5"
+                )}
+              >
+                <Icon size={18} />
+                {item.label}
+              </button>
+            </div>
           );
         })}
       </nav>
