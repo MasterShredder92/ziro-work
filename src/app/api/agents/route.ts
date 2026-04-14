@@ -246,6 +246,25 @@ export async function PATCH(req: NextRequest) {
       .select("*")
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Copy attached skills from original to clone
+    if (data) {
+      const { data: originalSkills } = await supabase
+        .from("agent_skills")
+        .select("skill_id, priority")
+        .eq("agent_id", id);
+
+      if (originalSkills && originalSkills.length > 0) {
+        await supabase.from("agent_skills").insert(
+          originalSkills.map((s: { skill_id: string; priority: number }) => ({
+            agent_id: data.id,
+            skill_id: s.skill_id,
+            priority: s.priority,
+          }))
+        );
+      }
+    }
+
     return NextResponse.json(data, { status: 201 });
   }
 

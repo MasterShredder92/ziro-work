@@ -56,6 +56,26 @@ interface AgentRecord {
   owner_type: string;
 }
 
+interface SkillRecord {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  preferred_runtime: string;
+  is_active: boolean;
+  approval_status: string;
+}
+
+interface AgentSkillLink {
+  id: string;
+  agent_id: string;
+  skill_id: string;
+  priority: number;
+  created_at: string;
+  skills: SkillRecord;
+}
+
 type Tab = "all" | "active" | "idle" | "retired" | "user" | "system";
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
@@ -522,6 +542,9 @@ export default function AgentProfilesView() {
                         </div>
                       )}
 
+                    {/* Attached Skills */}
+                    <AgentSkillsPanel agentId={agent.id} />
+
                     {/* System Prompt (read-only, composed) */}
                     {agent.system_prompt && (
                       <div>
@@ -538,6 +561,197 @@ export default function AgentProfilesView() {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Agent Skills Panel ──
+
+function AgentSkillsPanel({ agentId }: { agentId: string }) {
+  const [attached, setAttached] = useState<AgentSkillLink[]>([]);
+  const [allSkills, setAllSkills] = useState<SkillRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
+  const [skillSearch, setSkillSearch] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const loadAttached = useCallback(async () => {
+    const res = await fetch(`/api/agents/skills?agent_id=${agentId}`);
+    const data = await res.json();
+    setAttached(Array.isArray(data) ? data : []);
+  }, [agentId]);
+
+  const loadAllSkills = useCallback(async () => {
+    const res = await fetch("/api/skills?status=active&context=music_school");
+    const data = await res.json();
+    setAllSkills(Array.isArray(data) ? data : []);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([loadAttached(), loadAllSkills()]).then(() => setLoading(false));
+  }, [loadAttached, loadAllSkills]);
+
+  async function attachSkill(skillId: string) {
+    setActionLoading(skillId);
+    await fetch("/api/agents/skills", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_id: agentId, skill_id: skillId }),
+    });
+    await loadAttached();
+    setActionLoading(null);
+  }
+
+  async function detachSkill(skillId: string) {
+    setActionLoading(skillId);
+    await fetch("/api/agents/skills", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_id: agentId, skill_id: skillId }),
+    });
+    await loadAttached();
+    setActionLoading(null);
+  }
+
+  const attachedIds = new Set(attached.map((a) => a.skill_id));
+  const available = allSkills.filter((s) => !attachedIds.has(s.id));
+  const filteredAvailable = available.filter((s) => {
+    if (!skillSearch) return true;
+    const q = skillSearch.toLowerCase();
+    return s.name.toLowerCase().includes(q) || s.key.toLowerCase().includes(q) || s.category.toLowerCase().includes(q);
+  });
+
+  const RUNTIME_COLORS: Record<string, string> = {
+    claude_code: "#00ff88",
+    api: "#3b82f6",
+    browser: "#f59e0b",
+    manual: "#a855f7",
+  };
+
+  if (loading) {
+    return (
+      <div className="py-3 flex items-center gap-2 text-xs text-[#606068]">
+        <Loader2 size={12} className="animate-spin" /> Loading skills...
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Zap size={14} className="text-[#00ff88]" />
+          <span className="text-xs font-semibold text-[#606068] uppercase tracking-wider">
+            Attached Skills
+          </span>
+          <span className="text-xs text-[#505055]">
+            {attached.length} skill{attached.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <button
+          onClick={() => setShowPicker(!showPicker)}
+          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors ${
+            showPicker
+              ? "bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20"
+              : "bg-white/5 text-[#a0a0a8] hover:text-[#f0f0f0]"
+          }`}
+        >
+          {showPicker ? <X size={10} /> : <Plus size={10} />}
+          {showPicker ? "Close" : "Manage"}
+        </button>
+      </div>
+
+      {/* Attached skills as compact pills */}
+      {attached.length === 0 ? (
+        <div className="text-xs text-[#505055] bg-[#0a0a0c] border border-[#1c1c1e] rounded-lg px-3 py-2.5">
+          No skills attached — this agent uses only Star default skills or template skills.
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {attached.map((link) => (
+            <span
+              key={link.id}
+              className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-[#0a0a0c] border border-[#1c1c1e] text-[#a0a0a8] group"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: RUNTIME_COLORS[link.skills.preferred_runtime] || "#606068" }}
+              />
+              <span className="font-medium text-[#d0d0d8]">{link.skills.name}</span>
+              <span className="text-[#505055] font-mono">{link.skills.key}</span>
+              <button
+                onClick={() => detachSkill(link.skill_id)}
+                disabled={actionLoading === link.skill_id}
+                className="ml-0.5 text-[#505055] hover:text-[#ff4444] transition-colors"
+              >
+                {actionLoading === link.skill_id ? (
+                  <Loader2 size={10} className="animate-spin" />
+                ) : (
+                  <X size={10} />
+                )}
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Skill picker */}
+      {showPicker && (
+        <div className="mt-3 bg-[#0a0a0c] border border-[#1c1c1e] rounded-xl overflow-hidden">
+          {/* Search */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1c1c1e]">
+            <Search size={12} className="text-[#505055]" />
+            <input
+              type="text"
+              value={skillSearch}
+              onChange={(e) => setSkillSearch(e.target.value)}
+              placeholder="Search available skills..."
+              className="flex-1 bg-transparent text-sm text-[#f0f0f0] placeholder-[#505055] outline-none"
+              autoFocus
+            />
+          </div>
+
+          {/* Available skills list */}
+          <div className="max-h-[200px] overflow-y-auto">
+            {filteredAvailable.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-[#505055] text-center">
+                {available.length === 0
+                  ? "All active skills are already attached"
+                  : "No skills match your search"}
+              </div>
+            ) : (
+              filteredAvailable.map((skill) => (
+                <button
+                  key={skill.id}
+                  onClick={() => attachSkill(skill.id)}
+                  disabled={actionLoading === skill.id}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#101012] transition-colors border-b border-[#1c1c1e] last:border-0"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: RUNTIME_COLORS[skill.preferred_runtime] || "#606068" }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-[#d0d0d8]">{skill.name}</span>
+                      <span className="text-[11px] text-[#505055] font-mono">{skill.key}</span>
+                    </div>
+                    <p className="text-[11px] text-[#606068] truncate">{skill.description}</p>
+                  </div>
+                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-[#101012] text-[#606068] capitalize shrink-0">
+                    {skill.category}
+                  </span>
+                  {actionLoading === skill.id ? (
+                    <Loader2 size={12} className="animate-spin text-[#505055] shrink-0" />
+                  ) : (
+                    <Plus size={12} className="text-[#00ff88] shrink-0" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

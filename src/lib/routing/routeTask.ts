@@ -22,12 +22,23 @@ export interface RoutedTask {
   agentMode: AgentMode;
 }
 
+// Load per-agent attached skills from agent_skills junction table
+async function loadAgentSkills(agentId: string): Promise<string[]> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from("agent_skills")
+    .select("skill_id")
+    .eq("agent_id", agentId)
+    .order("priority", { ascending: true });
+  return (data || []).map((r: { skill_id: string }) => r.skill_id);
+}
+
 // Find or create an agent for this routed task
 async function resolveAgent(
   route: RouteDecision,
   composedPrompt: string,
   taskTitle: string
-): Promise<{ agentId: string; mode: AgentMode }> {
+): Promise<{ agentId: string; mode: AgentMode; agentSkillIds: string[] }> {
   const supabase = getServiceClient();
 
   // Prefer existing active persistent agent that uses this template
@@ -55,7 +66,8 @@ async function resolveAgent(
         })
         .eq("id", existing[0].id);
 
-      return { agentId: existing[0].id, mode: "persistent" };
+      const skillIds = await loadAgentSkills(existing[0].id);
+      return { agentId: existing[0].id, mode: "persistent", agentSkillIds: skillIds };
     }
   }
 
@@ -92,10 +104,10 @@ async function resolveAgent(
       .select("id")
       .eq("slug", "star")
       .single();
-    return { agentId: star?.id || "", mode: "ephemeral" };
+    return { agentId: star?.id || "", mode: "ephemeral", agentSkillIds: [] };
   }
 
-  return { agentId: newAgent.id, mode: "ephemeral" };
+  return { agentId: newAgent.id, mode: "ephemeral", agentSkillIds: [] };
 }
 
 // Main routing entry point
@@ -183,7 +195,35 @@ export async function routeTask(
   };
 
   // Resolve agent (find existing or create ephemeral)
-  const { agentId, mode } = await resolveAgent(route, composedPrompt, title);
+  const { agentId, mode, agentSkillIds } = await resolveAgent(route, composedPrompt, title);
+
+  // Merge agent-attached skills into the route (deduplicated with template skills)
+  if (agentSkillIds.length > 0) {
+    const existingIds = new Set(skills.map((s) => s.id));
+    const newIds = agentSkillIds.filter((id) => !existingIds.has(id));
+    if (newIds.length > 0) {
+      const supabase = getServiceClient();
+      const { data: agentSkills } = await supabase
+        .from("skills")
+        .select("*")
+        .in("id", newIds)
+        .eq("is_active", true)
+        .eq("approval_status", "approved");
+      if (agentSkills && agentSkills.length > 0) {
+        route.skills = [...skills, ...agentSkills];
+        // Recompose prompt with merged skill set
+        const mergedPrompt = composeSystemPrompt(best.template, route.skills, description);
+        console.log(`[ROUTE] Merged ${agentSkills.length} agent-attached skills for agent ${agentId}`);
+        return {
+          route,
+          composedPrompt: mergedPrompt,
+          estimatedTokens: estimateTokens(mergedPrompt),
+          agentId,
+          agentMode: mode,
+        };
+      }
+    }
+  }
 
   console.log(
     `[ROUTE] ${title} → template="${best.template.slug}" runtime=${runtime} score=${best.score} agent=${agentId} mode=${mode}`
