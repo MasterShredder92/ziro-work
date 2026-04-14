@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     profile_summary,
     business_context = "music_school",
     template_id,
+    zirorb_id,
   } = body;
 
   if (!name || !role) {
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
       profile_summary: profile_summary || null,
       business_context,
       template_id: template_id || null,
+      zirorb_id: zirorb_id || null,
       status: "active",
       is_visible_in_ui: true,
       is_archived: false,
@@ -238,6 +240,7 @@ export async function PATCH(req: NextRequest) {
         profile_summary: original.profile_summary,
         business_context: original.business_context,
         template_id: original.template_id,
+        zirorb_id: original.zirorb_id ?? null,
         status: "active",
         is_visible_in_ui: true,
         is_archived: false,

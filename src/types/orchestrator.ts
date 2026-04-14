@@ -67,6 +67,22 @@ export interface AgentTemplateSkill {
   priority: number;
 }
 
+// ── Zirorbs (agent clusters under Star) ──
+
+export type ZirorbFamily = "core" | "vertical";
+
+export interface Zirorb {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  family: ZirorbFamily;
+  accent_color: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Agents (extended) ──
 
 export interface Agent {
@@ -98,6 +114,8 @@ export interface Agent {
   auto_use_by_star: boolean;
   profile_summary: string | null;
   owner_type: string;
+  /** FK to zirorbs; absent or null means unassigned in UI */
+  zirorb_id?: string | null;
 }
 
 // ── Agent Tasks (extended) ──
