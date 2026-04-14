@@ -26,7 +26,16 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const supabase = getServiceClient();
   const body = await req.json();
-  const { name, slug, description, family = "vertical", accent_color = "#00ff88", sort_order = 100 } = body;
+  const {
+    name,
+    slug,
+    description,
+    family = "vertical",
+    accent_color = "#00ff88",
+    sort_order = 100,
+    board_x,
+    board_y,
+  } = body;
 
   if (!name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -51,6 +60,8 @@ export async function POST(req: NextRequest) {
       family,
       accent_color,
       sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 100,
+      board_x: board_x != null && Number.isFinite(Number(board_x)) ? Number(board_x) : null,
+      board_y: board_y != null && Number.isFinite(Number(board_y)) ? Number(board_y) : null,
       created_at: now,
       updated_at: now,
     })

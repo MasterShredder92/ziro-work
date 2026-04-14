@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from("agents")
     .select("*")
+    .order("zirorb_sort", { ascending: true })
     .order("name", { ascending: true })
     .limit(100);
 
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
     business_context = "music_school",
     template_id,
     zirorb_id,
+    zirorb_sort = 0,
   } = body;
 
   if (!name || !role) {
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
       business_context,
       template_id: template_id || null,
       zirorb_id: zirorb_id || null,
+      zirorb_sort: Number.isFinite(Number(zirorb_sort)) ? Number(zirorb_sort) : 0,
       status: "active",
       is_visible_in_ui: true,
       is_archived: false,
@@ -241,6 +244,7 @@ export async function PATCH(req: NextRequest) {
         business_context: original.business_context,
         template_id: original.template_id,
         zirorb_id: original.zirorb_id ?? null,
+        zirorb_sort: original.zirorb_sort ?? 0,
         status: "active",
         is_visible_in_ui: true,
         is_archived: false,

@@ -21,10 +21,10 @@ import {
   EyeOff,
   Search,
   Trash2,
-  ArrowLeft,
-  Sparkles,
   Orbit,
+  Sparkles,
 } from "lucide-react";
+import ZirorbFormModal, { type ZirorbRecord } from "@/components/ZirorbFormModal";
 
 // ── Types ──
 
@@ -58,18 +58,7 @@ interface AgentRecord {
   profile_summary: string | null;
   owner_type: string;
   zirorb_id: string | null;
-}
-
-interface ZirorbRecord {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  family: "core" | "vertical";
-  accent_color: string;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
+  zirorb_sort?: number;
 }
 
 interface SkillRecord {
@@ -111,13 +100,15 @@ const MODE_COLORS: Record<string, string> = {
 
 // ── Main Component ──
 
-export default function AgentProfilesView() {
+interface AgentProfilesViewProps {
+  onOpenOrganization?: () => void;
+}
+
+export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesViewProps) {
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [zirorbs, setZirorbs] = useState<ZirorbRecord[]>([]);
   const [zirorbsLoading, setZirorbsLoading] = useState(true);
-  const [starAgent, setStarAgent] = useState<AgentRecord | null>(null);
-  const [drillZirorbId, setDrillZirorbId] = useState<string | "unassigned" | null>(null);
   const [zirorbModal, setZirorbModal] = useState<"create" | ZirorbRecord | null>(null);
   const [createAgentDefaultZirorbId, setCreateAgentDefaultZirorbId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("all");
@@ -133,13 +124,6 @@ export default function AgentProfilesView() {
     const data = await res.json();
     setZirorbs(Array.isArray(data) ? data : []);
     setZirorbsLoading(false);
-  }, []);
-
-  const loadStar = useCallback(async () => {
-    const res = await fetch(`/api/agents?context=music_school`);
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : [];
-    setStarAgent((list as AgentRecord[]).find((a) => a.slug === "star") || null);
   }, []);
 
   const loadAgents = useCallback(async () => {
@@ -166,8 +150,7 @@ export default function AgentProfilesView() {
 
   useEffect(() => {
     loadZirorbs();
-    loadStar();
-  }, [loadZirorbs, loadStar]);
+  }, [loadZirorbs]);
 
   async function performAction(agentId: string, action: string) {
     setActionLoading(`${agentId}-${action}`);
@@ -193,32 +176,7 @@ export default function AgentProfilesView() {
     setActionLoading(null);
   }
 
-  async function deleteDrilledZirorb() {
-    if (!drillZirorbId || drillZirorbId === "unassigned") return;
-    if (!confirm("Delete this Zirorb? Its agents move to Unassigned.")) return;
-    const res = await fetch("/api/zirorbs", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: drillZirorbId }),
-    });
-    if (!res.ok) {
-      const j = await res.json();
-      alert(j.error || "Failed to delete Zirorb");
-      return;
-    }
-    setDrillZirorbId(null);
-    setSearch("");
-    await Promise.all([loadZirorbs(), loadAgents()]);
-  }
-
-  const drillAgents =
-    drillZirorbId === null
-      ? agents
-      : agents.filter((a) =>
-          drillZirorbId === "unassigned" ? !(a.zirorb_id ?? null) : a.zirorb_id === drillZirorbId
-        );
-
-  const filtered = drillAgents.filter((a) => {
+  const filtered = agents.filter((a) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -228,11 +186,6 @@ export default function AgentProfilesView() {
       (a.purpose || "").toLowerCase().includes(q)
     );
   });
-
-  const countInZirorb = (zid: string) => agents.filter((a) => a.zirorb_id === zid).length;
-  const unassignedCount = agents.filter((a) => !(a.zirorb_id ?? null)).length;
-  const coreZirorbs = zirorbs.filter((z) => z.family === "core");
-  const verticalZirorbs = zirorbs.filter((z) => z.family === "vertical");
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "all", label: "All" },
@@ -250,10 +203,20 @@ export default function AgentProfilesView() {
         <div className="min-w-0">
           <h2 className="text-lg font-extrabold text-[#f0f0f0]">Specialist Agents</h2>
           <p className="text-xs text-[#606068] mt-0.5">
-            Zirorbs group specialists under Star. Skills stay on each agent.
+            Full profiles, lifecycle, and skills. Use Organization for the spatial command map.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
+          {onOpenOrganization && (
+            <button
+              type="button"
+              onClick={onOpenOrganization}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#a855f7]/10 text-[#d8b4fe] border border-[#a855f7]/25 hover:bg-[#a855f7]/18 transition-colors"
+            >
+              <Sparkles size={12} />
+              Organization map
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setZirorbModal("create")}
@@ -265,9 +228,7 @@ export default function AgentProfilesView() {
           <button
             type="button"
             onClick={() => {
-              setCreateAgentDefaultZirorbId(
-                drillZirorbId && drillZirorbId !== "unassigned" ? drillZirorbId : null
-              );
+              setCreateAgentDefaultZirorbId(null);
               setShowCreate(true);
               setEditingId(null);
             }}
@@ -276,13 +237,11 @@ export default function AgentProfilesView() {
             <Plus size={12} />
             New Agent
           </button>
-          <span className="text-xs text-[#606068]">
-            {drillZirorbId ? `${filtered.length} in view` : `${agents.length} specialists`}
-          </span>
+          <span className="text-xs text-[#606068]">{filtered.length} in view</span>
         </div>
       </div>
 
-      {/* Tab bar + Search (search when drilled into a Zirorb) */}
+      {/* Tab bar + Search */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="flex gap-1 overflow-x-auto no-scrollbar">
           {tabs.map((t) => (
@@ -300,22 +259,16 @@ export default function AgentProfilesView() {
             </button>
           ))}
         </div>
-        {drillZirorbId ? (
-          <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-lg px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-            <Search size={12} className="text-[#606068] shrink-0" />
-            <input
-              type="text"
-              placeholder="Search agents..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent text-sm text-[#f0f0f0] placeholder-[#606068] outline-none w-full sm:w-40"
-            />
-          </div>
-        ) : (
-          <div className="text-[11px] text-[#505055] sm:text-right">
-            Tabs filter counts on Zirorbs and the roster below.
-          </div>
-        )}
+        <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-lg px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+          <Search size={12} className="text-[#606068] shrink-0" />
+          <input
+            type="text"
+            placeholder="Search agents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-transparent text-sm text-[#f0f0f0] placeholder-[#606068] outline-none w-full sm:w-40"
+          />
+        </div>
       </div>
 
       {zirorbModal && (
@@ -352,190 +305,18 @@ export default function AgentProfilesView() {
         />
       )}
 
-      {/* Constellation or drilled roster */}
       {loading || zirorbsLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 size={20} className="animate-spin text-[#505055]" />
         </div>
-      ) : !drillZirorbId ? (
-        <div className="relative space-y-10 pb-8">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-5%,rgba(0,255,136,0.1),transparent)]" />
-
-          <div className="relative flex flex-col items-center text-center px-2">
-            <div className="relative mb-5">
-              <div
-                className="absolute inset-0 rounded-full scale-[1.6] opacity-30"
-                style={{
-                  background: "radial-gradient(circle, rgba(245,158,11,0.35) 0%, transparent 70%)",
-                }}
-              />
-              <div className="relative w-[5.5rem] h-[5.5rem] sm:w-28 sm:h-28 rounded-full border border-[#f59e0b]/35 bg-gradient-to-br from-[#1c1610] via-[#0f0f12] to-[#080808] flex items-center justify-center shadow-[0_0_48px_rgba(245,158,11,0.12)]">
-                <Sparkles className="text-[#f59e0b] w-9 h-9 sm:w-11 sm:h-11" strokeWidth={1.2} />
-              </div>
-            </div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f59e0b]/75 mb-1">
-              Orchestrator
-            </div>
-            <h3 className="text-xl sm:text-2xl font-extrabold text-[#f0f0f0] tracking-tight">
-              {starAgent?.name || "Star"}
-            </h3>
-            <p className="text-sm text-[#707078] max-w-md mt-2 leading-relaxed">
-              {starAgent?.role ||
-                "Routes work, composes context, and coordinates specialists inside Zirorbs."}
-            </p>
-          </div>
-
-          {zirorbs.length === 0 ? (
-            <div className="relative bg-[#101012]/90 border border-[#1c1c1e] rounded-2xl p-10 text-center max-w-lg mx-auto">
-              <Orbit className="mx-auto text-[#505055] mb-3" size={36} strokeWidth={1.25} />
-              <p className="text-[#a0a0a8] text-sm mb-1">No Zirorbs yet</p>
-              <p className="text-[#505055] text-xs mb-5 leading-relaxed">
-                Create a Zirorb to organize agents into modular intelligence clusters under Star.
-              </p>
-              <button
-                type="button"
-                onClick={() => setZirorbModal("create")}
-                className="text-xs px-4 py-2 rounded-xl bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/25 hover:bg-[#00ff88]/18 transition-colors"
-              >
-                Create first Zirorb
-              </button>
-            </div>
-          ) : (
-            <div className="relative space-y-10">
-              <section>
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4 px-0.5">
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#f59e0b]/90">
-                      Core systems
-                    </h4>
-                    <p className="text-[11px] text-[#505055] mt-0.5">
-                      Reliability, product velocity, and shared platform intelligence.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                  {coreZirorbs.map((z) => (
-                    <ZirorbOrbCard
-                      key={z.id}
-                      z={z}
-                      count={countInZirorb(z.id)}
-                      onClick={() => {
-                        setDrillZirorbId(z.id);
-                        setSearch("");
-                      }}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4 px-0.5">
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#a855f7]/90">
-                      Verticals & business
-                    </h4>
-                    <p className="text-[11px] text-[#505055] mt-0.5">
-                      Domain clusters for go-to-market and operations.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                  {verticalZirorbs.map((z) => (
-                    <ZirorbOrbCard
-                      key={z.id}
-                      z={z}
-                      count={countInZirorb(z.id)}
-                      onClick={() => {
-                        setDrillZirorbId(z.id);
-                        setSearch("");
-                      }}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <div className="mb-3 px-0.5">
-                  <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#606068]">
-                    Fallback
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                  <UnassignedOrbCard
-                    count={unassignedCount}
-                    onClick={() => {
-                      setDrillZirorbId("unassigned");
-                      setSearch("");
-                    }}
-                  />
-                </div>
-              </section>
-            </div>
-          )}
+      ) : filtered.length === 0 ? (
+        <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+          <Bot size={32} className="mx-auto text-[#3a3a3e] mb-3" />
+          <p className="text-[#707078] text-[15px]">No agents found</p>
+          <p className="text-[#505055] text-sm mt-1">Adjust filters or create a specialist.</p>
         </div>
       ) : (
-        <>
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-            <button
-              type="button"
-              onClick={() => {
-                setDrillZirorbId(null);
-                setSearch("");
-              }}
-              className="inline-flex items-center gap-1.5 self-start text-xs px-3 py-1.5 rounded-lg border border-[#2a2a2e] text-[#a0a0a8] hover:text-[#f0f0f0] hover:border-[#505055] transition-colors"
-            >
-              <ArrowLeft size={14} />
-              All Zirorbs
-            </button>
-            <div className="flex-1 min-w-0 lg:order-first lg:mr-auto">
-              <h3 className="text-base sm:text-lg font-extrabold text-[#f0f0f0] truncate">
-                {drillZirorbId === "unassigned"
-                  ? "Unassigned"
-                  : zirorbs.find((z) => z.id === drillZirorbId)?.name || "Zirorb"}
-              </h3>
-              <p className="text-xs text-[#606068] line-clamp-2 mt-0.5">
-                {drillZirorbId === "unassigned"
-                  ? "Agents without a Zirorb stay here until you assign them."
-                  : zirorbs.find((z) => z.id === drillZirorbId)?.description || ""}
-              </p>
-            </div>
-            {drillZirorbId !== "unassigned" && (
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const z = zirorbs.find((x) => x.id === drillZirorbId);
-                    if (z) setZirorbModal(z);
-                  }}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-[#2a2a2e] text-[#a0a0a8] hover:text-[#f0f0f0] transition-colors"
-                >
-                  <Pencil size={12} className="inline mr-1" />
-                  Edit Zirorb
-                </button>
-                <button
-                  type="button"
-                  onClick={deleteDrilledZirorb}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-[#ff4444]/10 border border-[#ff4444]/25 text-[#ff8888] hover:bg-[#ff4444]/15 transition-colors"
-                >
-                  <Trash2 size={12} className="inline mr-1" />
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-
-          {filtered.length === 0 ? (
-            <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-              <Bot size={32} className="mx-auto text-[#3a3a3e] mb-3" />
-              <p className="text-[#707078] text-[15px]">No agents in this view</p>
-              <p className="text-[#505055] text-sm mt-1">
-                {drillZirorbId === "unassigned"
-                  ? "Assign agents to a Zirorb from each profile, or create a new specialist."
-                  : "Add an agent to this Zirorb or relax your tab filters."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
+        <div className="space-y-3">
           {filtered.map((agent) => {
             const isExpanded = expanded === agent.id;
             const statusCfg = STATUS_CONFIG[agent.status] || {
@@ -873,236 +654,8 @@ export default function AgentProfilesView() {
               </div>
             );
           })}
-            </div>
-          )}
-        </>
+        </div>
       )}
-    </div>
-  );
-}
-
-// ── Zirorb UI pieces ──
-
-function ZirorbOrbCard({
-  z,
-  count,
-  onClick,
-}: {
-  z: ZirorbRecord;
-  count: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group relative text-left w-full rounded-2xl border border-white/[0.06] bg-[#0c0c0e]/90 hover:border-white/[0.12] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45)] overflow-hidden min-h-[120px] p-4 sm:p-5"
-    >
-      <div
-        className="pointer-events-none absolute -right-6 -top-10 h-28 w-28 rounded-full opacity-25 blur-2xl group-hover:opacity-40 transition-opacity"
-        style={{ backgroundColor: z.accent_color }}
-      />
-      <div className="relative flex flex-col h-full min-h-[88px]">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10"
-            style={{
-              boxShadow: `0 0 24px ${z.accent_color}33`,
-              background: `linear-gradient(145deg, ${z.accent_color}22, transparent)`,
-            }}
-          >
-            <Orbit size={18} style={{ color: z.accent_color }} strokeWidth={1.5} />
-          </div>
-          <span
-            className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-white/10 text-[#a0a0a8] tabular-nums"
-            style={{ color: z.accent_color, borderColor: `${z.accent_color}44` }}
-          >
-            {count} agents
-          </span>
-        </div>
-        <div className="font-bold text-[#f0f0f0] text-sm sm:text-base leading-snug">{z.name}</div>
-        {z.description && (
-          <p className="text-[11px] sm:text-xs text-[#606068] mt-1.5 line-clamp-2 leading-relaxed">{z.description}</p>
-        )}
-        <span className="mt-auto pt-3 text-[10px] uppercase tracking-wider text-[#505055] opacity-0 group-hover:opacity-100 transition-opacity">
-          Open cluster
-        </span>
-      </div>
-    </button>
-  );
-}
-
-function UnassignedOrbCard({ count, onClick }: { count: number; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group relative text-left w-full rounded-2xl border border-dashed border-[#3a3a3e] bg-[#080808]/80 hover:border-[#606068] hover:bg-[#0a0a0c] transition-all duration-300 p-4 sm:p-5 min-h-[120px]"
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#2a2a2e] bg-[#101012]">
-          <Bot size={18} className="text-[#606068]" />
-        </div>
-        <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-[#2a2a2e] text-[#909098] tabular-nums">
-          {count} agents
-        </span>
-      </div>
-      <div className="font-bold text-[#e8e8e8] text-sm sm:text-base">Unassigned</div>
-      <p className="text-[11px] sm:text-xs text-[#606068] mt-1.5 leading-relaxed">
-        Default bucket for specialists not yet placed in a Zirorb.
-      </p>
-    </button>
-  );
-}
-
-function ZirorbFormModal({
-  mode,
-  zirorb,
-  onClose,
-  onSaved,
-}: {
-  mode: "create" | "edit";
-  zirorb: ZirorbRecord | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(zirorb?.name || "");
-  const [description, setDescription] = useState(zirorb?.description || "");
-  const [family, setFamily] = useState<"core" | "vertical">(zirorb?.family || "vertical");
-  const [accent_color, setAccentColor] = useState(zirorb?.accent_color || "#00ff88");
-  const [sort_order, setSortOrder] = useState(String(zirorb?.sort_order ?? 100));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSave() {
-    setError(null);
-    if (!name.trim()) {
-      setError("Name is required");
-      return;
-    }
-    setSaving(true);
-    const payload =
-      mode === "create"
-        ? {
-            name: name.trim(),
-            description: description.trim() || null,
-            family,
-            accent_color,
-            sort_order: Number(sort_order) || 0,
-          }
-        : {
-            id: zirorb!.id,
-            name: name.trim(),
-            description: description.trim() || null,
-            family,
-            accent_color,
-            sort_order: Number(sort_order) || 0,
-          };
-
-    const res = await fetch("/api/zirorbs", {
-      method: mode === "create" ? "POST" : "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const j = await res.json();
-      setError(j.error || "Request failed");
-      setSaving(false);
-      return;
-    }
-    setSaving(false);
-    onSaved();
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/70 z-[60] flex items-start justify-center pt-6 md:pt-16 overflow-y-auto px-3">
-      <div className="bg-[#0c0c0e] border border-[#232326] rounded-xl w-full max-w-md mb-10 shadow-xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#1c1c1e]">
-          <h3 className="text-base font-extrabold text-[#f0f0f0]">
-            {mode === "create" ? "New Zirorb" : "Edit Zirorb"}
-          </h3>
-          <button type="button" onClick={onClose} className="text-[#606068] hover:text-[#f0f0f0]">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-4 space-y-3">
-          {error && (
-            <div className="flex items-center gap-2 text-xs text-[#ff4444] bg-[#ff4444]/10 border border-[#ff4444]/20 rounded-lg px-3 py-2">
-              <AlertTriangle size={12} />
-              {error}
-            </div>
-          )}
-          <div>
-            <label className="block text-[11px] text-[#707078] uppercase tracking-wider mb-1">Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#0a0a0c] border border-[#232326] rounded-xl px-3 py-2 text-sm text-[#f0f0f0] outline-none focus:border-[#00ff88]/40"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] text-[#707078] uppercase tracking-wider mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full resize-none bg-[#0a0a0c] border border-[#232326] rounded-xl px-3 py-2 text-sm text-[#f0f0f0] outline-none focus:border-[#00ff88]/40"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[11px] text-[#707078] uppercase tracking-wider mb-1">Family</label>
-              <select
-                value={family}
-                onChange={(e) => setFamily(e.target.value as "core" | "vertical")}
-                className="w-full bg-[#0a0a0c] border border-[#232326] rounded-xl px-3 py-2 text-sm text-[#f0f0f0] outline-none"
-              >
-                <option value="core">Core</option>
-                <option value="vertical">Vertical / business</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] text-[#707078] uppercase tracking-wider mb-1">Sort order</label>
-              <input
-                type="number"
-                value={sort_order}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full bg-[#0a0a0c] border border-[#232326] rounded-xl px-3 py-2 text-sm text-[#f0f0f0] outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-[11px] text-[#707078] uppercase tracking-wider mb-1">Accent</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={accent_color}
-                onChange={(e) => setAccentColor(e.target.value)}
-                className="h-9 w-12 rounded-lg border border-[#232326] bg-transparent cursor-pointer"
-              />
-              <input
-                value={accent_color}
-                onChange={(e) => setAccentColor(e.target.value)}
-                className="flex-1 bg-[#0a0a0c] border border-[#232326] rounded-xl px-3 py-2 text-sm font-mono text-[#f0f0f0] outline-none"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-[#1c1c1e]">
-          <button type="button" onClick={onClose} className="text-sm px-3 py-2 text-[#a0a0a8] hover:text-white">
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-[#00ff88] text-black font-medium disabled:opacity-50"
-          >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Save
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

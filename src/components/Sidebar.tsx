@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { LayoutDashboard, Bot, Users, Settings, Zap, Layers, Play, Star, FileText, Archive, UserCog, Sparkles } from "lucide-react";
+import { LayoutDashboard, Bot, Users, Settings, Zap, Layers, Play, Star, FileText, Archive, UserCog, Sparkles, Orbit } from "lucide-react";
 import clsx from "clsx";
 import MrrTracker from "./MrrTracker";
 
-export type ViewName = "dashboard" | "agents" | "agent-profiles" | "star-config" | "contacts" | "skills" | "templates" | "runs" | "reviews" | "taskbank" | "archived" | "settings";
+export type ViewName = "dashboard" | "agents" | "organization" | "agent-profiles" | "star-config" | "contacts" | "skills" | "templates" | "runs" | "reviews" | "taskbank" | "archived" | "settings";
 
 const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard; section?: string }[] = [
   { label: "Dashboard", view: "dashboard", icon: LayoutDashboard },
   { label: "Agents", view: "agents", icon: Bot },
+  { label: "Organization", view: "organization", icon: Orbit },
   { label: "Contacts", view: "contacts", icon: Users },
   { label: "Star Config", view: "star-config", icon: Sparkles, section: "orchestrator" },
   { label: "Specialists", view: "agent-profiles", icon: UserCog, section: "orchestrator" },

@@ -12,6 +12,7 @@ import ReviewsView from "@/components/ReviewsView";
 import TaskBankView from "@/components/TaskBankView";
 import ArchivedView from "@/components/ArchivedView";
 import AgentProfilesView from "@/components/AgentProfilesView";
+import AgentOrganizationBoard from "@/components/AgentOrganizationBoard";
 import StarConfigView from "@/components/StarConfigView";
 import {
   DollarSign,
@@ -138,7 +139,10 @@ export default function Dashboard() {
         {activeView === "agents" && (
           <AgentChart agents={agents} onAgentClick={handleAgentClick} />
         )}
-        {activeView === "agent-profiles" && <AgentProfilesView />}
+        {activeView === "organization" && <AgentOrganizationBoard />}
+        {activeView === "agent-profiles" && (
+          <AgentProfilesView onOpenOrganization={() => setActiveView("organization")} />
+        )}
         {activeView === "star-config" && <StarConfigView />}
         {activeView === "contacts" && <ContactsView />}
         {activeView === "skills" && <SkillsView />}

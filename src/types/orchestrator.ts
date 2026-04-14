@@ -79,6 +79,9 @@ export interface Zirorb {
   family: ZirorbFamily;
   accent_color: string;
   sort_order: number;
+  /** Organization board X (0–100), null = client auto layout */
+  board_x?: number | null;
+  board_y?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -116,6 +119,8 @@ export interface Agent {
   owner_type: string;
   /** FK to zirorbs; absent or null means unassigned in UI */
   zirorb_id?: string | null;
+  /** Order within a Zirorb on the org board */
+  zirorb_sort?: number;
 }
 
 // ── Agent Tasks (extended) ──
