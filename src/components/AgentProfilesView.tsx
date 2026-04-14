@@ -268,7 +268,7 @@ export default function AgentProfilesView() {
             return (
               <div
                 key={agent.id}
-                className="bg-[#101012] border border-[#1c1c1e] rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+                className="bg-[#101012] border border-[#1c1c1e] rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.4)] min-w-0"
               >
                 {/* Row header */}
                 <div
@@ -290,11 +290,11 @@ export default function AgentProfilesView() {
                     style={{ backgroundColor: agent.color }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#f0f0f0]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-bold text-[#f0f0f0] truncate">
                         {agent.name}
                       </span>
-                      <span className="text-xs text-[#505055] font-mono">
+                      <span className="text-xs text-[#505055] font-mono truncate hidden sm:inline">
                         {agent.slug}
                       </span>
                     </div>
@@ -351,7 +351,7 @@ export default function AgentProfilesView() {
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="border-t border-[#1c1c1e] px-4 pb-4 pt-3 space-y-4 overflow-hidden">
+                  <div className="border-t border-[#1c1c1e] px-4 pb-4 pt-3 space-y-4 overflow-hidden min-w-0">
                     {/* Action buttons */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
@@ -456,7 +456,7 @@ export default function AgentProfilesView() {
                     </div>
 
                     {/* Profile details grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                       <DetailCell label="Role" value={agent.role} />
                       <DetailCell label="Mode" value={agent.mode} />
                       <DetailCell label="Owner" value={agent.owner_type} />
@@ -492,7 +492,7 @@ export default function AgentProfilesView() {
                         <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                           Purpose
                         </div>
-                        <div className="text-sm text-[#a0a0a8] bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 break-words overflow-hidden">
+                        <div className="text-sm text-[#a0a0a8] bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 break-words overflow-hidden" style={{ overflowWrap: 'anywhere' }}>
                           {agent.purpose}
                         </div>
                       </div>
@@ -504,7 +504,7 @@ export default function AgentProfilesView() {
                         <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                           Instructions
                         </div>
-                        <div className="text-sm text-[#a0a0a8] whitespace-pre-wrap break-words bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 max-h-[200px] overflow-y-auto overflow-x-hidden">
+                        <div className="text-sm text-[#a0a0a8] whitespace-pre-wrap break-words bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 max-h-[200px] overflow-y-auto overflow-x-hidden" style={{ overflowWrap: 'anywhere' }}>
                           {agent.instructions}
                         </div>
                       </div>
@@ -516,7 +516,7 @@ export default function AgentProfilesView() {
                         <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                           Profile Summary
                         </div>
-                        <div className="text-sm text-[#a0a0a8] bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 break-words overflow-hidden">
+                        <div className="text-sm text-[#a0a0a8] bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 break-words overflow-hidden" style={{ overflowWrap: 'anywhere' }}>
                           {agent.profile_summary}
                         </div>
                       </div>
@@ -533,7 +533,7 @@ export default function AgentProfilesView() {
                             {agent.usage_triggers.map((trigger, i) => (
                               <span
                                 key={i}
-                                className="text-xs px-2 py-0.5 rounded bg-[#1c1c1e] text-[#909098]"
+                                className="text-xs px-2 py-0.5 rounded bg-[#1c1c1e] text-[#909098] break-words max-w-full"
                               >
                                 {String(trigger)}
                               </span>
@@ -551,7 +551,7 @@ export default function AgentProfilesView() {
                         <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                           System Prompt (composed)
                         </div>
-                        <div className="text-sm text-[#707078] whitespace-pre-wrap break-words bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 max-h-[150px] overflow-y-auto overflow-x-hidden font-mono">
+                        <div className="text-sm text-[#707078] whitespace-pre-wrap break-words bg-[#080808] border border-[#1c1c1e] rounded-lg p-3 max-h-[150px] overflow-y-auto overflow-x-hidden font-mono" style={{ overflowWrap: 'anywhere' }}>
                           {agent.system_prompt}
                         </div>
                       </div>
@@ -660,7 +660,7 @@ function AgentSkillsPanel({ agentId }: { agentId: string }) {
           No active skills. Create and approve skills in the Skills Manager.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[250px] overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[250px] overflow-y-auto overflow-x-hidden">
           {allSkills.map((skill) => {
             const isAttached = attachedIds.has(skill.id);
             const isStarDefault = starDefaultIds.has(skill.id);
@@ -671,7 +671,7 @@ function AgentSkillsPanel({ agentId }: { agentId: string }) {
                 key={skill.id}
                 onClick={() => toggleSkill(skill.id)}
                 disabled={isLoading}
-                className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all ${
+                className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all min-w-0 overflow-hidden ${
                   isAttached
                     ? "border-[#00ff88]/30 bg-[#00ff88]/5"
                     : "border-[#1c1c1e] bg-[#0a0a0c] hover:border-[#3a3a3e]"
@@ -718,11 +718,11 @@ function AgentSkillsPanel({ agentId }: { agentId: string }) {
 
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-[#080808] border border-[#1c1c1e] rounded-lg px-4 py-2.5">
-      <div className="text-[11px] text-[#606068] uppercase tracking-wider">
+    <div className="bg-[#080808] border border-[#1c1c1e] rounded-lg px-4 py-2.5 min-w-0 overflow-hidden">
+      <div className="text-[11px] text-[#606068] uppercase tracking-wider truncate">
         {label}
       </div>
-      <div className="text-sm text-[#ccc] mt-0.5">{value}</div>
+      <div className="text-sm text-[#ccc] mt-0.5 truncate">{value}</div>
     </div>
   );
 }

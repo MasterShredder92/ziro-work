@@ -129,7 +129,7 @@ export default function Dashboard() {
 
       {/* Main content */}
       <main
-        className="flex-1 h-full transition-all duration-300 pt-12 md:pt-0 md:ml-[240px]"
+        className="flex-1 min-w-0 h-full overflow-hidden transition-all duration-300 pt-12 md:pt-0 md:ml-[240px]"
         style={{
           marginRight: selectedAgent ? 400 : 0,
         }}
