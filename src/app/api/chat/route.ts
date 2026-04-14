@@ -3,8 +3,7 @@ import { anthropic } from "@/lib/anthropic";
 import { getServiceClient } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
-import { routeTask } from "@/lib/routing/routeTask";
-import { isRouteDecision, isTemplateProposal } from "@/types/orchestrator";
+import { classifyTask } from "@/lib/routing/classifyTask";
 
 // Lessonpreneur Supabase client
 function getLessonpreneurClient() {
@@ -193,56 +192,33 @@ async function executeToolCall(
     const input = block.input as { title: string; description: string };
 
     try {
-      // Route the task through the orchestrator
-      let routeInfo: Awaited<ReturnType<typeof routeTask>> | null = null;
-      try {
-        routeInfo = await routeTask(input.title, input.description);
-        console.log(`[ROUTE] ${input.title} → ${routeInfo.route.reason}`);
-      } catch (routeErr) {
-        console.warn(`[ROUTE] Routing failed, using fallback: ${routeErr}`);
+      // Classify the task for metadata (no agent spawning — STAR handles everything directly)
+      const classified = classifyTask(input.title, input.description);
+
+      // Always assign to STAR — no ephemeral agent spawning
+      const { data: starAgent, error: starErr } = await supabase
+        .from("agents")
+        .select("id")
+        .eq("slug", "star")
+        .single();
+
+      if (starErr || !starAgent) {
+        return {
+          type: "tool_result",
+          tool_use_id: block.id,
+          content: `Error: Could not find STAR agent: ${starErr?.message ?? "not found"}`,
+          is_error: true,
+        };
       }
 
-      // Determine agent_id — routed agent or fallback to STAR
-      let agentId: string;
-      if (routeInfo?.agentId) {
-        agentId = routeInfo.agentId;
-      } else {
-        const { data: starAgent, error: starErr } = await supabase
-          .from("agents")
-          .select("id")
-          .eq("slug", "star")
-          .single();
-
-        if (starErr || !starAgent) {
-          return {
-            type: "tool_result",
-            tool_use_id: block.id,
-            content: `Error: Could not find STAR agent: ${starErr?.message ?? "not found"}`,
-            is_error: true,
-          };
-        }
-        agentId = starAgent.id;
-      }
-
-      // Build task insert — include orchestrator fields when routing succeeded
       const taskInsert: Record<string, unknown> = {
-        agent_id: agentId,
+        agent_id: starAgent.id,
         title: input.title,
         description: input.description,
         status: "pending",
+        task_type: classified.task_type,
+        runtime: classified.suggested_runtime,
       };
-
-      if (routeInfo && isRouteDecision(routeInfo.route)) {
-        taskInsert.task_type = routeInfo.route.template?.task_types?.[0] || null;
-        taskInsert.agent_template_id = routeInfo.route.template?.id || null;
-        taskInsert.skill_ids = routeInfo.route.skills.map((s) => s.id);
-        taskInsert.runtime = routeInfo.route.runtime;
-        taskInsert.priority = 0;
-        taskInsert.budget_tokens = routeInfo.estimatedTokens;
-      } else if (routeInfo && !isTemplateProposal(routeInfo.route)) {
-        // Fallback — set runtime from classification
-        taskInsert.runtime = routeInfo.route.runtime || "claude_code";
-      }
 
       const { data: insertData, error: insertErr } = await supabase
         .from("agent_tasks")
@@ -262,20 +238,10 @@ async function executeToolCall(
         };
       }
 
-      // Build response with routing context
-      let responseMsg = `Task "${input.title}" has been queued successfully.`;
-      if (routeInfo && isRouteDecision(routeInfo.route)) {
-        responseMsg += ` Routed to template "${routeInfo.route.template.name}" with ${routeInfo.route.skills.length} skill(s) via ${routeInfo.route.runtime} runtime.`;
-      } else if (routeInfo && isTemplateProposal(routeInfo.route)) {
-        responseMsg += ` No matching template found — proposal: "${routeInfo.route.suggested_name}". Task will execute with default behavior.`;
-      } else {
-        responseMsg += ` The lessonpreneur worker will pick it up and execute it.`;
-      }
-
       return {
         type: "tool_result",
         tool_use_id: block.id,
-        content: responseMsg,
+        content: `Task "${input.title}" queued for STAR (type: ${classified.task_type}, runtime: ${classified.suggested_runtime}).`,
       };
     } catch (taskErr) {
       return {
@@ -568,11 +534,17 @@ export async function POST(request: NextRequest) {
 
           send({ type: "done" });
           controller.close();
-        } catch (err) {
+        } catch (err: unknown) {
           console.error("[LOOP] Stream error:", err);
+          const errMsg =
+            err instanceof Anthropic.APIError
+              ? `API error (${err.status}): ${err.message}`
+              : err instanceof Error
+                ? err.message
+                : "Internal server error during streaming.";
           send({
             type: "error",
-            text: "Internal server error during streaming.",
+            text: errMsg,
           });
           send({ type: "done" });
           controller.close();

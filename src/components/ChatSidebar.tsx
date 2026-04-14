@@ -146,8 +146,19 @@ export default function ChatSidebar({ agent, onClose }: ChatSidebarProps) {
                   )
                 );
               }
+            } else if (payload.type === "error" && payload.text) {
+              // Surface API/server errors to the user instead of silently swallowing
+              started = true;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: assistantId,
+                  role: "assistant",
+                  content: `⚠ ${payload.text}`,
+                  created_at: new Date().toISOString(),
+                },
+              ]);
             }
-            // "done" and "error" — just stop reading
           } catch {
             // skip malformed SSE lines
           }
