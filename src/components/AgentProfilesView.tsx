@@ -201,7 +201,7 @@ export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesV
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div className="min-w-0">
-          <h2 className="text-lg font-extrabold text-[#f0f0f0]">Specialist Agents</h2>
+          <h2 className="text-lg font-extrabold text-[#f0f0f0]">Agents</h2>
           <p className="text-xs text-[#606068] mt-0.5">
             Full profiles, lifecycle, and skills. Use Organization for the spatial command map.
           </p>

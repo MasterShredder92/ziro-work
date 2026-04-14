@@ -66,17 +66,19 @@ body {
   transform: translateX(0);
 }
 
-/* React Flow overrides */
-.react-flow__background {
-  background: #080808 !important;
+/* Organization board: Star → Zirorb link animation */
+@keyframes org-star-line-flow {
+  to {
+    stroke-dashoffset: -36;
+  }
 }
-.react-flow__minimap {
-  display: none;
+.org-star-line {
+  stroke-dasharray: 5 7;
+  stroke-dashoffset: 0;
+  animation: org-star-line-flow 5.5s linear infinite;
 }
-.react-flow__controls {
-  display: none;
-}
-.react-flow__edge-path {
-  stroke: #333 !important;
-  stroke-width: 2px !important;
+@media (prefers-reduced-motion: reduce) {
+  .org-star-line {
+    animation: none;
+  }
 }

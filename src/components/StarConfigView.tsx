@@ -287,12 +287,12 @@ export default function StarConfigView() {
             </span>
           </div>
           <p className="text-xs text-[#606068] mb-4">
-            Specialist agents Star can delegate to. Only agents checked here are eligible for routing. Manage agent profiles in Specialist Agents.
+            Agents Star can delegate to. Only agents checked here are eligible for routing. Manage profiles and skills in Agents.
           </p>
 
           {agents.length === 0 ? (
             <div className="text-sm text-[#505055] py-4 text-center">
-              No agents available. Create agents in the Agent Profiles view.
+              No agents available. Create agents in the Agents view.
             </div>
           ) : (
             <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
@@ -357,7 +357,7 @@ export default function StarConfigView() {
             </span>
           </div>
           <p className="text-xs text-[#606068] mb-4">
-            Skills Star always has available when handling tasks directly. Agent-specific skills are configured per agent in Specialist Agents.
+            Skills Star always has available when handling tasks directly. Agent-specific skills are configured per agent in Agents.
           </p>
 
           {skills.length === 0 ? (

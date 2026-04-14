@@ -146,11 +146,12 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
   const agentsByZirorb = useMemo(() => {
     const m = new Map<string | "unassigned", AgentRecord[]>();
     m.set("unassigned", []);
-    for (const z of zirorbs) m.set(z.id, []);
+    for (const z of zirorbs) m.set(String(z.id), []);
     for (const a of agents) {
-      const k = a.zirorb_id && m.has(a.zirorb_id) ? a.zirorb_id : "unassigned";
-      if (!m.has(k)) m.set("unassigned", [...(m.get("unassigned") || []), a]);
-      else (m.get(k) as AgentRecord[]).push(a);
+      const raw = a.zirorb_id;
+      const rid = raw != null && String(raw).trim() !== "" ? String(raw).trim() : null;
+      const k: ZirorbKey = rid && m.has(rid) ? rid : "unassigned";
+      (m.get(k) as AgentRecord[]).push(a);
     }
     for (const [, list] of m) {
       list.sort((a, b) => (a.zirorb_sort ?? 0) - (b.zirorb_sort ?? 0) || a.name.localeCompare(b.name));
@@ -502,32 +503,58 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
             />
             <div className="pointer-events-none absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%220.04%22/%3E%3C/svg%3E')]" />
 
-            {/* Connection lines */}
+            {/* Star → Zirorb routing links */}
             <svg
-              className="absolute inset-0 w-full h-full pointer-events-none"
+              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
               viewBox="0 0 100 100"
               preserveAspectRatio="none"
+              aria-hidden
             >
               <defs>
-                <linearGradient id="ln" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#00ff88" stopOpacity="0.08" />
-                </linearGradient>
+                <filter id="org-star-line-glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="0.9" result="b" />
+                  <feMerge>
+                    <feMergeNode in="b" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
               {sortedZirorbs.map((z) => {
                 const { x, y } = effectiveXY(z, sortedZirorbs.indexOf(z), sortedZirorbs);
+                const gid = `org-star-lg-${z.id}`;
                 return (
-                  <line
-                    key={z.id}
-                    x1={50}
-                    y1={14}
-                    x2={x}
-                    y2={y}
-                    stroke="url(#ln)"
-                    strokeWidth={0.12}
-                    vectorEffect="non-scaling-stroke"
-                    className="transition-all duration-500"
-                  />
+                  <g key={z.id} className="transition-opacity duration-500">
+                    <defs>
+                      <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1={50} y1={14} x2={x} y2={y}>
+                        <stop offset="0%" stopColor="#fde68a" stopOpacity="1" />
+                        <stop offset="35%" stopColor={z.accent_color} stopOpacity="0.92" />
+                        <stop offset="100%" stopColor="#6ee7b7" stopOpacity="0.7" />
+                      </linearGradient>
+                    </defs>
+                    <line
+                      x1={50}
+                      y1={14}
+                      x2={x}
+                      y2={y}
+                      stroke={z.accent_color}
+                      strokeOpacity={0.35}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <line
+                      x1={50}
+                      y1={14}
+                      x2={x}
+                      y2={y}
+                      stroke={`url(#${gid})`}
+                      strokeWidth={1.45}
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                      className="org-star-line"
+                      filter="url(#org-star-line-glow)"
+                    />
+                  </g>
                 );
               })}
             </svg>
@@ -575,7 +602,7 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
                 Unassigned
               </div>
               <p className="mt-1 text-[10px] text-[#505055] leading-relaxed">
-                Drop specialists here or leave legacy agents until placed.
+                Drop agents here when moving them off a Zirorb, or hold them until assigned.
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {unassigned.slice(0, 6).map((a) => (
@@ -672,7 +699,13 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
                       }}
                     >
                       {inside.length === 0 ? (
-                        <p className="text-[11px] text-[#505055] px-1 py-2 text-center">Drop agents here</p>
+                        <div className="rounded-lg border border-dashed border-white/[0.1] bg-white/[0.02] px-3 py-3.5 text-center">
+                          <p className="text-[11px] font-medium text-[#909098]">No agents yet</p>
+                          <p className="mt-1 text-[10px] text-[#505055] leading-relaxed">
+                            Ready for expansion. Pull from Unassigned or add in{" "}
+                            <span className="text-[#707078]">Agents</span>.
+                          </p>
+                        </div>
                       ) : (
                         inside.map((a) => (
                           <AgentChip
@@ -743,9 +776,9 @@ function OrgHeader({ onNewZirorb }: { onNewZirorb: () => void }) {
       <div>
         <h1 className="text-lg font-extrabold tracking-tight text-[#f4f4f5]">Organization</h1>
         <p className="text-xs text-[#606068] mt-0.5 max-w-xl">
-          Primary map for how Star&apos;s specialists cluster: drag Zirorbs, reorder agents on chips, move between
+          Spatial command layer: how Star routes to each Zirorb. Drag Zirorbs, reorder agents on chips, move between
           clusters. Desktop: ⌃/⌘ + scroll to zoom, Shift or Alt + scroll to pan; double-click empty map to reset. Use
-          Specialists for full profiles and skills.
+          Agents for profiles, lifecycle, and skills.
         </p>
       </div>
       <button
@@ -818,7 +851,10 @@ function MobileZirorbSection({
       {open && (
         <div className="border-t border-white/[0.06] px-3 py-2 space-y-2">
           {agentList.length === 0 ? (
-            <p className="text-xs text-[#505055] py-2 text-center">No agents</p>
+            <div className="rounded-lg border border-dashed border-white/[0.08] bg-white/[0.02] px-3 py-3 text-center">
+              <p className="text-xs font-medium text-[#909098]">No agents yet</p>
+              <p className="mt-1 text-[10px] text-[#505055] leading-relaxed">Ready for expansion.</p>
+            </div>
           ) : (
             agentList.map((a) => (
               <div key={a.id} className="flex items-center gap-2 rounded-lg bg-[#080808] px-2 py-2">
@@ -1027,12 +1063,17 @@ function FocusOverlay({
           )}
           {isUn && (
             <p className="text-sm text-[#707078] mb-6">
-              Specialists without a Zirorb. Assign them to a cluster below.
+              Agents without a Zirorb. Assign them to a cluster below.
             </p>
           )}
           <div className="space-y-2">
             {agents.length === 0 ? (
-              <p className="text-sm text-[#505055] py-8 text-center">No agents in this cluster.</p>
+              <div className="rounded-xl border border-dashed border-white/[0.08] bg-white/[0.02] px-6 py-10 text-center">
+                <p className="text-sm font-medium text-[#909098]">No agents yet</p>
+                <p className="mt-2 text-xs text-[#505055] leading-relaxed max-w-sm mx-auto">
+                  This cluster is ready for expansion. Add agents from Unassigned or create them in Agents.
+                </p>
+              </div>
             ) : (
               agents.map((a) => (
                 <div
