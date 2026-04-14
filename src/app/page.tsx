@@ -22,6 +22,7 @@ import {
   SlidersHorizontal,
   Save,
   Loader2,
+  Menu,
 } from "lucide-react";
 
 interface Agent {
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [activeView, setActiveView] = useState<ViewName>("dashboard");
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Load visible agents (STAR + any currently-running spawned agents)
@@ -111,14 +113,24 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} />
+    <div className="h-screen flex overflow-x-hidden">
+      <Sidebar activeView={activeView} setActiveView={setActiveView} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Mobile header */}
+      <div className="fixed top-0 left-0 right-0 h-12 bg-[#0a0a0c] border-b border-[#1c1c1e] flex items-center px-4 z-30 md:hidden">
+        <button onClick={() => setSidebarOpen(true)} className="text-[#909098] hover:text-white p-1">
+          <Menu size={20} />
+        </button>
+        <span className="ml-3 text-sm font-bold">
+          <span className="text-[#00ff88]">ZIRO</span>
+          <span className="text-white ml-1 font-light">WORK</span>
+        </span>
+      </div>
 
       {/* Main content */}
       <main
-        className="flex-1 h-full transition-all duration-300"
+        className="flex-1 h-full transition-all duration-300 pt-12 md:pt-0 md:ml-[240px]"
         style={{
-          marginLeft: 240,
           marginRight: selectedAgent ? 400 : 0,
         }}
       >
@@ -201,8 +213,8 @@ function DashboardView({ agents }: { agents: Agent[] }) {
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-8">
-      <h2 className="text-xl font-extrabold text-[#f0f0f0] mb-6">Command Center</h2>
+    <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
+      <h2 className="text-lg font-extrabold text-[#f0f0f0] mb-5">Command Center</h2>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -335,9 +347,9 @@ function ContactsView() {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-extrabold text-[#f0f0f0]">Contacts</h2>
+    <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <h2 className="text-lg font-extrabold text-[#f0f0f0]">Contacts</h2>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-lg px-4 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
             <Search size={14} className="text-[#606068]" />
@@ -458,8 +470,8 @@ function SettingsView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
-      <h2 className="text-xl font-extrabold text-[#f0f0f0] mb-6">Settings</h2>
+    <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
+      <h2 className="text-lg font-extrabold text-[#f0f0f0] mb-5">Settings</h2>
 
       <div className="max-w-lg space-y-6">
         <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-6 space-y-5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">

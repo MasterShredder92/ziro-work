@@ -26,9 +26,11 @@ const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard; s
 interface SidebarProps {
   activeView: ViewName;
   setActiveView: (view: ViewName) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
+export default function Sidebar({ activeView, setActiveView, isOpen, onClose }: SidebarProps) {
   const [phase, setPhase] = useState<string>("1");
 
   useEffect(() => {
@@ -43,7 +45,15 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-[240px] bg-[#0a0a0c] border-r border-[#1c1c1e] flex flex-col z-50">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      <aside className={`fixed left-0 top-0 h-full w-[240px] bg-[#0a0a0c] border-r border-[#1c1c1e] flex flex-col z-50 transition-transform duration-200 ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
       {/* Logo */}
       <div className="px-6 pt-7 pb-5">
         <h1 className="text-2xl tracking-tighter">
@@ -82,15 +92,18 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                 </div>
               )}
               <button
-                onClick={() => setActiveView(item.view)}
+                onClick={() => {
+                  setActiveView(item.view);
+                  onClose();
+                }}
                 className={clsx(
-                  "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[15px] font-semibold transition-colors",
+                  "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
                   isActive
                     ? "bg-[#00ff88]/10 text-[#00ff88]"
                     : "text-[#909098] hover:text-white hover:bg-white/5"
                 )}
               >
-                <Icon size={20} />
+                <Icon size={18} />
                 {item.label}
               </button>
             </div>
@@ -103,5 +116,6 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
         Ziro Work v0.1
       </div>
     </aside>
+    </>
   );
 }

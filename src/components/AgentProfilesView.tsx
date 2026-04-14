@@ -172,38 +172,38 @@ export default function AgentProfilesView() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-extrabold text-[#f0f0f0]">Specialist Agents</h2>
-          <p className="text-sm text-[#606068] mt-1">
-            Create and manage specialist agents that Star delegates tasks to. Star itself is configured in Star Config.
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <div className="min-w-0">
+          <h2 className="text-lg font-extrabold text-[#f0f0f0]">Specialist Agents</h2>
+          <p className="text-xs text-[#606068] mt-0.5">
+            Manage specialist agents that Star delegates tasks to.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => {
               setShowCreate(true);
               setEditingId(null);
             }}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20 hover:bg-[#00ff88]/20 transition-colors"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20 hover:bg-[#00ff88]/20 transition-colors"
           >
-            <Plus size={14} />
+            <Plus size={12} />
             New Agent
           </button>
-          <span className="text-sm text-[#606068]">{filtered.length} agents</span>
+          <span className="text-xs text-[#606068]">{filtered.length} agents</span>
         </div>
       </div>
 
       {/* Tab bar + Search */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`text-sm px-4 py-2 rounded-lg transition-colors ${
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 tab === t.key
                   ? "bg-white/10 text-[#f0f0f0]"
                   : "text-[#606068] hover:text-[#a0a0a8]"
@@ -213,14 +213,14 @@ export default function AgentProfilesView() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-xl px-4 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-          <Search size={14} className="text-[#606068]" />
+        <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-lg px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+          <Search size={12} className="text-[#606068] shrink-0" />
           <input
             type="text"
             placeholder="Search agents..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-[15px] text-[#f0f0f0] placeholder-[#606068] outline-none w-48"
+            className="bg-transparent text-sm text-[#f0f0f0] placeholder-[#606068] outline-none w-full sm:w-40"
           />
         </div>
       </div>
@@ -302,20 +302,20 @@ export default function AgentProfilesView() {
                       {agent.purpose || agent.role}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Auto-use badge */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Auto-use badge — hidden on mobile */}
                     {agent.auto_use_by_star ? (
-                      <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded text-[#f59e0b] bg-[#f59e0b15]">
-                        <Eye size={10} /> Auto
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-[#f59e0b] bg-[#f59e0b15]">
+                        <Eye size={9} /> Auto
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded text-[#606068] bg-[#60606815]">
-                        <EyeOff size={10} /> Explicit
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-[#606068] bg-[#60606815]">
+                        <EyeOff size={9} /> Explicit
                       </span>
                     )}
-                    {/* Owner type */}
+                    {/* Owner type — hidden on mobile */}
                     <span
-                      className="text-xs px-2.5 py-0.5 rounded-full"
+                      className="hidden md:inline text-[10px] px-2 py-0.5 rounded-full"
                       style={{
                         color: agent.owner_type === "user" ? "#a855f7" : "#606068",
                         backgroundColor:
@@ -326,9 +326,9 @@ export default function AgentProfilesView() {
                     >
                       {agent.owner_type}
                     </span>
-                    {/* Mode */}
+                    {/* Mode — hidden on mobile */}
                     <span
-                      className="text-xs px-2.5 py-0.5 rounded-full"
+                      className="hidden md:inline text-[10px] px-2 py-0.5 rounded-full"
                       style={{
                         color: modeColor,
                         backgroundColor: `${modeColor}15`,
@@ -336,9 +336,9 @@ export default function AgentProfilesView() {
                     >
                       {agent.mode}
                     </span>
-                    {/* Status */}
+                    {/* Status — always visible */}
                     <span
-                      className="text-xs px-2.5 py-0.5 rounded-full capitalize"
+                      className="text-[10px] px-2 py-0.5 rounded-full capitalize"
                       style={{
                         color: statusCfg.color,
                         backgroundColor: `${statusCfg.color}15`,
@@ -456,7 +456,7 @@ export default function AgentProfilesView() {
                     </div>
 
                     {/* Profile details grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                       <DetailCell label="Role" value={agent.role} />
                       <DetailCell label="Mode" value={agent.mode} />
                       <DetailCell label="Owner" value={agent.owner_type} />
@@ -891,11 +891,11 @@ function AgentForm({ agent, onClose, onSaved }: AgentFormProps) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-12 overflow-y-auto">
-      <div className="bg-[#0c0c0e] border border-[#232326] rounded-xl w-full max-w-2xl mx-4 mb-8 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-4 md:pt-12 overflow-y-auto">
+      <div className="bg-[#0c0c0e] border border-[#232326] rounded-xl w-full max-w-2xl mx-3 md:mx-4 mb-8 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1c1c1e]">
-          <h3 className="text-xl font-extrabold text-[#f0f0f0]">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-[#1c1c1e]">
+          <h3 className="text-base md:text-lg font-extrabold text-[#f0f0f0]">
             {isEdit ? "Edit Agent Profile" : "Create New Agent"}
           </h3>
           <button
@@ -907,7 +907,7 @@ function AgentForm({ agent, onClose, onSaved }: AgentFormProps) {
         </div>
 
         {/* Form */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 md:p-6 space-y-4">
           {error && (
             <div className="flex items-center gap-2 text-sm text-[#ff4444] bg-[#ff4444]/10 border border-[#ff4444]/20 rounded-xl px-4 py-2.5">
               <AlertTriangle size={14} />
@@ -915,7 +915,7 @@ function AgentForm({ agent, onClose, onSaved }: AgentFormProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField
               label="Name"
               value={name}
@@ -964,7 +964,7 @@ function AgentForm({ agent, onClose, onSaved }: AgentFormProps) {
             rows={2}
           />
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs text-[#707078] uppercase tracking-wider mb-1.5">
                 Mode
@@ -1052,17 +1052,17 @@ function AgentForm({ agent, onClose, onSaved }: AgentFormProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#1c1c1e]">
+        <div className="flex items-center justify-end gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-[#1c1c1e]">
           <button
             onClick={onClose}
-            className="text-[15px] px-5 py-2.5 rounded-xl text-[#a0a0a8] hover:text-[#f0f0f0] transition-colors"
+            className="text-sm px-4 py-2 rounded-xl text-[#a0a0a8] hover:text-[#f0f0f0] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 text-[15px] px-5 py-2.5 rounded-xl bg-[#00ff88] text-black font-medium hover:bg-[#33ffaa] transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-[#00ff88] text-black font-medium hover:bg-[#33ffaa] transition-colors disabled:opacity-50"
           >
             {saving ? (
               <Loader2 size={14} className="animate-spin" />

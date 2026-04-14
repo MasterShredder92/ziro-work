@@ -153,22 +153,22 @@ export default function StarConfigView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Star size={20} className="text-[#f59e0b]" fill="#f59e0b" />
-          <div>
-            <h2 className="text-xl font-extrabold text-[#f0f0f0]">Star Configuration</h2>
-            <p className="text-sm text-[#606068] mt-1">
-              Single source of truth for the STAR orchestrator — instructions, delegation, approved agents, and default skills
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <Star size={18} className="text-[#f59e0b] shrink-0" fill="#f59e0b" />
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold text-[#f0f0f0]">Star Configuration</h2>
+            <p className="text-xs text-[#606068] mt-0.5">
+              Single source of truth for the STAR orchestrator
             </p>
           </div>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff88] text-black rounded-lg text-[15px] font-medium hover:bg-[#33ffaa] transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-[#00ff88] text-black rounded-lg text-sm font-medium hover:bg-[#33ffaa] transition-colors disabled:opacity-50 shrink-0"
         >
           {saving ? (
             <Loader2 size={14} className="animate-spin" />
@@ -177,7 +177,7 @@ export default function StarConfigView() {
           ) : (
             <Save size={14} />
           )}
-          {saving ? "Saving..." : saved ? "Saved" : "Save Configuration"}
+          {saving ? "Saving..." : saved ? "Saved" : "Save"}
         </button>
       </div>
 
@@ -220,7 +220,7 @@ export default function StarConfigView() {
           <p className="text-xs text-[#606068] mb-4">
             Controls how Star delegates tasks to agents.
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {(
               [
                 {
@@ -365,7 +365,7 @@ export default function StarConfigView() {
               No active skills. Create and approve skills in the Skills Manager.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-1.5 max-h-[300px] overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[300px] overflow-y-auto">
               {skills.map((skill) => {
                 const isSelected = defaultSkillIds.includes(skill.id);
                 return (
