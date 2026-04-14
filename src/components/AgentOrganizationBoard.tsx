@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   AlertCircle,
   Bot,
+  MessageSquare,
 } from "lucide-react";
 import clsx from "clsx";
 import ZirorbFormModal, { type ZirorbRecord } from "@/components/ZirorbFormModal";
@@ -105,7 +106,12 @@ function zirorbKey(zid: string | null): ZirorbKey {
   return zid || "unassigned";
 }
 
-export default function AgentOrganizationBoard() {
+type AgentOrganizationBoardProps = {
+  /** Opens the right chat panel (wired from app shell). */
+  onOpenAgentChat?: (agent: AgentRecord) => void;
+};
+
+export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganizationBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [isMdUp, setIsMdUp] = useState(true);
@@ -161,13 +167,27 @@ export default function AgentOrganizationBoard() {
       ]);
       const zData = await zRes.json();
       const aData = await aRes.json();
-      setZirorbs(Array.isArray(zData) ? zData : []);
-      setAgents(Array.isArray(aData) ? aData : []);
+      if (!zRes.ok) {
+        setToast((zData && typeof zData.error === "string" && zData.error) || "Could not load Zirorbs.");
+        setZirorbs([]);
+      } else {
+        setZirorbs(Array.isArray(zData) ? zData : []);
+      }
+      if (!aRes.ok) {
+        setToast((aData && typeof aData.error === "string" && aData.error) || "Could not load agents.");
+        setAgents([]);
+      } else {
+        setAgents(Array.isArray(aData) ? aData : []);
+      }
 
       const starR = await fetch("/api/agents?context=music_school");
-      const starList = await starR.json();
-      const list = Array.isArray(starList) ? starList : [];
-      setStarAgent((list as AgentRecord[]).find((x) => x.slug === "star") || null);
+      const starJson = await starR.json();
+      if (!starR.ok) {
+        setStarAgent(null);
+      } else {
+        const starList = Array.isArray(starJson) ? starJson : [];
+        setStarAgent((starList as AgentRecord[]).find((x) => x.slug === "star") || null);
+      }
     } catch {
       setToast("Failed to load organization data.");
     }
@@ -569,6 +589,7 @@ export default function AgentOrganizationBoard() {
                     onDropReorder={(draggedId, fromKey, insertBeforeId) => {
                       void reorderOrInsertAgent(draggedId, fromKey, "unassigned", insertBeforeId);
                     }}
+                    onOpenChat={onOpenAgentChat}
                   />
                 ))}
                 {unassigned.length > 6 && (
@@ -664,6 +685,7 @@ export default function AgentOrganizationBoard() {
                             onDropReorder={(draggedId, fromKey, insertBeforeId) => {
                               void reorderOrInsertAgent(draggedId, fromKey, z.id, insertBeforeId);
                             }}
+                            onOpenChat={onOpenAgentChat}
                           />
                         ))
                       )}
@@ -686,6 +708,7 @@ export default function AgentOrganizationBoard() {
           onMoveAgent={moveAgentToZirorb}
           onEditZirorb={(z) => setZirorbModal(z)}
           onDeleteZirorb={deleteZirorb}
+          onOpenAgentChat={onOpenAgentChat}
         />
       )}
 
@@ -720,8 +743,9 @@ function OrgHeader({ onNewZirorb }: { onNewZirorb: () => void }) {
       <div>
         <h1 className="text-lg font-extrabold tracking-tight text-[#f4f4f5]">Organization</h1>
         <p className="text-xs text-[#606068] mt-0.5 max-w-xl">
-          Command map: drag Zirorbs, reorder agents on chips, move between clusters. Desktop: ⌃/⌘ + scroll to zoom,
-          Shift or Alt + scroll to pan; double-click empty map to reset. Specialists keeps full CRUD.
+          Primary map for how Star&apos;s specialists cluster: drag Zirorbs, reorder agents on chips, move between
+          clusters. Desktop: ⌃/⌘ + scroll to zoom, Shift or Alt + scroll to pan; double-click empty map to reset. Use
+          Specialists for full profiles and skills.
         </p>
       </div>
       <button
@@ -834,6 +858,7 @@ function AgentChip({
   onDragStart,
   onDragEnd,
   onDropReorder,
+  onOpenChat,
 }: {
   agent: AgentRecord;
   clusterKey: ZirorbKey;
@@ -842,6 +867,7 @@ function AgentChip({
   onDragEnd?: () => void;
   /** Drop another agent before this chip to reorder within a cluster or insert from elsewhere. */
   onDropReorder?: (draggedId: string, fromKey: ZirorbKey, insertBeforeAgentId: string) => void;
+  onOpenChat?: (agent: AgentRecord) => void;
 }) {
   return (
     <div
@@ -868,12 +894,26 @@ function AgentChip({
         onDropReorder(dragId, from, agent.id);
       }}
       className={clsx(
-        "flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#08080c]/90 px-2 py-1.5 text-left transition-[border-color,background-color,transform,box-shadow] duration-200",
+        "group/chip flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-[#08080c]/90 px-2 py-1.5 text-left transition-[border-color,background-color,transform,box-shadow] duration-200",
         draggable && "cursor-grab active:cursor-grabbing hover:border-[#00ff88]/28 hover:bg-[#0c1210]/95 hover:shadow-[0_0_0_1px_rgba(0,255,136,0.08)]"
       )}
     >
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: agent.color }} />
-      <span className="truncate text-[11px] font-medium text-[#d8d8de]">{agent.name}</span>
+      <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#d8d8de]">{agent.name}</span>
+      {onOpenChat && (
+        <button
+          type="button"
+          draggable={false}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenChat(agent);
+          }}
+          className="shrink-0 rounded p-0.5 text-[#505058] opacity-0 transition-opacity hover:bg-white/10 hover:text-[#00ff88] group-hover/chip:opacity-100 md:opacity-100"
+          aria-label={`Chat with ${agent.name}`}
+        >
+          <MessageSquare size={12} strokeWidth={2} />
+        </button>
+      )}
     </div>
   );
 }
@@ -886,6 +926,7 @@ function FocusOverlay({
   onMoveAgent,
   onEditZirorb,
   onDeleteZirorb,
+  onOpenAgentChat,
 }: {
   focusedId: string | "unassigned";
   zirorbs: ZirorbRecord[];
@@ -894,6 +935,7 @@ function FocusOverlay({
   onMoveAgent: (agentId: string, zid: string | null) => void;
   onEditZirorb: (z: ZirorbRecord) => void;
   onDeleteZirorb: (id: string) => void;
+  onOpenAgentChat?: (agent: AgentRecord) => void;
 }) {
   const isUn = focusedId === "unassigned";
   const z = !isUn ? zirorbs.find((x) => x.id === focusedId) : null;
@@ -1002,6 +1044,16 @@ function FocusOverlay({
                     <div className="font-semibold text-[#e8e8ec] truncate">{a.name}</div>
                     <div className="text-xs text-[#606068] truncate">{a.purpose || a.role}</div>
                   </div>
+                  {onOpenAgentChat && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-lg border border-[#2a2a30] p-2 text-[#909098] hover:border-[#00ff88]/30 hover:bg-[#00ff88]/10 hover:text-[#00ff88]"
+                      aria-label={`Chat with ${a.name}`}
+                      onClick={() => onOpenAgentChat(a)}
+                    >
+                      <MessageSquare size={16} strokeWidth={2} />
+                    </button>
+                  )}
                   <select
                     className="rounded-lg border border-[#232326] bg-[#0a0a0c] px-3 py-2 text-xs text-[#d0d0d8] min-w-[140px]"
                     value={a.zirorb_id || ""}

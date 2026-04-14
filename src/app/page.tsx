@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Sidebar, { type ViewName } from "@/components/Sidebar";
-import AgentChart from "@/components/AgentChart";
 import ChatSidebar from "@/components/ChatSidebar";
 import SkillsView from "@/components/SkillsView";
 import TemplatesView from "@/components/TemplatesView";
@@ -91,10 +90,6 @@ export default function Dashboard() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const handleAgentClick = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-  }, []);
-
   const handleCloseChat = useCallback(() => {
     setSelectedAgent(null);
   }, []);
@@ -136,10 +131,23 @@ export default function Dashboard() {
         }}
       >
         {activeView === "dashboard" && <DashboardView agents={agents} />}
-        {activeView === "agents" && (
-          <AgentChart agents={agents} onAgentClick={handleAgentClick} />
+        {activeView === "organization" && (
+          <AgentOrganizationBoard
+            onOpenAgentChat={(a) =>
+              setSelectedAgent({
+                id: a.id,
+                slug: a.slug,
+                name: a.name,
+                role: a.role,
+                color: a.color,
+                status: a.status,
+                mode: a.mode ?? null,
+                position_x: 0,
+                position_y: 0,
+              })
+            }
+          />
         )}
-        {activeView === "organization" && <AgentOrganizationBoard />}
         {activeView === "agent-profiles" && (
           <AgentProfilesView onOpenOrganization={() => setActiveView("organization")} />
         )}
@@ -154,7 +162,7 @@ export default function Dashboard() {
         {activeView === "settings" && <SettingsView />}
       </main>
 
-      {/* Chat sidebar — only relevant on agents view */}
+      {/* Chat sidebar — opened from Organization (chip) or legacy flows */}
       <ChatSidebar agent={selectedAgent} onClose={handleCloseChat} />
     </div>
   );
