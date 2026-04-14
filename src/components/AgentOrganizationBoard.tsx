@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Bot,
 } from "lucide-react";
+import clsx from "clsx";
 import ZirorbFormModal, { type ZirorbRecord } from "@/components/ZirorbFormModal";
 
 interface AgentRecord {
@@ -68,8 +69,45 @@ function effectiveXY(
   return autoBoardXY(index, sorted.length, z.family);
 }
 
+const MIN_ZIRORB_SEP = 13; // percent space — keep clusters readable
+
+/** Nudge one Zirorb away from peers so centers stay separated. */
+function nudgeAgainstPeers(
+  id: string,
+  x: number,
+  y: number,
+  sorted: ZirorbRecord[]
+): { x: number; y: number } {
+  let cx = x;
+  let cy = y;
+  for (let pass = 0; pass < 5; pass++) {
+    for (const o of sorted) {
+      if (o.id === id) continue;
+      const i = sorted.indexOf(o);
+      const { x: ox, y: oy } = effectiveXY(o, i, sorted);
+      const dx = cx - ox;
+      const dy = cy - oy;
+      const d = Math.hypot(dx, dy) || 0.001;
+      if (d >= MIN_ZIRORB_SEP) continue;
+      const push = (MIN_ZIRORB_SEP - d) * 0.5;
+      cx += (dx / d) * push;
+      cy += (dy / d) * push;
+      cx = clamp(cx, 6, 94);
+      cy = clamp(cy, 14, 90);
+    }
+  }
+  return { x: cx, y: cy };
+}
+
+type ZirorbKey = string | "unassigned";
+
+function zirorbKey(zid: string | null): ZirorbKey {
+  return zid || "unassigned";
+}
+
 export default function AgentOrganizationBoard() {
   const boardRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [isMdUp, setIsMdUp] = useState(true);
   const [loading, setLoading] = useState(true);
   const [zirorbs, setZirorbs] = useState<ZirorbRecord[]>([]);
@@ -79,6 +117,9 @@ export default function AgentOrganizationBoard() {
   const [focusedZirorbId, setFocusedZirorbId] = useState<string | "unassigned" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [dragAgentId, setDragAgentId] = useState<string | null>(null);
+  const [draggingZirorbNodeId, setDraggingZirorbNodeId] = useState<string | null>(null);
+  /** Desktop viewport: pan (px) + zoom — transform on inner layer */
+  const [vp, setVp] = useState({ s: 1, tx: 0, ty: 0 });
   const dragZirorbRef = useRef<{
     id: string;
     startX: number;
@@ -164,24 +205,104 @@ export default function AgentOrganizationBoard() {
     }
   }
 
+  const applyAgentPatches = useCallback(
+    async (rows: { id: string; zirorb_id: string | null; zirorb_sort: number }[]) => {
+      const results = await Promise.all(
+        rows.map((row) =>
+          fetch("/api/agents", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: row.id,
+              zirorb_id: row.zirorb_id,
+              zirorb_sort: row.zirorb_sort,
+            }),
+          })
+        )
+      );
+      const failed = results.find((r) => !r.ok);
+      if (failed) {
+        const j = await failed.json().catch(() => ({}));
+        setToast(j.error || "Could not update agent order.");
+        await loadAll();
+        return false;
+      }
+      return true;
+    },
+    [loadAll]
+  );
+
   async function moveAgentToZirorb(agentId: string, targetZirorbId: string | null) {
-    const list = targetZirorbId ? agentsByZirorb.get(targetZirorbId) || [] : agentsByZirorb.get("unassigned") || [];
+    const key = zirorbKey(targetZirorbId);
+    const list = (agentsByZirorb.get(key === "unassigned" ? "unassigned" : key) || []).filter((a) => a.id !== agentId);
     const maxSort = list.reduce((m, a) => Math.max(m, a.zirorb_sort ?? 0), -1);
-    const res = await fetch("/api/agents", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: agentId,
-        zirorb_id: targetZirorbId,
-        zirorb_sort: maxSort + 1,
-      }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setToast(j.error || "Could not move agent.");
+    const ok = await applyAgentPatches([
+      { id: agentId, zirorb_id: targetZirorbId, zirorb_sort: maxSort + 1 },
+    ]);
+    if (ok) await loadAll();
+  }
+
+  /** Reorder within one cluster or move into cluster at a specific index (desktop DnD). */
+  const reorderOrInsertAgent = useCallback(
+    async (draggedId: string, fromKey: ZirorbKey, toKey: ZirorbKey, insertBeforeId: string | null) => {
+      const getList = (k: ZirorbKey) => [...(agentsByZirorb.get(k === "unassigned" ? "unassigned" : k) || [])];
+      const fromList = getList(fromKey);
+      const dragged = fromList.find((a) => a.id === draggedId);
+      if (!dragged) return;
+
+      const fromWithout = fromList.filter((a) => a.id !== draggedId);
+      const toZid = toKey === "unassigned" ? null : toKey;
+      const patches: { id: string; zirorb_id: string | null; zirorb_sort: number }[] = [];
+
+      if (fromKey === toKey) {
+        let idx = fromWithout.length;
+        if (insertBeforeId) {
+          const i = fromWithout.findIndex((a) => a.id === insertBeforeId);
+          if (i >= 0) idx = i;
+        }
+        const merged = [...fromWithout.slice(0, idx), { ...dragged, zirorb_id: toZid }, ...fromWithout.slice(idx)];
+        merged.forEach((a, i) => patches.push({ id: a.id, zirorb_id: toZid, zirorb_sort: i }));
+      } else {
+        const toList = getList(toKey).filter((a) => a.id !== draggedId);
+        let idx = toList.length;
+        if (insertBeforeId) {
+          const i = toList.findIndex((a) => a.id === insertBeforeId);
+          if (i >= 0) idx = i;
+        }
+        const mergedTo = [...toList.slice(0, idx), { ...dragged, zirorb_id: toZid }, ...toList.slice(idx)];
+        mergedTo.forEach((a, i) => patches.push({ id: a.id, zirorb_id: toZid, zirorb_sort: i }));
+        fromWithout.forEach((a, i) =>
+          patches.push({ id: a.id, zirorb_id: fromKey === "unassigned" ? null : fromKey, zirorb_sort: i })
+        );
+      }
+
+      const ok = await applyAgentPatches(patches);
+      if (ok) await loadAll();
+    },
+    [agentsByZirorb, applyAgentPatches, loadAll]
+  );
+
+  function handleBoardWheel(e: React.WheelEvent) {
+    if (!isMdUp || focusedZirorbId) return;
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? -0.06 : 0.06;
+      setVp((p) => ({ ...p, s: clamp(p.s + factor, 0.72, 1.38) }));
       return;
     }
-    await loadAll();
+    if (e.shiftKey) {
+      e.preventDefault();
+      setVp((p) => ({ ...p, tx: clamp(p.tx - e.deltaY * 0.45, -220, 220) }));
+      return;
+    }
+    if (e.altKey) {
+      e.preventDefault();
+      setVp((p) => ({ ...p, ty: clamp(p.ty - e.deltaY * 0.45, -180, 180) }));
+    }
+  }
+
+  function resetViewport() {
+    setVp({ s: 1, tx: 0, ty: 0 });
   }
 
   function onZirorbPointerDown(e: React.PointerEvent, z: ZirorbRecord, x: number, y: number) {
@@ -189,7 +310,8 @@ export default function AgentOrganizationBoard() {
     e.preventDefault();
     const el = boardRef.current;
     if (!el) return;
-    const r = el.getBoundingClientRect();
+    const r = (viewportRef.current ?? el).getBoundingClientRect();
+    setDraggingZirorbNodeId(z.id);
     try {
       el.setPointerCapture(e.pointerId);
     } catch {
@@ -208,8 +330,10 @@ export default function AgentOrganizationBoard() {
 
   function onBoardPointerMove(e: React.PointerEvent) {
     const d = dragZirorbRef.current;
-    if (!d || !boardRef.current) return;
-    const r = boardRef.current.getBoundingClientRect();
+    if (!d) return;
+    const el = viewportRef.current ?? boardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
     const dx = ((e.clientX - d.startX) / r.width) * 100;
     const dy = ((e.clientY - d.startY) / r.height) * 100;
     const nx = clamp(d.origX + dx, 6, 94);
@@ -229,10 +353,18 @@ export default function AgentOrganizationBoard() {
       }
     }
     dragZirorbRef.current = null;
+    setDraggingZirorbNodeId(null);
     if (!d) return;
+    const sorted = [...zirorbsRef.current].sort(
+      (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)
+    );
     const z = zirorbsRef.current.find((x) => x.id === d.id);
     if (z && z.board_x != null && z.board_y != null) {
-      void persistZirorbPos(z.id, z.board_x, z.board_y);
+      const { x: nx, y: ny } = nudgeAgainstPeers(z.id, z.board_x, z.board_y, sorted);
+      if (nx !== z.board_x || ny !== z.board_y) {
+        setZirorbs((prev) => prev.map((o) => (o.id === z.id ? { ...o, board_x: nx, board_y: ny } : o)));
+      }
+      void persistZirorbPos(z.id, nx, ny);
     }
   }
 
@@ -320,23 +452,36 @@ export default function AgentOrganizationBoard() {
         className="relative flex-1 min-h-[480px] mx-2 mb-2 md:mx-4 rounded-2xl border border-white/[0.06] bg-gradient-to-b from-[#0a0a10] via-[#06060a] to-[#030306] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden"
         onPointerMove={onBoardPointerMove}
         onPointerUp={onBoardPointerUp}
+        onWheel={handleBoardWheel}
+        onDoubleClick={(e) => {
+          const el = e.target as HTMLElement;
+          if (el.closest("[data-zirorb-card]") || el.closest("[data-unassigned-dock]")) return;
+          resetViewport();
+        }}
       >
-        {/* Atmospheric layers */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-90"
-          style={{
-            background:
-              "radial-gradient(ellipse 120% 80% at 50% -20%, rgba(0,255,136,0.07), transparent 55%), radial-gradient(ellipse 80% 50% at 80% 100%, rgba(168,85,247,0.06), transparent 45%), radial-gradient(ellipse 60% 40% at 10% 80%, rgba(245,158,11,0.05), transparent 50%)",
-          }}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%220.04%22/%3E%3C/svg%3E')]" />
-
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center z-10">
             <Loader2 className="animate-spin text-[#505055]" size={28} />
           </div>
         ) : (
-          <>
+          <div
+            ref={viewportRef}
+            className="absolute inset-0 will-change-transform"
+            style={{
+              transform: `translate(${vp.tx}px, ${vp.ty}px) scale(${vp.s})`,
+              transformOrigin: "50% 42%",
+            }}
+          >
+            {/* Atmospheric layers */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-90"
+              style={{
+                background:
+                  "radial-gradient(ellipse 120% 80% at 50% -20%, rgba(0,255,136,0.07), transparent 55%), radial-gradient(ellipse 80% 50% at 80% 100%, rgba(168,85,247,0.06), transparent 45%), radial-gradient(ellipse 60% 40% at 10% 80%, rgba(245,158,11,0.05), transparent 50%)",
+              }}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%220.04%22/%3E%3C/svg%3E')]" />
+
             {/* Connection lines */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
@@ -388,9 +533,11 @@ export default function AgentOrganizationBoard() {
 
             {/* Unassigned drop dock */}
             <div
-              className={`absolute left-[3%] bottom-[6%] z-10 w-[200px] max-w-[42vw] rounded-2xl border border-dashed p-3 transition-colors ${
-                dragAgentId ? "border-[#00ff88]/50 bg-[#00ff88]/[0.06]" : "border-[#2a2a30] bg-[#08080c]/80"
-              }`}
+              data-unassigned-dock
+              className={clsx(
+                "absolute left-[3%] bottom-[6%] z-10 w-[200px] max-w-[42vw] rounded-2xl border border-dashed p-3 transition-all duration-300",
+                dragAgentId ? "border-[#00ff88]/50 bg-[#00ff88]/[0.06] shadow-[0_0_28px_rgba(0,255,136,0.12)]" : "border-[#2a2a30] bg-[#08080c]/80 hover:border-[#3a3a44]"
+              )}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
@@ -398,7 +545,8 @@ export default function AgentOrganizationBoard() {
               onDrop={(e) => {
                 e.preventDefault();
                 const id = e.dataTransfer.getData("agentId");
-                if (id) void moveAgentToZirorb(id, null);
+                const from = (e.dataTransfer.getData("fromZirorb") || "unassigned") as ZirorbKey;
+                if (id) void reorderOrInsertAgent(id, from, "unassigned", null);
                 setDragAgentId(null);
               }}
             >
@@ -411,7 +559,17 @@ export default function AgentOrganizationBoard() {
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {unassigned.slice(0, 6).map((a) => (
-                  <AgentChip key={a.id} agent={a} draggable={false} />
+                  <AgentChip
+                    key={a.id}
+                    agent={a}
+                    clusterKey="unassigned"
+                    draggable
+                    onDragStart={() => setDragAgentId(a.id)}
+                    onDragEnd={() => setDragAgentId(null)}
+                    onDropReorder={(draggedId, fromKey, insertBeforeId) => {
+                      void reorderOrInsertAgent(draggedId, fromKey, "unassigned", insertBeforeId);
+                    }}
+                  />
                 ))}
                 {unassigned.length > 6 && (
                   <span className="text-[10px] text-[#505055]">+{unassigned.length - 6}</span>
@@ -426,11 +584,16 @@ export default function AgentOrganizationBoard() {
               return (
                 <div
                   key={z.id}
-                  className="absolute z-10 w-[min(260px,22vw)] min-w-[200px] -translate-x-1/2 -translate-y-1/2 transition-transform duration-300"
+                  data-zirorb-card
+                  className={clsx(
+                    "absolute z-10 w-[min(260px,22vw)] min-w-[200px] -translate-x-1/2 -translate-y-1/2 transition-[transform,opacity,filter] duration-500 ease-out",
+                    draggingZirorbNodeId === z.id && "z-[40] scale-[1.04] duration-200 ease-out",
+                    draggingZirorbNodeId && draggingZirorbNodeId !== z.id && "opacity-[0.48]"
+                  )}
                   style={{ left: `${x}%`, top: `${y}%` }}
                 >
                   <div
-                    className="rounded-2xl border border-white/[0.08] bg-[#0a0a0e]/95 shadow-[0_24px_48px_rgba(0,0,0,0.5)] backdrop-blur-md ring-1 ring-white/[0.03]"
+                    className="rounded-2xl border border-white/[0.08] bg-[#0a0a0e]/95 shadow-[0_24px_48px_rgba(0,0,0,0.5)] backdrop-blur-md ring-1 ring-white/[0.03] transition-[box-shadow,transform,border-color] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_28px_56px_rgba(0,0,0,0.55)]"
                     style={{ boxShadow: `0 0 0 1px ${z.accent_color}22, 0 20px 50px rgba(0,0,0,0.45)` }}
                   >
                     <div
@@ -482,7 +645,8 @@ export default function AgentOrganizationBoard() {
                       onDrop={(e) => {
                         e.preventDefault();
                         const id = e.dataTransfer.getData("agentId");
-                        if (id) void moveAgentToZirorb(id, z.id);
+                        const from = (e.dataTransfer.getData("fromZirorb") || "unassigned") as ZirorbKey;
+                        if (id) void reorderOrInsertAgent(id, from, z.id, null);
                         setDragAgentId(null);
                       }}
                     >
@@ -493,9 +657,13 @@ export default function AgentOrganizationBoard() {
                           <AgentChip
                             key={a.id}
                             agent={a}
+                            clusterKey={z.id}
                             draggable
                             onDragStart={() => setDragAgentId(a.id)}
                             onDragEnd={() => setDragAgentId(null)}
+                            onDropReorder={(draggedId, fromKey, insertBeforeId) => {
+                              void reorderOrInsertAgent(draggedId, fromKey, z.id, insertBeforeId);
+                            }}
                           />
                         ))
                       )}
@@ -504,7 +672,7 @@ export default function AgentOrganizationBoard() {
                 </div>
               );
             })}
-          </>
+          </div>
         )}
       </div>
 
@@ -552,7 +720,8 @@ function OrgHeader({ onNewZirorb }: { onNewZirorb: () => void }) {
       <div>
         <h1 className="text-lg font-extrabold tracking-tight text-[#f4f4f5]">Organization</h1>
         <p className="text-xs text-[#606068] mt-0.5 max-w-xl">
-          Spatial command map: drag Zirorbs to arrange, drag agents between clusters. Specialists tab keeps full CRUD.
+          Command map: drag Zirorbs, reorder agents on chips, move between clusters. Desktop: ⌃/⌘ + scroll to zoom,
+          Shift or Alt + scroll to pan; double-click empty map to reset. Specialists keeps full CRUD.
         </p>
       </div>
       <button
@@ -660,27 +829,48 @@ function MobileZirorbSection({
 
 function AgentChip({
   agent,
+  clusterKey,
   draggable,
   onDragStart,
   onDragEnd,
+  onDropReorder,
 }: {
   agent: AgentRecord;
+  clusterKey: ZirorbKey;
   draggable?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  /** Drop another agent before this chip to reorder within a cluster or insert from elsewhere. */
+  onDropReorder?: (draggedId: string, fromKey: ZirorbKey, insertBeforeAgentId: string) => void;
 }) {
   return (
     <div
-      draggable={draggable}
+      draggable={!!draggable}
       onDragStart={(e) => {
+        if (!draggable) return;
         e.dataTransfer.setData("agentId", agent.id);
+        e.dataTransfer.setData("fromZirorb", clusterKey);
         e.dataTransfer.effectAllowed = "move";
         onDragStart?.();
       }}
       onDragEnd={() => onDragEnd?.()}
-      className={`flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#08080c]/90 px-2 py-1.5 text-left ${
-        draggable ? "cursor-grab active:cursor-grabbing hover:border-[#00ff88]/25" : ""
-      }`}
+      onDragOver={(e) => {
+        if (!draggable || !onDropReorder) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }}
+      onDrop={(e) => {
+        if (!onDropReorder) return;
+        e.stopPropagation();
+        const dragId = e.dataTransfer.getData("agentId");
+        const from = (e.dataTransfer.getData("fromZirorb") || "unassigned") as ZirorbKey;
+        if (!dragId || dragId === agent.id) return;
+        onDropReorder(dragId, from, agent.id);
+      }}
+      className={clsx(
+        "flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#08080c]/90 px-2 py-1.5 text-left transition-[border-color,background-color,transform,box-shadow] duration-200",
+        draggable && "cursor-grab active:cursor-grabbing hover:border-[#00ff88]/28 hover:bg-[#0c1210]/95 hover:shadow-[0_0_0_1px_rgba(0,255,136,0.08)]"
+      )}
     >
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: agent.color }} />
       <span className="truncate text-[11px] font-medium text-[#d8d8de]">{agent.name}</span>
@@ -710,18 +900,54 @@ function FocusOverlay({
   const agents = agentsByZirorb.get(isUn ? "unassigned" : focusedId) || [];
   const title = isUn ? "Unassigned" : z?.name || "Zirorb";
 
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const accent = z?.accent_color || "#6b7280";
+
   return (
     <div
-      className="fixed inset-0 z-[50] flex items-center justify-center p-4 md:p-8"
-      style={{ background: "rgba(2,2,6,0.88)" }}
+      className={clsx(
+        "fixed inset-0 z-[50] flex items-center justify-center p-4 md:p-8 transition-opacity duration-300 ease-out",
+        entered ? "opacity-100" : "opacity-0"
+      )}
+      style={{
+        background: `radial-gradient(ellipse 85% 70% at 50% 18%, ${accent}22, transparent 52%), rgba(2,2,8,0.92)`,
+        backdropFilter: "blur(6px)",
+      }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0a0a0f]/98 shadow-[0_0_80px_rgba(0,0,0,0.85)] backdrop-blur-xl flex flex-col"
+        className={clsx(
+          "relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-3xl border border-white/[0.1] bg-[#07070c]/[0.97] shadow-[0_0_80px_rgba(0,0,0,0.85)] backdrop-blur-xl flex flex-col transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          entered ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+        )}
         style={{
-          boxShadow: z ? `0 0 0 1px ${z.accent_color}33, 0 40px 100px rgba(0,0,0,0.6)` : undefined,
+          boxShadow: z
+            ? `0 0 0 1px ${z.accent_color}40, 0 0 120px ${z.accent_color}18, 0 40px 100px rgba(0,0,0,0.65)`
+            : "0 0 0 1px rgba(255,255,255,0.06), 0 40px 100px rgba(0,0,0,0.65)",
         }}
       >
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-white/[0.06] shrink-0">
+        <div
+          className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[120%] -translate-x-1/2 opacity-50"
+          style={{
+            background: `radial-gradient(ellipse at center, ${accent}35, transparent 70%)`,
+          }}
+        />
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-white/[0.06] shrink-0 relative">
           <button
             type="button"
             onClick={onClose}
@@ -749,10 +975,10 @@ function FocusOverlay({
             </div>
           )}
         </div>
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-y-auto flex-1 relative">
           <div className="flex items-center gap-3 mb-2">
             {!isUn && z && <Orbit size={22} style={{ color: z.accent_color }} />}
-            <h2 className="text-xl font-extrabold text-[#f4f4f5]">{title}</h2>
+            <h2 className="text-xl font-extrabold tracking-tight text-[#f4f4f5]">{title}</h2>
           </div>
           {!isUn && z?.description && (
             <p className="text-sm text-[#707078] mb-6 leading-relaxed">{z.description}</p>
