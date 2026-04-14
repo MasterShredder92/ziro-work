@@ -4,9 +4,13 @@ import type { ClassifiedTask, TaskCategory, Runtime } from "@/types/orchestrator
 const CATEGORY_KEYWORDS: Record<TaskCategory, string[]> = {
   code: [
     "fix", "bug", "broken", "error", "crash", "build", "create", "component",
-    "page", "feature", "ui", "schema", "migration", "rls", "edge function",
+    "page", "feature", "schema", "migration", "rls", "edge function",
     "api route", "deploy", "push", "commit", "frontend", "backend", "refactor",
-    "test", "style", "css", "layout", "responsive",
+    "test",
+  ],
+  ui: [
+    "ui", "layout", "responsive", "styling", "style", "css", "tailwind", "design system",
+    "typography", "spacing", "breakpoint", "mobile view", "visual", "figma", "pixel",
   ],
   crm: [
     "crm", "student", "family", "enrollment", "contact record", "update record",
@@ -36,6 +40,7 @@ const CATEGORY_KEYWORDS: Record<TaskCategory, string[]> = {
 // Category → default runtime
 const RUNTIME_MAP: Record<TaskCategory, Runtime> = {
   code: "claude_code",
+  ui: "claude_code",
   crm: "browser",
   outreach: "browser",
   content: "manual",

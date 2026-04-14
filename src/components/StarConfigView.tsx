@@ -23,6 +23,12 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import ZirorbFormModal, { type ZirorbRecord } from "@/components/ZirorbFormModal";
+import {
+  parseStarRoutingRules,
+  STAR_ROUTING_VERSION,
+  type StarRoutingRulesV2,
+  type StarRoutingTaskKey,
+} from "@/lib/routing/starRouting";
 
 // ── Types ──
 
@@ -57,6 +63,27 @@ interface SkillOption {
   is_active: boolean;
 }
 
+const TASK_ROUTE_EDIT_KEYS: StarRoutingTaskKey[] = [
+  "code",
+  "ui",
+  "crm",
+  "outreach",
+  "content",
+  "analytics",
+  "ops",
+];
+
+const TASK_ROUTE_LABELS: Record<string, string> = {
+  code: "Code / build / deploy",
+  ui: "UI / layout / polish",
+  crm: "Music school (enrollment, billing, families)",
+  outreach: "Leads & outreach",
+  content: "Content & narrative",
+  analytics: "Reports & QA-style checks",
+  ops: "Operations & scheduling",
+  default: "Everything else",
+};
+
 export type StarControlNavProps = {
   /** Open Organization map; optionally focus a Zirorb overlay (or Unassigned). */
   onOpenOrganization: (focusZirorbId?: string | "unassigned" | null) => void;
@@ -81,6 +108,7 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
   const [approvedAgentIds, setApprovedAgentIds] = useState<string[]>([]);
   const [defaultSkillIds, setDefaultSkillIds] = useState<string[]>([]);
   const [routingNotes, setRoutingNotes] = useState("");
+  const [routingV2, setRoutingV2] = useState<StarRoutingRulesV2>(() => parseStarRoutingRules(null));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -103,6 +131,7 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
       setApprovedAgentIds(configData.approved_agent_ids || []);
       setDefaultSkillIds(configData.default_skill_ids || []);
       const rr = configData.routing_rules;
+      setRoutingV2(parseStarRoutingRules(rr));
       const notes =
         rr && typeof rr === "object" && rr !== null && "notes" in rr && typeof (rr as { notes?: unknown }).notes === "string"
           ? String((rr as { notes: string }).notes)
@@ -155,15 +184,44 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
 
   const totalSpecialistCount = specialistAgents.length;
 
+  const agentsInZirorbSlug = useCallback(
+    (slug: string | null | undefined) => {
+      if (!slug) return [];
+      const z = zirorbs.find((x) => x.slug === slug);
+      if (!z) return [];
+      return specialistAgents.filter((a) => String(a.zirorb_id) === String(z.id));
+    },
+    [zirorbs, specialistAgents]
+  );
+
+  const setRouteTarget = useCallback((key: StarRoutingTaskKey, next: { zirorb_slug?: string | null; agent_slug?: string | null }) => {
+    setRoutingV2((prev) => {
+      const cur = prev.routes[key] || { zirorb_slug: null, agent_slug: null };
+      return {
+        ...prev,
+        routes: {
+          ...prev.routes,
+          [key]: {
+            zirorb_slug: next.zirorb_slug !== undefined ? next.zirorb_slug : cur.zirorb_slug,
+            agent_slug: next.agent_slug !== undefined ? next.agent_slug : cur.agent_slug,
+          },
+        },
+      };
+    });
+  }, []);
+
   async function handleSave() {
     setError(null);
     setSaving(true);
     setSaved(false);
 
-    const mergedRules =
-      config?.routing_rules && typeof config.routing_rules === "object"
-        ? { ...config.routing_rules, notes: routingNotes || "" }
-        : { notes: routingNotes || "" };
+    const mergedRules: Record<string, unknown> = {
+      ...(config?.routing_rules && typeof config.routing_rules === "object" ? { ...config.routing_rules } : {}),
+      version: STAR_ROUTING_VERSION,
+      routes: routingV2.routes,
+      fallback: routingV2.fallback,
+      notes: routingNotes || "",
+    };
 
     const res = await fetch("/api/star-config", {
       method: "PATCH",
@@ -485,8 +543,9 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
             <h2 className="text-base font-bold text-[#f0f0f0]">Routing & logic</h2>
           </div>
           <p className="text-xs text-[#606068] mb-4">
-            Delegation mode controls how Star involves agents. Routing notes are stored with Star config (no duplicate
-            Orb store).
+            Delegation mode decides whether these routes run. When Auto is on, Star sends work to the Orb and agent you
+            pick here — inactive Orbs are skipped automatically. Same rules power the live <code className="text-[#909098]">routeTask</code>{" "}
+            pipeline.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
             {(
@@ -522,14 +581,188 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
               </button>
             ))}
           </div>
+
+          <div className="rounded-xl border border-white/[0.06] bg-[#060608] overflow-hidden mb-6">
+            <div className="px-4 py-3 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-[#e4e4ea]">Task → Orb → agent</h3>
+              <span className="text-[11px] text-[#606068]">“Anyone in Orb” picks the first eligible agent in that cluster.</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="text-[10px] uppercase tracking-wider text-[#606068] border-b border-white/[0.06]">
+                    <th className="px-4 py-2 font-medium">When the task looks like…</th>
+                    <th className="px-4 py-2 font-medium">Orb</th>
+                    <th className="px-4 py-2 font-medium">Agent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TASK_ROUTE_EDIT_KEYS.map((key) => {
+                    const row = routingV2.routes[key];
+                    const slug = row?.zirorb_slug ?? "";
+                    const members = agentsInZirorbSlug(slug);
+                    return (
+                      <tr key={key} className="border-b border-white/[0.04] last:border-0">
+                        <td className="px-4 py-3 text-[#c8c8d0] align-top">
+                          <div className="font-medium text-[#f0f0f0]">{TASK_ROUTE_LABELS[key] || key}</div>
+                          <div className="text-[11px] text-[#505058] mt-0.5 font-mono">{key}</div>
+                        </td>
+                        <td className="px-4 py-3 align-top min-w-[140px]">
+                          <select
+                            value={slug}
+                            onChange={(e) => {
+                              const v = e.target.value || null;
+                              setRouteTarget(key, { zirorb_slug: v, agent_slug: null });
+                            }}
+                            className="w-full max-w-[220px] rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-2 py-1.5 text-xs text-[#f0f0f0]"
+                          >
+                            <option value="">—</option>
+                            {zirorbs.map((z) => (
+                              <option key={z.id} value={z.slug}>
+                                {z.name}
+                                {z.is_active === false ? " (inactive)" : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 align-top min-w-[160px]">
+                          <select
+                            value={row?.agent_slug ?? ""}
+                            onChange={(e) => setRouteTarget(key, { agent_slug: e.target.value || null })}
+                            disabled={!slug}
+                            className="w-full max-w-[240px] rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-2 py-1.5 text-xs text-[#f0f0f0] disabled:opacity-40"
+                          >
+                            <option value="">Anyone in this Orb</option>
+                            {members.map((a) => (
+                              <option key={a.id} value={a.slug}>
+                                {a.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td className="px-4 py-3 text-[#c8c8d0] align-top">
+                      <div className="font-medium text-[#f0f0f0]">{TASK_ROUTE_LABELS.default}</div>
+                      <div className="text-[11px] text-[#505058] mt-0.5 font-mono">default</div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <select
+                        value={routingV2.routes.default?.zirorb_slug ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value || null;
+                          setRouteTarget("default", { zirorb_slug: v, agent_slug: null });
+                        }}
+                        className="w-full max-w-[220px] rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-2 py-1.5 text-xs text-[#f0f0f0]"
+                      >
+                        <option value="">—</option>
+                        {zirorbs.map((z) => (
+                          <option key={z.id} value={z.slug}>
+                            {z.name}
+                            {z.is_active === false ? " (inactive)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <select
+                        value={routingV2.routes.default?.agent_slug ?? ""}
+                        onChange={(e) => setRouteTarget("default", { agent_slug: e.target.value || null })}
+                        disabled={!routingV2.routes.default?.zirorb_slug}
+                        className="w-full max-w-[240px] rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-2 py-1.5 text-xs text-[#f0f0f0] disabled:opacity-40"
+                      >
+                        <option value="">Anyone in this Orb</option>
+                        {agentsInZirorbSlug(routingV2.routes.default?.zirorb_slug ?? null).map((a) => (
+                          <option key={a.id} value={a.slug}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/[0.06] bg-[#060608] px-4 py-4 mb-6 space-y-3">
+            <h3 className="text-sm font-semibold text-[#e4e4ea]">If the primary target is missing</h3>
+            <p className="text-xs text-[#606068]">
+              Example: Orb is turned off, empty, or the agent is not approved — Star uses this backup instead of failing
+              silently.
+            </p>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              <select
+                value={routingV2.fallback.behavior}
+                onChange={(e) =>
+                  setRoutingV2((prev) => ({
+                    ...prev,
+                    fallback: {
+                      ...prev.fallback,
+                      behavior: e.target.value as "star" | "first_eligible",
+                    },
+                  }))
+                }
+                className="rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-3 py-2 text-sm text-[#f0f0f0]"
+              >
+                <option value="star">Send to STAR</option>
+                <option value="first_eligible">Try another Orb / first specialist</option>
+              </select>
+              {routingV2.fallback.behavior === "first_eligible" && (
+                <>
+                  <select
+                    value={routingV2.fallback.zirorb_slug ?? ""}
+                    onChange={(e) =>
+                      setRoutingV2((prev) => ({
+                        ...prev,
+                        fallback: {
+                          ...prev.fallback,
+                          zirorb_slug: e.target.value || null,
+                          agent_slug: null,
+                        },
+                      }))
+                    }
+                    className="rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-3 py-2 text-sm text-[#f0f0f0]"
+                  >
+                    <option value="">Any Orb</option>
+                    {zirorbs.map((z) => (
+                      <option key={z.id} value={z.slug}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={routingV2.fallback.agent_slug ?? ""}
+                    onChange={(e) =>
+                      setRoutingV2((prev) => ({
+                        ...prev,
+                        fallback: { ...prev.fallback, agent_slug: e.target.value || null },
+                      }))
+                    }
+                    className="rounded-lg border border-[#2a2a30] bg-[#0a0a0e] px-3 py-2 text-sm text-[#f0f0f0]"
+                  >
+                    <option value="">Anyone in fallback Orb</option>
+                    {agentsInZirorbSlug(routingV2.fallback.zirorb_slug ?? null).map((a) => (
+                      <option key={a.id} value={a.slug}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+          </div>
+
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#707078] mb-2">
-            Routing notes (high-level)
+            Playbook notes (optional reminders)
           </label>
           <textarea
             value={routingNotes}
             onChange={(e) => setRoutingNotes(e.target.value)}
-            placeholder="e.g. Enrollment tasks → Music School Zirorb first; platform incidents → Core…"
-            rows={4}
+            placeholder="Short reminders for humans (not parsed as rules)."
+            rows={3}
             className="w-full rounded-xl border border-[#232326] bg-[#050508] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[#60a5fa]/40 placeholder-[#505055] resize-none"
           />
         </section>

@@ -56,3 +56,30 @@ export function composeSystemPrompt(
 export function estimateTokens(prompt: string): number {
   return Math.ceil(prompt.length / 4);
 }
+
+/** Execution prompt for a delegated specialist (not the STAR orchestrator template stack). */
+export function composeSpecialistExecutionPrompt(
+  agent: { name: string; role: string; instructions: string | null; system_prompt: string | null },
+  skills: Skill[],
+  taskDescription: string
+): string {
+  const parts: string[] = [];
+  parts.push(`You are ${agent.name} — ${agent.role}.`);
+  if (agent.instructions?.trim()) {
+    parts.push("\n--- YOUR OPERATING INSTRUCTIONS ---\n");
+    parts.push(agent.instructions.trim());
+  } else if (agent.system_prompt?.trim()) {
+    parts.push("\n--- SYSTEM PROMPT ---\n");
+    parts.push(agent.system_prompt.trim());
+  }
+  if (skills.length > 0) {
+    parts.push(`\n--- SKILLS (${skills.length}) ---`);
+    for (const skill of skills) {
+      parts.push(`\n[${skill.name}]`);
+      parts.push(skill.prompt_fragment);
+    }
+  }
+  parts.push("\n--- TASK ---\n");
+  parts.push(taskDescription);
+  return parts.join("\n");
+}

@@ -32,20 +32,30 @@ function logError(msg) {
   console.error(`[${new Date().toISOString()}] ${msg}`);
 }
 
-async function getStarAgentId() {
+/** STAR plus any specialist placed in a Zirorb (matches routeTask / Star Control delegation). */
+async function loadExecutorAgentIds() {
   const { data, error } = await supabase
     .from('agents')
-    .select('id')
-    .eq('slug', 'star')
-    .single();
+    .select('id, slug, zirorb_id')
+    .eq('business_context', 'music_school')
+    .eq('is_archived', false);
 
-  if (error || !data) {
-    logError(`Failed to fetch STAR agent ID: ${error?.message || 'not found'}`);
+  if (error || !data?.length) {
+    logError(`Failed to load executor agents: ${error?.message || 'no rows'}`);
     process.exit(1);
   }
 
-  log(`STAR agent_id: ${data.id}`);
-  return data.id;
+  const ids = [];
+  for (const row of data) {
+    if (row.slug === 'star' || row.zirorb_id) ids.push(row.id);
+  }
+  if (ids.length === 0) {
+    logError('No executor agents (need STAR and/or specialists with zirorb_id)');
+    process.exit(1);
+  }
+
+  log(`Polling agent_tasks for ${ids.length} executor(s) (STAR + Zirorb specialists)`);
+  return ids;
 }
 
 function runClaudeCode(taskDescription, taskId) {
@@ -114,13 +124,13 @@ function runClaudeCode(taskDescription, taskId) {
 const STUCK_THRESHOLD_MS = 10 * 60 * 1000;
 const RETRY_DELAY_MS = 60_000;
 
-async function recoverStuckTasks(agentId) {
+async function recoverStuckTasks(agentIds) {
   const cutoff = new Date(Date.now() - STUCK_THRESHOLD_MS).toISOString();
 
   const { data: stuck, error } = await supabase
     .from('agent_tasks')
     .select('id, title, retry_count')
-    .eq('agent_id', agentId)
+    .in('agent_id', agentIds)
     .eq('status', 'running')
     .lt('updated_at', cutoff);
 
@@ -486,16 +496,16 @@ async function completeTask(taskId, title, result, elapsed, runId, task) {
   await retireEphemeralAgent(task.agent_id);
 }
 
-async function pollAndExecute(agentId) {
+async function pollAndExecute(agentIds) {
   if (isRunning) return;
 
   // Recover stuck tasks every tick
-  await recoverStuckTasks(agentId);
+  await recoverStuckTasks(agentIds);
 
   const { data: tasks, error } = await supabase
     .from('agent_tasks')
     .select('id, title, description, retry_count, agent_id, agent_template_id, skill_ids, runtime, task_type, priority')
-    .eq('agent_id', agentId)
+    .in('agent_id', agentIds)
     .in('status', ['pending', 'retry'])
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
@@ -559,16 +569,16 @@ async function pollAndExecute(agentId) {
 async function main() {
   log(`Lessonpreneur Worker starting... (${WORKER_ID})`);
 
-  const agentId = await getStarAgentId();
+  const agentIds = await loadExecutorAgentIds();
 
   log('Running startup stuck task recovery...');
-  await recoverStuckTasks(agentId);
+  await recoverStuckTasks(agentIds);
 
   log(`Polling every ${POLL_INTERVAL / 1000}s for pending tasks...`);
 
   const tick = async () => {
     try {
-      await pollAndExecute(agentId);
+      await pollAndExecute(agentIds);
     } catch (err) {
       logError(`Unexpected error: ${err.message}`);
     }

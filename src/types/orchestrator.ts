@@ -2,7 +2,7 @@
 
 export type Runtime = "claude_code" | "browser" | "api" | "manual";
 
-export type TaskCategory = "code" | "crm" | "outreach" | "content" | "analytics" | "ops";
+export type TaskCategory = "code" | "ui" | "crm" | "outreach" | "content" | "analytics" | "ops";
 
 export type TaskRunStatus = "pending" | "running" | "complete" | "failed" | "failed_permanent";
 
@@ -276,7 +276,17 @@ export interface TemplateProposal {
   reason: string;
 }
 
-export type RouteResult = RouteDecision | RouteFallback | TemplateProposal;
+/** Specialist chosen from live Star Control + Zirorb membership (no template match required). */
+export interface StarControlDelegation {
+  source: "star_control";
+  agent_id: string;
+  task_type: TaskCategory;
+  skills: Skill[];
+  runtime: Runtime;
+  reason: string;
+}
+
+export type RouteResult = RouteDecision | RouteFallback | TemplateProposal | StarControlDelegation;
 
 // Type guard helpers
 export function isRouteDecision(r: RouteResult): r is RouteDecision {
@@ -285,4 +295,8 @@ export function isRouteDecision(r: RouteResult): r is RouteDecision {
 
 export function isTemplateProposal(r: RouteResult): r is TemplateProposal {
   return "proposed" in r && r.proposed === true;
+}
+
+export function isStarControlDelegation(r: RouteResult): r is StarControlDelegation {
+  return "source" in r && r.source === "star_control";
 }

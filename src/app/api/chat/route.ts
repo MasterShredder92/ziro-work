@@ -3,7 +3,8 @@ import { anthropic } from "@/lib/anthropic";
 import { getServiceClient } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
-import { classifyTask } from "@/lib/routing/classifyTask";
+import { routeTask } from "@/lib/routing/routeTask";
+import { isStarControlDelegation, isRouteDecision } from "@/types/orchestrator";
 
 // Lessonpreneur Supabase client
 function getLessonpreneurClient() {
@@ -192,10 +193,9 @@ async function executeToolCall(
     const input = block.input as { title: string; description: string };
 
     try {
-      // Classify the task for metadata (no agent spawning — STAR handles everything directly)
-      const classified = classifyTask(input.title, input.description);
+      const routed = await routeTask(input.title, input.description);
+      const classified = routed.classification;
 
-      // Always assign to STAR — no ephemeral agent spawning
       const { data: starAgent, error: starErr } = await supabase
         .from("agents")
         .select("id")
@@ -211,13 +211,59 @@ async function executeToolCall(
         };
       }
 
+      let agentId = starAgent.id;
+      let taskDescription = input.description;
+      let runtime = classified.suggested_runtime;
+      let taskType = classified.task_type;
+      let skillIds: string[] | null = null;
+      let agentTemplateId: string | null = null;
+
+      if (routed.agentId) {
+        const { data: assignee } = await supabase
+          .from("agents")
+          .select("id, slug, zirorb_id, template_id, mode")
+          .eq("id", routed.agentId)
+          .maybeSingle();
+
+        const runnableByWorker =
+          assignee &&
+          (assignee.slug === "star" || assignee.zirorb_id != null) &&
+          assignee.mode !== "ephemeral";
+
+        if (runnableByWorker) {
+          agentId = assignee.id;
+          agentTemplateId = assignee.template_id ?? null;
+          if (isStarControlDelegation(routed.route)) {
+            taskDescription = routed.composedPrompt;
+            runtime = routed.route.runtime;
+            skillIds = routed.route.skills.map((s) => s.id);
+          } else if (isRouteDecision(routed.route)) {
+            taskDescription = `${routed.composedPrompt}\n\n--- Operator request ---\n${input.description}`;
+            runtime = routed.route.runtime;
+            skillIds = routed.route.skills.map((s) => s.id);
+            agentTemplateId = routed.route.template.id;
+          } else {
+            taskDescription = `${routed.composedPrompt}\n\n--- Operator request ---\n${input.description}`;
+          }
+        } else {
+          console.warn(
+            `[TOOL] create_lessonpreneur_task: routed agent ${routed.agentId} is not worker-runnable (need STAR or an agent in a Zirorb, non-ephemeral). Using STAR.`
+          );
+          taskDescription = `${routed.composedPrompt}\n\n--- Operator request ---\n${input.description}`;
+        }
+      } else {
+        taskDescription = `${routed.composedPrompt}\n\n--- Operator request ---\n${input.description}`;
+      }
+
       const taskInsert: Record<string, unknown> = {
-        agent_id: starAgent.id,
+        agent_id: agentId,
         title: input.title,
-        description: input.description,
+        description: taskDescription,
         status: "pending",
-        task_type: classified.task_type,
-        runtime: classified.suggested_runtime,
+        task_type: taskType,
+        runtime,
+        ...(skillIds && skillIds.length > 0 ? { skill_ids: skillIds } : {}),
+        ...(agentTemplateId ? { agent_template_id: agentTemplateId } : {}),
       };
 
       const { data: insertData, error: insertErr } = await supabase
@@ -238,10 +284,11 @@ async function executeToolCall(
         };
       }
 
+      const assigneeLabel = agentId === starAgent.id ? "STAR" : `specialist (${agentId.slice(0, 8)}…)`;
       return {
         type: "tool_result",
         tool_use_id: block.id,
-        content: `Task "${input.title}" queued for STAR (type: ${classified.task_type}, runtime: ${classified.suggested_runtime}).`,
+        content: `Task "${input.title}" queued for ${assigneeLabel} (type: ${taskType}, runtime: ${runtime}).`,
       };
     } catch (taskErr) {
       return {
