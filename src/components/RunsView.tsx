@@ -55,7 +55,7 @@ function StatusIcon({ status }: { status: string }) {
     case "failed_permanent":
       return <AlertTriangle size={14} className="text-[#ff4444] shrink-0" />;
     default:
-      return <Circle size={14} className="text-[#444] shrink-0" />;
+      return <Circle size={14} className="text-[#505055] shrink-0" />;
   }
 }
 
@@ -64,7 +64,7 @@ const STATUS_COLORS: Record<string, string> = {
   running: "#f59e0b",
   failed: "#ff4444",
   failed_permanent: "#ff4444",
-  pending: "#888",
+  pending: "#909098",
 };
 
 const RUNTIME_COLORS: Record<string, string> = {
@@ -95,7 +95,7 @@ export default function RunsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="animate-spin text-[#444]" />
+        <Loader2 size={20} className="animate-spin text-[#505055]" />
       </div>
     );
   }
@@ -109,8 +109,8 @@ export default function RunsView() {
       <div className="h-full overflow-y-auto p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-white">Task Runs</h2>
-            <p className="text-xs text-[#555] mt-1">
+            <h2 className="text-xl font-extrabold text-[#f0f0f0]">Task Runs</h2>
+            <p className="text-sm text-[#606068] mt-1">
               Execution history for all routed tasks
             </p>
           </div>
@@ -120,25 +120,25 @@ export default function RunsView() {
                 <button
                   key={s}
                   onClick={() => setFilterStatus(s)}
-                  className={`text-[10px] px-2 py-1 rounded-full transition-colors ${
+                  className={`text-sm px-3 py-1.5 rounded-full transition-colors ${
                     filterStatus === s
-                      ? "bg-white/10 text-white"
-                      : "text-[#555] hover:text-[#999]"
+                      ? "bg-white/10 text-[#f0f0f0]"
+                      : "text-[#606068] hover:text-[#a0a0a8]"
                   }`}
                 >
                   {s === "all" ? "All" : s}
                 </button>
               ))}
             </div>
-            <span className="text-xs text-[#555]">{filtered.length} runs</span>
+            <span className="text-sm text-[#606068]">{filtered.length} runs</span>
           </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-12 text-center">
-            <Play size={32} className="mx-auto text-[#333] mb-3" />
-            <p className="text-[#666] text-sm">No task runs yet</p>
-            <p className="text-[#444] text-xs mt-1">
+          <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+            <Play size={32} className="mx-auto text-[#3a3a3e] mb-3" />
+            <p className="text-[#707078] text-[15px]">No task runs yet</p>
+            <p className="text-[#505055] text-sm mt-1">
               Runs appear here when STAR routes tasks through the orchestrator.
             </p>
           </div>
@@ -151,21 +151,21 @@ export default function RunsView() {
                 <div
                   key={run.id}
                   onClick={() => setSelected(run)}
-                  className="flex items-center gap-3 p-3 bg-[#111] border border-[#1a1a1a] rounded-xl cursor-pointer hover:bg-[#151515] hover:border-[#252525] transition-colors"
+                  className="flex items-center gap-3 p-4 bg-[#101012] border border-[#1c1c1e] rounded-xl cursor-pointer hover:bg-[#161618] hover:border-[#2a2a2e] transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
                 >
                   <StatusIcon status={run.status} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-[#ccc] truncate">
+                    <div className="text-sm font-medium text-[#ccc] truncate">
                       {run.agent_tasks?.title || "Untitled run"}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       {run.agent_templates?.name && (
-                        <span className="text-[10px] text-[#555]">
+                        <span className="text-xs text-[#606068]">
                           {run.agent_templates.name}
                         </span>
                       )}
                       <span
-                        className="text-[10px] px-1.5 py-0.5 rounded"
+                        className="text-xs px-1.5 py-0.5 rounded"
                         style={{
                           color: runtimeColor,
                           backgroundColor: `${runtimeColor}15`,
@@ -174,7 +174,7 @@ export default function RunsView() {
                         {run.runtime}
                       </span>
                       <span
-                        className="text-[10px] px-1.5 py-0.5 rounded"
+                        className="text-xs px-1.5 py-0.5 rounded"
                         style={{
                           color: statusColor,
                           backgroundColor: `${statusColor}15`,
@@ -183,18 +183,18 @@ export default function RunsView() {
                         {run.status}
                       </span>
                       {run.attempt_number > 1 && (
-                        <span className="text-[10px] text-[#f59e0b]">
+                        <span className="text-xs text-[#f59e0b]">
                           attempt {run.attempt_number}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-[10px] text-[#444]">
+                    <div className="text-xs text-[#505055]">
                       {formatTimestamp(run.created_at)}
                     </div>
                     {run.duration_ms && (
-                      <div className="flex items-center gap-1 text-[10px] text-[#555] mt-0.5 justify-end">
+                      <div className="flex items-center gap-1 text-xs text-[#606068] mt-0.5 justify-end">
                         <Clock size={9} />
                         {formatDuration(run.duration_ms)}
                       </div>
@@ -214,17 +214,17 @@ export default function RunsView() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="relative w-[90%] max-w-[600px] max-h-[80vh] bg-[#0c0c0c] border border-[#1a1a1a] rounded-xl shadow-2xl flex flex-col"
+            className="relative w-[90%] max-w-[660px] max-h-[80vh] bg-[#0c0c0e] border border-[#1c1c1e] rounded-xl shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-white">
+                <h3 className="text-[15px] font-bold text-[#f0f0f0]">
                   {selected.agent_tasks?.title || "Untitled"}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <span
-                    className="text-[10px] px-2 py-0.5 rounded font-semibold"
+                    className="text-xs px-2 py-0.5 rounded font-semibold"
                     style={{
                       color: STATUS_COLORS[selected.status] || "#888",
                       backgroundColor: `${STATUS_COLORS[selected.status] || "#888"}15`,
@@ -233,21 +233,21 @@ export default function RunsView() {
                     {selected.status}
                   </span>
                   <span
-                    className="text-[10px] px-2 py-0.5 rounded"
+                    className="text-xs px-2 py-0.5 rounded"
                     style={{
-                      color: RUNTIME_COLORS[selected.runtime] || "#888",
-                      backgroundColor: `${RUNTIME_COLORS[selected.runtime] || "#888"}15`,
+                      color: RUNTIME_COLORS[selected.runtime] || "#909098",
+                      backgroundColor: `${RUNTIME_COLORS[selected.runtime] || "#909098"}15`,
                     }}
                   >
                     {selected.runtime}
                   </span>
                   {selected.agent_templates?.name && (
-                    <span className="text-[10px] text-[#555]">
+                    <span className="text-xs text-[#606068]">
                       via {selected.agent_templates.name}
                     </span>
                   )}
                   {selected.attempt_number > 1 && (
-                    <span className="text-[10px] text-[#f59e0b]">
+                    <span className="text-xs text-[#f59e0b]">
                       attempt {selected.attempt_number}
                     </span>
                   )}
@@ -255,14 +255,14 @@ export default function RunsView() {
               </div>
               <button
                 onClick={() => setSelected(null)}
-                className="p-1 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+                className="p-1 rounded-lg hover:bg-white/5 text-[#707078] hover:text-[#f0f0f0] transition-colors"
               >
                 <X size={16} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
-              <div className="flex gap-4 text-[10px] text-[#555] flex-wrap">
+              <div className="flex gap-4 text-xs text-[#606068] flex-wrap">
                 <span>Created: {formatTimestamp(selected.created_at)}</span>
                 {selected.completed_at && (
                   <span>Completed: {formatTimestamp(selected.completed_at)}</span>
@@ -286,10 +286,10 @@ export default function RunsView() {
 
               {selected.error_message && (
                 <div>
-                  <div className="text-[10px] font-semibold text-[#ff4444] uppercase tracking-wider mb-1">
+                  <div className="text-xs font-semibold text-[#ff4444] uppercase tracking-wider mb-1">
                     Error
                   </div>
-                  <div className="text-xs text-[#ff4444]/80 whitespace-pre-wrap break-words bg-[#ff4444]/5 border border-[#ff4444]/20 rounded-lg p-3 max-h-[150px] overflow-y-auto">
+                  <div className="text-sm text-[#ff4444]/80 whitespace-pre-wrap break-words bg-[#ff4444]/5 border border-[#ff4444]/20 rounded-lg p-3 max-h-[150px] overflow-y-auto">
                     {selected.error_message}
                   </div>
                 </div>
@@ -297,10 +297,10 @@ export default function RunsView() {
 
               {selected.result_snapshot && (
                 <div>
-                  <div className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">
+                  <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                     Result
                   </div>
-                  <div className="text-xs text-[#999] whitespace-pre-wrap break-words bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 max-h-[300px] overflow-y-auto">
+                  <div className="text-sm text-[#a0a0a8] whitespace-pre-wrap break-words bg-[#0a0a0c] border border-[#1c1c1e] rounded-lg p-3 max-h-[300px] overflow-y-auto">
                     {selected.result_snapshot}
                   </div>
                 </div>

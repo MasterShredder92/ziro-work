@@ -14,17 +14,34 @@ export type AgentMode = "persistent" | "ephemeral";
 
 // ── Skills ──
 
+export type SkillApprovalStatus = "draft" | "pending_approval" | "approved" | "rejected";
+
 export interface Skill {
   id: string;
+  key: string;
   slug: string;
   name: string;
   description: string;
+  category: string;
+  system_prompt_fragment: string;
   prompt_fragment: string;
+  preferred_runtime: Runtime;
   runtime: Runtime;
+  allowed_tools: string[];
+  input_schema: Record<string, unknown>;
+  output_schema: Record<string, unknown>;
+  cost_tier: number;
+  risk_tier: number;
   tags: string[];
   is_active: boolean;
+  approval_status: SkillApprovalStatus;
+  proposed_by: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
   business_context: string;
+  version: number;
   created_at: string;
+  updated_at: string;
 }
 
 // ── Agent Templates ──
@@ -74,6 +91,13 @@ export interface Agent {
   business_context: string;
   updated_at: string | null;
   created_at: string;
+  // Profile fields
+  purpose: string | null;
+  instructions: string | null;
+  usage_triggers: string[];
+  auto_use_by_star: boolean;
+  profile_summary: string | null;
+  owner_type: string;
 }
 
 // ── Agent Tasks (extended) ──

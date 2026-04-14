@@ -93,8 +93,8 @@ export default function ArchivedView() {
     <div className="h-full overflow-y-auto p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold text-white">Archived / Hidden</h2>
-          <p className="text-xs text-[#555] mt-1">
+          <h2 className="text-xl font-extrabold text-[#f0f0f0]">Archived / Hidden</h2>
+          <p className="text-sm text-[#606068] mt-1">
             Preserved records hidden from active UI — data intact, not deleted
           </p>
         </div>
@@ -108,10 +108,10 @@ export default function ArchivedView() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg transition-colors ${
                 tab === t.key
                   ? "bg-white/10 text-white"
-                  : "text-[#555] hover:text-[#999]"
+                  : "text-[#606068] hover:text-[#a0a0a8]"
               }`}
             >
               <Icon size={12} />
@@ -123,7 +123,7 @@ export default function ArchivedView() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 size={20} className="animate-spin text-[#444]" />
+          <Loader2 size={20} className="animate-spin text-[#505055]" />
         </div>
       ) : (
         <>
@@ -134,17 +134,17 @@ export default function ArchivedView() {
             ) : (
               <div className="space-y-2">
                 {agents.map((a) => (
-                  <div key={a.id} className="flex items-center gap-3 p-3 bg-[#111] border border-[#1a1a1a] rounded-xl">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: a.color }} />
+                  <div key={a.id} className="flex items-center gap-3 p-4 bg-[#101012] border border-[#1c1c1e] rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: a.color }} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-[#ccc]">{a.name}</div>
+                      <div className="text-sm font-medium text-[#d0d0d8]">{a.name}</div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-[#555]">{a.role}</span>
-                        <span className="text-[10px] text-[#444]">{a.mode || "—"}</span>
-                        <span className="text-[10px] text-[#444]">{a.business_context || "—"}</span>
+                        <span className="text-xs text-[#606068]">{a.role}</span>
+                        <span className="text-xs text-[#505055]">{a.mode || "—"}</span>
+                        <span className="text-xs text-[#505055]">{a.business_context || "—"}</span>
                       </div>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1a1a1a] text-[#666]">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#1c1c1e] text-[#707078]">
                       {a.status}
                     </span>
                   </div>
@@ -160,21 +160,21 @@ export default function ArchivedView() {
             ) : (
               <div className="space-y-2">
                 {templates.map((t) => (
-                  <div key={t.id} className="p-3 bg-[#111] border border-[#1a1a1a] rounded-xl">
+                  <div key={t.id} className="p-4 bg-[#101012] border border-[#1c1c1e] rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-[#ccc]">{t.name}</div>
+                      <div className="text-sm font-medium text-[#d0d0d8]">{t.name}</div>
                       <div className="flex gap-1">
                         {!t.is_active && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ff4444]/10 text-[#ff4444]">
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#ff4444]/10 text-[#ff4444]">
                             Inactive
                           </span>
                         )}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1a1a1a] text-[#666]">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-[#1c1c1e] text-[#707078]">
                           {t.business_context || "—"}
                         </span>
                       </div>
                     </div>
-                    <p className="text-[10px] text-[#666] mt-1">{t.description}</p>
+                    <p className="text-xs text-[#707078] mt-1">{t.description}</p>
                   </div>
                 ))}
               </div>
@@ -188,14 +188,14 @@ export default function ArchivedView() {
             ) : (
               <div className="space-y-2">
                 {skills.map((s) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 bg-[#111] border border-[#1a1a1a] rounded-xl">
-                    <Zap size={12} className="text-[#555]" />
+                  <div key={s.id} className="flex items-center gap-3 p-4 bg-[#101012] border border-[#1c1c1e] rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+                    <Zap size={12} className="text-[#606068]" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-[#ccc]">{s.name}</div>
-                      <div className="text-[10px] text-[#555] mt-0.5">{s.runtime} / {s.business_context || "—"}</div>
+                      <div className="text-sm font-medium text-[#d0d0d8]">{s.name}</div>
+                      <div className="text-xs text-[#606068] mt-0.5">{s.runtime} / {s.business_context || "—"}</div>
                     </div>
                     {!s.is_active && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ff4444]/10 text-[#ff4444]">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-[#ff4444]/10 text-[#ff4444]">
                         Inactive
                       </span>
                     )}
@@ -212,9 +212,9 @@ export default function ArchivedView() {
 
 function EmptyState({ label }: { label: string }) {
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-12 text-center">
-      <Archive size={32} className="mx-auto text-[#333] mb-3" />
-      <p className="text-[#666] text-sm">{label}</p>
+    <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+      <Archive size={32} className="mx-auto text-[#3a3a3e] mb-3" />
+      <p className="text-[#707078] text-[15px]">{label}</p>
     </div>
   );
 }

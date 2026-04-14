@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
     // Pull agent row — include slug to determine if this is STAR
     const { data: agent, error: agentError } = await supabase
       .from("agents")
-      .select("id, slug, name, system_prompt")
+      .select("id, slug, name, system_prompt, instructions")
       .eq("id", agentId)
       .single();
 
@@ -372,8 +372,20 @@ export async function POST(request: NextRequest) {
       ? [queryLessonpreneurTool, createLessonpreneurTaskTool, pushLessonpreneurTool]
       : undefined;
 
-    const systemPrompt =
-      agent.system_prompt || `You are ${agent.name}, an AI agent.`;
+    // Resolve system prompt — single source of truth per agent type:
+    // STAR: reads from star_config.instructions (canonical orchestrator config)
+    // Specialists: reads from agents.instructions (agent profile), falls back to system_prompt
+    let systemPrompt: string;
+    if (isStar) {
+      const { data: starConfig } = await supabase
+        .from("star_config")
+        .select("instructions")
+        .eq("business_context", "music_school")
+        .single();
+      systemPrompt = starConfig?.instructions || agent.system_prompt || `You are STAR, the central orchestrator.`;
+    } else {
+      systemPrompt = agent.instructions || agent.system_prompt || `You are ${agent.name}, an AI agent.`;
+    }
 
     // Grab the abort signal from the incoming request so we stop if the client disconnects
     const signal = request.signal;

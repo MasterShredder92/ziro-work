@@ -59,7 +59,7 @@ export default function TemplatesView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="animate-spin text-[#444]" />
+        <Loader2 size={20} className="animate-spin text-[#505055]" />
       </div>
     );
   }
@@ -68,19 +68,19 @@ export default function TemplatesView() {
     <div className="h-full overflow-y-auto p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold text-white">Agent Templates</h2>
-          <p className="text-xs text-[#555] mt-1">
+          <h2 className="text-xl font-extrabold text-[#f0f0f0]">Agent Templates</h2>
+          <p className="text-sm text-[#606068] mt-1">
             Pre-configured agent profiles with skills and runtime routing
           </p>
         </div>
-        <span className="text-xs text-[#555]">{templates.length} templates</span>
+        <span className="text-sm text-[#606068]">{templates.length} templates</span>
       </div>
 
       {templates.length === 0 ? (
-        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-12 text-center">
-          <Layers size={32} className="mx-auto text-[#333] mb-3" />
-          <p className="text-[#666] text-sm">No templates defined yet</p>
-          <p className="text-[#444] text-xs mt-1">
+        <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+          <Layers size={32} className="mx-auto text-[#3a3a3e] mb-3" />
+          <p className="text-[#707078] text-[15px]">No templates defined yet</p>
+          <p className="text-[#505055] text-sm mt-1">
             Run the seed SQL to populate templates.
           </p>
         </div>
@@ -97,28 +97,28 @@ export default function TemplatesView() {
             return (
               <div
                 key={template.id}
-                className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 hover:border-[#252525] transition-colors"
+                className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-6 hover:border-[#2a2a2e] transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <Layers size={14} className="text-[#00ff88]" />
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-[15px] font-bold text-[#f0f0f0]">
                         {template.name}
                       </span>
                       {!template.is_active && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ff4444]/10 text-[#ff4444]">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-[#ff4444]/10 text-[#ff4444]">
                           Inactive
                         </span>
                       )}
                       {overloaded && (
-                        <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b]">
+                        <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b]">
                           <AlertTriangle size={10} />
                           Overloaded
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#888] mt-1">
+                    <p className="text-sm text-[#909098] mt-1">
                       {template.description}
                     </p>
                   </div>
@@ -126,10 +126,10 @@ export default function TemplatesView() {
                     {(template.supported_runtimes || []).map((rt) => (
                       <span
                         key={rt}
-                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
                         style={{
-                          color: RUNTIME_COLORS[rt] || "#888",
-                          backgroundColor: `${RUNTIME_COLORS[rt] || "#888"}15`,
+                          color: RUNTIME_COLORS[rt] || "#909098",
+                          backgroundColor: `${RUNTIME_COLORS[rt] || "#909098"}15`,
                         }}
                       >
                         {rt}
@@ -140,11 +140,11 @@ export default function TemplatesView() {
 
                 {/* Task types / categories */}
                 <div className="flex items-center gap-1 mb-3 flex-wrap">
-                  <span className="text-[10px] text-[#555] mr-1">Routes:</span>
+                  <span className="text-xs text-[#606068] mr-1">Routes:</span>
                   {(template.task_types || []).map((tt) => (
                     <span
                       key={tt}
-                      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                      className="text-xs px-1.5 py-0.5 rounded font-medium"
                       style={{
                         color: CATEGORY_COLORS[tt] || "#00ff88",
                         backgroundColor: `${CATEGORY_COLORS[tt] || "#00ff88"}15`,
@@ -157,15 +157,15 @@ export default function TemplatesView() {
 
                 {/* Skills */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Zap size={10} className="text-[#555]" />
-                  <span className="text-[10px] text-[#555]">
+                  <Zap size={10} className="text-[#606068]" />
+                  <span className="text-xs text-[#606068]">
                     {skillCount}/{template.max_skills} skills:
                   </span>
                   {skills.map((s) =>
                     s ? (
                       <span
                         key={s.slug}
-                        className="text-[10px] px-1.5 py-0.5 rounded border border-[#1a1a1a] text-[#999]"
+                        className="text-xs px-1.5 py-0.5 rounded border border-[#1c1c1e] text-[#a0a0a8]"
                       >
                         {s.name}
                       </span>

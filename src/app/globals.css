@@ -2,23 +2,33 @@
 
 :root {
   --background: #080808;
-  --foreground: #e0e0e0;
+  --foreground: #d4d4d4;
   --accent: #00ff88;
-  --sidebar-width: 220px;
-  --chat-width: 400px;
+  --sidebar-width: 240px;
+  --chat-width: 420px;
+  --card-bg: #101012;
+  --card-border: #1c1c1e;
+  --card-border-hover: #2a2a2e;
+  --input-bg: #0a0a0c;
+  --input-border: #232326;
+  --surface-dim: #0c0c0e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
-  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
 }
 
 /* Scrollbar */
@@ -29,8 +39,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #2a2a2e;
   border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3e;
 }
 
 /* Pulse animation for active agents */

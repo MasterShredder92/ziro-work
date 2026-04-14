@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { LayoutDashboard, Bot, Users, Settings, Zap, Layers, Play, Star, FileText, Archive } from "lucide-react";
+import { LayoutDashboard, Bot, Users, Settings, Zap, Layers, Play, Star, FileText, Archive, UserCog, Sparkles } from "lucide-react";
 import clsx from "clsx";
 import MrrTracker from "./MrrTracker";
 
-export type ViewName = "dashboard" | "agents" | "contacts" | "skills" | "templates" | "runs" | "reviews" | "taskbank" | "archived" | "settings";
+export type ViewName = "dashboard" | "agents" | "agent-profiles" | "star-config" | "contacts" | "skills" | "templates" | "runs" | "reviews" | "taskbank" | "archived" | "settings";
 
 const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard; section?: string }[] = [
   { label: "Dashboard", view: "dashboard", icon: LayoutDashboard },
   { label: "Agents", view: "agents", icon: Bot },
   { label: "Contacts", view: "contacts", icon: Users },
+  { label: "Star Config", view: "star-config", icon: Sparkles, section: "orchestrator" },
+  { label: "Specialists", view: "agent-profiles", icon: UserCog, section: "orchestrator" },
   { label: "Skills", view: "skills", icon: Zap, section: "orchestrator" },
   { label: "Templates", view: "templates", icon: Layers, section: "orchestrator" },
   { label: "Runs", view: "runs", icon: Play, section: "orchestrator" },
@@ -41,32 +43,32 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-[220px] bg-[#0c0c0c] border-r border-[#1a1a1a] flex flex-col z-50">
+    <aside className="fixed left-0 top-0 h-full w-[240px] bg-[#0a0a0c] border-r border-[#1c1c1e] flex flex-col z-50">
       {/* Logo */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-xl font-bold tracking-tight">
-          <span className="text-[#00ff88]">ZIRO</span>
-          <span className="text-white ml-1">WORK</span>
+      <div className="px-6 pt-7 pb-5">
+        <h1 className="text-2xl tracking-tighter">
+          <span className="text-[#00ff88] font-extrabold">ZIRO</span>
+          <span className="text-white ml-1 font-light">WORK</span>
         </h1>
       </div>
 
       {/* MRR */}
-      <div className="px-5 pb-2">
+      <div className="px-6 pb-3">
         <MrrTracker />
       </div>
 
       {/* Phase Badge */}
-      <div className="px-5 pb-5">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20">
+      <div className="px-6 pb-6">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20">
           Phase {phase}
         </span>
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-[#1a1a1a] mx-5" />
+      <div className="h-px bg-[#1c1c1e] mx-6" />
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
         {navItems.map((item, idx) => {
           const Icon = item.icon;
           const isActive = activeView === item.view;
@@ -75,20 +77,20 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
           return (
             <div key={item.view}>
               {showDivider && (
-                <div className="pt-3 pb-2 px-3">
-                  <div className="text-[10px] font-semibold text-[#444] uppercase tracking-wider">Orchestrator</div>
+                <div className="pt-4 pb-3 px-4">
+                  <div className="text-xs font-semibold text-[#505055] uppercase tracking-wider">Orchestrator</div>
                 </div>
               )}
               <button
                 onClick={() => setActiveView(item.view)}
                 className={clsx(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[15px] font-semibold transition-colors",
                   isActive
                     ? "bg-[#00ff88]/10 text-[#00ff88]"
-                    : "text-[#888] hover:text-white hover:bg-white/5"
+                    : "text-[#909098] hover:text-white hover:bg-white/5"
                 )}
               >
-                <Icon size={18} />
+                <Icon size={20} />
                 {item.label}
               </button>
             </div>
@@ -97,7 +99,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-5 pb-5 text-[11px] text-[#444]">
+      <div className="px-6 pb-6 text-xs text-[#505055]">
         Ziro Work v0.1
       </div>
     </aside>

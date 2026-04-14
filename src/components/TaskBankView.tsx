@@ -65,7 +65,7 @@ const STATUS_COLORS: Record<string, string> = {
   running: "#f59e0b",
   failed: "#ff4444",
   failed_permanent: "#ff4444",
-  pending: "#888",
+  pending: "#909098",
   retry: "#f59e0b",
 };
 
@@ -95,7 +95,7 @@ function StatusIcon({ status }: { status: string }) {
     case "failed_permanent":
       return <AlertTriangle size={14} className="text-[#ff4444] shrink-0" />;
     default:
-      return <Clock size={14} className="text-[#888] shrink-0" />;
+      return <Clock size={14} className="text-[#909098] shrink-0" />;
   }
 }
 
@@ -170,7 +170,7 @@ export default function TaskBankView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="animate-spin text-[#444]" />
+        <Loader2 size={20} className="animate-spin text-[#505055]" />
       </div>
     );
   }
@@ -179,19 +179,19 @@ export default function TaskBankView() {
     <div className="h-full overflow-y-auto p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold text-white">Task Bank</h2>
-          <p className="text-xs text-[#555] mt-1">
+          <h2 className="text-xl font-extrabold text-[#f0f0f0]">Task Bank</h2>
+          <p className="text-sm text-[#606068] mt-1">
             Task-centered history — one clean record per completed task
           </p>
         </div>
-        <span className="text-xs text-[#555]">{tasks.length} tasks</span>
+        <span className="text-sm text-[#606068]">{tasks.length} tasks</span>
       </div>
 
       {tasks.length === 0 ? (
-        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-12 text-center">
-          <FileText size={32} className="mx-auto text-[#333] mb-3" />
-          <p className="text-[#666] text-sm">No completed tasks yet</p>
-          <p className="text-[#444] text-xs mt-1">
+        <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+          <FileText size={32} className="mx-auto text-[#3a3a3e] mb-3" />
+          <p className="text-[#707078] text-[15px]">No completed tasks yet</p>
+          <p className="text-[#505055] text-sm mt-1">
             Tasks appear here after execution and review.
           </p>
         </div>
@@ -203,42 +203,42 @@ export default function TaskBankView() {
             const verdictColor = task.review_status ? (VERDICT_COLORS[task.review_status] || "#888") : undefined;
 
             return (
-              <div key={task.id} className="bg-[#111] border border-[#1a1a1a] rounded-xl overflow-hidden">
+              <div key={task.id} className="bg-[#101012] border border-[#1c1c1e] rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
                 {/* Header — always visible */}
                 <div
-                  className="flex items-center gap-3 p-4 cursor-pointer hover:bg-[#151515] transition-colors"
+                  className="flex items-center gap-3 p-5 cursor-pointer hover:bg-[#161618] transition-colors"
                   onClick={() => toggleExpand(task.id)}
                 >
                   {isExpanded ? (
-                    <ChevronDown size={14} className="text-[#555] shrink-0" />
+                    <ChevronDown size={14} className="text-[#606068] shrink-0" />
                   ) : (
-                    <ChevronRight size={14} className="text-[#555] shrink-0" />
+                    <ChevronRight size={14} className="text-[#606068] shrink-0" />
                   )}
                   <StatusIcon status={task.status} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-[#ccc] truncate">
+                    <div className="text-sm font-medium text-[#ccc] truncate">
                       {task.title}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       {task.agents?.name && (
-                        <span className="text-[10px] text-[#555]">
+                        <span className="text-xs text-[#606068]">
                           {task.agents.name}
                         </span>
                       )}
                       {task.agent_templates?.name && (
-                        <span className="text-[10px] text-[#444]">
+                        <span className="text-xs text-[#505055]">
                           via {task.agent_templates.name}
                         </span>
                       )}
                       <span
-                        className="text-[10px] px-1.5 py-0.5 rounded"
+                        className="text-xs px-1.5 py-0.5 rounded"
                         style={{ color: statusColor, backgroundColor: `${statusColor}15` }}
                       >
                         {task.status}
                       </span>
                       {verdictColor && (
                         <span
-                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          className="text-xs px-1.5 py-0.5 rounded"
                           style={{ color: verdictColor, backgroundColor: `${verdictColor}15` }}
                         >
                           {task.review_status}
@@ -246,51 +246,51 @@ export default function TaskBankView() {
                       )}
                     </div>
                   </div>
-                  <div className="text-[10px] text-[#444] shrink-0">
+                  <div className="text-xs text-[#505055] shrink-0">
                     {task.completed_at ? formatTimestamp(task.completed_at) : formatTimestamp(task.created_at)}
                   </div>
                 </div>
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="border-t border-[#1a1a1a] px-4 pb-4 pt-3 space-y-4">
+                  <div className="border-t border-[#1c1c1e] px-5 pb-5 pt-4 space-y-4">
                     {detailLoading ? (
                       <div className="flex items-center justify-center py-6">
-                        <Loader2 size={16} className="animate-spin text-[#444]" />
+                        <Loader2 size={16} className="animate-spin text-[#505055]" />
                       </div>
                     ) : (
                       <>
                         {/* Review Summary */}
                         {task.review_summary && (
                           <div>
-                            <div className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">
+                            <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                               Review Summary
                             </div>
-                            <p className="text-xs text-[#999]">{task.review_summary}</p>
+                            <p className="text-sm text-[#a0a0a8]">{task.review_summary}</p>
                           </div>
                         )}
 
                         {/* Failures */}
                         {failures.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#ff4444] uppercase tracking-wider mb-1">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#ff4444] uppercase tracking-wider mb-1">
                               <Bug size={10} />
                               Failures ({failures.length})
                             </div>
                             <div className="space-y-1">
                               {failures.map((f) => (
-                                <div key={f.id} className="text-xs bg-[#ff4444]/5 border border-[#ff4444]/20 rounded-lg p-2">
+                                <div key={f.id} className="text-sm bg-[#ff4444]/5 border border-[#ff4444]/20 rounded-lg p-3">
                                   <div className="flex items-center gap-2">
                                     <span className="text-[#ff4444] font-medium">{f.failure_stage}</span>
                                     {f.recoverable && (
-                                      <span className="text-[10px] text-[#f59e0b]">recoverable</span>
+                                      <span className="text-xs text-[#f59e0b]">recoverable</span>
                                     )}
                                   </div>
                                   {f.error_message && (
                                     <p className="text-[#ff4444]/70 mt-1 line-clamp-3">{f.error_message}</p>
                                   )}
                                   {f.recovery_action && (
-                                    <p className="text-[#888] mt-1">Recovery: {f.recovery_action}</p>
+                                    <p className="text-[#909098] mt-1">Recovery: {f.recovery_action}</p>
                                   )}
                                 </div>
                               ))}
@@ -301,15 +301,15 @@ export default function TaskBankView() {
                         {/* Artifacts */}
                         {artifacts.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#3b82f6] uppercase tracking-wider mb-1">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#3b82f6] uppercase tracking-wider mb-1">
                               <FileOutput size={10} />
                               Artifacts ({artifacts.length})
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {artifacts.map((a) => (
-                                <div key={a.id} className="text-xs bg-[#3b82f6]/5 border border-[#3b82f6]/20 rounded-lg px-2 py-1">
+                                <div key={a.id} className="text-sm bg-[#3b82f6]/5 border border-[#3b82f6]/20 rounded-lg px-2.5 py-1.5">
                                   <span className="text-[#3b82f6]">{a.artifact_type}</span>
-                                  <span className="text-[#888] ml-1.5">{a.title}</span>
+                                  <span className="text-[#909098] ml-1.5">{a.title}</span>
                                 </div>
                               ))}
                             </div>
@@ -319,33 +319,33 @@ export default function TaskBankView() {
                         {/* Thread Messages */}
                         {threadMessages.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                               <Zap size={10} />
                               Thread ({threadMessages.length} messages)
                             </div>
-                            <div className="bg-[#080808] border border-[#1a1a1a] rounded-lg max-h-[300px] overflow-y-auto">
+                            <div className="bg-[#0a0a0c] border border-[#1c1c1e] rounded-lg max-h-[300px] overflow-y-auto">
                               {threadMessages.map((msg) => {
                                 const isError = msg.message_type === "error";
                                 const isResult = msg.message_type === "result";
                                 return (
                                   <div
                                     key={msg.id}
-                                    className="px-3 py-2 border-b border-[#1a1a1a] last:border-0"
+                                    className="px-3 py-2.5 border-b border-[#1c1c1e] last:border-0"
                                   >
                                     <div className="flex items-center gap-2 mb-0.5">
-                                      <span className="text-[10px] font-medium text-[#666]">
+                                      <span className="text-xs font-medium text-[#707078]">
                                         {msg.sender_name || msg.sender_type}
                                       </span>
-                                      <span className="text-[10px] text-[#444]">
+                                      <span className="text-xs text-[#505055]">
                                         {msg.message_type}
                                       </span>
-                                      <span className="text-[10px] text-[#333]">
+                                      <span className="text-xs text-[#3a3a3e]">
                                         {formatTimestamp(msg.created_at)}
                                       </span>
                                     </div>
                                     <p
-                                      className={`text-xs whitespace-pre-wrap line-clamp-6 ${
-                                        isError ? "text-[#ff4444]/80" : isResult ? "text-[#00ff88]/80" : "text-[#999]"
+                                      className={`text-sm whitespace-pre-wrap line-clamp-6 ${
+                                        isError ? "text-[#ff4444]/80" : isResult ? "text-[#00ff88]/80" : "text-[#a0a0a8]"
                                       }`}
                                     >
                                       {msg.content}
@@ -360,10 +360,10 @@ export default function TaskBankView() {
                         {/* Raw result fallback if no thread */}
                         {threadMessages.length === 0 && task.result && (
                           <div>
-                            <div className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">
+                            <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                               Result
                             </div>
-                            <div className="text-xs text-[#999] whitespace-pre-wrap break-words bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 max-h-[200px] overflow-y-auto">
+                            <div className="text-sm text-[#a0a0a8] whitespace-pre-wrap break-words bg-[#0a0a0c] border border-[#1c1c1e] rounded-lg p-3 max-h-[200px] overflow-y-auto">
                               {task.result.slice(0, 5000)}
                             </div>
                           </div>

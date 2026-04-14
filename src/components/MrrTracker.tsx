@@ -45,7 +45,7 @@ export default function MrrTracker() {
 
   return (
     <div>
-      <div className="text-[11px] text-[#666] uppercase tracking-wider mb-1">
+      <div className="text-xs text-[#707078] uppercase tracking-wider mb-1 font-semibold">
         Monthly Revenue
       </div>
       {editing ? (
@@ -56,24 +56,24 @@ export default function MrrTracker() {
           onChange={(e) => setMrr(Number(e.target.value))}
           onBlur={handleSave}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
-          className="bg-[#1a1a1a] border border-[#333] rounded px-2 py-1 text-lg font-bold text-[#00ff88] w-full outline-none focus:border-[#00ff88]"
+          className="bg-[#18181b] border border-[#2a2a2e] rounded px-3 py-1.5 text-xl font-bold text-[#00ff88] w-full outline-none focus:border-[#00ff88]"
         />
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="text-lg font-bold text-[#00ff88] hover:text-[#33ffaa] transition-colors cursor-pointer"
+          className="text-xl font-bold text-[#00ff88] hover:text-[#33ffaa] transition-colors cursor-pointer"
         >
           ${mrr.toLocaleString()}
         </button>
       )}
       {/* Progress bar */}
-      <div className="mt-2 h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+      <div className="mt-2 h-1.5 bg-[#1c1c1e] rounded-full overflow-hidden">
         <div
           className="h-full bg-[#00ff88] rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="text-[10px] text-[#555] mt-1">
+      <div className="text-xs text-[#606068] mt-1">
         ${mrr.toLocaleString()} / ${target.toLocaleString()}
       </div>
     </div>

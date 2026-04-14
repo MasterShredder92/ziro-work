@@ -79,7 +79,7 @@ export default function ReviewsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="animate-spin text-[#444]" />
+        <Loader2 size={20} className="animate-spin text-[#505055]" />
       </div>
     );
   }
@@ -93,8 +93,8 @@ export default function ReviewsView() {
       <div className="h-full overflow-y-auto p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-white">STAR Reviews</h2>
-            <p className="text-xs text-[#555] mt-1">
+            <h2 className="text-xl font-extrabold text-[#f0f0f0]">STAR Reviews</h2>
+            <p className="text-sm text-[#606068] mt-1">
               Post-execution reviews with verdict, analysis, and next actions
             </p>
           </div>
@@ -102,10 +102,10 @@ export default function ReviewsView() {
             <div className="flex gap-1">
               <button
                 onClick={() => setFilterVerdict("all")}
-                className={`text-[10px] px-2 py-1 rounded-full transition-colors ${
+                className={`text-sm px-3 py-1.5 rounded-full transition-colors ${
                   filterVerdict === "all"
-                    ? "bg-white/10 text-white"
-                    : "text-[#555] hover:text-[#999]"
+                    ? "bg-white/10 text-[#f0f0f0]"
+                    : "text-[#606068] hover:text-[#a0a0a8]"
                 }`}
               >
                 All
@@ -114,11 +114,11 @@ export default function ReviewsView() {
                 <button
                   key={key}
                   onClick={() => setFilterVerdict(key)}
-                  className={`text-[10px] px-2 py-1 rounded-full transition-colors ${
-                    filterVerdict === key ? "" : "hover:text-[#999]"
+                  className={`text-sm px-3 py-1.5 rounded-full transition-colors ${
+                    filterVerdict === key ? "" : "hover:text-[#a0a0a8]"
                   }`}
                   style={{
-                    color: filterVerdict === key ? cfg.color : "#555",
+                    color: filterVerdict === key ? cfg.color : "#606068",
                     backgroundColor: filterVerdict === key ? `${cfg.color}15` : undefined,
                   }}
                 >
@@ -126,15 +126,15 @@ export default function ReviewsView() {
                 </button>
               ))}
             </div>
-            <span className="text-xs text-[#555]">{filtered.length} reviews</span>
+            <span className="text-sm text-[#606068]">{filtered.length} reviews</span>
           </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-12 text-center">
-            <Star size={32} className="mx-auto text-[#333] mb-3" />
-            <p className="text-[#666] text-sm">No reviews yet</p>
-            <p className="text-[#444] text-xs mt-1">
+          <div className="bg-[#101012] border border-[#1c1c1e] rounded-xl p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+            <Star size={32} className="mx-auto text-[#3a3a3e] mb-3" />
+            <p className="text-[#707078] text-[15px]">No reviews yet</p>
+            <p className="text-[#505055] text-sm mt-1">
               Reviews are generated after task runs complete.
             </p>
           </div>
@@ -146,20 +146,20 @@ export default function ReviewsView() {
                 <div
                   key={review.id}
                   onClick={() => setSelected(review)}
-                  className="flex items-center gap-3 p-3 bg-[#111] border border-[#1a1a1a] rounded-xl cursor-pointer hover:bg-[#151515] hover:border-[#252525] transition-colors"
+                  className="flex items-center gap-3 p-4 bg-[#101012] border border-[#1c1c1e] rounded-xl cursor-pointer hover:bg-[#161618] hover:border-[#2a2a2e] transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
                 >
                   <VerdictIcon verdict={review.verdict} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-[#ccc] truncate">
+                    <div className="text-sm font-medium text-[#ccc] truncate">
                       {review.task_runs?.agent_tasks?.title || "Untitled"}
                     </div>
-                    <div className="text-[10px] text-[#666] mt-0.5 truncate">
+                    <div className="text-xs text-[#707078] mt-0.5 truncate">
                       {review.summary}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <span
-                      className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                      className="text-xs px-2 py-0.5 rounded-full font-semibold"
                       style={{
                         color: vc.color,
                         backgroundColor: `${vc.color}15`,
@@ -167,7 +167,7 @@ export default function ReviewsView() {
                     >
                       {vc.label}
                     </span>
-                    <div className="text-[10px] text-[#444] mt-1">
+                    <div className="text-xs text-[#505055] mt-1">
                       {formatTimestamp(review.created_at)}
                     </div>
                   </div>
@@ -185,32 +185,32 @@ export default function ReviewsView() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="relative w-[90%] max-w-[560px] max-h-[80vh] bg-[#0c0c0c] border border-[#1a1a1a] rounded-xl shadow-2xl flex flex-col"
+            className="relative w-[90%] max-w-[620px] max-h-[80vh] bg-[#0c0c0e] border border-[#1c1c1e] rounded-xl shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-white">
+                <h3 className="text-[15px] font-bold text-[#f0f0f0]">
                   {selected.task_runs?.agent_tasks?.title || "Untitled"}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <span
-                    className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                    className="text-xs px-2 py-0.5 rounded-full font-semibold"
                     style={{
                       color:
-                        VERDICT_CONFIG[selected.verdict]?.color || "#888",
-                      backgroundColor: `${VERDICT_CONFIG[selected.verdict]?.color || "#888"}15`,
+                        VERDICT_CONFIG[selected.verdict]?.color || "#909098",
+                      backgroundColor: `${VERDICT_CONFIG[selected.verdict]?.color || "#909098"}15`,
                     }}
                   >
                     {VERDICT_CONFIG[selected.verdict]?.label || selected.verdict}
                   </span>
                   {selected.task_runs?.runtime && (
-                    <span className="text-[10px] text-[#555]">
+                    <span className="text-xs text-[#606068]">
                       {selected.task_runs.runtime}
                     </span>
                   )}
                   {selected.task_runs?.attempt_number && selected.task_runs.attempt_number > 1 && (
-                    <span className="text-[10px] text-[#f59e0b]">
+                    <span className="text-xs text-[#f59e0b]">
                       attempt {selected.task_runs.attempt_number}
                     </span>
                   )}
@@ -218,7 +218,7 @@ export default function ReviewsView() {
               </div>
               <button
                 onClick={() => setSelected(null)}
-                className="p-1 rounded-lg hover:bg-white/5 text-[#666] hover:text-white transition-colors"
+                className="p-1 rounded-lg hover:bg-white/5 text-[#707078] hover:text-[#f0f0f0] transition-colors"
               >
                 <X size={16} />
               </button>
@@ -227,21 +227,21 @@ export default function ReviewsView() {
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
               {/* Summary */}
               <div>
-                <div className="text-[10px] font-semibold text-[#555] uppercase tracking-wider mb-1">
+                <div className="text-xs font-semibold text-[#606068] uppercase tracking-wider mb-1">
                   Summary
                 </div>
-                <p className="text-xs text-[#999]">{selected.summary}</p>
+                <p className="text-sm text-[#a0a0a8]">{selected.summary}</p>
               </div>
 
               {/* What Worked */}
               {selected.what_worked.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-semibold text-[#00ff88] uppercase tracking-wider mb-1">
+                  <div className="text-xs font-semibold text-[#00ff88] uppercase tracking-wider mb-1">
                     What Worked
                   </div>
                   <ul className="space-y-1">
                     {selected.what_worked.map((item, i) => (
-                      <li key={i} className="text-xs text-[#999] flex items-start gap-1.5">
+                      <li key={i} className="text-sm text-[#a0a0a8] flex items-start gap-1.5">
                         <CheckCircle size={10} className="text-[#00ff88] mt-0.5 shrink-0" />
                         {item}
                       </li>
@@ -253,12 +253,12 @@ export default function ReviewsView() {
               {/* What Failed */}
               {selected.what_failed.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-semibold text-[#ff4444] uppercase tracking-wider mb-1">
+                  <div className="text-xs font-semibold text-[#ff4444] uppercase tracking-wider mb-1">
                     What Failed
                   </div>
                   <ul className="space-y-1">
                     {selected.what_failed.map((item, i) => (
-                      <li key={i} className="text-xs text-[#999] flex items-start gap-1.5">
+                      <li key={i} className="text-sm text-[#a0a0a8] flex items-start gap-1.5">
                         <AlertTriangle size={10} className="text-[#ff4444] mt-0.5 shrink-0" />
                         {item}
                       </li>
@@ -270,10 +270,10 @@ export default function ReviewsView() {
               {/* Next Action */}
               {selected.next_action && (
                 <div>
-                  <div className="text-[10px] font-semibold text-[#3b82f6] uppercase tracking-wider mb-1">
+                  <div className="text-xs font-semibold text-[#3b82f6] uppercase tracking-wider mb-1">
                     Next Action
                   </div>
-                  <p className="text-xs text-[#999]">{selected.next_action}</p>
+                  <p className="text-sm text-[#a0a0a8]">{selected.next_action}</p>
                 </div>
               )}
             </div>

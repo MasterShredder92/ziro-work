@@ -25,7 +25,7 @@ export async function loadTemplatesWithSkills(): Promise<TemplateWithSkills[]> {
 
   const skillIds = [...new Set((links || []).map((l: { skill_id: string }) => l.skill_id))];
   const { data: skills } = skillIds.length > 0
-    ? await supabase.from("skills").select("*").in("id", skillIds).eq("is_active", true)
+    ? await supabase.from("skills").select("*").in("id", skillIds).eq("is_active", true).eq("approval_status", "approved")
     : { data: [] as Skill[] };
 
   const skillMap = new Map((skills || []).map((s: Skill) => [s.id, s]));

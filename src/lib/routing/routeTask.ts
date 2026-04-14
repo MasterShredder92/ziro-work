@@ -4,6 +4,7 @@ import { loadTemplatesWithSkills, selectBestTemplate } from "./selectTemplate";
 import { selectSkills } from "./selectSkills";
 import { selectRuntime } from "./selectRuntime";
 import { composeSystemPrompt, estimateTokens } from "./composeSystemPrompt";
+import { proposeSkill } from "./proposeSkill";
 import type {
   RouteResult,
   RouteDecision,
@@ -152,6 +153,26 @@ export async function routeTask(
   );
   const skills = selectSkills(best.template.skills, runtime, classified.keywords);
   const composedPrompt = composeSystemPrompt(best.template, skills, description);
+
+  // Detect skill gaps: keywords that matched classification but no skill tag covers them
+  const allSkillTags = skills.flatMap((s) => s.tags || []);
+  const uncoveredKeywords = classified.keywords.filter(
+    (kw) => !allSkillTags.includes(kw)
+  );
+  if (uncoveredKeywords.length >= 2 && best.score < 60) {
+    // Propose a skill for the gap (non-blocking, runs in background)
+    const gapKey = `${classified.task_type}-${uncoveredKeywords[0]}`.replace(/\s+/g, "-").toLowerCase();
+    proposeSkill({
+      key: gapKey,
+      name: `${uncoveredKeywords[0]} ${classified.task_type}`.replace(/\b\w/g, (c) => c.toUpperCase()),
+      description: `Handles ${uncoveredKeywords.join(", ")} tasks within ${classified.task_type} domain. Auto-proposed by STAR routing.`,
+      category: classified.task_type === "code" ? "engineering" : "operations",
+      system_prompt_fragment: `You handle tasks related to: ${uncoveredKeywords.join(", ")}. Follow standard operating procedures for ${classified.task_type} work.`,
+      preferred_runtime: runtime,
+      tags: uncoveredKeywords,
+      reason: `Routing scored ${best.score} for "${title}" — keywords [${uncoveredKeywords.join(", ")}] had no matching skill tags.`,
+    }).catch((err) => console.error("[ROUTE] Skill proposal failed:", err));
+  }
 
   const route: RouteDecision = {
     template: best.template,

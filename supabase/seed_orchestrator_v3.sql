@@ -240,24 +240,20 @@ INSERT INTO agent_template_skills (agent_template_id, skill_id, priority)
 SELECT t.id, s.id, 40 FROM agent_templates t, skills s WHERE t.key = 'orchestrator' AND s.key = 'task-audit'
 ON CONFLICT DO NOTHING;
 
--- ── Hide old non-music-school agents from active UI ──
--- This does NOT delete them. Just hides from active canvas.
+-- ── STAR-first mode: hide all legacy agents, STAR is sole orchestrator ──
+-- This does NOT delete them. Marks them retired/hidden/legacy.
 
 UPDATE agents SET
   is_visible_in_ui = false,
   is_archived = true,
-  business_context = 'future'
-WHERE slug NOT IN ('star')
-  AND (
-    name ILIKE '%outreach%'
-    OR name ILIKE '%gtm%'
-    OR name ILIKE '%marketplace%'
-    OR name ILIKE '%scout%'
-    OR name ILIKE '%cold%'
-  );
+  status = 'retired',
+  business_context = 'legacy'
+WHERE slug IN ('scout', 'reel', 'spark', 'close', 'pulse', 'anchor', 'echo');
 
--- Ensure STAR is always visible
+-- Ensure STAR is persistent orchestrator, always visible
 UPDATE agents SET
+  mode = 'persistent',
+  status = 'deployed',
   is_visible_in_ui = true,
   is_archived = false,
   business_context = 'music_school'
