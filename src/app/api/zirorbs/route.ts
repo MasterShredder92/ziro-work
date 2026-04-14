@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     sort_order = 100,
     board_x,
     board_y,
+    is_active = true,
   } = body;
 
   if (!name) {
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
       sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 100,
       board_x: board_x != null && Number.isFinite(Number(board_x)) ? Number(board_x) : null,
       board_y: board_y != null && Number.isFinite(Number(board_y)) ? Number(board_y) : null,
+      is_active: Boolean(is_active),
       created_at: now,
       updated_at: now,
     })
@@ -88,6 +90,10 @@ export async function PATCH(req: NextRequest) {
 
   if (updates.family && updates.family !== "core" && updates.family !== "vertical") {
     return NextResponse.json({ error: "family must be core or vertical" }, { status: 400 });
+  }
+
+  if (updates.is_active !== undefined) {
+    updates.is_active = Boolean(updates.is_active);
   }
 
   updates.updated_at = new Date().toISOString();

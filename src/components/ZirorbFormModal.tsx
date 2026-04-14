@@ -13,6 +13,8 @@ export interface ZirorbRecord {
   sort_order: number;
   board_x?: number | null;
   board_y?: number | null;
+  /** When false, Zirorb is dormant (dimmed on map, routing prefers active Orbs). */
+  is_active?: boolean | null;
   created_at?: string;
   updated_at?: string;
 }

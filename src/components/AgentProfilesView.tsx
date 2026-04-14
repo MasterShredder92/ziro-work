@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Loader2,
   Bot,
@@ -102,9 +102,14 @@ const MODE_COLORS: Record<string, string> = {
 
 interface AgentProfilesViewProps {
   onOpenOrganization?: () => void;
+  /** From Star Control: bump token + set zirorbId to filter the list to one Orb. */
+  agentsFilterRequest?: { token: number; zirorbId: string | null };
 }
 
-export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesViewProps) {
+export default function AgentProfilesView({
+  onOpenOrganization,
+  agentsFilterRequest = { token: 0, zirorbId: null },
+}: AgentProfilesViewProps) {
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [zirorbs, setZirorbs] = useState<ZirorbRecord[]>([]);
@@ -117,6 +122,8 @@ export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesV
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [zirorbListFilter, setZirorbListFilter] = useState<string | null>(null);
+  const lastAgentsFilterToken = useRef(0);
 
   const loadZirorbs = useCallback(async () => {
     setZirorbsLoading(true);
@@ -152,6 +159,13 @@ export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesV
     loadZirorbs();
   }, [loadZirorbs]);
 
+  useEffect(() => {
+    if (!agentsFilterRequest || agentsFilterRequest.token === 0) return;
+    if (agentsFilterRequest.token === lastAgentsFilterToken.current) return;
+    lastAgentsFilterToken.current = agentsFilterRequest.token;
+    setZirorbListFilter(agentsFilterRequest.zirorbId);
+  }, [agentsFilterRequest]);
+
   async function performAction(agentId: string, action: string) {
     setActionLoading(`${agentId}-${action}`);
     await fetch("/api/agents", {
@@ -177,6 +191,10 @@ export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesV
   }
 
   const filtered = agents.filter((a) => {
+    if (zirorbListFilter) {
+      const rid = a.zirorb_id != null && String(a.zirorb_id).trim() !== "" ? String(a.zirorb_id).trim() : null;
+      if (rid !== zirorbListFilter) return false;
+    }
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -241,33 +259,52 @@ export default function AgentProfilesView({ onOpenOrganization }: AgentProfilesV
         </div>
       </div>
 
-      {/* Tab bar + Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div className="flex gap-1 overflow-x-auto no-scrollbar">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                tab === t.key
-                  ? "bg-white/10 text-[#f0f0f0]"
-                  : "text-[#606068] hover:text-[#a0a0a8]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-lg px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-          <Search size={12} className="text-[#606068] shrink-0" />
-          <input
-            type="text"
-            placeholder="Search agents..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-sm text-[#f0f0f0] placeholder-[#606068] outline-none w-full sm:w-40"
-          />
+      {/* Tab bar + Zirorb filter + Search */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                  tab === t.key
+                    ? "bg-white/10 text-[#f0f0f0]"
+                    : "text-[#606068] hover:text-[#a0a0a8]"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex items-center gap-2 rounded-lg border border-[#1c1c1e] bg-[#101012] px-2 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+              <Orbit size={12} className="text-[#707078] shrink-0" />
+              <select
+                className="bg-transparent text-xs text-[#d0d0d8] outline-none min-w-[140px] cursor-pointer"
+                value={zirorbListFilter ?? ""}
+                onChange={(e) => setZirorbListFilter(e.target.value === "" ? null : e.target.value)}
+              >
+                <option value="">All Zirorbs</option>
+                {zirorbs.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 bg-[#101012] border border-[#1c1c1e] rounded-lg px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+              <Search size={12} className="text-[#606068] shrink-0" />
+              <input
+                type="text"
+                placeholder="Search agents..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent text-sm text-[#f0f0f0] placeholder-[#606068] outline-none w-full sm:w-40"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

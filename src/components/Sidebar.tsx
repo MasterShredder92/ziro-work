@@ -24,7 +24,7 @@ const navItems: { label: string; view: ViewName; icon: typeof LayoutDashboard; s
   { label: "Dashboard", view: "dashboard", icon: LayoutDashboard },
   { label: "Organization", view: "organization", icon: Orbit },
   { label: "Contacts", view: "contacts", icon: Users },
-  { label: "Star Config", view: "star-config", icon: Sparkles, section: "orchestrator" },
+  { label: "Star Control", view: "star-config", icon: Sparkles, section: "orchestrator" },
   { label: "Agents", view: "agent-profiles", icon: UserCog, section: "orchestrator" },
   { label: "Skills", view: "skills", icon: Zap, section: "orchestrator" },
   { label: "Templates", view: "templates", icon: Layers, section: "orchestrator" },

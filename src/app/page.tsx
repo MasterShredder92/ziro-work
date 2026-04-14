@@ -43,6 +43,14 @@ export default function Dashboard() {
   const [activeView, setActiveView] = useState<ViewName>("dashboard");
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [organizationNav, setOrganizationNav] = useState<{
+    token: number;
+    zirorbId: string | "unassigned" | null;
+  }>({ token: 0, zirorbId: null });
+  const [agentsFilterRequest, setAgentsFilterRequest] = useState<{ token: number; zirorbId: string | null }>({
+    token: 0,
+    zirorbId: null,
+  });
 
   useEffect(() => {
     // Load visible agents (STAR + any currently-running spawned agents)
@@ -133,6 +141,7 @@ export default function Dashboard() {
         {activeView === "dashboard" && <DashboardView agents={agents} />}
         {activeView === "organization" && (
           <AgentOrganizationBoard
+            organizationNav={organizationNav}
             onOpenAgentChat={(a) =>
               setSelectedAgent({
                 id: a.id,
@@ -149,9 +158,23 @@ export default function Dashboard() {
           />
         )}
         {activeView === "agent-profiles" && (
-          <AgentProfilesView onOpenOrganization={() => setActiveView("organization")} />
+          <AgentProfilesView
+            onOpenOrganization={() => setActiveView("organization")}
+            agentsFilterRequest={agentsFilterRequest}
+          />
         )}
-        {activeView === "star-config" && <StarConfigView />}
+        {activeView === "star-config" && (
+          <StarConfigView
+            onOpenOrganization={(focusZirorbId) => {
+              setOrganizationNav({ token: Date.now(), zirorbId: focusZirorbId ?? null });
+              setActiveView("organization");
+            }}
+            onOpenAgents={(filterZirorbId) => {
+              setAgentsFilterRequest({ token: Date.now(), zirorbId: filterZirorbId ?? null });
+              setActiveView("agent-profiles");
+            }}
+          />
+        )}
         {activeView === "contacts" && <ContactsView />}
         {activeView === "skills" && <SkillsView />}
         {activeView === "templates" && <TemplatesView />}

@@ -109,9 +109,14 @@ function zirorbKey(zid: string | null): ZirorbKey {
 type AgentOrganizationBoardProps = {
   /** Opens the right chat panel (wired from app shell). */
   onOpenAgentChat?: (agent: AgentRecord) => void;
+  /** Deep-link from Star Control: bump `token` and set `zirorbId` to open the focus overlay (or null to close). */
+  organizationNav?: { token: number; zirorbId: string | "unassigned" | null };
 };
 
-export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganizationBoardProps) {
+export default function AgentOrganizationBoard({
+  onOpenAgentChat,
+  organizationNav = { token: 0, zirorbId: null },
+}: AgentOrganizationBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [isMdUp, setIsMdUp] = useState(true);
@@ -198,6 +203,14 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  const lastOrgNavToken = useRef(0);
+  useEffect(() => {
+    if (!organizationNav || organizationNav.token === 0) return;
+    if (organizationNav.token === lastOrgNavToken.current) return;
+    lastOrgNavToken.current = organizationNav.token;
+    setFocusedZirorbId(organizationNav.zirorbId != null ? organizationNav.zirorbId : null);
+  }, [organizationNav]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -522,13 +535,17 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
               {sortedZirorbs.map((z) => {
                 const { x, y } = effectiveXY(z, sortedZirorbs.indexOf(z), sortedZirorbs);
                 const gid = `org-star-lg-${z.id}`;
+                const orbActive = z.is_active !== false;
                 return (
-                  <g key={z.id} className="transition-opacity duration-500">
+                  <g
+                    key={z.id}
+                    className={clsx("transition-opacity duration-500", !orbActive && "opacity-[0.35]")}
+                  >
                     <defs>
                       <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1={50} y1={14} x2={x} y2={y}>
-                        <stop offset="0%" stopColor="#fde68a" stopOpacity="1" />
-                        <stop offset="35%" stopColor={z.accent_color} stopOpacity="0.92" />
-                        <stop offset="100%" stopColor="#6ee7b7" stopOpacity="0.7" />
+                        <stop offset="0%" stopColor="#fde68a" stopOpacity={orbActive ? "1" : "0.45"} />
+                        <stop offset="35%" stopColor={z.accent_color} stopOpacity={orbActive ? "0.92" : "0.35"} />
+                        <stop offset="100%" stopColor="#6ee7b7" stopOpacity={orbActive ? "0.7" : "0.25"} />
                       </linearGradient>
                     </defs>
                     <line
@@ -537,7 +554,7 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
                       x2={x}
                       y2={y}
                       stroke={z.accent_color}
-                      strokeOpacity={0.35}
+                      strokeOpacity={orbActive ? 0.35 : 0.12}
                       strokeWidth={3}
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
@@ -551,7 +568,7 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
                       strokeWidth={1.45}
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
-                      className="org-star-line"
+                      className={orbActive ? "org-star-line" : undefined}
                       filter="url(#org-star-line-glow)"
                     />
                   </g>
@@ -636,7 +653,8 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
                   className={clsx(
                     "absolute z-10 w-[min(260px,22vw)] min-w-[200px] -translate-x-1/2 -translate-y-1/2 transition-[transform,opacity,filter] duration-500 ease-out",
                     draggingZirorbNodeId === z.id && "z-[40] scale-[1.04] duration-200 ease-out",
-                    draggingZirorbNodeId && draggingZirorbNodeId !== z.id && "opacity-[0.48]"
+                    draggingZirorbNodeId && draggingZirorbNodeId !== z.id && "opacity-[0.48]",
+                    z.is_active === false && "opacity-[0.52] saturate-[0.65]"
                   )}
                   style={{ left: `${x}%`, top: `${y}%` }}
                 >
@@ -665,7 +683,14 @@ export default function AgentOrganizationBoard({ onOpenAgentChat }: AgentOrganiz
                           <Orbit size={14} style={{ color: z.accent_color }} />
                           <span className="truncate text-sm font-bold text-[#f0f0f0]">{z.name}</span>
                         </div>
-                        <div className="text-[10px] text-[#606068]">{inside.length} agents</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] text-[#606068]">{inside.length} agents</span>
+                          {z.is_active === false && (
+                            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#fbbf24]/90 border border-[#f59e0b]/25 rounded px-1.5 py-0">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
                       </button>
                       <div className="flex shrink-0 gap-0.5">
                         <button
