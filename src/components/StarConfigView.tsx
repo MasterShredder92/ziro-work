@@ -10,7 +10,7 @@ import {
   Zap,
   Check,
   Orbit,
-  Map,
+  Map as MapIcon,
   Users,
   Layers,
   Plus,
@@ -327,7 +327,7 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
                 onClick={() => onOpenOrganization(null)}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#a855f7]/35 bg-[#a855f7]/10 px-4 py-2.5 text-sm font-semibold text-[#e9d5ff] hover:bg-[#a855f7]/18 transition-colors"
               >
-                <Map size={16} />
+                <MapIcon size={16} />
                 Open Organization
               </button>
               <button
@@ -451,7 +451,7 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
                         onClick={() => onOpenOrganization(z.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-white/[0.1] px-2 py-1 text-[11px] text-[#c0c0c8] hover:bg-white/5"
                       >
-                        <Map size={12} />
+                        <MapIcon size={12} />
                         Map
                       </button>
                       <button
