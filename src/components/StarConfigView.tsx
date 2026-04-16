@@ -50,7 +50,7 @@ interface AgentRow {
   slug: string;
   role: string;
   status: string;
-  auto_use_by_star: boolean;
+  auto_use_by_ziro: boolean;
   color: string;
   zirorb_id: string | null;
   is_archived?: boolean;
@@ -146,7 +146,7 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
       slug: a.slug,
       role: a.role,
       status: a.status,
-      auto_use_by_star: a.auto_use_by_star,
+      auto_use_by_ziro: a.auto_use_by_ziro,
       color: a.color,
       zirorb_id: a.zirorb_id ?? null,
       is_archived: Boolean(a.is_archived),
@@ -803,7 +803,7 @@ export default function StarConfigView({ onOpenOrganization, onOpenAgents }: Sta
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#f0f0f0] truncate">{agent.name}</span>
-                        {agent.auto_use_by_star && (
+                        {agent.auto_use_by_ziro && (
                           <span className="text-[10px] px-1 py-0.5 rounded bg-[#f59e0b]/15 text-[#fbbf24]">auto</span>
                         )}
                       </div>

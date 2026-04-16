@@ -54,7 +54,7 @@ interface AgentRecord {
   purpose: string | null;
   instructions: string | null;
   usage_triggers: string[];
-  auto_use_by_star: boolean;
+  auto_use_by_ziro: boolean;
   profile_summary: string | null;
   owner_type: string;
   zirorb_id: string | null;
@@ -402,7 +402,7 @@ export default function AgentProfilesView({
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {/* Auto-use badge — hidden on mobile */}
-                    {agent.auto_use_by_star ? (
+                    {agent.auto_use_by_ziro ? (
                       <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-[#f59e0b] bg-[#f59e0b15]">
                         <Eye size={9} /> Auto
                       </span>
@@ -592,7 +592,7 @@ export default function AgentProfilesView({
                       <DetailCell label="Owner" value={agent.owner_type} />
                       <DetailCell
                         label="Star Auto-Use"
-                        value={agent.auto_use_by_star ? "Yes" : "No"}
+                        value={agent.auto_use_by_ziro ? "Yes" : "No"}
                       />
                       <DetailCell
                         label="Created By"
@@ -880,7 +880,7 @@ function AgentForm({ agent, zirorbs, defaultZirorbId, onClose, onSaved }: AgentF
   const [mode, setMode] = useState(agent?.mode || "ephemeral");
   const [ownerType, setOwnerType] = useState(agent?.owner_type || "user");
   const [color, setColor] = useState(agent?.color || "#00ff88");
-  const [autoUse, setAutoUse] = useState(agent?.auto_use_by_star ?? true);
+  const [autoUse, setAutoUse] = useState(agent?.auto_use_by_ziro ?? true);
   const [profileSummary, setProfileSummary] = useState(
     agent?.profile_summary || ""
   );
@@ -927,7 +927,7 @@ function AgentForm({ agent, zirorbs, defaultZirorbId, onClose, onSaved }: AgentF
           mode,
           owner_type: ownerType,
           color,
-          auto_use_by_star: autoUse,
+          auto_use_by_ziro: autoUse,
           profile_summary: profileSummary || null,
           usage_triggers,
           zirorb_id: zirorbId || null,
@@ -952,7 +952,7 @@ function AgentForm({ agent, zirorbs, defaultZirorbId, onClose, onSaved }: AgentF
           mode,
           owner_type: ownerType,
           color,
-          auto_use_by_star: autoUse,
+          auto_use_by_ziro: autoUse,
           profile_summary: profileSummary || null,
           usage_triggers,
           zirorb_id: zirorbId || null,

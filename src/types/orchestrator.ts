@@ -114,7 +114,7 @@ export interface Agent {
   purpose: string | null;
   instructions: string | null;
   usage_triggers: string[];
-  auto_use_by_star: boolean;
+  auto_use_by_ziro: boolean;
   profile_summary: string | null;
   owner_type: string;
   /** FK to zirorbs; absent or null means unassigned in UI */
