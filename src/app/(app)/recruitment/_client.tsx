@@ -47,7 +47,7 @@ function statusCfg(key: string) {
 }
 
 function AddProspectModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: Omit<Prospect, "id" | "created_at">) => void }) {
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", instruments: "", source: "indeed", notes: "", location_id: LOCATIONS[0].id, status: "new" });
+  const [form, setForm] = useState<{ first_name: string; last_name: string; email: string; phone: string; instruments: string; source: string; notes: string; location_id: string; status: string }>({ first_name: "", last_name: "", email: "", phone: "", instruments: "", source: "indeed", notes: "", location_id: LOCATIONS[0].id as string, status: "new" });
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onAdd({ ...form, instruments: form.instruments ? form.instruments.split(",").map(s => s.trim()).filter(Boolean) : [] });
