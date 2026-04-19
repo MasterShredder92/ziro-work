@@ -31,6 +31,23 @@ export function twoWeekWindowFromToday(): ScheduleWindow {
   return twoWeekWindowFrom(toIsoDate(new Date()));
 }
 
+/** Returns a Monday-anchored 7-day window (Mon-Sun) containing the given date */
+export function weekWindowContaining(isoDate: string): ScheduleWindow {
+  const d = parseIsoDate(isoDate);
+  const dow = d.getUTCDay(); // 0=Sun
+  const daysToMonday = dow === 0 ? -6 : 1 - dow;
+  const monday = toIsoDate(new Date(d.getTime() + daysToMonday * DAY_MS));
+  return { start: monday, end: addDays(monday, 6) };
+}
+
+export function weekWindowFromToday(): ScheduleWindow {
+  return weekWindowContaining(toIsoDate(new Date()));
+}
+
+export function shiftWindowByOneWeek(startIso: string, direction: 1 | -1): ScheduleWindow {
+  return weekWindowContaining(addDays(startIso, direction * 7));
+}
+
 export function shiftWindowByWeeks(startIso: string, weeks: number): ScheduleWindow {
   return twoWeekWindowFrom(addDays(startIso, weeks * 7));
 }

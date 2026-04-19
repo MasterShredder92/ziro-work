@@ -1,0 +1,558 @@
+"use client";
+import * as React from "react";
+import Link from "next/link";
+import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
+import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
+import type { ScheduleRoom } from "@/lib/schedule/types";
+import type { LocationHoursMap } from "@/lib/schedule/locationHours";
+import { getHoursForDate } from "@/lib/schedule/locationHours";
+import {
+  projectBlocksForWindow,
+  type ProjectedBlock,
+} from "@/lib/schedule/windowedClient";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type LocationConfig = {
+  name: string;
+  color: string;
+  accent: string;
+  border: string;
+  bg: string;
+  textColor: string;
+};
+
+type Props = {
+  locationId: string;
+  locationName: string;
+  locationConfig?: LocationConfig;
+  selectedDate: string;
+  blocks: ScheduleBlock[];
+  teachers: Teacher[];
+  students: Student[];
+  families: Family[];
+  availability: TeacherAvailabilityRow[];
+  rooms: ScheduleRoom[];
+  locationHours: LocationHoursMap;
+  onBlocksChange: (blocks: ScheduleBlock[]) => void;
+};
+
+// ─── Block type display config ─────────────────────────────────────────────────
+const BLOCK_DISPLAY: Record<string, { label: string; bg: string; border: string; text: string }> = {
+  student_session: { label: "Booked",       bg: "rgba(234,179,8,0.9)",   border: "#ca8a04", text: "#000" },
+  first_day:       { label: "First Day",    bg: "rgba(59,130,246,0.85)", border: "#2563eb", text: "#fff" },
+  last_day:        { label: "Last Day",     bg: "rgba(239,68,68,0.85)",  border: "#dc2626", text: "#fff" },
+  call_out:        { label: "Call Out",     bg: "rgba(249,115,22,0.85)", border: "#ea580c", text: "#fff" },
+  makeup_session:  { label: "Makeup",       bg: "rgba(236,72,153,0.85)", border: "#db2777", text: "#fff" },
+  meet_greet:      { label: "Meet & Greet", bg: "rgba(20,184,166,0.85)", border: "#0d9488", text: "#fff" },
+  sub:             { label: "Sub",          bg: "rgba(34,197,94,0.85)",  border: "#16a34a", text: "#fff" },
+  teacher_training:{ label: "Training",     bg: "rgba(139,92,246,0.85)", border: "#7c3aed", text: "#fff" },
+  not_bookable:    { label: "Locked",       bg: "rgba(107,114,128,0.7)", border: "#6b7280", text: "#fff" },
+  open_time:       { label: "Open",         bg: "rgba(16,185,129,0.2)",  border: "rgba(16,185,129,0.4)", text: "rgba(16,185,129,0.9)" },
+  virtual:         { label: "Virtual",      bg: "rgba(14,165,233,0.85)", border: "#0284c7", text: "#fff" },
+};
+
+function getBlockDisplay(block: ScheduleBlock) {
+  if (block.checked_in) {
+    return { label: "Checked In", bg: "rgba(34,197,94,0.3)", border: "rgba(34,197,94,0.6)", text: "#86efac" };
+  }
+  if (block.is_family_callout || block.block_type === "call_out") return BLOCK_DISPLAY.call_out;
+  if (block.is_makeup_session || block.block_type === "makeup_session") return BLOCK_DISPLAY.makeup_session;
+  if (block.is_virtual || block.block_type === "virtual") return BLOCK_DISPLAY.virtual;
+  if (block.block_type === "first_day") return BLOCK_DISPLAY.first_day;
+  if (block.block_type === "last_day") return BLOCK_DISPLAY.last_day;
+  if (block.block_type === "meet_greet") return BLOCK_DISPLAY.meet_greet;
+  if (block.block_type === "sub") return BLOCK_DISPLAY.sub;
+  if (block.block_type === "teacher_training") return BLOCK_DISPLAY.teacher_training;
+  if (block.block_type === "not_bookable") return BLOCK_DISPLAY.not_bookable;
+  if (block.block_type === "open_time" || !block.student_id) return BLOCK_DISPLAY.open_time;
+  return BLOCK_DISPLAY.student_session;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function toMinute(value: string): number {
+  const [h = "0", m = "0"] = value.split(":");
+  return Number(h) * 60 + Number(m);
+}
+
+function minuteToLabel(value: number): string {
+  const h24 = Math.floor(value / 60);
+  const m = value % 60;
+  const hour = h24 % 12 || 12;
+  const suffix = h24 >= 12 ? "PM" : "AM";
+  return `${hour}:${m.toString().padStart(2, "0")} ${suffix}`;
+}
+
+function teacherName(teacher: Teacher): string {
+  const t = teacher as unknown as Record<string, unknown>;
+  const first = typeof t.first_name === "string" ? t.first_name.trim() : "";
+  const last = typeof t.last_name === "string" ? t.last_name.trim() : "";
+  return `${first} ${last}`.trim() || "Teacher";
+}
+
+function studentName(student: Student): string {
+  const s = student as unknown as Record<string, unknown>;
+  const first = typeof s.first_name === "string" ? s.first_name.trim() : "";
+  const last = typeof s.last_name === "string" ? s.last_name.trim() : "";
+  return `${first} ${last}`.trim() || "Student";
+}
+
+// ─── Block type options for the edit panel ────────────────────────────────────
+const BLOCK_TYPE_OPTIONS: Array<{ value: ScheduleBlock["block_type"]; label: string }> = [
+  { value: "student_session", label: "Booked Session" },
+  { value: "first_day",       label: "First Day" },
+  { value: "last_day",        label: "Last Day" },
+  { value: "call_out",        label: "Call Out" },
+  { value: "makeup_session",  label: "Makeup Session" },
+  { value: "meet_greet",      label: "Meet & Greet" },
+  { value: "sub",             label: "Sub" },
+  { value: "teacher_training",label: "Training" },
+  { value: "not_bookable",    label: "Locked Time" },
+  { value: "open_time",       label: "Open Time" },
+  { value: "virtual",         label: "Virtual Session" },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export function LocationScheduleGrid({
+  locationId,
+  locationName,
+  locationConfig,
+  selectedDate,
+  blocks,
+  teachers,
+  students,
+  families,
+  availability,
+  rooms,
+  locationHours,
+  onBlocksChange,
+}: Props) {
+  const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
+  const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
+  const [roomIdDraft, setRoomIdDraft] = React.useState<string>("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // ── Compute time bounds from location_hours ──
+  const { openMinute, closeMinute, isClosed } = React.useMemo(
+    () => getHoursForDate(locationHours, selectedDate),
+    [locationHours, selectedDate],
+  );
+
+  const slots = React.useMemo(() => {
+    if (isClosed) return [];
+    const out: number[] = [];
+    for (let m = openMinute; m <= closeMinute; m += 30) out.push(m);
+    return out;
+  }, [openMinute, closeMinute, isClosed]);
+
+  // ── Project blocks for selected date ──
+  const projected = React.useMemo(
+    () => projectBlocksForWindow(blocks, selectedDate, selectedDate),
+    [blocks, selectedDate],
+  );
+
+  const dayBlocks = React.useMemo(
+    () => projected.filter((b) => b.block_date === selectedDate),
+    [projected, selectedDate],
+  );
+
+  const dayTeacherIds = React.useMemo(
+    () => Array.from(new Set(dayBlocks.map((b) => b.teacher_id).filter(Boolean) as string[])),
+    [dayBlocks],
+  );
+
+  const teachersForBoard = React.useMemo(() => {
+    const withBlocks = teachers
+      .filter((t) => dayTeacherIds.includes(t.id))
+      .sort((a, b) => teacherName(a).localeCompare(teacherName(b)));
+    return withBlocks.length > 0 ? withBlocks : teachers.slice(0, 12);
+  }, [teachers, dayTeacherIds]);
+
+  const teacherBlocks = React.useMemo(() => {
+    const map = new Map<string, ProjectedBlock[]>();
+    for (const t of teachersForBoard) map.set(t.id, []);
+    for (const b of dayBlocks) {
+      if (!b.teacher_id) continue;
+      const list = map.get(b.teacher_id) ?? [];
+      list.push(b);
+      map.set(b.teacher_id, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.start_time.localeCompare(b.start_time));
+    }
+    return map;
+  }, [dayBlocks, teachersForBoard]);
+
+  const studentsById = React.useMemo(() => {
+    const m = new Map<string, Student>();
+    for (const s of students) m.set(s.id, s);
+    return m;
+  }, [students]);
+
+  const familiesById = React.useMemo(() => {
+    const m = new Map<string, Family>();
+    for (const f of families) m.set(f.id, f);
+    return m;
+  }, [families]);
+
+  const roomsById = React.useMemo(() => {
+    const m = new Map<string, ScheduleRoom>();
+    for (const r of rooms) m.set(r.id, r);
+    return m;
+  }, [rooms]);
+
+  const selectedBlock = React.useMemo(
+    () => dayBlocks.find((b) => b.id === selectedBlockId || b.source_block_id === selectedBlockId) ?? null,
+    [dayBlocks, selectedBlockId],
+  );
+
+  React.useEffect(() => {
+    if (selectedBlock) {
+      setSessionType(selectedBlock.block_type ?? "student_session");
+      setRoomIdDraft(selectedBlock.room_id ?? "");
+    }
+  }, [selectedBlock]);
+
+  // ── Patch block ──
+  async function patchBlock(block: ProjectedBlock, patch: Partial<ScheduleBlock>) {
+    const targetId = block.source_block_id || block.id;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/schedule-blocks/${encodeURIComponent(targetId)}?skip_conflict_check=true`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", "x-tenant-id": block.tenant_id },
+          body: JSON.stringify(patch),
+        },
+      );
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || `Update failed (${res.status})`);
+      }
+      const updated = blocks.map((b) =>
+        b.id === targetId ? { ...b, ...(patch as Partial<ScheduleBlock>) } : b,
+      );
+      onBlocksChange(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function checkIn(block: ProjectedBlock) {
+    const targetId = block.source_block_id || block.id;
+    if (block.student_id && block.teacher_id) {
+      await fetch("/api/session-log", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          schedule_block_id: targetId,
+          student_id: block.student_id,
+          teacher_id: block.teacher_id,
+          location_id: block.location_id,
+          block_date: block.block_date,
+          student_rate: 0,
+          teacher_rate: 0,
+          status: "checked_in",
+        }),
+      }).catch(() => null);
+    }
+    await patchBlock(block, {
+      checked_in: true,
+      checked_in_at: new Date().toISOString(),
+      teacher_tally: true,
+      status: "booked",
+    });
+  }
+
+  async function callOut(block: ProjectedBlock) {
+    await patchBlock(block, {
+      block_type: "call_out",
+      is_family_callout: true,
+      status: "available",
+    });
+  }
+
+  // ── Block position in grid ──
+  function blockTop(startTime: string): number {
+    const m = toMinute(startTime);
+    return ((m - openMinute) / 30) * 48;
+  }
+
+  function blockHeight(startTime: string, endTime: string): number {
+    const duration = toMinute(endTime) - toMinute(startTime);
+    return Math.max((duration / 30) * 48, 44);
+  }
+
+  const gridHeight = slots.length * 48;
+
+  if (isClosed) {
+    return (
+      <div
+        className="mx-4 my-6 rounded-xl border p-8 text-center"
+        style={{ borderColor: locationConfig?.border ?? "var(--z-border)", backgroundColor: locationConfig?.bg ?? "transparent" }}
+      >
+        <p className="text-sm font-semibold" style={{ color: locationConfig?.textColor ?? "var(--z-muted)" }}>
+          {locationName} is closed on this day
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 gap-0">
+      {/* ── Time grid ── */}
+      <div className="flex min-h-0 flex-1 overflow-auto">
+        {/* Time labels column */}
+        <div className="sticky left-0 z-10 w-14 shrink-0 bg-[var(--z-bg)]">
+          <div style={{ height: gridHeight + 32 }} className="relative">
+            {slots.map((minute) => (
+              <div
+                key={minute}
+                className="absolute right-2 text-[10px] text-[var(--z-muted)]"
+                style={{ top: ((minute - openMinute) / 30) * 48 + 16 }}
+              >
+                {minuteToLabel(minute)}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Teacher columns */}
+        <div className="flex flex-1 gap-0 overflow-x-auto">
+          {teachersForBoard.map((teacher) => {
+            const tBlocks = teacherBlocks.get(teacher.id) ?? [];
+            const openCount = tBlocks.filter((b) => b.block_type === "open_time" || !b.student_id).length;
+            const bookedCount = tBlocks.filter((b) => b.student_id && b.block_type !== "open_time").length;
+
+            return (
+              <div key={teacher.id} className="relative min-w-[140px] flex-1 border-l border-[var(--z-border)]">
+                {/* Teacher header */}
+                <div
+                  className="sticky top-0 z-10 border-b px-2 py-2 text-center"
+                  style={{
+                    borderColor: locationConfig?.border ?? "var(--z-border)",
+                    backgroundColor: locationConfig?.bg ?? "var(--z-bg)",
+                  }}
+                >
+                  <div
+                    className="truncate text-xs font-semibold"
+                    style={{ color: locationConfig?.textColor ?? "var(--z-fg)" }}
+                  >
+                    {teacherName(teacher)}
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] text-[var(--z-muted)]">
+                    <span>{bookedCount} booked</span>
+                    {openCount > 0 && (
+                      <span className="text-emerald-400">{openCount} open</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Grid background rows */}
+                <div className="relative" style={{ height: gridHeight }}>
+                  {slots.map((minute, i) => (
+                    <div
+                      key={minute}
+                      className="absolute inset-x-0 border-b border-[var(--z-border)]/30"
+                      style={{ top: i * 48, height: 48 }}
+                    />
+                  ))}
+
+                  {/* Blocks */}
+                  {tBlocks.map((block) => {
+                    const display = getBlockDisplay(block as ScheduleBlock);
+                    const top = blockTop(block.start_time);
+                    const height = blockHeight(block.start_time, block.end_time);
+                    const isSelected = block.id === selectedBlockId || block.source_block_id === selectedBlockId;
+                    const student = block.student_id ? studentsById.get(block.student_id) : null;
+
+                    return (
+                      <button
+                        key={block.id}
+                        type="button"
+                        onClick={() => setSelectedBlockId(isSelected ? null : (block.source_block_id || block.id))}
+                        className="absolute inset-x-1 overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] transition-all hover:z-20 hover:shadow-lg"
+                        style={{
+                          top,
+                          height,
+                          backgroundColor: display.bg,
+                          borderColor: isSelected ? "#fff" : display.border,
+                          color: display.text,
+                          outline: isSelected ? `2px solid ${display.border}` : "none",
+                          outlineOffset: "1px",
+                          zIndex: isSelected ? 15 : 5,
+                        }}
+                      >
+                        <div className="font-semibold leading-tight truncate">
+                          {display.label}
+                        </div>
+                        {student && (
+                          <div className="truncate opacity-90 leading-tight">
+                            {studentName(student)}
+                          </div>
+                        )}
+                        <div className="opacity-75 leading-tight">
+                          {minuteToLabel(toMinute(block.start_time))}–{minuteToLabel(toMinute(block.end_time))}
+                        </div>
+                        {block.checked_in && (
+                          <div className="text-[9px] font-bold">✓ IN</div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Detail panel ── */}
+      {selectedBlock && (
+        <div
+          className="w-72 shrink-0 overflow-y-auto border-l p-4"
+          style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}
+        >
+          {/* Header */}
+          <div className="mb-3 flex items-start justify-between">
+            <div>
+              <div
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: locationConfig?.textColor ?? "var(--z-muted)" }}
+              >
+                {locationName}
+              </div>
+              <h3 className="text-sm font-bold text-[var(--z-fg)]">
+                {getBlockDisplay(selectedBlock as ScheduleBlock).label}
+              </h3>
+              <div className="text-xs text-[var(--z-muted)]">
+                {minuteToLabel(toMinute(selectedBlock.start_time))} – {minuteToLabel(toMinute(selectedBlock.end_time))}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedBlockId(null)}
+              className="rounded p-1 text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+            >
+              ✕
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              {error}
+            </div>
+          )}
+
+          {/* Student info */}
+          {selectedBlock.student_id && (() => {
+            const student = studentsById.get(selectedBlock.student_id!);
+            const family = student?.family_id ? familiesById.get(student.family_id) : null;
+            return (
+              <div className="mb-3 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
+                {student && (
+                  <div className="font-semibold text-[var(--z-fg)]">{studentName(student)}</div>
+                )}
+                {family && (
+                  <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
+                )}
+                {family?.primary_phone && (
+                  <div className="text-[var(--z-muted)]">{family.primary_phone}</div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  {selectedBlock.student_id && (
+                    <Link
+                      href={`/crm/students/${selectedBlock.student_id}`}
+                      className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
+                    >
+                      Student →
+                    </Link>
+                  )}
+                  {student?.family_id && (
+                    <Link
+                      href={`/crm/families/${student.family_id}`}
+                      className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
+                    >
+                      Family →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Session type */}
+          <div className="mb-3 space-y-2">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+              Session Type
+            </label>
+            <select
+              value={sessionType}
+              onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
+              className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
+            >
+              {BLOCK_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Room */}
+          <div className="mb-4 space-y-2">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+              Room
+            </label>
+            <select
+              value={roomIdDraft}
+              onChange={(e) => setRoomIdDraft(e.target.value)}
+              className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
+            >
+              <option value="">No room assigned</option>
+              {rooms.map((room) => (
+                <option key={room.id} value={room.id}>{room.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => checkIn(selectedBlock)}
+              className="w-full rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-100 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "✓ Check In"}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() =>
+                patchBlock(selectedBlock, {
+                  block_type: sessionType,
+                  status: ["open_time", "sub", "call_out"].includes(sessionType) ? "available" : "booked",
+                  room_id: roomIdDraft || null,
+                })
+              }
+              className="w-full rounded-md border border-yellow-400/60 bg-yellow-400/20 px-3 py-2 text-sm font-semibold text-yellow-200 disabled:opacity-50"
+            >
+              Update Session
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => callOut(selectedBlock)}
+              className="w-full rounded-md border border-red-400/60 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-200 disabled:opacity-50"
+            >
+              Call Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

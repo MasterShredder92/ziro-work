@@ -1,19 +1,13 @@
 import { resolveScheduleContext } from "./guard";
 import { EmptyState } from "@/components/system/SurfaceStates";
-import { clampWindowLength, twoWeekWindowFromToday } from "@/lib/schedule/window";
+import { weekWindowFromToday } from "@/lib/schedule/window";
 import { loadWindowedScheduleData } from "@/lib/schedule/windowedData";
-import { WindowedScheduleClient } from "./components/WindowedScheduleClient";
+import { MultiLocationScheduleClient } from "./components/MultiLocationScheduleClient";
 import { resolveUserLocationAccess } from "@/lib/auth/locationAccess";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Record<string, string | string[] | undefined>;
-
-export default async function ScheduleDashboardPage({
-  searchParams,
-}: {
-  searchParams?: Promise<SearchParams>;
-}) {
+export default async function ScheduleDashboardPage() {
   let ctx;
   try {
     ctx = await resolveScheduleContext();
@@ -26,23 +20,9 @@ export default async function ScheduleDashboardPage({
     );
   }
 
-  const resolved = (await searchParams) ?? {};
-  const startParam = typeof resolved.start === "string" ? resolved.start : undefined;
-  const endParam = typeof resolved.end === "string" ? resolved.end : undefined;
-  const locationParam =
-    typeof resolved.locationId === "string" ? resolved.locationId.trim() : "";
-  const defaultWindow = twoWeekWindowFromToday();
-  const requestedWindow =
-    startParam && endParam
-      ? { start: startParam, end: endParam }
-      : defaultWindow;
-  const window = clampWindowLength(requestedWindow, 14)
-    ? requestedWindow
-    : defaultWindow;
-
   const access = await resolveUserLocationAccess({
     session: ctx.session,
-    preferredLocationId: locationParam || null,
+    preferredLocationId: null,
     autoRepairProfileLocation: true,
   }).catch(() => ({
     tenantId: ctx.tenantId,
@@ -50,10 +30,10 @@ export default async function ScheduleDashboardPage({
     locations: [],
     selectedLocationId: null,
   }));
-  const activeLocationId = access.selectedLocationId;
-  const activeLocation = access.locations.find((l) => l.id === activeLocationId) ?? null;
 
-  if (!activeLocationId) {
+  const locations = access.locations;
+
+  if (locations.length === 0) {
     return (
       <EmptyState
         title="No locations configured"
@@ -62,26 +42,38 @@ export default async function ScheduleDashboardPage({
     );
   }
 
-  const data = await loadWindowedScheduleData({
-    tenantId: ctx.tenantId,
-    locationId: activeLocationId,
-    start: window.start,
-    end: window.end,
-    includeRooms: true,
-  });
+  const window = weekWindowFromToday();
+
+  // Load all locations in parallel
+  const locationDataEntries = await Promise.all(
+    locations.map(async (loc) => {
+      const data = await loadWindowedScheduleData({
+        tenantId: ctx.tenantId,
+        locationId: loc.id,
+        start: window.start,
+        end: window.end,
+        includeRooms: true,
+        includeStudents: true,
+      }).catch(() => ({
+        teachers: [],
+        students: [],
+        families: [],
+        availability: [],
+        blocks: [],
+        rooms: [],
+        locationHours: {},
+      }));
+      return [loc.id, data] as const;
+    }),
+  );
+
+  const locationDataMap = Object.fromEntries(locationDataEntries);
 
   return (
-    <WindowedScheduleClient
-      locationId={activeLocationId}
-      locationLabel={activeLocation?.name ?? "Location"}
-      locations={access.locations}
+    <MultiLocationScheduleClient
+      locations={locations}
+      locationDataMap={locationDataMap}
       initialWindow={window}
-      initialBlocks={data.blocks}
-      teachers={data.teachers}
-      students={data.students}
-      families={data.families}
-      availability={data.availability}
-      rooms={data.rooms}
     />
   );
 }

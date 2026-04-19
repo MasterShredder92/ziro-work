@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase";
 import { listScheduleRooms } from "@data/scheduleRooms";
+import { fetchLocationHours, type LocationHoursMap } from "@/lib/schedule/locationHours";
 import type {
   Family,
   ScheduleBlock,
@@ -19,6 +20,7 @@ export type WindowedScheduleData = {
   availability: TeacherAvailabilityRow[];
   blocks: ScheduleBlock[];
   rooms: Awaited<ReturnType<typeof listScheduleRooms>>;
+  locationHours: LocationHoursMap;
 };
 
 export async function loadWindowedScheduleData(input: {
@@ -70,6 +72,7 @@ export async function loadWindowedScheduleData(input: {
       availability: [],
       blocks: [],
       rooms: [],
+      locationHours: {},
     };
   }
 
@@ -111,12 +114,13 @@ export async function loadWindowedScheduleData(input: {
     .order("start_time", { ascending: true })
     .limit(4000);
 
-  const [teacherIdsRes, studentsRes, availabilityRes, blocksRes, rooms] = await Promise.all([
+  const [teacherIdsRes, studentsRes, availabilityRes, blocksRes, rooms, locationHours] = await Promise.all([
     teacherIdsPromise,
     studentsPromise,
     availabilityPromise,
     blocksPromise,
     includeRooms ? listScheduleRooms(tenantId, { location_id: locationId, is_active: true }) : Promise.resolve([]),
+    fetchLocationHours(locationId),
   ]);
 
   const teachersLocationError = teacherIdsRes.error;
@@ -213,5 +217,6 @@ export async function loadWindowedScheduleData(input: {
     availability: availabilityError ? [] : ((availabilityRes.data ?? []) as TeacherAvailabilityRow[]),
     blocks: blocksError ? [] : ((blocksRes.data ?? []) as ScheduleBlock[]),
     rooms,
+    locationHours,
   };
 }
