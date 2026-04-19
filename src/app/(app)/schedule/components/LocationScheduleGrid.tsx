@@ -127,6 +127,7 @@ export function LocationScheduleGrid({
   rooms,
   locationHours,
   onBlocksChange,
+  onRubyEvent,
 }: Props) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
