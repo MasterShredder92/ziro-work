@@ -1,0 +1,395 @@
+/* Motion tokens — use with var(--z-accent-color) for neon */
+:root {
+  --z-duration-fast: 120ms;
+  --z-duration-medium: 220ms;
+  --z-duration-slow: 420ms;
+  --z-ease-spring: cubic-bezier(0.34, 1.45, 0.35, 1);
+  --z-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Keyframes: transform + opacity only (performant) */
+@keyframes neonPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes neonPulseOpacity {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes softScale {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zPageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes zModalOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+
+@keyframes zDrawerIn {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes zDrawerOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+@keyframes zTableRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes studentOrbFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Marketing hero orb — float + glow ramp (CSS only) */
+@keyframes marketingHeroOrbFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) scale(1.02);
+  }
+}
+
+@keyframes marketingHeroOrbGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.95;
+    filter: blur(1px);
+  }
+}
+
+.marketing-hero-orb-core {
+  animation: marketingHeroOrbFloat 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+.marketing-hero-orb-halo {
+  animation: marketingHeroOrbGlow 5.5s ease-in-out infinite;
+  will-change: opacity, filter;
+}
+
+@keyframes studioOrbStagger {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes studentOrbRipple {
+  0% {
+    opacity: 0.45;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+/* Neon ramp utility */
+.neon-ramp {
+  transition:
+    box-shadow var(--z-duration-fast) var(--z-ease-smooth),
+    border-color var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+.neon-ramp:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--z-accent-color), transparent 52%),
+    0 0 22px color-mix(in oklab, var(--z-accent-color), transparent 72%);
+}
+
+/* Micro-interaction utilities */
+.z-hover-micro {
+  transition:
+    transform var(--z-duration-fast) var(--z-ease-spring),
+    box-shadow var(--z-duration-fast) var(--z-ease-smooth),
+    border-color var(--z-duration-fast) var(--z-ease-smooth),
+    background-color var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+@media (hover: hover) {
+  .z-hover-micro:hover {
+    transform: scale(1.02);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--z-accent-color), transparent 65%),
+      0 0 20px color-mix(in oklab, var(--z-accent-color), transparent 82%);
+  }
+}
+
+.z-hover-micro-subtle {
+  transition:
+    transform var(--z-duration-fast) var(--z-ease-spring),
+    box-shadow var(--z-duration-fast) var(--z-ease-smooth),
+    border-color var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+.z-card-interact {
+  transition:
+    transform var(--z-duration-fast) var(--z-ease-spring),
+    box-shadow var(--z-duration-fast) var(--z-ease-smooth),
+    border-color var(--z-duration-fast) var(--z-ease-smooth),
+    background-color var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+@media (hover: hover) {
+  .z-card-interact:hover {
+    transform: scale(1.01);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--z-accent-color), transparent 72%),
+      0 0 18px color-mix(in oklab, var(--z-accent-color), transparent 86%);
+  }
+}
+
+@media (hover: hover) {
+  .z-hover-micro-subtle:hover {
+    transform: scale(1.015);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--z-accent-color), transparent 70%),
+      0 0 14px color-mix(in oklab, var(--z-accent-color), transparent 85%);
+  }
+}
+
+.z-page-transition {
+  animation: zPageEnter var(--z-duration-medium) var(--z-ease-smooth) both;
+}
+
+.z-modal-panel {
+  transform-origin: center center;
+}
+
+.z-modal-panel--in {
+  animation: zModalIn var(--z-duration-medium) var(--z-ease-smooth) both;
+}
+
+.z-modal-panel--out {
+  animation: zModalOut var(--z-duration-medium) var(--z-ease-smooth) forwards;
+}
+
+.z-drawer-panel--in {
+  animation: zDrawerIn var(--z-duration-medium) var(--z-ease-spring) both;
+}
+
+.z-drawer-panel--out {
+  animation: zDrawerOut var(--z-duration-medium) var(--z-ease-smooth) forwards;
+}
+
+.z-table-row-enter {
+  animation: zTableRowIn var(--z-duration-medium) var(--z-ease-smooth) both;
+}
+
+.z-studio-orb-enter {
+  animation: studioOrbStagger var(--z-duration-medium) var(--z-ease-smooth) both;
+}
+
+.teacher-orb-magnet {
+  transition:
+    transform var(--z-duration-medium) var(--z-ease-spring),
+    box-shadow var(--z-duration-medium) var(--z-ease-smooth),
+    border-color var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+@media (hover: hover) {
+  .teacher-orb-magnet:hover {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--z-accent-color), transparent 55%),
+      0 0 28px color-mix(in oklab, var(--z-accent-color), transparent 78%);
+  }
+}
+
+.student-orb-float {
+  animation: studentOrbFloat var(--z-duration-slow) var(--z-ease-smooth) ease-in-out infinite;
+}
+
+.student-orb-ripple {
+  position: relative;
+  overflow: visible;
+}
+
+.student-orb-ripple:active::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--z-radius-lg);
+  pointer-events: none;
+  border: 1px solid color-mix(in oklab, var(--z-accent-color), transparent 40%);
+  animation: studentOrbRipple var(--z-duration-medium) var(--z-ease-smooth) forwards;
+}
+
+.z-teacher-cluster {
+  transition:
+    max-height var(--z-duration-medium) var(--z-ease-spring),
+    opacity var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+.z-tabs-indicator {
+  transition:
+    left var(--z-duration-medium) var(--z-ease-spring),
+    width var(--z-duration-medium) var(--z-ease-spring),
+    opacity var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+.z-notify-pulse {
+  animation: neonPulseOpacity var(--z-duration-slow) var(--z-ease-smooth) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-ramp,
+  .neon-ramp:hover {
+    transition: none;
+    box-shadow: none;
+  }
+
+  .z-hover-micro:hover,
+  .z-hover-micro-subtle:hover,
+  .z-card-interact:hover {
+    transform: none;
+    animation: none;
+    box-shadow: none;
+  }
+
+  .z-notify-pulse {
+    animation: none !important;
+  }
+
+  .z-page-transition,
+  .z-modal-panel--in,
+  .z-modal-panel--out,
+  .z-drawer-panel--in,
+  .z-drawer-panel--out,
+  .z-table-row-enter,
+  .z-studio-orb-enter,
+  .student-orb-float,
+  .marketing-hero-orb-core,
+  .marketing-hero-orb-halo,
+  .student-orb-ripple::after,
+  .teacher-orb-magnet,
+  .teacher-orb-magnet:hover,
+  .z-tabs-indicator,
+  .z-teacher-cluster {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .student-orb-ripple:hover,
+  .student-orb-ripple:active {
+    transform: none !important;
+  }
+}

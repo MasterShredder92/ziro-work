@@ -2,16 +2,19 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 export default function AppErrorBoundary({
   error,
+  unstable_retry,
   reset,
 }: {
   error: Error & { digest?: string };
+  unstable_retry?: () => void;
   reset: () => void;
 }) {
   useEffect(() => {
-    // eslint-disable-next-line no-console
     console.error("[app.error_boundary]", {
       name: error.name,
       message: error.message,
@@ -21,39 +24,35 @@ export default function AppErrorBoundary({
   }, [error]);
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-6 py-16">
-      <div className="max-w-md w-full">
-        <div className="text-xs uppercase tracking-wider text-[#606068] mb-2">
+    <div className="flex min-h-[60vh] items-center justify-center px-6 py-16">
+      <Card className="max-w-md w-full" padding="lg">
+        <div className="mb-2 text-xs uppercase tracking-wider text-[var(--z-muted)]">
           Something went wrong
         </div>
-        <h1 className="text-2xl font-extrabold text-[#f0f0f0] mb-3">
+        <h1 className="mb-3 text-2xl font-extrabold text-[var(--z-fg)]">
           We hit an unexpected error
         </h1>
-        <p className="text-sm text-[#8a8a92] mb-6">
+        <p className="mb-6 text-sm text-[var(--z-muted)]">
           The team has been notified. You can retry the action or head back to
           your dashboard.
         </p>
         {error.digest ? (
-          <div className="text-[11px] text-[#50525a] mb-6 font-mono">
+          <div className="mb-6 text-[11px] font-mono text-[var(--z-muted)]">
             ref: {error.digest}
           </div>
         ) : null}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => reset()}
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-[#00ff88] text-black text-sm font-semibold"
-          >
+        <div className="flex gap-3" role="alert" aria-live="polite">
+          <Button type="button" onClick={() => (unstable_retry ? unstable_retry() : reset())}>
             Try again
-          </button>
+          </Button>
           <Link
             href="/dashboard"
-            className="inline-flex items-center px-4 py-2 rounded-lg border border-[#2a2a30] text-sm text-[#d4d4d4]"
+            className="inline-flex items-center rounded-lg border border-[var(--z-border)] px-4 py-2 text-sm text-[var(--z-fg)] outline-none transition hover:bg-white/[0.04]"
           >
             Go to Dashboard
           </Link>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

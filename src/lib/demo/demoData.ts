@@ -1,0 +1,197 @@
+import type { Student } from "@/lib/data/models/students";
+import type { Teacher } from "@/lib/data/models/teachers";
+import type { Family } from "@/lib/data/models/families";
+import type { Invoice } from "@/lib/data/models/invoices";
+import type { EventLog } from "@/lib/data/models/events";
+
+const TENANT = "00000000-0000-0000-0000-000000000001";
+const ISO = (d: string) => `${d}T12:00:00.000Z`;
+
+/** Primary demo student for deep links and product tour. */
+export const DEMO_PRIMARY_STUDENT_ID = "11111111-1111-1111-1111-111111111111";
+
+export const DEMO_TEACHERS: Teacher[] = [
+  {
+    id: "22222222-2222-2222-2222-222222222222",
+    tenant_id: TENANT,
+    created_at: ISO("2025-01-04"),
+    name: "Alex Rivera",
+    email: "alex@zirowork.demo",
+    phone: "+1 555 0101",
+    status: "active",
+    max_students: 24,
+    weekly_capacity_minutes: 960,
+    notes: null,
+    archived_at: null,
+  },
+  {
+    id: "33333333-3333-3333-3333-333333333333",
+    tenant_id: TENANT,
+    created_at: ISO("2025-01-05"),
+    name: "Jordan Lee",
+    email: "jordan@zirowork.demo",
+    phone: "+1 555 0102",
+    status: "active",
+    max_students: 18,
+    weekly_capacity_minutes: 720,
+    notes: null,
+    archived_at: null,
+  },
+];
+
+export const DEMO_STUDENTS: Student[] = [
+  {
+    id: DEMO_PRIMARY_STUDENT_ID,
+    tenant_id: TENANT,
+    created_at: ISO("2025-02-01"),
+    family_id: "44444444-4444-4444-4444-444444444444",
+    teacher_id: DEMO_TEACHERS[0].id,
+    name: "Sam Chen",
+    email: "sam@zirowork.demo",
+    phone: "+1 555 0201",
+    date_of_birth: "2012-04-18",
+    status: "active",
+    enrollment_date: ISO("2025-02-02"),
+    onboarding_stage: "first_week",
+    last_attendance_at: ISO("2026-04-10"),
+    attendance_streak: 3,
+    churn_risk: "low",
+    notes: null,
+    archived_at: null,
+  },
+  {
+    id: "55555555-5555-5555-5555-555555555555",
+    tenant_id: TENANT,
+    created_at: ISO("2025-02-10"),
+    family_id: "44444444-4444-4444-4444-444444444444",
+    teacher_id: DEMO_TEACHERS[0].id,
+    name: "Riley Park",
+    email: "riley@zirowork.demo",
+    phone: null,
+    date_of_birth: "2010-11-02",
+    status: "active",
+    enrollment_date: ISO("2025-02-11"),
+    onboarding_stage: "at_risk",
+    last_attendance_at: ISO("2026-03-01"),
+    attendance_streak: 0,
+    churn_risk: "high",
+    notes: null,
+    archived_at: null,
+  },
+];
+
+export const DEMO_FAMILIES: Family[] = [
+  {
+    id: "44444444-4444-4444-4444-444444444444",
+    tenant_id: TENANT,
+    created_at: ISO("2025-01-20"),
+    name: "Chen Family",
+    primary_email: "parents@zirowork.demo",
+    primary_phone: "+1 555 0300",
+    address_line1: "12 Neon Ave",
+    address_line2: null,
+    city: "Omaha",
+    state: "NE",
+    postal_code: "68102",
+    notes: null,
+    archived_at: null,
+  },
+];
+
+export const DEMO_INVOICES: Invoice[] = [
+  {
+    id: "66666666-6666-6666-6666-666666666666",
+    tenant_id: TENANT,
+    created_at: ISO("2026-03-15"),
+    family_id: DEMO_FAMILIES[0].id,
+    student_id: DEMO_PRIMARY_STUDENT_ID,
+    status: "paid",
+    currency: "USD",
+    amount_cents: 18000,
+    issued_at: ISO("2026-03-15"),
+    due_at: ISO("2026-04-01"),
+    paid_at: ISO("2026-03-28"),
+    description: "April tuition — Sam Chen",
+    external_ref: "INV-1001",
+    archived_at: null,
+  },
+  {
+    id: "77777777-7777-7777-7777-777777777777",
+    tenant_id: TENANT,
+    created_at: ISO("2026-04-01"),
+    family_id: DEMO_FAMILIES[0].id,
+    student_id: DEMO_STUDENTS[1].id,
+    status: "overdue",
+    currency: "USD",
+    amount_cents: 22000,
+    issued_at: ISO("2026-04-01"),
+    due_at: ISO("2026-04-08"),
+    paid_at: null,
+    description: "April tuition — Riley Park",
+    external_ref: "INV-1002",
+    archived_at: null,
+  },
+];
+
+export const DEMO_EVENTS: EventLog[] = [
+  {
+    id: "88888888-8888-8888-8888-888888888888",
+    tenant_id: TENANT,
+    created_at: ISO("2026-04-12"),
+    entity_type: "lifecycle",
+    entity_id: DEMO_PRIMARY_STUDENT_ID,
+    event_type: "stage_transition",
+    actor_id: null,
+    payload: { from: "new", to: "first_week" },
+  },
+  {
+    id: "99999999-9999-9999-9999-999999999999",
+    tenant_id: TENANT,
+    created_at: ISO("2026-04-11"),
+    entity_type: "system",
+    entity_id: null,
+    event_type: "agent_digest",
+    actor_id: null,
+    payload: { summary: "3 leads need follow-up" },
+  },
+  {
+    id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    tenant_id: TENANT,
+    created_at: ISO("2026-04-09"),
+    entity_type: "invoice",
+    entity_id: DEMO_INVOICES[1].id,
+    event_type: "invoice_overdue",
+    actor_id: null,
+    payload: { amount_cents: 22000 },
+  },
+  {
+    id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    tenant_id: TENANT,
+    created_at: ISO("2026-04-08"),
+    entity_type: "student",
+    entity_id: DEMO_STUDENTS[1].id,
+    event_type: "churn_risk_high",
+    actor_id: null,
+    payload: { band: "high" },
+  },
+  {
+    id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    tenant_id: TENANT,
+    created_at: ISO("2026-04-01"),
+    entity_type: "system",
+    entity_id: null,
+    event_type: "kpi_snapshot",
+    actor_id: null,
+    payload: { leadsThisWeek: 6, trialsBooked: 2 },
+  },
+];
+
+/** Demo lifecycle stage labels for marketing / tour copy (not persisted). */
+export const DEMO_LIFECYCLE_STAGES = [
+  "Intake",
+  "Lead work",
+  "Scheduling",
+  "Enrollment",
+  "Service delivery",
+  "Retention",
+] as const;

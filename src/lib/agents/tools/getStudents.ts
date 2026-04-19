@@ -1,18 +1,18 @@
 import { registerTool } from "../tools";
+import type { AgentContext } from "../types";
+import { getStudentById, getStudentsForTenant } from "../../../../lib/data/students";
 
 registerTool({
   name: "get_students",
-  run: async ({ tenantId, filter }, ctx) => {
-    let q = ctx.supabase.from("students").select("*").eq("tenant_id", tenantId);
-
+  run: async (args: unknown, ctx: AgentContext) => {
+    void ctx;
+    const { tenantId, filter } = args as { tenantId: string; filter?: { id?: string } };
     if (filter?.id) {
-      q = q.eq("id", filter.id);
+      const row = await getStudentById(String(filter.id), String(tenantId));
+      return row ? [row] : [];
     }
 
-    const { data, error } = await q;
-
-    if (error) throw error;
-    return data || [];
+    return await getStudentsForTenant(String(tenantId));
   },
 });
 

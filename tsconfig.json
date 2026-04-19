@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@data/*": ["./lib/data/*"],
+      "@ziro/*": ["./src/lib/ziro/*"]
     }
   },
   "include": [
@@ -30,5 +32,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/lib/agents/**",
+    "src/lib/data/**",
+    "src/lib/tools/**",
+    "src/lib/types/**"
+  ]
 }

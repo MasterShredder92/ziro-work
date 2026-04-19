@@ -20,7 +20,6 @@ export async function createEnrollment(ctx: AgentContext, { lead_id }: { lead_id
       tenant_id: ctx.tenantId,
       lead_id,
       enrollment_date: now,
-      onboarding_stage: "new",
       attendance_streak: 0,
     })
     .select()
@@ -29,3 +28,4 @@ export async function createEnrollment(ctx: AgentContext, { lead_id }: { lead_id
   if (error) throw error;
   return student as Student;
 }
+

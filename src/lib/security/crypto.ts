@@ -47,7 +47,6 @@ function resolveKey(): Buffer {
     return g.__ziro_encryption_key;
   }
   if (!g.__ziro_encryption_warned) {
-    // eslint-disable-next-line no-console
     console.warn(
       "[security.crypto] ZIRO_ENCRYPTION_KEY is not 64 hex chars; deriving 32-byte key via SHA-256. " +
         "For long-term storage prefer a raw 32-byte hex key.",

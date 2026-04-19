@@ -1,0 +1,313 @@
+/* ===========================================================
+ * AgentOS — Avatar, Bubble, Pointer, Orb animations + styles
+ * Neon-first, transform+opacity only (performant).
+ * =========================================================== */
+
+/* --- Avatar states -------------------------------------------- */
+
+@keyframes zAgentIdlePulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--z-agent-accent), transparent 55%),
+      0 0 18px color-mix(in oklab, var(--z-agent-accent), transparent 78%);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--z-agent-accent), transparent 45%),
+      0 0 28px color-mix(in oklab, var(--z-agent-accent), transparent 60%);
+  }
+}
+
+@keyframes zAgentListenLean {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(-1px) scale(1.02);
+  }
+}
+
+@keyframes zAgentSpeak {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes zAgentAlertDouble {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--z-danger), transparent 35%);
+  }
+  15% {
+    box-shadow: 0 0 0 10px color-mix(in oklab, var(--z-danger), transparent 85%);
+  }
+  30% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--z-danger), transparent 35%);
+  }
+  45% {
+    box-shadow: 0 0 0 10px color-mix(in oklab, var(--z-danger), transparent 85%);
+  }
+  60%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--z-danger), transparent 100%);
+  }
+}
+
+@keyframes zAgentDots {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.z-agent-avatar {
+  position: relative;
+  border-radius: 9999px;
+  background: var(--z-surface);
+  transition:
+    transform var(--z-duration-fast) var(--z-ease-spring),
+    box-shadow var(--z-duration-fast) var(--z-ease-smooth);
+  will-change: transform, box-shadow;
+}
+
+.z-agent-avatar[data-state="idle"] {
+  animation: zAgentIdlePulse 2s ease-in-out infinite;
+}
+
+.z-agent-avatar[data-state="listening"] {
+  animation: zAgentListenLean var(--z-duration-medium) var(--z-ease-smooth) forwards;
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--z-agent-accent), transparent 30%),
+    0 0 36px color-mix(in oklab, var(--z-agent-accent), transparent 50%);
+}
+
+.z-agent-avatar[data-state="speaking"] {
+  animation: zAgentSpeak 900ms var(--z-ease-smooth) infinite;
+}
+
+.z-agent-avatar[data-state="alert"] {
+  animation: zAgentAlertDouble 1.6s var(--z-ease-smooth) 1;
+}
+
+.z-agent-avatar[data-state="thinking"] {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--z-agent-accent), transparent 55%),
+    0 0 22px color-mix(in oklab, var(--z-agent-accent), transparent 70%);
+}
+
+@media (hover: hover) {
+  .z-agent-avatar:hover {
+    transform: scale(1.04) rotate(-2deg);
+  }
+}
+
+.z-agent-thinking-dots {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+.z-agent-thinking-dots > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--z-agent-accent);
+  animation: zAgentDots 1.2s var(--z-ease-smooth) infinite;
+}
+.z-agent-thinking-dots > span:nth-child(2) {
+  animation-delay: 150ms;
+}
+.z-agent-thinking-dots > span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+/* --- Bubble --------------------------------------------------- */
+
+@keyframes zAgentBubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes zAgentBubbleOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.94);
+  }
+}
+
+.z-agent-bubble--in {
+  animation: zAgentBubbleIn var(--z-duration-medium) var(--z-ease-spring) both;
+  transform-origin: bottom right;
+}
+.z-agent-bubble--out {
+  animation: zAgentBubbleOut var(--z-duration-fast) var(--z-ease-smooth) forwards;
+  transform-origin: bottom right;
+}
+
+/* --- Pointer -------------------------------------------------- */
+
+@keyframes zAgentPointerBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes zAgentPointerLinePulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    stroke-width: 1.5;
+  }
+  50% {
+    opacity: 1;
+    stroke-width: 2;
+  }
+}
+
+@keyframes zAgentPointerFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.z-agent-pointer {
+  animation: zAgentPointerFadeIn 150ms var(--z-ease-smooth) both;
+}
+.z-agent-pointer__head {
+  animation: zAgentPointerBob 1.8s ease-in-out infinite;
+  will-change: transform;
+}
+.z-agent-pointer__line {
+  animation: zAgentPointerLinePulse 1.6s var(--z-ease-smooth) infinite;
+}
+
+/* --- Orbs ----------------------------------------------------- */
+
+@keyframes zOrbFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+@keyframes zOrbOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.z-orb {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--z-surface);
+  border: 1px solid color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 55%);
+  color: var(--z-fg);
+  overflow: hidden;
+  transition:
+    transform var(--z-duration-fast) var(--z-ease-spring),
+    box-shadow var(--z-duration-fast) var(--z-ease-smooth),
+    border-color var(--z-duration-fast) var(--z-ease-smooth);
+  will-change: transform, box-shadow;
+}
+
+.z-orb::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  pointer-events: none;
+  box-shadow: 0 0 24px color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 78%);
+  transition: box-shadow var(--z-duration-fast) var(--z-ease-smooth);
+}
+
+@media (hover: hover) {
+  .z-orb:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 38%);
+    border-color: color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 28%);
+  }
+  .z-orb:hover::after {
+    box-shadow: 0 0 34px color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 58%);
+  }
+}
+
+.z-orb--agent {
+  animation: zOrbFloat 3s ease-in-out infinite;
+}
+
+.z-orb[data-active="true"] {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 30%),
+    0 0 28px color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 55%);
+}
+
+.z-orb-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1px dashed color-mix(in oklab, var(--z-agent-accent, var(--z-accent)), transparent 70%);
+  pointer-events: none;
+  opacity: 0.6;
+  animation: zOrbOrbit 22s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .z-agent-avatar,
+  .z-agent-avatar[data-state="idle"],
+  .z-agent-avatar[data-state="listening"],
+  .z-agent-avatar[data-state="speaking"],
+  .z-agent-avatar[data-state="alert"],
+  .z-agent-bubble--in,
+  .z-agent-bubble--out,
+  .z-agent-pointer,
+  .z-agent-pointer__head,
+  .z-agent-pointer__line,
+  .z-agent-thinking-dots > span,
+  .z-orb,
+  .z-orb--agent,
+  .z-orb-ring {
+    animation: none !important;
+    transition: none !important;
+  }
+}

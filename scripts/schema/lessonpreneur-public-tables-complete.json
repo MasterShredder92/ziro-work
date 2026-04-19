@@ -1,0 +1,546 @@
+[
+  {
+    "table": "tenants",
+    "primaryKey": "id"
+  },
+  {
+    "table": "permission_definitions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "locations",
+    "primaryKey": "id"
+  },
+  {
+    "table": "brand_settings",
+    "primaryKey": "id"
+  },
+  {
+    "table": "location_hours",
+    "primaryKey": "id"
+  },
+  {
+    "table": "families",
+    "primaryKey": "id"
+  },
+  {
+    "table": "teachers",
+    "primaryKey": "id"
+  },
+  {
+    "table": "profiles",
+    "primaryKey": "id"
+  },
+  {
+    "table": "profile_locations",
+    "primaryKey": "id"
+  },
+  {
+    "table": "teacher_locations",
+    "primaryKey": "id"
+  },
+  {
+    "table": "rooms",
+    "primaryKey": "id"
+  },
+  {
+    "table": "room_inventory",
+    "primaryKey": "id"
+  },
+  {
+    "table": "teacher_room_assignments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "teacher_availability",
+    "primaryKey": "id"
+  },
+  {
+    "table": "students",
+    "primaryKey": "id"
+  },
+  {
+    "table": "addresses",
+    "primaryKey": "id"
+  },
+  {
+    "table": "student_instruments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "student_followups",
+    "primaryKey": "id"
+  },
+  {
+    "table": "student_duplicate_reviews",
+    "primaryKey": "id"
+  },
+  {
+    "table": "enrollments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "studio_closures",
+    "primaryKey": "id"
+  },
+  {
+    "table": "files",
+    "primaryKey": "id"
+  },
+  {
+    "table": "family_files",
+    "primaryKey": "id"
+  },
+  {
+    "table": "student_files",
+    "primaryKey": "id"
+  },
+  {
+    "table": "leads",
+    "primaryKey": "id"
+  },
+  {
+    "table": "intake_submissions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "issues",
+    "primaryKey": "id"
+  },
+  {
+    "table": "invoices",
+    "primaryKey": "id"
+  },
+  {
+    "table": "invoice_flags",
+    "primaryKey": "id"
+  },
+  {
+    "table": "invoice_tokens",
+    "primaryKey": "id"
+  },
+  {
+    "table": "billing_periods",
+    "primaryKey": "id"
+  },
+  {
+    "table": "billing_cycles",
+    "primaryKey": "id"
+  },
+  {
+    "table": "billing_events",
+    "primaryKey": "id"
+  },
+  {
+    "table": "billing_line_items",
+    "primaryKey": "id"
+  },
+  {
+    "table": "billing_adjustments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "square_invoices",
+    "primaryKey": "id"
+  },
+  {
+    "table": "square_payments_fact",
+    "primaryKey": "id"
+  },
+  {
+    "table": "square_refunds_fact",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_accounts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_categories",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_category_groups",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_category_rules",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_locations",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_plaid_items",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_recurring_rules",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_sync_runs",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_transactions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_transaction_category_assignments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_balance_snapshots",
+    "primaryKey": "id"
+  },
+  {
+    "table": "finance_exports",
+    "primaryKey": "id"
+  },
+  {
+    "table": "schedule_blocks",
+    "primaryKey": "id"
+  },
+  {
+    "table": "session_log",
+    "primaryKey": "id"
+  },
+  {
+    "table": "events",
+    "primaryKey": "id"
+  },
+  {
+    "table": "tasks",
+    "primaryKey": "id"
+  },
+  {
+    "table": "notifications",
+    "primaryKey": "id"
+  },
+  {
+    "table": "pending_reminders",
+    "primaryKey": "id"
+  },
+  {
+    "table": "appointment_notifications",
+    "primaryKey": "id"
+  },
+  {
+    "table": "studio_messages",
+    "primaryKey": "id"
+  },
+  {
+    "table": "reviews",
+    "primaryKey": "id"
+  },
+  {
+    "table": "value_cards",
+    "primaryKey": "id"
+  },
+  {
+    "table": "webhook_events",
+    "primaryKey": "id"
+  },
+  {
+    "table": "integration_configs",
+    "primaryKey": "id"
+  },
+  {
+    "table": "integration_events",
+    "primaryKey": "id"
+  },
+  {
+    "table": "expenses",
+    "primaryKey": "id"
+  },
+  {
+    "table": "performance_alerts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "performance_metrics",
+    "primaryKey": "id"
+  },
+  {
+    "table": "audit_log",
+    "primaryKey": "id"
+  },
+  {
+    "table": "activity_log",
+    "primaryKey": "id"
+  },
+  {
+    "table": "api_tokens",
+    "primaryKey": "id"
+  },
+  {
+    "table": "google_oauth_tokens",
+    "primaryKey": "id"
+  },
+  {
+    "table": "onboarding_sequences",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ai_workflows",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ai_conversations",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ai_messages",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ai_action_logs",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ai_feedback",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ai_legacy_message_log",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ziro_skills",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ziro_agents",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ziro_agent_skills",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ziro_config",
+    "primaryKey": "id"
+  },
+  {
+    "table": "ziro_idempotency_keys",
+    "primaryKey": "tenant_id,idempotency_key"
+  },
+  {
+    "table": "ziro_page_intelligence_bindings",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_chat_conversations",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_chat_messages",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_communications",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_contact_change_requests",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_content_moderation_words",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_dashboard_alerts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_director_closeouts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_issue_reports",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_lifecycle",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_lp_prospects",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_makeup_sessions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_messages",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_notes",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_oauth_state",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_oauth_states",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_payment_history",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_payments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_payroll_entries",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_payroll_periods",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_permission_requests",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_permission_set_grants",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_practice_sessions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_profile_edit_requests",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_profile_permission_overrides",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_progress_reports",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_query_performance",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_quiz_scores",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_recruitment_prospects",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_refunds",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_retention_campaigns",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_retention_outreach",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_review_requests",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_role_permissions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_schedules",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_student_achievements",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_student_callouts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_student_director_notes",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_student_milestones",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_callouts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_closeouts",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_documents",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_notes",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_session_notes",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_student_notes",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_uploads",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_teacher_w9",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_tip_attributions",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_tips",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_user_profiles",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_ziro_skill_assignments",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_ziro_skill_proposals",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_ziro_task_agents",
+    "primaryKey": "id"
+  },
+  {
+    "table": "_archive_2026_ziro_task_runs",
+    "primaryKey": "id"
+  }
+]

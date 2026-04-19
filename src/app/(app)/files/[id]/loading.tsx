@@ -1,0 +1,15 @@
+import { FilesLoading } from "../components/FilesStates";
+
+export default function FileDetailLoading() {
+  return (
+    <div className="space-y-6">
+      <div className="h-4 w-2/3 max-w-md animate-pulse rounded bg-white/[0.06]" />
+      <div className="h-10 w-full max-w-lg animate-pulse rounded bg-white/[0.06]" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="h-[50vh] animate-pulse rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)]/40 lg:col-span-2" />
+        <div className="h-64 animate-pulse rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)]/40" />
+      </div>
+      <FilesLoading label="Loading file…" />
+    </div>
+  );
+}

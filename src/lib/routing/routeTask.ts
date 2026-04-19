@@ -169,8 +169,7 @@ async function tryResolveStarControlDelegation(
 // Find or create an agent for this routed task
 async function resolveAgent(
   route: RouteDecision,
-  composedPrompt: string,
-  taskTitle: string
+  composedPrompt: string
 ): Promise<{ agentId: string; mode: AgentMode; agentSkillIds: string[] }> {
   const supabase = getServiceClient();
 
@@ -327,7 +326,7 @@ export async function routeTask(title: string, description: string): Promise<Rou
   };
 
   // Resolve agent (find existing or create ephemeral)
-  const { agentId, mode, agentSkillIds } = await resolveAgent(route, composedPrompt, title);
+  const { agentId, mode, agentSkillIds } = await resolveAgent(route, composedPrompt);
 
   // Merge agent-attached skills into the route (deduplicated with template skills)
   if (agentSkillIds.length > 0) {

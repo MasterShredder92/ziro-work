@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { tick } from "@/lib/queue/runner";
+import { ensureQueueHandlersRegistered } from "@/lib/queue/registerHandlers";
 import { timingSafeEqualStrings } from "@/lib/security/crypto";
 import { withApi } from "@/lib/errors/handler";
 import { AppError } from "@/lib/errors/AppError";
@@ -20,6 +21,7 @@ export const POST = withApi(
     if (!isAuthorized(req)) {
       throw AppError.forbidden("Unauthorized cron request");
     }
+    ensureQueueHandlersRegistered();
     const url = new URL(req.url);
     const max = Number(url.searchParams.get("max") ?? "10");
     const kinds = url.searchParams.get("kinds")?.split(",").filter(Boolean) ?? undefined;

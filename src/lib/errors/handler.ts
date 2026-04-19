@@ -11,6 +11,15 @@ type ApiHandler<Ctx extends RouteContext = RouteContext> = (
   context: Ctx,
 ) => Promise<Response | NextResponse> | Response | NextResponse;
 
+function retryAfterFromBody(body: { code?: unknown; details?: unknown }): string | null {
+  if (body.code !== "RATE_LIMITED") return null;
+  if (!body.details || typeof body.details !== "object") return null;
+  const retryAfterMs = (body.details as { retryAfterMs?: unknown }).retryAfterMs;
+  if (typeof retryAfterMs !== "number" || !Number.isFinite(retryAfterMs)) return null;
+  const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+  return String(seconds);
+}
+
 export interface WithApiOptions {
   /** Logical name like "api.crm.contacts.GET" — used for logs + metrics. */
   name: string;
@@ -78,9 +87,14 @@ export function withApi<Ctx extends RouteContext = RouteContext>(
         status: String(status),
         code: String(body.code),
       });
+      const retryAfter = retryAfterFromBody(body);
       return NextResponse.json(body, {
         status,
-        headers: { [REQUEST_ID_HEADER]: requestId },
+        headers: {
+          [REQUEST_ID_HEADER]: requestId,
+          "Cache-Control": "no-store",
+          ...(retryAfter ? { "Retry-After": retryAfter } : {}),
+        },
       });
     }
   };

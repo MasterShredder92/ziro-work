@@ -1,5 +1,5 @@
-import { cached, invalidate, set, get, clear, inspect } from "./memoCache";
-import { CacheNamespace, keyFor, matchesScope, namespacePrefix } from "./keys";
+import { cached, invalidate, set, get } from "./memoCache";
+import { CacheNamespace, keyFor, matchesScope } from "./keys";
 import type { CacheNamespaceValue } from "./keys";
 
 export { cached, invalidate, set, get, clear, inspect } from "./memoCache";

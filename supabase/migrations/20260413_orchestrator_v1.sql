@@ -44,8 +44,33 @@ create table if not exists agent_template_skills (
   unique(template_id, skill_id)
 );
 
-create index if not exists idx_ats_template on agent_template_skills(template_id);
-create index if not exists idx_ats_skill on agent_template_skills(skill_id);
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'agent_template_skills'
+      and column_name = 'template_id'
+  ) then
+    execute 'create index if not exists idx_ats_template on agent_template_skills(template_id)';
+  end if;
+end
+$$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'agent_template_skills'
+      and column_name = 'skill_id'
+  ) then
+    execute 'create index if not exists idx_ats_skill on agent_template_skills(skill_id)';
+  end if;
+end
+$$;
 
 -- ── Task Runs ──
 create table if not exists task_runs (
@@ -80,8 +105,33 @@ create table if not exists star_reviews (
   created_at timestamptz default now()
 );
 
-create index if not exists idx_star_reviews_run on star_reviews(run_id);
-create index if not exists idx_star_reviews_verdict on star_reviews(verdict);
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'star_reviews'
+      and column_name = 'run_id'
+  ) then
+    execute 'create index if not exists idx_star_reviews_run on star_reviews(run_id)';
+  end if;
+end
+$$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'star_reviews'
+      and column_name = 'verdict'
+  ) then
+    execute 'create index if not exists idx_star_reviews_verdict on star_reviews(verdict)';
+  end if;
+end
+$$;
 
 -- ── Extend agent_tasks with orchestrator fields ──
 alter table agent_tasks add column if not exists retry_count integer default 0;

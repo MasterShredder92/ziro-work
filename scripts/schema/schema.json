@@ -1,0 +1,2088 @@
+{
+  "generated_at": "2026-04-18T22:32:18.120Z",
+  "source": "supabase_information_schema",
+  "tables": {
+    "schedule_blocks": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "uuid_generate_v4()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "student_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "block_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "column_name": "start_time",
+        "data_type": "time without time zone",
+        "udt_name": "time",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "column_name": "end_time",
+        "data_type": "time without time zone",
+        "udt_name": "time",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "column_name": "status",
+        "data_type": "USER-DEFINED",
+        "udt_name": "block_status",
+        "is_nullable": "NO",
+        "column_default": "'available'::block_status",
+        "ordinal_position": 9
+      },
+      {
+        "column_name": "is_recurring",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 10
+      },
+      {
+        "column_name": "notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "column_name": "ai_context",
+        "data_type": "jsonb",
+        "udt_name": "jsonb",
+        "is_nullable": "YES",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 12
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 13
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 14
+      },
+      {
+        "column_name": "block_type",
+        "data_type": "USER-DEFINED",
+        "udt_name": "block_type",
+        "is_nullable": "NO",
+        "column_default": "'open_time'::block_type",
+        "ordinal_position": 15
+      },
+      {
+        "column_name": "room",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 16
+      },
+      {
+        "column_name": "fifth_week",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 17
+      },
+      {
+        "column_name": "checked_in",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 18
+      },
+      {
+        "column_name": "checked_in_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 19
+      },
+      {
+        "column_name": "checked_in_by",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 20
+      },
+      {
+        "column_name": "callout_reason",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 21
+      },
+      {
+        "column_name": "room_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 22
+      },
+      {
+        "column_name": "teacher_tally",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 23
+      },
+      {
+        "column_name": "generated_from_availability",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 24
+      },
+      {
+        "column_name": "original_teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 25
+      },
+      {
+        "column_name": "original_teacher_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 26
+      },
+      {
+        "column_name": "reminder_sent",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 27
+      },
+      {
+        "column_name": "is_virtual",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 28
+      },
+      {
+        "column_name": "meet_link",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 29
+      },
+      {
+        "column_name": "meet_event_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 30
+      },
+      {
+        "column_name": "converted_to_virtual_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 31
+      },
+      {
+        "column_name": "converted_by",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 32
+      },
+      {
+        "column_name": "is_family_callout",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 33
+      },
+      {
+        "column_name": "callout_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 34
+      },
+      {
+        "column_name": "is_makeup_session",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 35
+      },
+      {
+        "column_name": "makeup_session_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 36
+      },
+      {
+        "column_name": "archived_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 37
+      },
+      {
+        "column_name": "metadata",
+        "data_type": "jsonb",
+        "udt_name": "jsonb",
+        "is_nullable": "YES",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 38
+      }
+    ],
+    "students": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "uuid_generate_v4()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "family_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "profile_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "column_name": "first_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "column_name": "last_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "column_name": "instrument",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "column_name": "status",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": "'active'::text",
+        "ordinal_position": 10
+      },
+      {
+        "column_name": "date_of_birth",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "column_name": "start_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "column_name": "end_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "column_name": "blocks_per_week",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "1",
+        "ordinal_position": 14
+      },
+      {
+        "column_name": "rate_per_session",
+        "data_type": "numeric",
+        "udt_name": "numeric",
+        "is_nullable": "NO",
+        "column_default": "45.00",
+        "ordinal_position": 15
+      },
+      {
+        "column_name": "notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 16
+      },
+      {
+        "column_name": "tags",
+        "data_type": "ARRAY",
+        "udt_name": "_text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 17
+      },
+      {
+        "column_name": "ai_context",
+        "data_type": "jsonb",
+        "udt_name": "jsonb",
+        "is_nullable": "YES",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 18
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 19
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 20
+      },
+      {
+        "column_name": "total_fifth_weeks",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 21
+      },
+      {
+        "column_name": "total_callouts",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 22
+      },
+      {
+        "column_name": "exit_reason",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 23
+      },
+      {
+        "column_name": "exit_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 24
+      },
+      {
+        "column_name": "may_return",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 25
+      },
+      {
+        "column_name": "reactivation_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 26
+      },
+      {
+        "column_name": "overdue_amount",
+        "data_type": "numeric",
+        "udt_name": "numeric",
+        "is_nullable": "YES",
+        "column_default": "0",
+        "ordinal_position": 27
+      },
+      {
+        "column_name": "age",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 28
+      },
+      {
+        "column_name": "bio",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 29
+      },
+      {
+        "column_name": "first_lesson_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 30
+      },
+      {
+        "column_name": "card_last_four",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 31
+      },
+      {
+        "column_name": "card_brand",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 32
+      },
+      {
+        "column_name": "total_lessons_taken",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "0",
+        "ordinal_position": 33
+      },
+      {
+        "column_name": "total_paid",
+        "data_type": "numeric",
+        "udt_name": "numeric",
+        "is_nullable": "YES",
+        "column_default": "0",
+        "ordinal_position": 34
+      },
+      {
+        "column_name": "teacher_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 35
+      },
+      {
+        "column_name": "sessions_per_month",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "4",
+        "ordinal_position": 36
+      },
+      {
+        "column_name": "experience",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'none'::text",
+        "ordinal_position": 37
+      },
+      {
+        "column_name": "has_instrument",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'na'::text",
+        "ordinal_position": 38
+      },
+      {
+        "column_name": "preferred_days",
+        "data_type": "ARRAY",
+        "udt_name": "_text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 39
+      },
+      {
+        "column_name": "source",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'other'::text",
+        "ordinal_position": 40
+      },
+      {
+        "column_name": "is_military",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 41
+      },
+      {
+        "column_name": "pause_reason",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 42
+      },
+      {
+        "column_name": "pause_reason_detail",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 43
+      },
+      {
+        "column_name": "coming_back",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 44
+      },
+      {
+        "column_name": "expected_return_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 45
+      },
+      {
+        "column_name": "followup_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 46
+      },
+      {
+        "column_name": "followup_sent",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 47
+      },
+      {
+        "column_name": "followup_sent_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 48
+      },
+      {
+        "column_name": "deactivated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 49
+      },
+      {
+        "column_name": "deactivated_by",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 50
+      },
+      {
+        "column_name": "first_teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 51
+      },
+      {
+        "column_name": "first_teacher_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 52
+      },
+      {
+        "column_name": "last_teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 53
+      },
+      {
+        "column_name": "last_teacher_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 54
+      },
+      {
+        "column_name": "exit_category",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 55
+      },
+      {
+        "column_name": "transferred_to_location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 56
+      },
+      {
+        "column_name": "goals",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 57
+      },
+      {
+        "column_name": "learning_style",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 58
+      },
+      {
+        "column_name": "previous_teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 59
+      },
+      {
+        "column_name": "teacher_changed_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 60
+      },
+      {
+        "column_name": "student_display_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 61
+      },
+      {
+        "column_name": "square_customer_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 62
+      },
+      {
+        "column_name": "lesson_day_of_week",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 63
+      },
+      {
+        "column_name": "fifth_weeks_used",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "0",
+        "ordinal_position": 64
+      },
+      {
+        "column_name": "intake_submission_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 65
+      },
+      {
+        "column_name": "counts_toward_family_tier",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 66
+      },
+      {
+        "column_name": "enrollment_type",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'new_enrollment'::text",
+        "ordinal_position": 67
+      },
+      {
+        "column_name": "email",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 68
+      },
+      {
+        "column_name": "phone",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 69
+      },
+      {
+        "column_name": "archived_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 70
+      }
+    ],
+    "families": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "uuid_generate_v4()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "primary_contact_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "primary_email",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "primary_phone",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "column_name": "billing_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "column_name": "is_military",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 8
+      },
+      {
+        "column_name": "profile_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 10
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 11
+      },
+      {
+        "column_name": "card_last_four",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "column_name": "card_brand",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "column_name": "square_customer_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "column_name": "square_card_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 15
+      },
+      {
+        "column_name": "card_exp_month",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 16
+      },
+      {
+        "column_name": "card_exp_year",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 17
+      },
+      {
+        "column_name": "billing_day",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "1",
+        "ordinal_position": 18
+      },
+      {
+        "column_name": "billing_status",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": "'active'::text",
+        "ordinal_position": 19
+      },
+      {
+        "column_name": "balance",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 20
+      },
+      {
+        "column_name": "parent_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 21
+      },
+      {
+        "column_name": "rate_tier",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "4500",
+        "ordinal_position": 22
+      },
+      {
+        "column_name": "rate_tier_override",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 23
+      },
+      {
+        "column_name": "rate_tier_override_by",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 24
+      },
+      {
+        "column_name": "rate_tier_override_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 25
+      },
+      {
+        "column_name": "rate_tier_reason",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 26
+      },
+      {
+        "column_name": "primary_location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 27
+      },
+      {
+        "column_name": "parent_first_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 28
+      },
+      {
+        "column_name": "parent_last_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 29
+      },
+      {
+        "column_name": "emergency_contact_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 30
+      },
+      {
+        "column_name": "emergency_contact_phone",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 31
+      },
+      {
+        "column_name": "emergency_contact_relationship",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 32
+      },
+      {
+        "column_name": "scheduling_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 34
+      },
+      {
+        "column_name": "lifetime_paid_cents",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 35
+      },
+      {
+        "column_name": "overdue_balance_cents",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 36
+      },
+      {
+        "column_name": "stripe_customer_id_connect",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 37
+      },
+      {
+        "column_name": "autopay_enabled",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 38
+      },
+      {
+        "column_name": "default_payment_method_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 39
+      },
+      {
+        "column_name": "notify_via_sms",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 40
+      },
+      {
+        "column_name": "notify_via_email",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 41
+      },
+      {
+        "column_name": "reminder_4hr",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 42
+      },
+      {
+        "column_name": "reminder_1hr",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 43
+      },
+      {
+        "column_name": "sms_opted_out",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 44
+      },
+      {
+        "column_name": "referral_code",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 45
+      },
+      {
+        "column_name": "referred_by_family_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 46
+      },
+      {
+        "column_name": "referral_count",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "0",
+        "ordinal_position": 47
+      },
+      {
+        "column_name": "archived_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 48
+      },
+      {
+        "column_name": "primary_contact_email",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 49
+      },
+      {
+        "column_name": "primary_contact_phone",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 50
+      },
+      {
+        "column_name": "status",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'active'::text",
+        "ordinal_position": 51
+      },
+      {
+        "column_name": "notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 52
+      }
+    ],
+    "teachers": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "uuid_generate_v4()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "profile_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "instruments",
+        "data_type": "ARRAY",
+        "udt_name": "_text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "bio",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "rate_per_block",
+        "data_type": "numeric",
+        "udt_name": "numeric",
+        "is_nullable": "NO",
+        "column_default": "15.00",
+        "ordinal_position": 6
+      },
+      {
+        "column_name": "is_active",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 7
+      },
+      {
+        "column_name": "hire_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "column_name": "termination_date",
+        "data_type": "date",
+        "udt_name": "date",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "column_name": "ai_context",
+        "data_type": "jsonb",
+        "udt_name": "jsonb",
+        "is_nullable": "YES",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 10
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 11
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 12
+      },
+      {
+        "column_name": "is_sub_available",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 13
+      },
+      {
+        "column_name": "sub_available",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 14
+      },
+      {
+        "column_name": "square_team_member_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 15
+      },
+      {
+        "column_name": "first_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 16
+      },
+      {
+        "column_name": "last_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 17
+      },
+      {
+        "column_name": "email",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 18
+      },
+      {
+        "column_name": "phone",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 19
+      },
+      {
+        "column_name": "display_name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 20
+      },
+      {
+        "column_name": "teacher_role",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'Music Teacher'::text",
+        "ordinal_position": 21
+      },
+      {
+        "column_name": "photo_url",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 22
+      },
+      {
+        "column_name": "status",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'active'::text",
+        "ordinal_position": 23
+      },
+      {
+        "column_name": "pay_rate_per_half_hour",
+        "data_type": "numeric",
+        "udt_name": "numeric",
+        "is_nullable": "YES",
+        "column_default": "15",
+        "ordinal_position": 24
+      },
+      {
+        "column_name": "internal_match_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 25
+      },
+      {
+        "column_name": "personality",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 26
+      },
+      {
+        "column_name": "lesson_style",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 27
+      },
+      {
+        "column_name": "best_age_range",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 28
+      },
+      {
+        "column_name": "needs_1099",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 29
+      },
+      {
+        "column_name": "documents_locked",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 30
+      },
+      {
+        "column_name": "w9_status",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'missing'::text",
+        "ordinal_position": 31
+      },
+      {
+        "column_name": "w9_completed_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 32
+      },
+      {
+        "column_name": "contract_status",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'missing'::text",
+        "ordinal_position": 33
+      },
+      {
+        "column_name": "contract_signed_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 34
+      },
+      {
+        "column_name": "contract_pdf_url",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 35
+      },
+      {
+        "column_name": "primary_instruments",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 36
+      },
+      {
+        "column_name": "secondary_instruments",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 37
+      },
+      {
+        "column_name": "style_genre_strengths",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 38
+      },
+      {
+        "column_name": "preferred_age_range",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 39
+      },
+      {
+        "column_name": "acceptable_age_range",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 40
+      },
+      {
+        "column_name": "skill_levels_by_instrument",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 41
+      },
+      {
+        "column_name": "teaching_strengths",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 42
+      },
+      {
+        "column_name": "musical_strengths_background",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 43
+      },
+      {
+        "column_name": "best_first_lesson_fit",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 44
+      },
+      {
+        "column_name": "best_match_students",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 45
+      },
+      {
+        "column_name": "use_caution_internal_placement_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 46
+      },
+      {
+        "column_name": "meet_and_greet_fit",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 47
+      },
+      {
+        "column_name": "substitute_coverage",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 48
+      },
+      {
+        "column_name": "customer_facing_match_summary",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 49
+      },
+      {
+        "column_name": "internal_matching_tags",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 50
+      },
+      {
+        "column_name": "director_notes",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 51
+      },
+      {
+        "column_name": "archived_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 52
+      }
+    ],
+    "locations": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "uuid_generate_v4()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "address",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "city",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "state",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": "'NE'::text",
+        "ordinal_position": 6
+      },
+      {
+        "column_name": "zip",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "column_name": "phone",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "column_name": "email",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "column_name": "website",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "column_name": "google_review_url",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "column_name": "hours_json",
+        "data_type": "jsonb",
+        "udt_name": "jsonb",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "column_name": "is_active",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 13
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 14
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 15
+      },
+      {
+        "column_name": "logo_url",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 16
+      },
+      {
+        "column_name": "color",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": "'#D4226A'::text",
+        "ordinal_position": 17
+      },
+      {
+        "column_name": "state_rank",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 18
+      },
+      {
+        "column_name": "students_enrolled",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 19
+      },
+      {
+        "column_name": "students_taught_total",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 20
+      },
+      {
+        "column_name": "floorplan_cols",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "16",
+        "ordinal_position": 21
+      },
+      {
+        "column_name": "floorplan_rows",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "8",
+        "ordinal_position": 22
+      },
+      {
+        "column_name": "min_floors",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "YES",
+        "column_default": "1",
+        "ordinal_position": 23
+      },
+      {
+        "column_name": "square_location_id",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 24
+      }
+    ],
+    "profile_locations": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "uuid_generate_v4()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "profile_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 4
+      }
+    ],
+    "teacher_locations": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "teacher_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "YES",
+        "column_default": "now()",
+        "ordinal_position": 4
+      }
+    ],
+    "finance_locations": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "code",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "name",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "location_type",
+        "data_type": "text",
+        "udt_name": "text",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "is_active",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 6
+      },
+      {
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone",
+        "udt_name": "timestamptz",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "'00000000-0000-0000-0000-000000000001'::uuid",
+        "ordinal_position": 8
+      },
+      {
+        "column_name": "core_location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      }
+    ],
+    "location_hours": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "location_id",
+        "data_type": "uuid",
+        "udt_name": "uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "column_name": "day_of_week",
+        "data_type": "integer",
+        "udt_name": "int4",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "column_name": "open_time",
+        "data_type": "time without time zone",
+        "udt_name": "time",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "column_name": "close_time",
+        "data_type": "time without time zone",
+        "udt_name": "time",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "column_name": "is_closed",
+        "data_type": "boolean",
+        "udt_name": "bool",
+        "is_nullable": "YES",
+        "column_default": "false",
+        "ordinal_position": 6
+      }
+    ]
+  }
+}

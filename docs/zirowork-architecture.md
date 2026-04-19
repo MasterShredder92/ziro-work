@@ -467,3 +467,11 @@ A **task queue** plus **event bus** (`emit` / `subscribe`) for in-process coordi
 
 This architecture is stable, scalable, and ready for the next phase: admin UI for `tenant_settings`, deduping recurring retention tasks, production scheduling instead of client `dashboard_tick`, and a product UI on top of the same tools and events.
 
+#️⃣ 11. Runtime Alignment (Apr 2026 Stabilization)
+
+- **Migration lineage normalized** around `20260417010000_lessonpreneur_core_schema.sql` with destructive/duplicate migrations removed.
+- **Automation action runtime de-stubbed** for CRM updates, invoice/credit mutations, schedule event mutations, and task persistence.
+- **Queue handlers registered** via `src/lib/queue/registerHandlers.ts` and activated on queue tick for `automation.run`.
+- **Billing settings PATCH API** available at `src/app/api/billing/settings/route.ts`.
+- **Messaging attachment path upgraded**: composer uploads binary payloads, Files OS persists + signs URLs, message delivery metadata carries attachment descriptors.
+- **Stripe webhook billing events bridged** into Automation OS triggers for `billing.invoice.paid`, `billing.invoice.failed`, and `billing.subscription.updated`.

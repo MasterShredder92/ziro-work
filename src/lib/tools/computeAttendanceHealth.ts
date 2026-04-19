@@ -12,9 +12,9 @@ export async function computeAttendanceHealth(
   missed_in_last_30_days: number;
 }> {
   const settings = await getTenantSettings(ctx);
-  const rp = settings.retention_pipeline;
-  const warning = rp.warning_threshold ?? 1;
-  const risk = rp.risk_threshold ?? 3;
+  const rp = settings.retention_pipeline ?? {};
+  const warning = typeof rp.warning_threshold === "number" ? rp.warning_threshold : 1;
+  const risk = typeof rp.risk_threshold === "number" ? rp.risk_threshold : 3;
 
   const now = new Date();
   const last30 = records.filter((r) => {
@@ -32,3 +32,4 @@ export async function computeAttendanceHealth(
 
   return { health, missed_in_last_30_days: missed };
 }
+

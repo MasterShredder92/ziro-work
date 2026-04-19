@@ -31,6 +31,7 @@ import "./tools/detectAtRiskStudents";
 import "./tools/planRetentionSequence";
 
 // Load agents
-import "./dashboardAgent";
-import "./enrollmentCoordinator";
+// Legacy agents (dashboardAgent, enrollmentCoordinator) removed.
+// Current agent roster is defined in ./registry.ts and ./agentMetadata.ts:
+// ziro, star, ruby, stewie, vader, bub, sid
 

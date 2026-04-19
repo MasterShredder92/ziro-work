@@ -1,19 +1,28 @@
 import type { AgentContext } from "../agents/types";
-import type { Trial } from "../types/trials";
 
-export async function detectTrialToEnrollment(ctx: AgentContext) {
-  const trials: Trial[] = await ctx.tools.get_trials({ tenantId: ctx.tenantId });
+/**
+ * Detect trials that should be converted to enrollments.
+ * Conservative: requires status "completed" and a lead_id.
+ */
+export async function detectTrialToEnrollment(ctx: AgentContext): Promise<
+  { trial_id: string; lead_id: string }[]
+> {
+  const { data, error } = await ctx.supabase
+    .from("trials")
+    .select("id,lead_id,status,enrollment_decision")
+    .eq("tenant_id", ctx.tenantId)
+    .eq("status", "completed")
+    .neq("lead_id", null)
+    .order("scheduled_at", { ascending: false })
+    .limit(200);
 
-  const ready: { trial_id: string; lead_id: string }[] = [];
-
-  for (const trial of trials) {
-    if (trial.status === "completed" && trial.attended === true && trial.lead_id) {
-      ready.push({
-        trial_id: trial.id,
-        lead_id: trial.lead_id,
-      });
-    }
+  if (error) throw error;
+  const out: { trial_id: string; lead_id: string }[] = [];
+  for (const row of (data ?? []) as Record<string, unknown>[]) {
+    const decision = (row.enrollment_decision as string | null | undefined) ?? null;
+    if (decision && decision.toLowerCase() === "no") continue;
+    out.push({ trial_id: row.id as string, lead_id: row.lead_id as string });
   }
-
-  return ready;
+  return out;
 }
+

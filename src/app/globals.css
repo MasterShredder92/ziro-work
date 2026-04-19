@@ -1,9 +1,11 @@
 @import "tailwindcss";
+@import "../styles/animations.css";
+@import "../styles/agentOS.css";
 
 :root {
   --background: #080808;
   --foreground: #d4d4d4;
-  --accent: #00ff88;
+  --accent: var(--z-accent);
   --sidebar-width: 240px;
   --chat-width: 420px;
   --card-bg: #101012;
@@ -12,23 +14,71 @@
   --input-bg: #0a0a0c;
   --input-border: #232326;
   --surface-dim: #0c0c0e;
+
+  /* Premium design system tokens */
+  --z-bg: #080808;
+  --z-fg: #d4d4d4;
+  --z-muted: color-mix(in oklab, var(--z-fg), transparent 35%);
+  /* Theme controls (see settings/theme + globals) */
+  --z-accent-color: #00ff88;
+  --z-neon-strength: 1;
+  --z-density-scale: 1;
+  --z-accent: var(--z-accent-color);
+  --z-accent-dim: #00cc6e;
+  --z-surface: #101012;
+  --z-surface-2: #0b0b0d;
+  --z-border: #1c1c1e;
+  --z-border-2: #2a2a2e;
+  --z-danger: #ff3b6b;
+  --z-warning: #ffcc33;
+  --z-on-accent: #00130a;
+  --z-content-max: 1400px;
+  --z-leading-tight: 1.25;
+  --z-leading-body: 1.55;
+
+  --z-radius-sm: 0.5rem;
+  --z-radius-md: 0.75rem;
+  --z-radius-lg: 1rem;
+
+  --z-space-1: 0.25rem;
+  --z-space-2: 0.5rem;
+  --z-space-3: 0.75rem;
+  --z-space-4: 1rem;
+  --z-space-5: 1.25rem;
+  --z-space-6: 1.5rem;
+  --z-space-8: 2rem;
+  --z-space-10: 2.5rem;
+  --z-space-12: 3rem;
+  --z-space-16: 4rem;
+
+  --z-font-sans: var(--font-inter, "Inter"), system-ui, -apple-system, sans-serif;
+
+  --z-agent-accent: var(--z-accent);
+  --z-agent-glow: color-mix(in oklab, var(--z-accent), transparent 60%);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-accent: var(--accent);
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --color-accent: var(--z-accent);
+  --font-sans: var(--z-font-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background: var(--z-bg);
+  color: var(--z-fg);
+  font-family: var(--z-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
-  line-height: 1.5;
+  line-height: var(--z-leading-body);
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--z-leading-tight);
 }
 
 /* Scrollbar */
@@ -44,15 +94,6 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #3a3a3e;
-}
-
-/* Pulse animation for active agents */
-@keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.status-pulse {
-  animation: status-pulse 2s ease-in-out infinite;
 }
 
 /* Chat sidebar transition */
@@ -78,6 +119,19 @@ body {
   animation: org-star-line-flow 5.5s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .org-star-line {
     animation: none;
   }

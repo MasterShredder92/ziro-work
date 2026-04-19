@@ -1,0 +1,30 @@
+export {
+  bookBlock,
+  rescheduleBlock,
+  cancelBlock,
+  checkInBlock,
+  upsertSessionLogForBlock,
+  logSession,
+  listScheduleBlocks,
+  type CreateBlockInput,
+  type ScheduleBlockFilter,
+  type DetectConflictsInput,
+  type LogSessionPayload,
+} from "./blocks";
+
+export {
+  getSchedule,
+  listSchedules,
+  createSchedule,
+  updateSchedule,
+  listAvailability,
+  createAvailabilityBlock,
+  updateAvailabilityBlock,
+  deleteAvailabilityBlock,
+  listAppointments,
+  createAppointment,
+  updateAppointment,
+  expandRecurrence,
+  detectConflicts,
+  getAppointmentRange,
+} from "./schedulingOps";
