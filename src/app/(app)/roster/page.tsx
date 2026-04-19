@@ -66,7 +66,7 @@ export default async function RosterPage() {
       shortName: LOCATION_SHORT_NAMES[loc.id] ?? (loc.name ?? loc.id),
       studentCount: locStudents.length,
       familyCount: locFamilies.filter(
-        (f) => (f.status ?? "active") === "active"
+        (f) => (f.billing_status ?? "active").toLowerCase() === "active"
       ).length,
       monthlyRevenue,
     };

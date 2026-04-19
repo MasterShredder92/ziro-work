@@ -44,11 +44,11 @@ interface StudentRow {
   teacher_id: string | null;
   rate_per_session: number | null;
   blocks_per_week: number | null;
-  is_military: boolean;
+  is_military: boolean | null;
   start_date: string | null;
   family_id: string | null;
-  total_lessons_taken: number;
-  fifth_weeks_used: number;
+  total_lessons_taken: number | null;
+  fifth_weeks_used: number | null;
   total_callouts: number;
 }
 
@@ -61,7 +61,7 @@ interface FamilyRow {
   card_last_four: string | null;
   card_brand: string | null;
   square_customer_id: string | null;
-  autopay_enabled: boolean;
+  autopay_enabled: boolean | null;
   billing_status: string | null;
   rate_tier: number | null;
   balance: number | null;
@@ -70,7 +70,6 @@ interface FamilyRow {
   is_military: boolean;
   parent_name: string | null;
   primary_contact_name: string | null;
-  status: string | null;
 }
 
 interface LocationStat {
@@ -443,7 +442,7 @@ export function RosterClient({
 
     // Status filter
     if (statusFilter !== "all") {
-      result = result.filter((f) => (f.status ?? "active") === statusFilter);
+      result = result.filter((f) => (f.billing_status ?? "active").toLowerCase() === statusFilter.toLowerCase());
     }
 
     // Search
@@ -464,9 +463,9 @@ export function RosterClient({
 
   // Summary stats
   const totalActive = students.filter((s) => s.status === "active").length;
-  const totalFamilies = families.filter((f) => (f.status ?? "active") === "active").length;
+  const totalFamilies = families.filter((f) => (f.billing_status ?? "active").toLowerCase() === "active").length;
   const totalMonthly = families.reduce((sum, f) => sum + monthlyForFamily(students, f), 0);
-  const noCard = families.filter((f) => !f.card_last_four && !f.square_customer_id && (f.status ?? "active") === "active").length;
+  const noCard = families.filter((f) => !f.card_last_four && !f.square_customer_id && (f.billing_status ?? "active").toLowerCase() === "active").length;
 
   return (
     <PageShell title="Roster">
