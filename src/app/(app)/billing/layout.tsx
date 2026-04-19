@@ -23,7 +23,7 @@ export default async function BillingLayout({
 }) {
   const session = await resolveSession();
 
-  if (session.role !== "admin" && session.role !== "director") {
+  if (session.role !== "admin" && session.role !== "director" && session.role !== "owner") {
     redirect("/dashboard");
   }
 
