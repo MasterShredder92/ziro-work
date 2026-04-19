@@ -1,5 +1,8 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import type { LocationHoursMap } from "./locationHoursUtils";
+
+export type { LocationHoursMap } from "./locationHoursUtils";
 
 export type LocationHoursRow = {
   day_of_week: number; // 0=Sun, 1=Mon, ... 6=Sat
@@ -7,8 +10,6 @@ export type LocationHoursRow = {
   close_time: string;  // "HH:MM:SS"
   is_closed: boolean;
 };
-
-export type LocationHoursMap = Record<number, { openMinute: number; closeMinute: number; isClosed: boolean }>;
 
 function toMinute(value: string): number {
   const [h = "0", m = "0"] = value.split(":");

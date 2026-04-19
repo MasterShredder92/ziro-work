@@ -4,8 +4,8 @@ import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import type { ScheduleRoom } from "@/lib/schedule/types";
-import type { LocationHoursMap } from "@/lib/schedule/locationHours";
-import { getHoursForDate } from "@/lib/schedule/locationHours";
+import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
+import { getHoursForDate } from "@/lib/schedule/locationHoursUtils";
 import {
   projectBlocksForWindow,
   type ProjectedBlock,

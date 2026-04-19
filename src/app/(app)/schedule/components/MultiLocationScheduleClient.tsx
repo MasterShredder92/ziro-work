@@ -11,8 +11,7 @@ import {
   eachDayInclusive,
   addDays,
 } from "@/lib/schedule/window";
-import type { LocationHoursMap } from "@/lib/schedule/locationHours";
-import { getHoursForDate } from "@/lib/schedule/locationHours";
+import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { LocationScheduleGrid } from "./LocationScheduleGrid";
 
 // ─── Location config ──────────────────────────────────────────────────────────
