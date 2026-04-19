@@ -13,6 +13,7 @@ import {
 } from "@/lib/schedule/window";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { LocationScheduleGrid } from "./LocationScheduleGrid";
+import { MobileScheduleView } from "./MobileScheduleView";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 export const LOCATION_CONFIG: Record<string, {
@@ -298,27 +299,46 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
         const currentBlocks = blocksByLocationWindow[loc.id]?.[windowKey] ?? data.blocks;
         const selectedDate = selectedDates[loc.id] ?? window.start;
         const cfg = LOCATION_CONFIG[loc.id];
+        const handleBlocksChange = (newBlocks: import("@/lib/types/entities").ScheduleBlock[]) => {
+          setBlocksByLocationWindow((prev) => ({
+            ...prev,
+            [loc.id]: { ...(prev[loc.id] ?? {}), [windowKey]: newBlocks },
+          }));
+        };
         return (
-          <LocationScheduleGrid
-            key={loc.id}
-            locationId={loc.id}
-            locationName={loc.name}
-            locationConfig={cfg}
-            selectedDate={selectedDate}
-            blocks={currentBlocks}
-            teachers={data.teachers}
-            students={data.students}
-            families={data.families}
-            availability={data.availability}
-            rooms={data.rooms}
-            locationHours={data.locationHours}
-            onBlocksChange={(newBlocks) => {
-              setBlocksByLocationWindow((prev) => ({
-                ...prev,
-                [loc.id]: { ...(prev[loc.id] ?? {}), [windowKey]: newBlocks },
-              }));
-            }}
-          />
+          <React.Fragment key={loc.id}>
+            {/* Desktop grid */}
+            <div className="hidden sm:block">
+              <LocationScheduleGrid
+                locationId={loc.id}
+                locationName={loc.name}
+                locationConfig={cfg}
+                selectedDate={selectedDate}
+                blocks={currentBlocks}
+                teachers={data.teachers}
+                students={data.students}
+                families={data.families}
+                availability={data.availability}
+                rooms={data.rooms}
+                locationHours={data.locationHours}
+                onBlocksChange={handleBlocksChange}
+              />
+            </div>
+            {/* Mobile horizontal timeline */}
+            <div className="block sm:hidden">
+              <MobileScheduleView
+                locationId={loc.id}
+                locationConfig={cfg}
+                selectedDate={selectedDate}
+                blocks={currentBlocks}
+                teachers={data.teachers}
+                students={data.students}
+                families={data.families}
+                locationHours={data.locationHours}
+                onBlocksChange={handleBlocksChange}
+              />
+            </div>
+          </React.Fragment>
         );
       })}
     </div>

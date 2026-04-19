@@ -38,7 +38,7 @@ type Props = {
 
 // ─── Block type display config ─────────────────────────────────────────────────
 const BLOCK_DISPLAY: Record<string, { label: string; bg: string; border: string; text: string }> = {
-  student_session: { label: "Booked",       bg: "rgba(234,179,8,0.9)",   border: "#ca8a04", text: "#000" },
+  student_session: { label: "",            bg: "rgba(234,179,8,0.9)",   border: "#ca8a04", text: "#000" },
   first_day:       { label: "First Day",    bg: "rgba(59,130,246,0.85)", border: "#2563eb", text: "#fff" },
   last_day:        { label: "Last Day",     bg: "rgba(239,68,68,0.85)",  border: "#dc2626", text: "#fff" },
   call_out:        { label: "Call Out",     bg: "rgba(249,115,22,0.85)", border: "#ea580c", text: "#fff" },
@@ -387,14 +387,26 @@ export function LocationScheduleGrid({
                           zIndex: isSelected ? 15 : 5,
                         }}
                       >
-                        <div className="font-semibold leading-tight truncate">
-                          {display.label}
-                        </div>
-                        {student && (
-                          <div className="truncate opacity-90 leading-tight">
-                            {studentName(student)}
+                        {/* Student name — bold and larger, shown first for booked sessions */}
+                        {student ? (
+                          <div className="font-bold leading-tight truncate text-[11px]">
+                            {(() => {
+                              const instr = (student as unknown as Record<string, unknown>).instrument;
+                              const emoji = typeof instr === "string" && instr ? (
+                                /guitar|bass/i.test(instr) ? "🎸" :
+                                /piano|keyboard/i.test(instr) ? "🎹" :
+                                /drum|perc/i.test(instr) ? "🥁" :
+                                /violin|viola|cello|string/i.test(instr) ? "🎻" :
+                                /trumpet|horn|brass/i.test(instr) ? "🎺" :
+                                /sax|clarinet|flute|wind/i.test(instr) ? "🎷" :
+                                /voice|vocal|sing/i.test(instr) ? "🎤" : "🎵"
+                              ) : null;
+                              return <>{emoji && <span className="mr-0.5">{emoji}</span>}{studentName(student)}</>;
+                            })()}
                           </div>
-                        )}
+                        ) : display.label ? (
+                          <div className="font-semibold leading-tight truncate">{display.label}</div>
+                        ) : null}
                         <div className="opacity-75 leading-tight">
                           {minuteToLabel(toMinute(block.start_time))}–{minuteToLabel(toMinute(block.end_time))}
                         </div>

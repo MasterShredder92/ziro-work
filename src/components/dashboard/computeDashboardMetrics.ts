@@ -6,6 +6,8 @@ export type DashboardMetrics = {
   recognizedRevenue: number;
   paidThisMonth: number;
   outstanding: number;
+  overdueCount: number;
+  overdueAmount: number;
   leadsThisWeek: number;
   enrollmentsThisWeek: number;
   churnThisWeek: number;
@@ -65,10 +67,15 @@ export function computeDashboardMetrics(invoices: Invoice[], events: EventLog[])
     );
   }).length;
 
+  const overdueCount = invoices.filter((i) => i.status === "overdue").length;
+  const overdueAmount = sumCents(invoices, (i) => i.status === "overdue");
+
   return {
     recognizedRevenue,
     paidThisMonth,
     outstanding,
+    overdueCount,
+    overdueAmount,
     leadsThisWeek,
     enrollmentsThisWeek,
     churnThisWeek,

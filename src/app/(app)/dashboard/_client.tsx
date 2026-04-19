@@ -46,6 +46,24 @@ const ActivityFeed = dynamic(
   { loading: () => <BlockSkeleton rows={5} /> },
 );
 
+const DashboardMetricsBar = dynamic(
+  () => import("@/components/dashboard/DashboardMetricsBar").then((m) => ({ default: m.DashboardMetricsBar })),
+  {
+    loading: () => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-[5.25rem] animate-pulse rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)]" />
+        ))}
+      </div>
+    ),
+  },
+);
+
+const OverdueAlert = dynamic(
+  () => import("@/components/dashboard/OverdueAlert").then((m) => ({ default: m.OverdueAlert })),
+  { loading: () => null },
+);
+
 export function DashboardClient() {
   return (
     <PageShell
@@ -68,6 +86,12 @@ export function DashboardClient() {
               7 agents working for you right now. Click any one to see what they&apos;re doing and jump straight to their page.
             </p>
           </header>
+
+          {/* ── Revenue metrics bar ─────────────────────────────── */}
+          <DashboardMetricsBar />
+
+          {/* ── Overdue alert ───────────────────────────────────── */}
+          <OverdueAlert />
 
           {/* ── Agent circles — full width, no sidebar ──────────── */}
           <DashboardSection

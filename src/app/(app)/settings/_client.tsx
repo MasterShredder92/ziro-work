@@ -14,6 +14,7 @@ const categories: { href: string; label: string; description: string }[] = [
   { href: "/settings/automations", label: "Automations", description: "Lifecycle intelligence toggles." },
   { href: "/settings/theme", label: "Theme", description: "Neon intensity, accent, and density." },
   { href: "/settings/permissions", label: "Permissions", description: "Roles and surface-level access maps." },
+  { href: "/settings/integrations", label: "Integrations", description: "QUO, Gmail, Twilio, Stripe — connect external services." },
 ];
 
 export function SettingsClient() {
