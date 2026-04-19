@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     const grossPay = sessions.count * payRate * 100; // in cents
     return {
       id: t.id,
-      display_name: t.display_name ?? [t.first_name, t.last_name].filter(Boolean).join(" ") || "Unknown",
+      display_name: (t.display_name ?? [t.first_name, t.last_name].filter(Boolean).join(" ")) || "Unknown",
       email: t.email,
       photo_url: t.photo_url,
       instruments: t.instruments ?? [],
