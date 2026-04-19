@@ -1,16 +1,70 @@
 "use client";
-
 import * as React from "react";
 import Link from "next/link";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { cn, focusRingClassName } from "@/components/ui/utils";
 import { Loader2 } from "lucide-react";
 
+// ── Location color palette (matches roster/invoices) ─────────────────────────
+export const LOCATION_COLORS: Record<string, { color: string; glow: string; label: string }> = {
+  "f7b52dd5-12ee-437f-9c60-f8adf454ac31": { color: "#7C3AED", glow: "rgba(124,58,237,0.45)", label: "Bellevue" },
+  "40c67ffc-91b5-46a9-94bd-6ddffdfb7638": { color: "#16A34A", glow: "rgba(22,163,74,0.45)",  label: "Gretna"   },
+  "cebd97d4-c241-4de2-8ade-49e5cc0070d5": { color: "#0EA5E9", glow: "rgba(14,165,233,0.45)", label: "Elkhorn"  },
+  "d48229c1-b70a-4d29-893e-5079887dab76": { color: "#DC2626", glow: "rgba(220,38,38,0.45)",  label: "Omaha"    },
+};
+const DEFAULT_LOC = { color: "#6366f1", glow: "rgba(99,102,241,0.45)", label: "Location" };
+
+function getLocColor(id: string) {
+  return LOCATION_COLORS[id] ?? DEFAULT_LOC;
+}
+
+// ── Shared orb shell ──────────────────────────────────────────────────────────
+function Orb({
+  size,
+  color,
+  glow,
+  children,
+  className,
+  style,
+}: {
+  size: number;
+  color: string;
+  glow: string;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const glowSize = Math.round(size * 0.6);
+  return (
+    <div
+      className={cn(
+        "relative flex flex-col items-center justify-center rounded-full border-2 text-center select-none",
+        className,
+      )}
+      style={{
+        width: size,
+        height: size,
+        borderColor: `${color}66`,
+        background: `radial-gradient(circle at 38% 32%, ${color}22 0%, #0d0d1a 70%)`,
+        boxShadow: `0 0 0 1px ${color}33, 0 0 ${glowSize}px ${glow}, inset 0 1px 0 ${color}22`,
+        ...style,
+      }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-[3px] rounded-full"
+        style={{ background: `radial-gradient(circle at 30% 25%, ${color}18 0%, transparent 60%)` }}
+      />
+      {children}
+    </div>
+  );
+}
+
+// ── Node type definitions ─────────────────────────────────────────────────────
 export type CompanyNodeData = {
   label: string;
   subtitle?: string;
 };
-
 export type LocationNodeData = {
   label: string;
   locationId: string;
@@ -20,7 +74,6 @@ export type LocationNodeData = {
   href: string;
   onToggle: () => void;
 };
-
 export type TeacherFlowNodeData = {
   label: string;
   initials: string;
@@ -33,7 +86,6 @@ export type TeacherFlowNodeData = {
   href: string;
   onToggle: () => void;
 };
-
 export type StudentFlowNodeData = {
   studentId: string;
   label: string;
@@ -41,167 +93,170 @@ export type StudentFlowNodeData = {
   active: boolean;
   href: string;
 };
-
 export type AgentsNodeData = {
   href: string;
 };
 
-function orbBase(className?: string) {
-  return cn(
-    "relative flex flex-col items-center justify-center rounded-full border text-center shadow-sm transition-[transform,box-shadow,border-color] duration-[var(--z-duration-medium)] [transition-timing-function:var(--z-ease-spring)]",
-    className,
-  );
-}
-
+// ── Company orb (center / owner) ──────────────────────────────────────────────
 export function CompanyOrbNode({ data }: NodeProps) {
   const d = data as CompanyNodeData;
+  const color = "#f59e0b";
+  const glow  = "rgba(245,158,11,0.5)";
   return (
     <>
-      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-[var(--z-accent-color)]" />
-      <div
-        className={orbBase(
-          "h-[7.5rem] w-[7.5rem] border-[color-mix(in_oklab,var(--z-accent-color),transparent_40%)] bg-[color-mix(in_oklab,var(--z-surface),var(--z-accent-color)_10%)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-accent-color),transparent_72%),0_0_48px_color-mix(in_oklab,var(--z-accent-color),transparent_88%)]",
-        )}
-      >
-        <span className="max-w-[6.5rem] px-1 text-center text-[0.7rem] font-extrabold uppercase leading-tight tracking-[0.14em] text-[var(--z-accent-color)] sm:text-xs">
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <Orb size={130} color={color} glow={glow}>
+        <span
+          className="px-2 text-center text-[0.65rem] font-black uppercase leading-tight tracking-[0.16em]"
+          style={{ color }}
+        >
           {d.label}
         </span>
         {d.subtitle ? (
-          <span className="mt-1 max-w-[7rem] px-1 text-[0.6rem] font-medium leading-tight text-[var(--z-muted)]">
+          <span className="mt-1 px-2 text-[0.55rem] font-medium leading-tight text-white/50">
             {d.subtitle}
           </span>
         ) : null}
-      </div>
+      </Orb>
     </>
   );
 }
 
+// ── Location orb ──────────────────────────────────────────────────────────────
 export function LocationOrbNode({ data }: NodeProps) {
   const d = data as LocationNodeData;
+  const { color, glow } = getLocColor(d.locationId);
+  const activeGlow = d.expanded ? glow : glow.replace("0.45", "0.25");
+  const activeStyle: React.CSSProperties | undefined = d.expanded
+    ? { boxShadow: `0 0 0 3px ${color}44, 0 0 60px ${glow}, inset 0 1px 0 ${color}22` }
+    : undefined;
+
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-[var(--z-muted)]" />
-      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-[var(--z-accent-color)]" />
-      <div className="flex flex-col items-center gap-1">
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <div className="flex flex-col items-center gap-2">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            d.onToggle();
-          }}
+          onClick={(e) => { e.stopPropagation(); d.onToggle(); }}
           className={cn(
-            orbBase(
-              "h-24 w-24 border-[var(--z-border)] bg-[var(--z-surface-2)] hover:border-[color-mix(in_oklab,var(--z-accent-color),transparent_45%)] hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-accent-color),transparent_65%),0_0_28px_color-mix(in_oklab,var(--z-accent-color),transparent_85%)]",
-            ),
+            "group transition-transform duration-200 hover:scale-105 active:scale-95",
             focusRingClassName(),
           )}
+          style={{ borderRadius: "50%" }}
         >
-          {d.loading ? (
-            <Loader2 className="h-6 w-6 animate-spin text-[var(--z-accent-color)]" aria-hidden />
-          ) : (
-            <span className="max-w-[5.5rem] px-1 text-[0.65rem] font-bold leading-tight text-[var(--z-fg)]">
-              {d.label}
-            </span>
-          )}
+          <Orb size={100} color={color} glow={activeGlow} style={activeStyle}>
+            {d.loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color }} />
+            ) : (
+              <>
+                <span className="px-2 text-[0.62rem] font-bold leading-tight text-white/90">
+                  {d.label}
+                </span>
+                {typeof d.teacherCount === "number" && d.expanded ? (
+                  <span className="mt-0.5 text-[0.52rem] font-semibold" style={{ color }}>
+                    {d.teacherCount} teachers
+                  </span>
+                ) : (
+                  <span className="mt-0.5 text-[0.5rem] font-medium text-white/40">
+                    {d.expanded ? "expanded" : "tap to expand"}
+                  </span>
+                )}
+              </>
+            )}
+          </Orb>
         </button>
-        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[0.6rem] text-[var(--z-muted)]">
-          <span>{d.expanded ? "Expanded" : "Tap to expand"}</span>
-          {typeof d.teacherCount === "number" && d.expanded ? (
-            <span className="text-[var(--z-fg)]">{d.teacherCount} teachers</span>
-          ) : null}
-        </div>
         <Link
           href={d.href}
           onClick={(e) => e.stopPropagation()}
-          className="text-[0.6rem] font-medium text-[var(--z-accent-color)] underline-offset-2 hover:underline"
+          className="text-[0.58rem] font-semibold underline-offset-2 hover:underline"
+          style={{ color }}
         >
-          Open schedule
+          Schedule
         </Link>
       </div>
     </>
   );
 }
 
+// ── Teacher orb ───────────────────────────────────────────────────────────────
 export function TeacherFlowOrbNode({ data }: NodeProps) {
   const d = data as TeacherFlowNodeData;
+  const { color, glow } = getLocColor(d.locationId);
+  const teacherGlow = glow.replace("0.45", "0.30");
+
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-[var(--z-muted)]" />
-      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-[var(--z-accent-color)]" />
-      <div className="flex flex-col items-center gap-1">
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <div className="flex flex-col items-center gap-1.5">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            d.onToggle();
-          }}
+          onClick={(e) => { e.stopPropagation(); d.onToggle(); }}
           className={cn(
-            "group flex max-w-[10rem] flex-col items-center gap-1 rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-center hover:border-[color-mix(in_oklab,var(--z-accent-color),transparent_45%)]",
+            "group transition-transform duration-200 hover:scale-105 active:scale-95",
             focusRingClassName(),
           )}
+          style={{ borderRadius: "50%" }}
         >
-          <span
-            className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-full border text-xs font-bold tracking-tight",
-              "border-[var(--z-border)] bg-[var(--z-surface-2)] text-[var(--z-accent-color)]",
-              "transition-[transform,box-shadow] duration-[var(--z-duration-medium)] [transition-timing-function:var(--z-ease-spring)]",
-              "group-hover:scale-[1.06] group-hover:shadow-[0_0_22px_color-mix(in_oklab,var(--z-accent-color),transparent_82%)]",
-            )}
-            aria-hidden
-          >
+          <Orb size={76} color={color} glow={teacherGlow}>
             {d.loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" style={{ color }} />
             ) : (
-              d.initials || "?"
+              <>
+                <span className="text-sm font-black leading-none" style={{ color }}>
+                  {d.initials || "?"}
+                </span>
+                <span className="mt-0.5 px-1 text-[0.5rem] font-medium leading-tight text-white/60 line-clamp-1 max-w-[4rem]">
+                  {d.label.split(" ")[0]}
+                </span>
+              </>
             )}
-          </span>
-          <span className="line-clamp-2 text-[0.65rem] font-semibold leading-tight text-[var(--z-fg)]">
-            {d.label}
-          </span>
-          <span className="text-[0.6rem] font-medium uppercase tracking-[0.1em] text-[var(--z-muted)]">
-            {d.studentCount} students · {d.openSlotCount} open slots
-          </span>
+          </Orb>
         </button>
-        <Link
-          href={d.href}
-          onClick={(e) => e.stopPropagation()}
-          className="text-[0.6rem] font-medium text-[var(--z-accent-color)] underline-offset-2 hover:underline"
-        >
-          Teacher profile
-        </Link>
+        <div className="text-center">
+          <p className="text-[0.55rem] font-semibold text-white/70 max-w-[5rem] line-clamp-1">
+            {d.label}
+          </p>
+          <p className="text-[0.5rem] text-white/40">
+            {d.studentCount} students
+            {d.openSlotCount > 0 ? ` · ${d.openSlotCount} open` : ""}
+          </p>
+        </div>
       </div>
     </>
   );
 }
 
+// ── Student mini orb ──────────────────────────────────────────────────────────
 export function StudentMiniNode({ data }: NodeProps) {
   const d = data as StudentFlowNodeData;
+  const color = d.active ? "#34d399" : "#6b7280";
+  const glow  = d.active ? "rgba(52,211,153,0.35)" : "rgba(107,114,128,0.2)";
+
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!h-1.5 !w-1.5 !border-0 !bg-[var(--z-muted)]" />
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <Link
         href={d.href}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
-          "flex min-w-[4.5rem] max-w-[6.5rem] flex-col items-center gap-1 rounded-[var(--z-radius-md)] border px-2 py-1.5 text-center",
-          "transition-[transform,opacity,box-shadow] duration-[var(--z-duration-medium)] [transition-timing-function:var(--z-ease-smooth)]",
+          "group flex flex-col items-center gap-1 transition-transform duration-150 hover:scale-110",
           focusRingClassName(),
-          d.active
-            ? "border-[color-mix(in_oklab,var(--z-accent-color),transparent_45%)] bg-[color-mix(in_oklab,var(--z-surface),var(--z-accent-color)_6%)] shadow-[0_0_18px_color-mix(in_oklab,var(--z-accent-color),transparent_88%)]"
-            : "border-[var(--z-border)] bg-[var(--z-surface-2)] opacity-75 hover:opacity-100",
-          "hover:-translate-y-0.5",
         )}
+        style={{ borderRadius: "50%" }}
       >
-        <span
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full border text-[0.6rem] font-bold",
-            d.active
-              ? "border-[color-mix(in_oklab,var(--z-accent-color),transparent_35%)] text-[var(--z-accent-color)]"
-              : "border-[var(--z-border)] text-[var(--z-muted)]",
-          )}
+        <Orb
+          size={52}
+          color={color}
+          glow={glow}
+          className={cn(!d.active && "opacity-50 hover:opacity-80")}
         >
-          {d.initials}
-        </span>
-        <span className="line-clamp-2 text-[0.58rem] font-semibold leading-tight text-[var(--z-fg)]">
+          <span className="text-[0.55rem] font-black leading-none" style={{ color }}>
+            {d.initials}
+          </span>
+        </Orb>
+        <span className="max-w-[4.5rem] text-center text-[0.5rem] font-medium leading-tight text-white/60 line-clamp-2">
           {d.label}
         </span>
       </Link>
@@ -209,24 +264,30 @@ export function StudentMiniNode({ data }: NodeProps) {
   );
 }
 
+// ── Agents satellite orb ──────────────────────────────────────────────────────
 export function AgentsSatelliteNode({ data }: NodeProps) {
   const d = data as AgentsNodeData;
+  const color = "#a78bfa";
+  const glow  = "rgba(167,139,250,0.4)";
+
   return (
     <>
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-[var(--z-muted)]" />
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <Link
         href={d.href}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
-          orbBase(
-            "h-16 w-16 border-dashed border-[color-mix(in_oklab,var(--z-accent-color),transparent_55%)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_20%)] hover:border-[color-mix(in_oklab,var(--z-accent-color),transparent_25%)]",
-          ),
+          "group transition-transform duration-200 hover:scale-110",
           focusRingClassName(),
         )}
+        style={{ borderRadius: "50%" }}
       >
-        <span className="text-[0.55rem] font-extrabold uppercase tracking-[0.12em] text-[var(--z-accent-color)]">
-          Agents
-        </span>
-        <span className="mt-0.5 text-[0.55rem] text-[var(--z-muted)]">Automations</span>
+        <Orb size={64} color={color} glow={glow}>
+          <span className="text-[0.52rem] font-black uppercase tracking-[0.1em]" style={{ color }}>
+            Agents
+          </span>
+          <span className="mt-0.5 text-[0.48rem] text-white/40">7 active</span>
+        </Orb>
       </Link>
     </>
   );

@@ -52,12 +52,26 @@ export default async function StudioMapPage({
   const initialWindow = twoWeekWindowFromToday();
 
   const supabase = getServiceClient();
-  const { data: tenantRow } = await supabase
-    .from("tenants")
-    .select("name")
-    .eq("id", ctx.tenantId)
-    .maybeSingle();
-  const companyName = (tenantRow?.name as string | undefined)?.trim() || "Your studio";
+  const [tenantResult, studentsResult, teachersResult] = await Promise.all([
+    supabase.from("tenants").select("name").eq("id", ctx.tenantId).maybeSingle(),
+    supabase
+      .from("students")
+      .select("id, rate")
+      .eq("tenant_id", ctx.tenantId)
+      .eq("status", "active"),
+    supabase
+      .from("teachers")
+      .select("id")
+      .eq("tenant_id", ctx.tenantId)
+      .eq("status", "active"),
+  ]);
+  const companyName = (tenantResult.data?.name as string | undefined)?.trim() || "Your studio";
+  const totalStudents = studentsResult.data?.length ?? 0;
+  const totalTeachers = teachersResult.data?.length ?? 0;
+  const monthlyRevenue = (studentsResult.data ?? []).reduce(
+    (sum, s) => sum + ((s as { rate?: number | null }).rate ?? 0),
+    0,
+  );
 
   return (
     <StudioMapClient
@@ -65,6 +79,9 @@ export default async function StudioMapPage({
       locations={access.locations}
       initialFocusLocationId={activeLocationId}
       initialWindow={initialWindow}
+      totalStudents={totalStudents}
+      totalTeachers={totalTeachers}
+      monthlyRevenue={monthlyRevenue}
     />
   );
 }

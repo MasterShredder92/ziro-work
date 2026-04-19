@@ -409,18 +409,26 @@ function StudioMapCanvasInner({
       target: "agents",
       type: "smoothstep",
       style: {
-        strokeDasharray: "4 4",
-        stroke: "color-mix(in oklab, var(--z-muted), transparent 20%)",
+        strokeDasharray: "5 5",
+        stroke: "rgba(167,139,250,0.35)",
+        strokeWidth: 1,
       },
     });
     for (const loc of locations) {
+      const locColors: Record<string, string> = {
+        "f7b52dd5-12ee-437f-9c60-f8adf454ac31": "rgba(124,58,237,",
+        "40c67ffc-91b5-46a9-94bd-6ddffdfb7638": "rgba(22,163,74,",
+        "cebd97d4-c241-4de2-8ade-49e5cc0070d5": "rgba(14,165,233,",
+        "d48229c1-b70a-4d29-893e-5079887dab76": "rgba(220,38,38,",
+      };
+      const lc = locColors[loc.id] ?? "rgba(99,102,241,";
       e.push({
         id: `e-company-loc-${loc.id}`,
         source: "company",
         target: `loc|${loc.id}`,
         type: "smoothstep",
         animated: expandedLocs.has(loc.id),
-        style: { stroke: "color-mix(in oklab, var(--z-accent-color), transparent 55%)", strokeWidth: 1.5 },
+        style: { stroke: `${lc}0.5)`, strokeWidth: 1.5 },
       });
 
       const bundle = locBundles[loc.id];
@@ -432,7 +440,7 @@ function StudioMapCanvasInner({
           source: `loc|${loc.id}`,
           target: `teacher|${loc.id}|${teacher.id}`,
           type: "smoothstep",
-          style: { stroke: "color-mix(in oklab, var(--z-accent-color), transparent 40%)", strokeWidth: 1.25 },
+          style: { stroke: `${lc}0.35)`, strokeWidth: 1.25 },
         });
 
         const tkey = teacherKey(loc.id, teacher.id);
@@ -446,7 +454,7 @@ function StudioMapCanvasInner({
             source: `teacher|${loc.id}|${teacher.id}`,
             target: `student|${loc.id}|${teacher.id}|${stu.id}`,
             type: "smoothstep",
-            style: { stroke: "color-mix(in oklab, var(--z-muted), transparent 35%)", strokeWidth: 1 },
+            style: { stroke: `${lc}0.2)`, strokeWidth: 1 },
           });
         }
       }
@@ -479,7 +487,10 @@ function StudioMapCanvasInner({
   }, [layoutTick, fitView]);
 
   return (
-    <div className="studio-map-flow h-[min(76vh,820px)] w-full overflow-hidden rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface),transparent_4%)] [&_.react-flow\_\_attribution]:hidden">
+    <div
+      className="studio-map-flow relative h-[min(80vh,860px)] w-full overflow-hidden rounded-2xl border border-white/10 [&_.react-flow\_\_attribution]:hidden"
+      style={{ background: 'radial-gradient(ellipse at 50% 35%, #0f0f2e 0%, #060610 100%)' }}
+    >
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -492,15 +503,16 @@ function StudioMapCanvasInner({
         proOptions={{ hideAttribution: true }}
         className="bg-transparent"
       >
-        <Background gap={22} size={1.2} color="color-mix(in oklab, var(--z-muted), transparent 88%)" />
+        <Background gap={30} size={1} color="rgba(255,255,255,0.05)" />
         <Controls
-          className="!m-3 !overflow-hidden !rounded-lg !border !border-[var(--z-border)] !bg-[var(--z-surface)] !shadow-md"
+          className="!m-3 !overflow-hidden !rounded-lg !border !border-white/10 !bg-black/60 !shadow-xl [&_button]:!text-white/70 [&_button:hover]:!text-white [&_button]:!bg-transparent"
           showInteractive={false}
         />
         <MiniMap
-          className="!m-3 !overflow-hidden !rounded-lg !border !border-[var(--z-border)] !bg-[var(--z-surface-2)]"
-          maskColor="color-mix(in oklab, var(--z-surface), transparent 35%)"
+          className="!m-3 !overflow-hidden !rounded-lg !border !border-white/10 !bg-black/60"
+          maskColor="rgba(6,6,16,0.7)"
           nodeStrokeWidth={2}
+          nodeColor="rgba(255,255,255,0.15)"
         />
       </ReactFlow>
     </div>
