@@ -4,6 +4,8 @@ import { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
+import { BillingSummaryBar } from "@/components/billing/BillingSummaryBar";
+import type { BillingMetrics } from "./page";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 const LOCATIONS: { id: string; name: string; color: string }[] = [
@@ -47,6 +49,7 @@ interface InvoicesClientProps {
   initialStatus: string;
   initialLocationId: string;
   initialSearch: string;
+  billingMetrics?: BillingMetrics[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,6 +110,7 @@ export function InvoicesClient({
   initialStatus,
   initialLocationId,
   initialSearch,
+  billingMetrics,
 }: InvoicesClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -155,6 +159,8 @@ export function InvoicesClient({
   return (
     <PageShell title="Invoices">
       <div className="space-y-6">
+        {/* ── Billing summary by location ── */}
+        {billingMetrics && <BillingSummaryBar metrics={billingMetrics} />}
         {/* ── Summary stats ── */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">

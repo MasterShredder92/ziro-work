@@ -1,4 +1,4 @@
-export type RouteGroupId = "top" | "lifecycle" | "ops";
+export type RouteGroupId = "core" | "people" | "money" | "growth" | "admin";
 
 export type AppRoute = {
   id: string;
@@ -15,41 +15,45 @@ export type AppRouteGroup = {
 
 export const ROUTE_GROUPS: AppRouteGroup[] = [
   {
-    id: "top",
-    label: "TOP",
+    id: "core",
+    label: "CORE",
     items: [
-      { id: "dashboard", label: "Dashboard", href: "/dashboard", group: "top" },
-      { id: "studio-map", label: "Studio Map", href: "/studio-map", group: "top" },
-      { id: "schedule", label: "Schedule", href: "/schedule", group: "top" },
-      { id: "agent-reports", label: "Agent Reports", href: "/agent-reports", group: "top" },
+      { id: "dashboard",   label: "Dashboard",   href: "/dashboard",   group: "core" },
+      { id: "schedule",    label: "Schedule",    href: "/schedule",    group: "core" },
+      { id: "studio-map",  label: "Studio Map",  href: "/studio-map",  group: "core" },
     ],
   },
   {
-    id: "lifecycle",
-    label: "CUSTOMER LIFECYCLE",
+    id: "people",
+    label: "PEOPLE",
     items: [
-      { id: "intake", label: "Inquiries", href: "/lifecycle/intake", group: "lifecycle" },
-      { id: "lead-work", label: "Follow-up", href: "/lifecycle/lead-work", group: "lifecycle" },
-      { id: "scheduling", label: "Scheduling", href: "/lifecycle/scheduling", group: "lifecycle" },
-      { id: "enrollment", label: "Enrollment", href: "/lifecycle/enrollment", group: "lifecycle" },
-      { id: "service-delivery", label: "Ongoing lessons", href: "/lifecycle/service-delivery", group: "lifecycle" },
-      { id: "relationship", label: "Client care", href: "/lifecycle/relationship", group: "lifecycle" },
-      { id: "retention", label: "Retention", href: "/lifecycle/retention", group: "lifecycle" },
-      { id: "win-back", label: "Invite them back", href: "/lifecycle/win-back", group: "lifecycle" },
+      { id: "crm",      label: "Families & Students", href: "/crm",      group: "people" },
+      { id: "teachers", label: "Teachers",             href: "/teachers", group: "people" },
     ],
   },
   {
-    id: "ops",
-    label: "STUDIO OPERATIONS",
+    id: "money",
+    label: "MONEY",
     items: [
-      { id: "roster", label: "Roster", href: "/roster", group: "ops" },
-      { id: "attendance", label: "Attendance", href: "/attendance", group: "ops" },
-      { id: "teachers", label: "Teachers", href: "/teachers", group: "ops" },
-      { id: "invoices", label: "Invoices", href: "/invoices", group: "ops" },
-      { id: "payroll", label: "Payroll", href: "/payroll", group: "ops" },
-      { id: "recruitment", label: "Recruitment", href: "/recruitment", group: "ops" },
-      { id: "reports", label: "Reports / Books", href: "/reports", group: "ops" },
-      { id: "settings", label: "Settings", href: "/settings", group: "ops" },
+      { id: "invoices",    label: "Invoices",    href: "/invoices",    group: "money" },
+      { id: "payroll",     label: "Payroll",     href: "/payroll",     group: "money" },
+      { id: "financials",  label: "Financials",  href: "/financials",  group: "money" },
+    ],
+  },
+  {
+    id: "growth",
+    label: "GROWTH",
+    items: [
+      { id: "lifecycle",      label: "Student Journey",  href: "/lifecycle",      group: "growth" },
+      { id: "agent-reports",  label: "Agent Reports",    href: "/agent-reports",  group: "growth" },
+      { id: "recruitment",    label: "Recruitment",      href: "/recruitment",    group: "growth" },
+    ],
+  },
+  {
+    id: "admin",
+    label: "ADMIN",
+    items: [
+      { id: "settings", label: "Settings", href: "/settings", group: "admin" },
     ],
   },
 ];
@@ -59,4 +63,3 @@ export const ALL_ROUTES: AppRoute[] = ROUTE_GROUPS.flatMap((g) => g.items);
 export function getRouteByHref(href: string): AppRoute | undefined {
   return ALL_ROUTES.find((r) => r.href === href);
 }
-

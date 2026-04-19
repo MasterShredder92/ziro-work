@@ -94,55 +94,62 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
 
   return (
     <>
-      {/* ── Ruby inline bar (compact, lives in the top row) ── */}
+      {/* ── Ruby inline bar — prominent center piece ── */}
       <button
         type="button"
         onClick={() => setChatOpen(true)}
-        className="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-all hover:bg-white/5 group shrink-0"
+        className="flex items-center gap-3 rounded-2xl px-4 py-2 transition-all hover:bg-white/5 group"
+        style={{
+          background: `linear-gradient(135deg, ${RUBY_ACCENT}10 0%, transparent 60%)`,
+          border: `1px solid ${glowColor}35`,
+          boxShadow: `0 0 24px ${glowColor}20`,
+          minWidth: 220,
+        }}
         aria-label="Open Ruby chat"
         title="Ask Ruby"
       >
         {/* Photo + pulse ring */}
         <div className="relative shrink-0">
           <div
-            className="absolute inset-0 rounded-full animate-ping opacity-20"
+            className="absolute inset-0 rounded-full animate-ping opacity-25"
             style={{ backgroundColor: glowColor, animationDuration: "3s" }}
           />
           <div
-            className="relative h-9 w-9 overflow-hidden rounded-full"
+            className="relative h-14 w-14 overflow-hidden rounded-full"
             style={{
-              boxShadow: `0 0 14px ${glowColor}60`,
-              border: `2px solid ${glowColor}70`,
+              boxShadow: `0 0 22px ${glowColor}70`,
+              border: `2.5px solid ${glowColor}80`,
             }}
           >
-            <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full" />
+            <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full object-cover" />
           </div>
         </div>
 
         {/* Name + status */}
-        <div className="text-left min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-black tracking-tight" style={{ color: RUBY_ACCENT }}>
+        <div className="text-left min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-black tracking-tight" style={{ color: RUBY_ACCENT }}>
               Ruby
             </span>
             <span
-              className="rounded-full border px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest"
+              className="rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
               style={{ borderColor: `${RUBY_ACCENT}40`, color: RUBY_ACCENT, backgroundColor: `${RUBY_ACCENT}10` }}
             >
               AI
             </span>
             {isConflict && (
-              <span className="rounded-full bg-red-500/20 border border-red-500/40 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
+              <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
                 ⚠ Alert
               </span>
             )}
           </div>
           <p
-            className="text-[10px] leading-tight truncate max-w-[180px] transition-all duration-500"
+            className="text-[11px] leading-snug truncate max-w-[200px] transition-all duration-500 mt-0.5"
             style={{ color: statusTextColor }}
           >
             {statusText}
           </p>
+          <p className="text-[9px] mt-0.5 opacity-50" style={{ color: RUBY_ACCENT }}>Tap to chat</p>
         </div>
       </button>
 

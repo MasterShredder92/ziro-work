@@ -19,6 +19,15 @@ const defaultSiteMetadata: Metadata = {
   description:
     "The operating system for serious music studios—lifecycle, billing, agents, and studio map in a charcoal console with neon signal.",
   applicationName: "ZiroWork",
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.ico',
+  },
   openGraph: {
     type: "website",
     locale: "en_US",

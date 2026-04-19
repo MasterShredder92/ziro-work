@@ -231,7 +231,7 @@ export function LocationScheduleGrid({
   }, [selectedBlock?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Patch block ──
-  async function patchBlock(block: ProjectedBlock, patch: Partial<ScheduleBlock>) {
+  async function patchBlock(block: ProjectedBlock, patch: Partial<ScheduleBlock>, closeOnSuccess = false) {
     const targetId = block.source_block_id || block.id;
     setSaving(true);
     setError(null);
@@ -252,6 +252,8 @@ export function LocationScheduleGrid({
         b.id === targetId ? { ...b, ...(patch as Partial<ScheduleBlock>) } : b,
       );
       onBlocksChange(updated);
+      // Close modal immediately after successful save if requested
+      if (closeOnSuccess) setSelectedBlockId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update");
     } finally {
@@ -778,15 +780,21 @@ export function LocationScheduleGrid({
                       <button
                         type="button"
                         disabled={saving}
-                        onClick={() =>
-                          patchBlock(selectedBlock, {
+                        onClick={() => {
+                          // Build patch: clear flag overrides so color re-derives from block_type
+                          const patch: Partial<ScheduleBlock> = {
                             block_type: sessionType,
                             status: ["open_time", "sub", "call_out"].includes(sessionType) ? "available" : "booked",
-                          })
-                        }
+                          };
+                          // Clear flags that override block_type in getBlockDisplay
+                          if (sessionType !== "call_out") patch.is_family_callout = false;
+                          if (sessionType !== "makeup_session") patch.is_makeup_session = false;
+                          if (sessionType !== "virtual") patch.is_virtual = false;
+                          patchBlock(selectedBlock, patch, true);
+                        }}
                         className="rounded-xl border border-yellow-400/60 bg-yellow-400/20 px-3 py-2.5 text-sm font-semibold text-yellow-200 disabled:opacity-50 hover:bg-yellow-400/30 transition-colors"
                       >
-                        Save
+                        {saving ? "Saving…" : "Save"}
                       </button>
                       <button
                         type="button"

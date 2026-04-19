@@ -5,6 +5,9 @@ import { daysAgoIso, startOfUtcMonth } from "./dashboardFormat";
 export type DashboardMetrics = {
   recognizedRevenue: number;
   paidThisMonth: number;
+  totalInvoicedThisMonth: number;
+  discountedThisMonth: number;
+  nextMonthProjected: number;
   outstanding: number;
   overdueCount: number;
   overdueAmount: number;
@@ -41,6 +44,29 @@ export function computeDashboardMetrics(invoices: Invoice[], events: EventLog[])
 
   const outstanding = sumCents(invoices, (i) => i.status === "sent" || i.status === "overdue");
 
+  // Invoices issued this month (use invoice_date or created_at)
+  const thisMonthInvoices = invoices.filter((i) => {
+    const d = (i as unknown as Record<string, unknown>).invoice_date as string | null
+      ?? (i as unknown as Record<string, unknown>).created_at as string | null;
+    return d && new Date(d).getTime() >= monthStart.getTime();
+  });
+
+  // Total invoiced = requested_amount (before discounts) or fall back to amount_cents
+  const totalInvoicedThisMonth = thisMonthInvoices.reduce((acc, i) => {
+    const requested = (i as unknown as Record<string, unknown>).requested_amount as number | null;
+    return acc + (requested ?? i.amount_cents ?? 0);
+  }, 0);
+
+  // Discounted = difference between requested and actual charged
+  const actualChargedThisMonth = thisMonthInvoices.reduce(
+    (acc, i) => acc + (i.amount_cents ?? 0),
+    0,
+  );
+  const discountedThisMonth = Math.max(0, totalInvoicedThisMonth - actualChargedThisMonth);
+
+  // Next month projected ≈ current month collected + 2% growth
+  const nextMonthProjected = Math.round(paidThisMonth * 1.02);
+
   const kpi = latestKpiSnapshot(events);
   const leadsThisWeek =
     typeof kpi?.leadsThisWeek === "number"
@@ -73,6 +99,9 @@ export function computeDashboardMetrics(invoices: Invoice[], events: EventLog[])
   return {
     recognizedRevenue,
     paidThisMonth,
+    totalInvoicedThisMonth,
+    discountedThisMonth,
+    nextMonthProjected,
     outstanding,
     overdueCount,
     overdueAmount,

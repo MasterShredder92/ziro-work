@@ -4,16 +4,15 @@ import { useMemo } from "react";
 import {
   Banknote,
   CalendarClock,
-  ClipboardList,
+  ChevronUp,
   Sparkles,
-  TrendingDown,
-  UserPlus,
+  Tag,
 } from "lucide-react";
-import { useEvents, useInvoices } from "@/hooks/data";
+import { useInvoices } from "@/hooks/data";
 import { DASHBOARD_TENANT_ID } from "./constants";
 import { computeDashboardMetrics } from "./computeDashboardMetrics";
 import { DashboardMetricCard } from "./DashboardMetricCard";
-import { formatShortNumber, formatUsdFromCents } from "./dashboardFormat";
+import { formatUsdFromCents } from "./dashboardFormat";
 
 export function DashboardMetricsBar() {
   const tenantId = DASHBOARD_TENANT_ID;
@@ -26,60 +25,44 @@ export function DashboardMetricsBar() {
     [tenantId],
   );
 
-  const eventParams = useMemo(
-    () => ({
-      tenantId,
-      page: { mode: "offset" as const, page: 1, pageSize: 180 },
-    }),
-    [tenantId],
-  );
-
   const { data: invData } = useInvoices(invoiceParams);
-  const { data: evData } = useEvents(eventParams);
 
   const metrics = useMemo(() => {
     const invoices = invData?.items ?? [];
-    const events = evData?.items ?? [];
-    return computeDashboardMetrics(invoices, events);
-  }, [invData, evData]);
+    return computeDashboardMetrics(invoices, []);
+  }, [invData]);
 
   return (
-    <section className="grid grid-cols-1 gap-[var(--z-space-3)] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+    <section className="grid grid-cols-2 gap-[var(--z-space-3)] sm:grid-cols-3 xl:grid-cols-5">
       <DashboardMetricCard
-        label="Recorded revenue"
-        value={formatUsdFromCents(metrics.recognizedRevenue)}
-        trend="up"
-        icon={<Banknote className="h-4 w-4" aria-hidden />}
-      />
-      <DashboardMetricCard
-        label="Collected (MTD)"
+        label="Collected This Month"
         value={formatUsdFromCents(metrics.paidThisMonth)}
         trend={metrics.paidThisMonth > 0 ? "up" : "flat"}
         icon={<Sparkles className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
-        label="Outstanding"
+        label="Total Invoiced"
+        value={formatUsdFromCents(metrics.totalInvoicedThisMonth)}
+        trend={metrics.totalInvoicedThisMonth > 0 ? "up" : "flat"}
+        icon={<Banknote className="h-4 w-4" aria-hidden />}
+      />
+      <DashboardMetricCard
+        label="Discounted"
+        value={formatUsdFromCents(metrics.discountedThisMonth)}
+        trend={metrics.discountedThisMonth > 0 ? "down" : "flat"}
+        icon={<Tag className="h-4 w-4" aria-hidden />}
+      />
+      <DashboardMetricCard
+        label="Next Month Projected"
+        value={formatUsdFromCents(metrics.nextMonthProjected)}
+        trend="up"
+        icon={<ChevronUp className="h-4 w-4" aria-hidden />}
+      />
+      <DashboardMetricCard
+        label="Scheduled Payments"
         value={formatUsdFromCents(metrics.outstanding)}
         trend="flat"
-        icon={<ClipboardList className="h-4 w-4" aria-hidden />}
-      />
-      <DashboardMetricCard
-        label="New leads (7d)"
-        value={formatShortNumber(metrics.leadsThisWeek)}
-        trend={metrics.leadsThisWeek > 0 ? "up" : "flat"}
-        icon={<UserPlus className="h-4 w-4" aria-hidden />}
-      />
-      <DashboardMetricCard
-        label="Enrollments (7d)"
-        value={formatShortNumber(metrics.enrollmentsThisWeek)}
-        trend={metrics.enrollmentsThisWeek > 0 ? "up" : "flat"}
         icon={<CalendarClock className="h-4 w-4" aria-hidden />}
-      />
-      <DashboardMetricCard
-        label="Churn signals (7d)"
-        value={formatShortNumber(metrics.churnThisWeek)}
-        trend={metrics.churnThisWeek > 0 ? "down" : "flat"}
-        icon={<TrendingDown className="h-4 w-4" aria-hidden />}
       />
     </section>
   );
