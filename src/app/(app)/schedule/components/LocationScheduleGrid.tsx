@@ -303,9 +303,9 @@ export function LocationScheduleGrid({
   }
 
   return (
-    <div className="flex h-full min-h-0 gap-0">
+    <div className="relative h-full min-h-0">
       {/* ── Time grid ── */}
-      <div className="flex min-h-0 flex-1 overflow-auto">
+      <div className="flex h-full min-h-0 overflow-auto">
         {/* Time labels column */}
         <div className="sticky left-0 z-10 w-14 shrink-0 bg-[var(--z-bg)]">
           <div style={{ height: gridHeight + 32 }} className="relative">
@@ -423,148 +423,170 @@ export function LocationScheduleGrid({
         </div>
       </div>
 
-      {/* ── Detail panel ── */}
-      {selectedBlock && (
-        <div
-          className="w-72 shrink-0 overflow-y-auto border-l p-4"
-          style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}
-        >
-          {/* Header */}
-          <div className="mb-3 flex items-start justify-between">
-            <div>
-              <div
-                className="text-[10px] font-semibold uppercase tracking-wider"
-                style={{ color: locationConfig?.textColor ?? "var(--z-muted)" }}
-              >
-                {locationName}
-              </div>
-              <h3 className="text-sm font-bold text-[var(--z-fg)]">
-                {getBlockDisplay(selectedBlock as ScheduleBlock).label}
-              </h3>
-              <div className="text-xs text-[var(--z-muted)]">
-                {minuteToLabel(toMinute(selectedBlock.start_time))} – {minuteToLabel(toMinute(selectedBlock.end_time))}
-              </div>
-            </div>
-            <button
-              type="button"
+      {/* ── Block detail modal ── */}
+      {selectedBlock && (() => {
+        const student = selectedBlock.student_id ? studentsById.get(selectedBlock.student_id) : null;
+        const family = student?.family_id ? familiesById.get(student.family_id) : null;
+        const display = getBlockDisplay(selectedBlock as ScheduleBlock);
+        return (
+          <>
+            {/* Blurred backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
               onClick={() => setSelectedBlockId(null)}
-              className="rounded p-1 text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+              aria-hidden
+            />
+            {/* Centered panel */}
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border shadow-2xl"
+              style={{
+                borderColor: locationConfig?.border ?? "var(--z-border)",
+                backgroundColor: "#0f0f12",
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Block details"
             >
-              ✕
-            </button>
-          </div>
+              {/* Modal header */}
+              <div
+                className="flex items-start justify-between rounded-t-2xl border-b px-5 py-4"
+                style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}
+              >
+                <div>
+                  <div
+                    className="text-[10px] font-semibold uppercase tracking-wider mb-0.5"
+                    style={{ color: locationConfig?.textColor ?? "var(--z-muted)" }}
+                  >
+                    {locationName}
+                  </div>
+                  <h3 className="text-base font-bold text-[var(--z-fg)]">
+                    {student ? studentName(student) : (display.label || "Block")}
+                  </h3>
+                  <div className="text-xs text-[var(--z-muted)] mt-0.5">
+                    {minuteToLabel(toMinute(selectedBlock.start_time))} – {minuteToLabel(toMinute(selectedBlock.end_time))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBlockId(null)}
+                  className="rounded-lg p-1.5 text-[var(--z-muted)] hover:bg-white/5 hover:text-[var(--z-fg)] transition-colors"
+                  aria-label="Close"
+                >
+                  <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
 
-          {error && (
-            <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-              {error}
-            </div>
-          )}
+              <div className="px-5 py-4 space-y-4">
+                {error && (
+                  <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {error}
+                  </div>
+                )}
 
-          {/* Student info */}
-          {selectedBlock.student_id && (() => {
-            const student = studentsById.get(selectedBlock.student_id!);
-            const family = student?.family_id ? familiesById.get(student.family_id) : null;
-            return (
-              <div className="mb-3 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
+                {/* Student / family info */}
                 {student && (
-                  <div className="font-semibold text-[var(--z-fg)]">{studentName(student)}</div>
+                  <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
+                    <div className="font-semibold text-[var(--z-fg)] text-sm">{studentName(student)}</div>
+                    {family && (
+                      <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
+                    )}
+                    {family?.primary_phone && (
+                      <div className="text-[var(--z-muted)]">{family.primary_phone}</div>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <Link
+                        href={`/crm/students/${selectedBlock.student_id}`}
+                        className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
+                        onClick={() => setSelectedBlockId(null)}
+                      >
+                        Student →
+                      </Link>
+                      {student.family_id && (
+                        <Link
+                          href={`/crm/families/${student.family_id}`}
+                          className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
+                          onClick={() => setSelectedBlockId(null)}
+                        >
+                          Family →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 )}
-                {family && (
-                  <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
-                )}
-                {family?.primary_phone && (
-                  <div className="text-[var(--z-muted)]">{family.primary_phone}</div>
-                )}
-                <div className="flex gap-2 pt-1">
-                  {selectedBlock.student_id && (
-                    <Link
-                      href={`/crm/students/${selectedBlock.student_id}`}
-                      className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
-                    >
-                      Student →
-                    </Link>
-                  )}
-                  {student?.family_id && (
-                    <Link
-                      href={`/crm/families/${student.family_id}`}
-                      className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
-                    >
-                      Family →
-                    </Link>
-                  )}
+
+                {/* Session type */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+                    Session Type
+                  </label>
+                  <select
+                    value={sessionType}
+                    onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
+                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
+                  >
+                    {BLOCK_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Room */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+                    Room
+                  </label>
+                  <select
+                    value={roomIdDraft}
+                    onChange={(e) => setRoomIdDraft(e.target.value)}
+                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
+                  >
+                    <option value="">No room assigned</option>
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>{room.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => checkIn(selectedBlock)}
+                    className="col-span-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 px-3 py-2.5 text-sm font-semibold text-emerald-100 disabled:opacity-50 hover:bg-emerald-500/30 transition-colors"
+                  >
+                    {saving ? "Saving..." : "✓ Check In"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() =>
+                      patchBlock(selectedBlock, {
+                        block_type: sessionType,
+                        status: ["open_time", "sub", "call_out"].includes(sessionType) ? "available" : "booked",
+                        room_id: roomIdDraft || null,
+                      })
+                    }
+                    className="rounded-xl border border-yellow-400/60 bg-yellow-400/20 px-3 py-2.5 text-sm font-semibold text-yellow-200 disabled:opacity-50 hover:bg-yellow-400/30 transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => callOut(selectedBlock)}
+                    className="rounded-xl border border-red-400/60 bg-red-500/20 px-3 py-2.5 text-sm font-semibold text-red-200 disabled:opacity-50 hover:bg-red-500/30 transition-colors"
+                  >
+                    Call Out
+                  </button>
                 </div>
               </div>
-            );
-          })()}
-
-          {/* Session type */}
-          <div className="mb-3 space-y-2">
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-              Session Type
-            </label>
-            <select
-              value={sessionType}
-              onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
-              className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
-            >
-              {BLOCK_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Room */}
-          <div className="mb-4 space-y-2">
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-              Room
-            </label>
-            <select
-              value={roomIdDraft}
-              onChange={(e) => setRoomIdDraft(e.target.value)}
-              className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
-            >
-              <option value="">No room assigned</option>
-              {rooms.map((room) => (
-                <option key={room.id} value={room.id}>{room.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-2">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => checkIn(selectedBlock)}
-              className="w-full rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-100 disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "✓ Check In"}
-            </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() =>
-                patchBlock(selectedBlock, {
-                  block_type: sessionType,
-                  status: ["open_time", "sub", "call_out"].includes(sessionType) ? "available" : "booked",
-                  room_id: roomIdDraft || null,
-                })
-              }
-              className="w-full rounded-md border border-yellow-400/60 bg-yellow-400/20 px-3 py-2 text-sm font-semibold text-yellow-200 disabled:opacity-50"
-            >
-              Update Session
-            </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => callOut(selectedBlock)}
-              className="w-full rounded-md border border-red-400/60 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-200 disabled:opacity-50"
-            >
-              Call Out
-            </button>
-          </div>
-        </div>
-      )}
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

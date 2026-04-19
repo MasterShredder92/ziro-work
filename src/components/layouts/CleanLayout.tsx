@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { TopBar } from "@/components/navigation/TopBar";
 import { AnnouncementsProvider } from "@/components/announcements/AnnouncementsProvider";
@@ -11,6 +12,8 @@ import { RouteLoadingBoundary } from "@/components/system/RouteLoadingBoundary";
 
 export function CleanLayout({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const pathname = usePathname();
+  const isSchedulePage = pathname?.startsWith("/schedule") ?? false;
 
   return (
     <div className="relative flex h-screen overflow-hidden">
@@ -21,7 +24,7 @@ export function CleanLayout({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <Sidebar isMobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:pl-[260px]">
+      <div className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300 ${isSchedulePage ? "lg:pl-[64px]" : "lg:pl-[260px]"}`}>
         <AnnouncementsProvider />
         <Suspense
           fallback={

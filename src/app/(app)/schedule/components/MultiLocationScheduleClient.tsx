@@ -5,15 +5,14 @@ import type { TeacherAvailabilityRow, WindowedScheduleData } from "@/lib/schedul
 import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { ScheduleWindow } from "@/lib/schedule/window";
 import {
-  weekWindowFromToday,
   weekWindowContaining,
   shiftWindowByOneWeek,
   eachDayInclusive,
-  addDays,
 } from "@/lib/schedule/window";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { LocationScheduleGrid } from "./LocationScheduleGrid";
 import { MobileScheduleView } from "./MobileScheduleView";
+import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 export const LOCATION_CONFIG: Record<string, {
@@ -94,12 +93,10 @@ function formatDayTab(isoDate: string, locationHours: LocationHoursMap): {
   const isClosed = hours?.isClosed ?? false;
   const dayLabel = DAY_LABELS[dow];
   const dateNum = d.getUTCDate();
-  return {
-    label: dayLabel,
-    sub: String(dateNum),
-    isClosed,
-  };
+  return { label: dayLabel, sub: String(dateNum), isClosed };
 }
+
+type ToolModal = "sub" | "callout" | "virtual" | null;
 
 export function MultiLocationScheduleClient({ locations, locationDataMap, initialWindow }: Props) {
   const [window, setWindow] = React.useState<ScheduleWindow>(initialWindow);
@@ -120,6 +117,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     return out;
   });
   const [loading, setLoading] = React.useState(false);
+  const [activeModal, setActiveModal] = React.useState<ToolModal>(null);
 
   const weekDays = React.useMemo(
     () => eachDayInclusive(window.start, window.end),
@@ -164,12 +162,26 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   }, [window.start, window.end, locations, blocksByLocationWindow]);
 
   const activeLocConfig = LOCATION_CONFIG[activeLocationId];
+  const windowKey = `${window.start}_${window.end}`;
+  const activeData = locationDataMap[activeLocationId];
+  const activeBlocks = blocksByLocationWindow[activeLocationId]?.[windowKey] ?? activeData?.blocks ?? [];
+  const activeSelectedDate = selectedDates[activeLocationId] ?? window.start;
+
+  // Utilization for active location on selected date
+  const utilization = React.useMemo(() => {
+    const dayBlocks = activeBlocks.filter((b) => b.block_date === activeSelectedDate);
+    const total = dayBlocks.length;
+    const booked = dayBlocks.filter((b) => b.student_id && b.block_type !== "open_time").length;
+    const open = dayBlocks.filter((b) => !b.student_id || b.block_type === "open_time").length;
+    const pct = total > 0 ? Math.round((booked / total) * 100) : 0;
+    return { total, booked, open, pct };
+  }, [activeBlocks, activeSelectedDate]);
 
   return (
     <div className="space-y-0">
       {/* ── Top bar: location tabs + week nav ── */}
       <div className="sticky top-0 z-30 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Location tabs */}
+        {/* Row 1: location tabs + week nav */}
         <div className="flex items-center gap-1 px-4 pt-3">
           {locations.map((loc) => {
             const cfg = LOCATION_CONFIG[loc.id];
@@ -222,14 +234,14 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           </div>
         </div>
 
-        {/* Day tabs for active location */}
-        {activeLocationId && locationDataMap[activeLocationId] && (
+        {/* Row 2: day tabs + toolbar actions */}
+        {activeLocationId && activeData && (
           <div
             className="flex items-center gap-1 overflow-x-auto px-4 pb-2 pt-1"
             style={{ borderTop: `1px solid ${activeLocConfig?.border ?? "var(--z-border)"}` }}
           >
             {weekDays.map((day) => {
-              const hours = locationDataMap[activeLocationId]?.locationHours ?? {};
+              const hours = activeData.locationHours ?? {};
               const { label, sub, isClosed } = formatDayTab(day, hours);
               const isSelected = selectedDates[activeLocationId] === day;
               const isToday = day === new Date().toISOString().slice(0, 10);
@@ -259,8 +271,63 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               );
             })}
             {loading && (
-              <span className="ml-2 text-xs text-[var(--z-muted)] animate-pulse">Loading...</span>
+              <span className="ml-2 text-xs text-[var(--z-muted)] animate-pulse">Loading…</span>
             )}
+
+            {/* ── Toolbar action buttons ── */}
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
+              {/* Utilization badge */}
+              <div className="flex items-center gap-1.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2.5 py-1.5">
+                <div
+                  className="h-2 w-2 rounded-full"
+                  style={{
+                    backgroundColor: utilization.pct >= 80 ? "#22c55e" : utilization.pct >= 50 ? "#eab308" : "#ef4444",
+                  }}
+                />
+                <span className="text-[11px] font-bold text-[var(--z-fg)]">{utilization.pct}%</span>
+                <span className="hidden text-[10px] text-[var(--z-muted)] sm:inline">
+                  {utilization.booked}/{utilization.total} · {utilization.open} open
+                </span>
+              </div>
+
+              {/* + Sub */}
+              <button
+                type="button"
+                onClick={() => setActiveModal("sub")}
+                className="flex items-center gap-1.5 rounded-lg border border-[#00ff88]/30 bg-[#00ff88]/10 px-2.5 py-1.5 text-[11px] font-bold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors"
+              >
+                <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
+                  <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Sub
+              </button>
+
+              {/* Call Out */}
+              <button
+                type="button"
+                onClick={() => setActiveModal("callout")}
+                className="flex items-center gap-1.5 rounded-lg border border-orange-400/30 bg-orange-500/10 px-2.5 py-1.5 text-[11px] font-bold text-orange-300 hover:bg-orange-500/20 transition-colors"
+              >
+                <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
+                  <path d="M7 2v5M7 9v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/>
+                </svg>
+                Call Out
+              </button>
+
+              {/* Go Virtual */}
+              <button
+                type="button"
+                onClick={() => setActiveModal("virtual")}
+                className="flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 py-1.5 text-[11px] font-bold text-sky-300 hover:bg-sky-500/20 transition-colors"
+              >
+                <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
+                  <rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M9 7l-4-2v4l4-2z" fill="currentColor"/>
+                </svg>
+                Virtual
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -281,10 +348,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           { color: "#10B981", label: "Open" },
         ].map(({ color, label }) => (
           <span key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--z-muted)]">
-            <span
-              className="inline-block h-3 w-3 rounded-sm"
-              style={{ backgroundColor: color }}
-            />
+            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
             {label}
           </span>
         ))}
@@ -295,11 +359,10 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
         if (loc.id !== activeLocationId) return null;
         const data = locationDataMap[loc.id];
         if (!data) return null;
-        const windowKey = `${window.start}_${window.end}`;
         const currentBlocks = blocksByLocationWindow[loc.id]?.[windowKey] ?? data.blocks;
         const selectedDate = selectedDates[loc.id] ?? window.start;
         const cfg = LOCATION_CONFIG[loc.id];
-        const handleBlocksChange = (newBlocks: import("@/lib/types/entities").ScheduleBlock[]) => {
+        const handleBlocksChange = (newBlocks: ScheduleBlock[]) => {
           setBlocksByLocationWindow((prev) => ({
             ...prev,
             [loc.id]: { ...(prev[loc.id] ?? {}), [windowKey]: newBlocks },
@@ -341,6 +404,55 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           </React.Fragment>
         );
       })}
+
+      {/* ── Toolbar Modals ── */}
+      {activeModal === "sub" && activeData && (
+        <SubModal
+          locationId={activeLocationId}
+          selectedDate={activeSelectedDate}
+          teachers={activeData.teachers}
+          blocks={activeBlocks}
+          onClose={() => setActiveModal(null)}
+          onBlocksChange={(newBlocks) => {
+            setBlocksByLocationWindow((prev) => ({
+              ...prev,
+              [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
+            }));
+          }}
+        />
+      )}
+      {activeModal === "callout" && activeData && (
+        <CallOutModal
+          locationId={activeLocationId}
+          selectedDate={activeSelectedDate}
+          teachers={activeData.teachers}
+          students={activeData.students}
+          blocks={activeBlocks}
+          onClose={() => setActiveModal(null)}
+          onBlocksChange={(newBlocks) => {
+            setBlocksByLocationWindow((prev) => ({
+              ...prev,
+              [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
+            }));
+          }}
+        />
+      )}
+      {activeModal === "virtual" && activeData && (
+        <GoVirtualModal
+          locationId={activeLocationId}
+          selectedDate={activeSelectedDate}
+          teachers={activeData.teachers}
+          students={activeData.students}
+          blocks={activeBlocks}
+          onClose={() => setActiveModal(null)}
+          onBlocksChange={(newBlocks) => {
+            setBlocksByLocationWindow((prev) => ({
+              ...prev,
+              [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
+            }));
+          }}
+        />
+      )}
     </div>
   );
 }

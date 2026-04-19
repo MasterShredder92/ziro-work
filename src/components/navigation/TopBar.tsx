@@ -4,14 +4,10 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { CommandPalette } from "@/components/command/CommandPalette";
-import { TenantSwitcher } from "@/components/tenant/TenantSwitcher";
 import { useTenantUi } from "@/components/tenant/TenantUiContext";
 import { getRouteByHref } from "@/lib/routes";
 import Link from "next/link";
-import { cn } from "@/components/ui/utils";
 import { Button } from "@/components/ui/Button";
-import { ProductTour } from "@/components/tour/ProductTour";
-import { ZIRO_TOUR_AUTOSTART_KEY } from "@/lib/demo/isDemoMode";
 import { ClientPageTitle } from "@/components/navigation/ClientPageTitle";
 
 function titleForPath(pathname: string): string {
@@ -43,11 +39,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
   const pathname = usePathname();
   const { tenantId } = useTenantUi();
   const [commandOpen, setCommandOpen] = React.useState(false);
-  const [tourOpen, setTourOpen] = React.useState(false);
   const pageTitle = titleForPath(pathname);
-
-  const marketingLinkClass =
-    "text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)] underline decoration-transparent underline-offset-4 transition-colors hover:text-[var(--z-fg)] hover:decoration-[var(--z-accent)] hover:decoration-2";
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,18 +50,6 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  React.useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      if (window.sessionStorage.getItem(ZIRO_TOUR_AUTOSTART_KEY) === "1") {
-        window.sessionStorage.removeItem(ZIRO_TOUR_AUTOSTART_KEY);
-        setTourOpen(true);
-      }
-    } catch {
-      /* ignore */
-    }
   }, []);
 
   return (
@@ -96,41 +76,11 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           >
             Quick
           </Button>
-          <TenantSwitcher />
           <div className="hidden min-w-0 flex-1 sm:block">
             <ClientPageTitle title={pageTitle} />
           </div>
         </div>
-        <nav
-          className="hidden items-center gap-[var(--z-space-4)] lg:flex"
-          aria-label="Marketing links"
-        >
-          <a href="/features" target="_blank" rel="noopener noreferrer" className={marketingLinkClass}>
-            Docs
-          </a>
-          <a href="/about" target="_blank" rel="noopener noreferrer" className={marketingLinkClass}>
-            Updates
-          </a>
-          <a href="/pricing" target="_blank" rel="noopener noreferrer" className={marketingLinkClass}>
-            Pricing
-          </a>
-        </nav>
         <div className="flex shrink-0 items-center gap-[var(--z-space-2)] sm:gap-[var(--z-space-3)]">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="hidden text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--z-accent)] sm:inline-flex"
-            onClick={() => setTourOpen(true)}
-          >
-            Start Tour
-          </Button>
-          <Link
-            href="/demo"
-            className="rounded-[var(--z-radius-md)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--z-accent)] hover:bg-white/5"
-          >
-            Try Demo
-          </Link>
           <Link
             href="/help"
             className="rounded-[var(--z-radius-md)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)] hover:bg-white/5 hover:text-[var(--z-accent)]"
@@ -138,17 +88,13 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
             Help
           </Link>
           <span
-            className={cn(
-              "hidden select-none text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--z-muted)]",
-              "lg:inline",
-            )}
+            className="hidden select-none text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--z-muted)] lg:inline"
           >
             ⌘K
           </span>
           <NotificationBell />
         </div>
       </header>
-      <ProductTour open={tourOpen} onClose={() => setTourOpen(false)} />
       <CommandPalette
         open={commandOpen}
         onClose={() => setCommandOpen(false)}
