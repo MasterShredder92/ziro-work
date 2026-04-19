@@ -357,22 +357,27 @@ export function AgentCards() {
     return result;
   }, [leader, team]);
 
+  const expandedMeta = expanded ? allAgents.find((a) => a.id === expanded) ?? null : null;
+  const collapsedAgents = allAgents.filter((a) => a.id !== expanded);
+
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {allAgents.map((meta) =>
-        expanded === meta.id ? (
-          <div key={meta.id} className="col-span-2 sm:col-span-2 lg:col-span-3 xl:col-span-4">
-            <AgentCircleExpanded
-              meta={meta}
-              metrics={metrics}
-              signals={signals}
-              loading={loading}
-              savings={savingsByAgent[meta.id] ?? 0}
-              isLeader={meta.id === DASHBOARD_LEADER_ID}
-              onCollapse={() => setExpanded(null)}
-            />
-          </div>
-        ) : (
+    <div className="space-y-4">
+      {/* Expanded card always renders at the top */}
+      {expandedMeta && (
+        <AgentCircleExpanded
+          meta={expandedMeta}
+          metrics={metrics}
+          signals={signals}
+          loading={loading}
+          savings={savingsByAgent[expandedMeta.id] ?? 0}
+          isLeader={expandedMeta.id === DASHBOARD_LEADER_ID}
+          onCollapse={() => setExpanded(null)}
+        />
+      )}
+
+      {/* Remaining collapsed circles in original order */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {collapsedAgents.map((meta) => (
           <AgentCircleCollapsed
             key={meta.id}
             meta={meta}
@@ -380,8 +385,8 @@ export function AgentCards() {
             isLeader={meta.id === DASHBOARD_LEADER_ID}
             onClick={() => setExpanded(meta.id)}
           />
-        )
-      )}
+        ))}
+      </div>
     </div>
   );
 }
