@@ -21,6 +21,7 @@ export const ROUTE_GROUPS: AppRouteGroup[] = [
       { id: "dashboard", label: "Dashboard", href: "/dashboard", group: "top" },
       { id: "studio-map", label: "Studio Map", href: "/studio-map", group: "top" },
       { id: "schedule", label: "Schedule", href: "/schedule", group: "top" },
+      { id: "agent-reports", label: "Agent Reports", href: "/agent-reports", group: "top" },
     ],
   },
   {
@@ -48,7 +49,6 @@ export const ROUTE_GROUPS: AppRouteGroup[] = [
       { id: "payroll", label: "Payroll", href: "/payroll", group: "ops" },
       { id: "recruitment", label: "Recruitment", href: "/recruitment", group: "ops" },
       { id: "reports", label: "Reports / Books", href: "/reports", group: "ops" },
-      { id: "agent-reports", label: "Agent Reports", href: "/agent-reports", group: "ops" },
       { id: "settings", label: "Settings", href: "/settings", group: "ops" },
     ],
   },

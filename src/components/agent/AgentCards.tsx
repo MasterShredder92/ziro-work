@@ -45,6 +45,20 @@ function fmtUsd(n: number) {
   return `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
+/**
+ * Determine if an accent color is "light" (needs dark text).
+ * We check a known set of light agent accents.
+ */
+function isLightAccent(accent: string): boolean {
+  // Ziro: neon green, Bub: yellow, Ruby: orange — all need dark text
+  const lightAccents = ["#00ff88", "#facc15", "#fb923c", "#4ade80", "#a3e635", "#fde047"];
+  return lightAccents.some((c) => accent.toLowerCase() === c.toLowerCase());
+}
+
+function accentTextColor(accent: string): string {
+  return isLightAccent(accent) ? "#111111" : "#ffffff";
+}
+
 /** The glowing circle avatar */
 function AgentOrb({
   meta,
@@ -85,14 +99,34 @@ function AgentOrb({
   );
 }
 
-/** Collapsed circle card — just the orb, name, and tagline */
+/** Savings badge — color-aware text */
+function SavingsBadge({ accent, savings }: { accent: string; savings: number }) {
+  if (savings <= 0) return null;
+  const textColor = accentTextColor(accent);
+  return (
+    <div
+      className="rounded-full border px-3 py-1 text-[11px] font-bold"
+      style={{
+        borderColor: `color-mix(in oklab, ${accent}, transparent 45%)`,
+        color: textColor,
+        background: `color-mix(in oklab, ${accent}, transparent 20%)`,
+      }}
+    >
+      saved {fmtUsd(savings)} this month
+    </div>
+  );
+}
+
+/** Collapsed circle card */
 function AgentCircleCollapsed({
   meta,
   savings,
+  isLeader,
   onClick,
 }: {
   meta: AgentMetadata;
   savings: number;
+  isLeader: boolean;
   onClick: () => void;
 }) {
   return (
@@ -100,11 +134,13 @@ function AgentCircleCollapsed({
       onClick={onClick}
       className={cn(
         "group relative flex w-full flex-col items-center gap-3 rounded-2xl border p-5 text-center",
-        "border-[color-mix(in_oklab,var(--z-border),transparent_8%)]",
+        isLeader
+          ? "border-[color-mix(in_oklab,var(--z-agent-accent),transparent_35%)]"
+          : "border-[color-mix(in_oklab,var(--z-border),transparent_8%)]",
         "bg-[color-mix(in_oklab,var(--z-surface-2),transparent_35%)]",
         "transition-all duration-200",
-        "hover:border-[color-mix(in_oklab,var(--z-agent-accent),transparent_40%)]",
-        "hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-agent-accent),transparent_50%),0_8px_32px_color-mix(in_oklab,var(--z-agent-accent),transparent_80%)]",
+        "hover:border-[color-mix(in_oklab,var(--z-agent-accent),transparent_35%)]",
+        "hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-agent-accent),transparent_45%),0_8px_32px_color-mix(in_oklab,var(--z-agent-accent),transparent_80%)]",
         focusRingClassName(),
       )}
       style={{ "--z-agent-accent": meta.accent, "--z-agent-glow": meta.glow } as React.CSSProperties}
@@ -119,24 +155,29 @@ function AgentCircleCollapsed({
       <AgentOrb meta={meta} sizePx={64} isExpanded={false} />
 
       <div className="relative space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: meta.accent }}>
-          {getAgent(meta.id)?.role ?? "Agent"}
-        </p>
+        <div className="flex items-center justify-center gap-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: meta.accent }}>
+            {getAgent(meta.id)?.role ?? "Agent"}
+          </p>
+          {isLeader && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
+              style={{
+                background: `color-mix(in oklab, ${meta.accent}, transparent 20%)`,
+                color: accentTextColor(meta.accent),
+              }}
+            >
+              Leader
+            </span>
+          )}
+        </div>
         <p className="text-sm font-bold text-[var(--z-fg)]">{meta.displayName}</p>
         <p className="text-[11px] leading-snug text-[var(--z-muted)]">{meta.tagline}</p>
       </div>
 
-      {savings > 0 && (
-        <div className="relative rounded-full border px-3 py-1 text-[11px] font-bold"
-          style={{
-            borderColor: `color-mix(in oklab, ${meta.accent}, transparent 60%)`,
-            color: meta.accent,
-            background: `color-mix(in oklab, ${meta.accent}, transparent 88%)`,
-          }}
-        >
-          saved {fmtUsd(savings)} this month
-        </div>
-      )}
+      <div className="relative">
+        <SavingsBadge accent={meta.accent} savings={savings} />
+      </div>
 
       <div className="relative text-[10px] font-semibold text-[var(--z-muted)] group-hover:text-[var(--z-fg)] transition-colors">
         Click to expand ↓
@@ -152,6 +193,7 @@ function AgentCircleExpanded({
   signals,
   loading,
   savings,
+  isLeader,
   onCollapse,
 }: {
   meta: AgentMetadata;
@@ -159,6 +201,7 @@ function AgentCircleExpanded({
   signals: StudentSignals;
   loading: boolean;
   savings: number;
+  isLeader: boolean;
   onCollapse: () => void;
 }) {
   const entry = getAgent(meta.id);
@@ -186,8 +229,8 @@ function AgentCircleExpanded({
       style={{
         "--z-agent-accent": meta.accent,
         "--z-agent-glow": meta.glow,
-        borderColor: `color-mix(in oklab, ${meta.accent}, transparent 45%)`,
-        boxShadow: `0 0 0 1px color-mix(in oklab, ${meta.accent}, transparent 55%), 0 16px 48px ${meta.glow}`,
+        borderColor: `color-mix(in oklab, ${meta.accent}, transparent 40%)`,
+        boxShadow: `0 0 0 1px color-mix(in oklab, ${meta.accent}, transparent 50%), 0 16px 48px ${meta.glow}`,
         background: `linear-gradient(160deg, color-mix(in oklab, var(--z-surface), transparent 5%) 0%, color-mix(in oklab, var(--z-surface-2), transparent 30%) 100%)`,
       } as React.CSSProperties}
     >
@@ -199,28 +242,31 @@ function AgentCircleExpanded({
       />
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
-        {/* Left: orb + name */}
+        {/* Left: orb + savings */}
         <div className="flex flex-col items-center gap-3 sm:items-start">
-          <AgentOrb meta={meta} sizePx={80} isExpanded={true} />
-          {savings > 0 && (
-            <div className="rounded-full border px-3 py-1 text-center text-[11px] font-bold"
-              style={{
-                borderColor: `color-mix(in oklab, ${meta.accent}, transparent 55%)`,
-                color: meta.accent,
-                background: `color-mix(in oklab, ${meta.accent}, transparent 88%)`,
-              }}
-            >
-              {fmtUsd(savings)} saved this month
-            </div>
-          )}
+          <AgentOrb meta={meta} sizePx={72} isExpanded={true} />
+          <SavingsBadge accent={meta.accent} savings={savings} />
         </div>
 
         {/* Right: content */}
         <div className="min-w-0 flex-1 space-y-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: meta.accent }}>
-              {specialty}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: meta.accent }}>
+                {specialty}
+              </p>
+              {isLeader && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider"
+                  style={{
+                    background: `color-mix(in oklab, ${meta.accent}, transparent 20%)`,
+                    color: accentTextColor(meta.accent),
+                  }}
+                >
+                  Leader
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-lg font-bold text-[var(--z-fg)]">{meta.displayName}</p>
             <p className="mt-1 text-xs leading-relaxed text-[var(--z-muted)]">{meta.tagline}</p>
           </div>
@@ -249,25 +295,24 @@ function AgentCircleExpanded({
           {/* Rate info */}
           {rateConfig && (
             <p className="text-[10px] text-[var(--z-muted)]">
-              Rate basis: {rateConfig.roleEquivalent} · ${rateConfig.hourlyRateUsd}/hr US avg · {rateConfig.rateSource}
+              Rate basis: {rateConfig.roleEquivalent} · ${rateConfig.hourlyRateUsd}/hr US avg
             </p>
           )}
 
-          {/* Actions */}
+          {/* Primary action — prominent */}
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={link.href}
               className={cn(
-                "inline-flex h-9 items-center justify-center rounded-full px-4 text-xs font-semibold transition-colors",
-                "ring-1",
+                "inline-flex h-10 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold transition-colors",
                 focusRingClassName(),
               )}
               style={{
-                background: `color-mix(in oklab, ${meta.accent}, transparent 12%)`,
-                color: "var(--z-fg)",
+                background: meta.accent,
+                color: accentTextColor(meta.accent),
               }}
             >
-              {link.label}
+              {link.label} →
             </Link>
             {ask ? (
               <Button type="button" size="sm" variant="ghost" className="text-[var(--z-muted)]" onClick={fireAsk}>
@@ -283,121 +328,6 @@ function AgentCircleExpanded({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Leader card — always expanded, centered, full-width */
-function LeaderCard({
-  meta,
-  metrics,
-  signals,
-  loading,
-  savings,
-}: {
-  meta: AgentMetadata;
-  metrics: DashboardMetrics;
-  signals: StudentSignals;
-  loading: boolean;
-  savings: number;
-}) {
-  const entry = getAgent(meta.id);
-  const specialty = entry?.role ?? "Orchestrator";
-  const lines = linesForAgent(meta.id, metrics, signals);
-  const link = primaryLinkForAgent(meta.id);
-  const ask = askActionForAgent(meta.id);
-  const rateConfig = AGENT_RATE_CONFIG[meta.id as keyof typeof AGENT_RATE_CONFIG];
-
-  const fireAsk = () => {
-    if (!ask) return;
-    try {
-      queueAgentAction(meta.id, ask.action, { source: "dashboard", ...(typeof ask.payload === "object" && ask.payload ? ask.payload : {}) });
-    } catch { /* ignore */ }
-  };
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-2xl border p-6 sm:p-8"
-      style={{
-        "--z-agent-accent": meta.accent,
-        "--z-agent-glow": meta.glow,
-        borderColor: `color-mix(in oklab, ${meta.accent}, transparent 40%)`,
-        boxShadow: `0 0 0 1px color-mix(in oklab, ${meta.accent}, transparent 50%), 0 24px 64px ${meta.glow}`,
-        background: `linear-gradient(165deg, color-mix(in oklab, var(--z-surface), transparent 5%) 0%, color-mix(in oklab, var(--z-surface-2), transparent 30%) 100%)`,
-      } as React.CSSProperties}
-    >
-      <div aria-hidden className="pointer-events-none absolute -right-24 top-0 h-64 w-64 rounded-full opacity-[0.13] blur-3xl" style={{ background: meta.accent }} />
-
-      <div className="relative flex flex-col items-center text-center">
-        <AgentOrb meta={meta} sizePx={96} isExpanded={true} />
-
-        <div className="mt-4 space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: meta.accent }}>{specialty} · Leader</p>
-          <p className="text-xl font-bold tracking-tight text-[var(--z-fg)]">{meta.displayName}</p>
-        </div>
-
-        <p className="mt-2 max-w-md text-xs leading-relaxed text-[var(--z-muted)]">{meta.tagline}</p>
-
-        {savings > 0 && (
-          <div className="mt-3 rounded-full border px-4 py-1.5 text-[11px] font-bold"
-            style={{
-              borderColor: `color-mix(in oklab, ${meta.accent}, transparent 55%)`,
-              color: meta.accent,
-              background: `color-mix(in oklab, ${meta.accent}, transparent 88%)`,
-            }}
-          >
-            orchestrated {fmtUsd(savings)} in savings this month
-          </div>
-        )}
-
-        <div
-          className="mt-5 w-full max-w-lg rounded-xl border p-4 text-left"
-          style={{
-            borderColor: `color-mix(in oklab, ${meta.accent}, transparent 72%)`,
-            background: `color-mix(in oklab, var(--z-surface-2), transparent 20%)`,
-          }}
-        >
-          {loading ? (
-            <p className="text-xs text-[var(--z-muted)]">Loading…</p>
-          ) : (
-            <ul className="space-y-2 text-xs leading-snug text-[color-mix(in_oklab,var(--z-fg),transparent_12%)]">
-              {lines.map((line, i) => (
-                <li key={i} className={line.isEstimate ? "text-[var(--z-muted)]" : ""}>{line.text}</li>
-              ))}
-            </ul>
-          )}
-          {rateConfig && (
-            <p className="mt-3 text-[10px] text-[var(--z-muted)]">
-              Rate basis: {rateConfig.roleEquivalent} · ${rateConfig.hourlyRateUsd}/hr US avg
-            </p>
-          )}
-        </div>
-
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Link
-            href={link.href}
-            className={cn("inline-flex h-9 items-center justify-center rounded-full px-5 text-xs font-semibold transition-colors ring-1", focusRingClassName())}
-            style={{ background: `color-mix(in oklab, ${meta.accent}, transparent 12%)`, color: "var(--z-fg)" }}
-          >
-            {link.label}
-          </Link>
-          {ask ? (
-            <Button type="button" size="sm" variant="ghost" className="text-[var(--z-muted)]" onClick={fireAsk}>
-              {ask.label}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TeamDivider() {
-  return (
-    <div className="flex items-center gap-3 py-1">
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[var(--z-border)]" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--z-muted)]">Specialists</span>
-      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--z-border)]" />
     </div>
   );
 }
@@ -419,45 +349,39 @@ export function AgentCards() {
 
   const [expanded, setExpanded] = React.useState<string | null>(null);
 
+  // All agents in one unified grid (leader + team together)
+  const allAgents = React.useMemo(() => {
+    const result: AgentMetadata[] = [];
+    if (leader) result.push(leader);
+    result.push(...team);
+    return result;
+  }, [leader, team]);
+
   return (
-    <div className="space-y-5">
-      {/* Leader — always shown fully expanded */}
-      {leader ? (
-        <LeaderCard
-          meta={leader}
-          metrics={metrics}
-          signals={signals}
-          loading={loading}
-          savings={savingsByAgent[leader.id] ?? 0}
-        />
-      ) : null}
-
-      {leader && team.length > 0 ? <TeamDivider /> : null}
-
-      {/* Team — circles that expand on click */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {team.map((meta) =>
-          expanded === meta.id ? (
-            <div key={meta.id} className="col-span-2 sm:col-span-2 lg:col-span-3">
-              <AgentCircleExpanded
-                meta={meta}
-                metrics={metrics}
-                signals={signals}
-                loading={loading}
-                savings={savingsByAgent[meta.id] ?? 0}
-                onCollapse={() => setExpanded(null)}
-              />
-            </div>
-          ) : (
-            <AgentCircleCollapsed
-              key={meta.id}
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {allAgents.map((meta) =>
+        expanded === meta.id ? (
+          <div key={meta.id} className="col-span-2 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+            <AgentCircleExpanded
               meta={meta}
+              metrics={metrics}
+              signals={signals}
+              loading={loading}
               savings={savingsByAgent[meta.id] ?? 0}
-              onClick={() => setExpanded(meta.id)}
+              isLeader={meta.id === DASHBOARD_LEADER_ID}
+              onCollapse={() => setExpanded(null)}
             />
-          )
-        )}
-      </div>
+          </div>
+        ) : (
+          <AgentCircleCollapsed
+            key={meta.id}
+            meta={meta}
+            savings={savingsByAgent[meta.id] ?? 0}
+            isLeader={meta.id === DASHBOARD_LEADER_ID}
+            onClick={() => setExpanded(meta.id)}
+          />
+        )
+      )}
     </div>
   );
 }
