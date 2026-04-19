@@ -41,8 +41,7 @@ export const ROUTE_GROUPS: AppRouteGroup[] = [
     id: "ops",
     label: "STUDIO OPERATIONS",
     items: [
-      { id: "families", label: "Families / Accounts", href: "/families", group: "ops" },
-      { id: "students", label: "Students", href: "/students", group: "ops" },
+      { id: "roster", label: "Roster", href: "/roster", group: "ops" },
       { id: "attendance", label: "Attendance", href: "/attendance", group: "ops" },
       { id: "teachers", label: "Teachers", href: "/teachers", group: "ops" },
       { id: "invoices", label: "Invoices", href: "/invoices", group: "ops" },
