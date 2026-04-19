@@ -14,6 +14,7 @@ import { LocationScheduleGrid } from "./LocationScheduleGrid";
 import { MobileScheduleView } from "./MobileScheduleView";
 import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
 import { RubyScheduleBar, type RubyEvent } from "./RubyScheduleBar";
+import { ScheduleRoomsPanel } from "./ScheduleRoomsPanel";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 export const LOCATION_CONFIG: Record<string, {
@@ -120,6 +121,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const [loading, setLoading] = React.useState(false);
   const [activeModal, setActiveModal] = React.useState<ToolModal>(null);
   const [rubyEvent, setRubyEvent] = React.useState<RubyEvent | null>(null);
+  const [activeView, setActiveView] = React.useState<"schedule" | "rooms">("schedule");
 
   // Auto-clear ruby event after 6 seconds
   React.useEffect(() => {
@@ -203,17 +205,11 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
 
   return (
     <div className="space-y-0">
-      {/* ── Ruby Bar ── */}
-      <RubyScheduleBar
-        locationName={activeLocConfig?.name ?? locations.find((l) => l.id === activeLocationId)?.name ?? "Studio"}
-        selectedDate={activeSelectedDate}
-        event={rubyEvent}
-      />
-
-      {/* ── Top bar: location tabs + week nav ── */}
+      {/* ── Single compact top bar ── */}
       <div className="sticky top-0 z-30 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Row 1: location tabs + week nav */}
-        <div className="flex items-center gap-1 px-4 pt-3">
+        {/* Row 1: location tabs | Ruby | week nav + tools */}
+        <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
+          {/* Location pills */}
           {locations.map((loc) => {
             const cfg = LOCATION_CONFIG[loc.id];
             const isActive = loc.id === activeLocationId;
@@ -221,60 +217,95 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               <button
                 key={loc.id}
                 type="button"
-                onClick={() => setActiveLocationId(loc.id)}
+                onClick={() => { setActiveLocationId(loc.id); setActiveView("schedule"); }}
                 style={isActive ? {
                   borderColor: cfg?.border ?? "transparent",
                   backgroundColor: cfg?.accent ?? "transparent",
                   color: cfg?.textColor ?? "inherit",
                 } : {}}
-                className={`rounded-t-lg border-x border-t px-4 py-2 text-sm font-semibold transition-all ${
+                className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
                   isActive
-                    ? "border-b-[var(--z-bg)]"
-                    : "border-transparent text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+                    ? "border"
+                    : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
                 }`}
               >
                 {loc.name}
               </button>
             );
           })}
-          <div className="ml-auto flex items-center gap-2 pb-1">
+
+          {/* Schedule / Rooms view toggle */}
+          <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5 ml-1">
+            <button
+              type="button"
+              onClick={() => setActiveView("schedule")}
+              className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                activeView === "schedule"
+                  ? "bg-[#00ff88]/15 text-[#00ff88]"
+                  : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+              }`}
+            >
+              Schedule
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("rooms")}
+              className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                activeView === "rooms"
+                  ? "bg-[#00ff88]/15 text-[#00ff88]"
+                  : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+              }`}
+            >
+              Rooms
+            </button>
+          </div>
+
+          {/* Ruby — centered, inline */}
+          <div className="flex-1 flex justify-center">
+            <RubyScheduleBar
+              locationName={activeLocConfig?.name ?? locations.find((l) => l.id === activeLocationId)?.name ?? "Studio"}
+              selectedDate={activeSelectedDate}
+              event={rubyEvent}
+            />
+          </div>
+
+          {/* Week nav + date jump */}
+          <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               onClick={() => goWeek(-1)}
-              className="rounded-md border border-[var(--z-border)] px-2.5 py-1 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+              className="rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]"
             >
-              ← Prev
+              ←
             </button>
-            <span className="text-xs font-semibold text-[var(--z-fg)]">
+            <span className="hidden text-[11px] font-semibold text-[var(--z-fg)] sm:inline">
               {formatWeekLabel(window.start, window.end)}
             </span>
             <button
               type="button"
               onClick={() => goWeek(1)}
-              className="rounded-md border border-[var(--z-border)] px-2.5 py-1 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+              className="rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]"
             >
-              Next →
+              →
             </button>
             <label className="relative cursor-pointer" title="Jump to week">
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-base select-none">
-                📅
-              </span>
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm select-none">📅</span>
               <input
                 type="date"
                 value={window.start}
                 onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
-                className="h-8 w-8 cursor-pointer rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] opacity-0"
+                className="h-7 w-7 cursor-pointer opacity-0"
                 title="Jump to week"
               />
             </label>
           </div>
         </div>
 
-        {/* Row 2: day tabs + toolbar actions */}
-        {activeLocationId && activeData && (
+        {/* Row 2: day tabs + utilization + toolbar (only in schedule view) */}
+        {activeView === "schedule" && activeLocationId && activeData && (
           <div
-            className="flex items-center gap-1 overflow-x-auto px-4 pb-2 pt-1"
-            style={{ borderTop: `1px solid ${activeLocConfig?.border ?? "var(--z-border)"}` }}
+            className="flex items-center gap-1 overflow-x-auto px-3 pb-1.5 pt-0.5 scrollbar-none"
+            style={{ borderTop: `1px solid ${activeLocConfig?.border ?? "var(--z-border)"}40` }}
           >
             {weekDays.map((day) => {
               const hours = activeData.locationHours ?? {};
@@ -292,7 +323,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                     backgroundColor: activeLocConfig?.accent ?? "transparent",
                     color: activeLocConfig?.textColor ?? "inherit",
                   } : {}}
-                  className={`flex min-w-[52px] flex-col items-center rounded-lg border px-2 py-1.5 text-center transition-all ${
+                  className={`flex min-w-[44px] flex-col items-center rounded-md border px-1.5 py-1 text-center transition-all ${
                     isClosed
                       ? "cursor-not-allowed border-transparent opacity-30"
                       : isSelected
@@ -300,67 +331,31 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                       : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
                   }`}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-wide">{label}</span>
-                  <span className={`text-base font-bold ${isToday ? "text-yellow-400" : ""}`}>{sub}</span>
-                  {isClosed && <span className="text-[9px] text-[var(--z-muted)]">Closed</span>}
+                  <span className="text-[9px] font-semibold uppercase tracking-wide">{label}</span>
+                  <span className={`text-sm font-bold leading-none ${isToday ? "text-yellow-400" : ""}`}>{sub}</span>
                 </button>
               );
             })}
-            {loading && (
-              <span className="ml-2 text-xs text-[var(--z-muted)] animate-pulse">Loading…</span>
-            )}
+            {loading && <span className="ml-1 text-[10px] text-[var(--z-muted)] animate-pulse">Loading…</span>}
 
-            {/* ── Toolbar action buttons ── */}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
-              {/* Utilization badge */}
-              <div className="flex items-center gap-1.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2.5 py-1.5">
-                <div
-                  className="h-2 w-2 rounded-full"
-                  style={{
-                    backgroundColor: utilization.pct >= 80 ? "#22c55e" : utilization.pct >= 50 ? "#eab308" : "#ef4444",
-                  }}
-                />
-                <span className="text-[11px] font-bold text-[var(--z-fg)]">{utilization.pct}%</span>
-                <span className="hidden text-[10px] text-[var(--z-muted)] sm:inline">
-                  {utilization.booked}/{utilization.total} · {utilization.open} open
-                </span>
+            {/* Toolbar */}
+            <div className="ml-auto flex shrink-0 items-center gap-1 pl-1">
+              {/* Utilization */}
+              <div className="flex items-center gap-1 rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1">
+                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: utilization.pct >= 80 ? "#22c55e" : utilization.pct >= 50 ? "#eab308" : "#ef4444" }} />
+                <span className="text-[10px] font-bold text-[var(--z-fg)]">{utilization.pct}%</span>
+                <span className="hidden text-[9px] text-[var(--z-muted)] sm:inline">{utilization.open} open</span>
               </div>
-
-              {/* + Sub */}
-              <button
-                type="button"
-                onClick={() => setActiveModal("sub")}
-                className="flex items-center gap-1.5 rounded-lg border border-[#00ff88]/30 bg-[#00ff88]/10 px-2.5 py-1.5 text-[11px] font-bold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors"
-              >
-                <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
-                  <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
+              <button type="button" onClick={() => setActiveModal("sub")} className="flex items-center gap-1 rounded-md border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-1 text-[10px] font-bold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
+                <svg viewBox="0 0 14 14" fill="none" className="h-2.5 w-2.5" aria-hidden><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 Sub
               </button>
-
-              {/* Call Out */}
-              <button
-                type="button"
-                onClick={() => setActiveModal("callout")}
-                className="flex items-center gap-1.5 rounded-lg border border-orange-400/30 bg-orange-500/10 px-2.5 py-1.5 text-[11px] font-bold text-orange-300 hover:bg-orange-500/20 transition-colors"
-              >
-                <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
-                  <path d="M7 2v5M7 9v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/>
-                </svg>
+              <button type="button" onClick={() => setActiveModal("callout")} className="flex items-center gap-1 rounded-md border border-orange-400/30 bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-300 hover:bg-orange-500/20 transition-colors">
+                <svg viewBox="0 0 14 14" fill="none" className="h-2.5 w-2.5" aria-hidden><path d="M7 2v5M7 9v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/></svg>
                 Call Out
               </button>
-
-              {/* Go Virtual */}
-              <button
-                type="button"
-                onClick={() => setActiveModal("virtual")}
-                className="flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 py-1.5 text-[11px] font-bold text-sky-300 hover:bg-sky-500/20 transition-colors"
-              >
-                <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
-                  <rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-                  <path d="M9 7l-4-2v4l4-2z" fill="currentColor"/>
-                </svg>
+              <button type="button" onClick={() => setActiveModal("virtual")} className="flex items-center gap-1 rounded-md border border-sky-400/30 bg-sky-500/10 px-2 py-1 text-[10px] font-bold text-sky-300 hover:bg-sky-500/20 transition-colors">
+                <svg viewBox="0 0 14 14" fill="none" className="h-2.5 w-2.5" aria-hidden><rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M9 7l-4-2v4l4-2z" fill="currentColor"/></svg>
                 Virtual
               </button>
             </div>
@@ -368,30 +363,19 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
         )}
       </div>
 
-      {/* ── Legend ── */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--z-border)] px-4 py-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Legend</span>
-        {[
-          { color: "#EAB308", label: "Booked" },
-          { color: "#3B82F6", label: "First Day" },
-          { color: "#EF4444", label: "Last Day" },
-          { color: "#F97316", label: "Call Out" },
-          { color: "#EC4899", label: "Makeup" },
-          { color: "#14B8A6", label: "Meet & Greet" },
-          { color: "#22C55E", label: "Sub" },
-          { color: "#8B5CF6", label: "Training" },
-          { color: "#6B7280", label: "Locked" },
-          { color: "#10B981", label: "Open" },
-        ].map(({ color, label }) => (
-          <span key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--z-muted)]">
-            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
-            {label}
-          </span>
-        ))}
-      </div>
+      {/* ── Rooms view ── */}
+      {activeView === "rooms" && (
+        <ScheduleRoomsPanel
+          locationId={activeLocationId}
+          locationName={activeLocConfig?.name ?? locations.find((l) => l.id === activeLocationId)?.name ?? "Studio"}
+          locationColor={activeLocConfig?.color ?? "#00ff88"}
+          rooms={activeData?.rooms ?? []}
+          onRubyEvent={fireRubyEvent}
+        />
+      )}
 
       {/* ── Active location grid ── */}
-      {locations.map((loc) => {
+      {activeView === "schedule" && locations.map((loc) => {
         if (loc.id !== activeLocationId) return null;
         const data = locationDataMap[loc.id];
         if (!data) return null;

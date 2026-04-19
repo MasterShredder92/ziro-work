@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import { AgentOSProvider } from "./AgentOSContext";
-import { AgentAvatarButton } from "./AgentAvatarButton";
-import { AgentBubble } from "./AgentBubble";
 import { AgentPointer } from "./AgentPointer";
 import { AgentFullChat } from "./AgentFullChat";
 import { AgentAutoCollapseOnScroll } from "./AgentAutoCollapseOnScroll";
@@ -21,8 +19,6 @@ export function AgentOSRoot({ children }: { children: React.ReactNode }) {
     <AgentOSProvider>
       {children}
       <AgentUIBoundary>
-        <AgentAvatarButton />
-        <AgentBubble />
         <AgentPointer />
         <AgentFullChat />
         <AgentAutoCollapseOnScroll />
