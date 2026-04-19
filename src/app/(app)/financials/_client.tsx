@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { PageShell } from "@/components/layouts/PageShell";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Expense = {
@@ -190,6 +191,13 @@ export function FinancialsClient() {
   return (
     <PageShell title="Financials">
       <div className="space-y-6">
+
+        {/* Bub agent bar */}
+        <AgentPageBar
+          agentId="bub"
+          chatPlaceholder="Ask Bub about revenue, expenses, or P&L…"
+          pageContext={{ page: "financials", collected: collectedCents, teacherPayroll, otherExpenses, ownerTakeHome }}
+        />
 
         {/* Revenue Summary */}
         <div>

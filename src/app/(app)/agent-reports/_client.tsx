@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { PageShell } from "@/components/layouts/PageShell";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import type { PeriodSummary, AgentSummary } from "@/lib/agents/agentSavings";
 import { AGENT_METADATA } from "@/lib/agents/agentMetadata";
 
@@ -168,6 +169,13 @@ export function AgentReportsClient({ monthly, weekly }: AgentReportsClientProps)
   return (
     <PageShell title="Agent Reports">
       <div className="space-y-6">
+        {/* Ziro agent bar */}
+        <AgentPageBar
+          agentId="ziro"
+          chatPlaceholder="Ask Ziro about agent performance or savings…"
+          pageContext={{ page: "agent-reports" }}
+        />
+
         {/* Period toggle */}
         <div className="flex items-center gap-3">
           <div className="flex overflow-hidden rounded-lg border border-[var(--z-border)] text-sm">

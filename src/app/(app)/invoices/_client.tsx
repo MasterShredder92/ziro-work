@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
 import { BillingSummaryBar } from "@/components/billing/BillingSummaryBar";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import type { BillingMetrics } from "./page";
 
 // ─── Location config ──────────────────────────────────────────────────────────
@@ -98,6 +99,41 @@ function isOverdue(invoice: InvoiceRow): boolean {
   return new Date(invoice.due_date) < new Date();
 }
 
+// ─── Square Sync Button ─────────────────────────────────────────────────────
+function SquareSyncButton() {
+  const [syncing, setSyncing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const router = useRouter();
+  async function handleSync() {
+    setSyncing(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/integrations/square/sync", { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      setResult(j.message ?? (res.ok ? "Sync complete" : "Sync failed"));
+      if (res.ok) router.refresh();
+    } catch {
+      setResult("Sync failed — check connection");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setResult(null), 4000);
+    }
+  }
+  return (
+    <div className="flex flex-col items-end gap-1 shrink-0">
+      <button
+        onClick={handleSync}
+        disabled={syncing}
+        className="flex h-full items-center gap-2 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-4 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] hover:border-[#00ff88]/30 disabled:opacity-50 transition-colors"
+      >
+        <span className={syncing ? "animate-spin" : ""}>⟳</span>
+        {syncing ? "Syncing…" : "Sync Square"}
+      </button>
+      {result && <div className="text-[10px] text-[var(--z-muted)]">{result}</div>}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function InvoicesClient({
   invoices,
@@ -159,6 +195,17 @@ export function InvoicesClient({
   return (
     <PageShell title="Invoices">
       <div className="space-y-6">
+        {/* ── Bub agent bar + Square sync ── */}
+        <div className="flex items-stretch gap-3">
+          <div className="flex-1">
+            <AgentPageBar
+              agentId="bub"
+              chatPlaceholder="Ask Bub about invoices, payments, or revenue…"
+              pageContext={{ page: "invoices", totalCount, paidTotal, unpaidTotal, overdueCount }}
+            />
+          </div>
+          <SquareSyncButton />
+        </div>
         {/* ── Billing summary by location ── */}
         {billingMetrics && <BillingSummaryBar metrics={billingMetrics} />}
         {/* ── Summary stats ── */}

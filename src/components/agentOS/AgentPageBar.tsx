@@ -1,73 +1,104 @@
 "use client";
 import * as React from "react";
-import { AgentAvatarImage } from "@/components/agentOS/AgentAvatarImage";
+import { AgentAvatarImage } from "./AgentAvatarImage";
+import { AGENT_METADATA } from "@/lib/agents/agentMetadata";
 
-const RUBY_IMAGE = "/static/agents/ruby.png";
-const RUBY_ACCENT = "#fb923c";
-const RUBY_GLOW = "rgba(251,146,60,0.35)";
-
-// ─── Ruby event type ──────────────────────────────────────────────────────────
-export type RubyEvent = {
-  type:
-    | "book_student"
-    | "check_in"
-    | "call_out"
-    | "go_virtual"
-    | "move_student"
-    | "sub_added"
-    | "conflict"
-    | "error"
-    | "idle";
-  message: string;
-  detail?: string;
-  timestamp?: number;
+export type AgentPageBarProps = {
+  /** Agent ID — must match a key in AGENT_METADATA (ruby, bub, star, stewie, vader, ziro, sid) */
+  agentId: string;
+  /** Page context passed to the AI */
+  pageContext?: Record<string, unknown>;
+  /** Short status/idle line shown in the bar */
+  statusLine?: string;
+  /** Placeholder text for the chat input */
+  chatPlaceholder?: string;
+  /** System prompt override for this agent on this page */
+  systemPrompt?: string;
+  /** API route for chat — defaults to /api/agent/chat */
+  chatRoute?: string;
 };
 
-type ChatMessage = { role: "user" | "ruby"; text: string };
-
-type Props = {
-  locationName: string;
-  selectedDate: string;
-  event?: RubyEvent | null;
-  onChat?: (message: string) => void;
+const IDLE_LINES_BY_AGENT: Record<string, string[]> = {
+  ruby: [
+    "Ready when you are.",
+    "All clear — schedule looks good.",
+    "I'm watching everything.",
+    "Nothing to flag right now.",
+  ],
+  bub: [
+    "Money in, money out — I'm on it.",
+    "Watching your revenue.",
+    "Ready to pull the numbers.",
+    "Ask me about any invoice.",
+  ],
+  star: [
+    "Your leads are ready.",
+    "I know who to call first.",
+    "Watching your pipeline.",
+    "Ready to prioritize.",
+  ],
+  stewie: [
+    "I know who needs a follow-up.",
+    "Watching your contacts.",
+    "Ready when you are.",
+    "No one slips through.",
+  ],
+  vader: [
+    "Ready to send a message.",
+    "Watching your inbox.",
+    "I'll handle the outreach.",
+    "Who do you need to reach?",
+  ],
+  ziro: [
+    "How can I help?",
+    "Ask me anything.",
+    "I know this system inside out.",
+    "Ready.",
+  ],
+  sid: [
+    "I see who might be at risk.",
+    "Watching retention signals.",
+    "Ready to flag concerns.",
+    "Ask me about any student.",
+  ],
 };
 
-const IDLE_LINES = [
-  "Ready when you are.",
-  "All clear — schedule looks good.",
-  "I'm watching everything. You're good.",
-  "Nothing to flag right now.",
-  "Tap me if you need anything.",
-];
-
-function randomIdle() {
-  return IDLE_LINES[Math.floor(Math.random() * IDLE_LINES.length)];
+function randomIdle(agentId: string): string {
+  const lines = IDLE_LINES_BY_AGENT[agentId] ?? ["Ready."];
+  return lines[Math.floor(Math.random() * lines.length)];
 }
 
-export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
+type ChatMessage = { role: "user" | "agent"; text: string };
+
+export function AgentPageBar({
+  agentId,
+  pageContext = {},
+  statusLine,
+  chatPlaceholder,
+  systemPrompt,
+  chatRoute = "/api/agent/chat",
+}: AgentPageBarProps) {
+  const meta = AGENT_METADATA[agentId] ?? AGENT_METADATA["ziro"];
   const [chatOpen, setChatOpen] = React.useState(false);
   const [chatInput, setChatInput] = React.useState("");
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
-      role: "ruby",
-      text: `Hey — I'm Ruby, your scheduling assistant for ${locationName}. I can move students, change block types, flag conflicts, or answer questions. What do you need?`,
+      role: "agent",
+      text: `Hey — I'm ${meta.displayName}. ${meta.tagline} What do you need?`,
     },
   ]);
   const [chatLoading, setChatLoading] = React.useState(false);
-  const [idleLine] = React.useState(randomIdle);
+  const [idleLine] = React.useState(() => statusLine ?? randomIdle(agentId));
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const isConflict = event?.type === "conflict" || event?.type === "error";
-  const isSuccess = event?.type === "book_student" || event?.type === "check_in" || event?.type === "sub_added";
-  const isAction = event?.type === "call_out" || event?.type === "go_virtual" || event?.type === "move_student";
-
-  const glowColor = isConflict ? "#ef4444" : isSuccess ? "#22c55e" : isAction ? "#f59e0b" : RUBY_ACCENT;
-  const statusText = event?.message ?? idleLine;
-  const statusTextColor = isConflict ? "#fca5a5" : isSuccess ? "#86efac" : isAction ? "#fde68a" : "#94a3b8";
+  const accent = meta.accent;
+  const glow = meta.glow;
+  const image = meta.imagePath;
+  const name = meta.displayName;
 
   async function sendChat() {
     const text = chatInput.trim();
@@ -77,28 +108,29 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
     setMessages(newMessages);
     setChatLoading(true);
     try {
-      // Build history for the API (exclude the initial greeting)
       const history = newMessages.slice(1).map((m) => ({
-        role: m.role === "ruby" ? "assistant" : "user",
+        role: m.role === "agent" ? "assistant" : "user",
         content: m.text,
       }));
-      const res = await fetch("/api/ruby/chat", {
+      const res = await fetch(chatRoute, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           message: text,
-          context: { locationName, selectedDate, recentEvent: event },
-          history: history.slice(0, -1), // exclude the message we just added
+          agentId,
+          context: pageContext,
+          history: history.slice(0, -1),
+          systemPrompt,
         }),
       });
       if (res.ok) {
         const j = await res.json().catch(() => null);
-        setMessages((prev) => [...prev, { role: "ruby", text: j?.reply ?? "Got it." }]);
+        setMessages((prev) => [...prev, { role: "agent", text: j?.reply ?? "Got it." }]);
       } else {
-        setMessages((prev) => [...prev, { role: "ruby", text: "Hit a snag — try again in a second." }]);
+        setMessages((prev) => [...prev, { role: "agent", text: "Hit a snag — try again in a second." }]);
       }
     } catch {
-      setMessages((prev) => [...prev, { role: "ruby", text: "Can't reach the server right now. Try again in a sec." }]);
+      setMessages((prev) => [...prev, { role: "agent", text: "Can't reach the server right now." }]);
     } finally {
       setChatLoading(false);
     }
@@ -106,66 +138,56 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
 
   return (
     <>
-      {/* ── Ruby inline bar — prominent center piece ── */}
+      {/* ── Agent inline bar ── */}
       <button
         type="button"
         onClick={() => setChatOpen(true)}
-        className="flex items-center gap-3 rounded-2xl px-4 py-2 transition-all hover:bg-white/5 group"
+        className="flex items-center gap-3 rounded-2xl px-4 py-2 transition-all hover:bg-white/5 group w-full"
         style={{
-          background: `linear-gradient(135deg, ${RUBY_ACCENT}10 0%, transparent 60%)`,
-          border: `1px solid ${glowColor}35`,
-          boxShadow: `0 0 24px ${glowColor}20`,
-          minWidth: 220,
+          background: `linear-gradient(135deg, ${accent}10 0%, transparent 60%)`,
+          border: `1px solid ${accent}35`,
+          boxShadow: `0 0 24px ${accent}18`,
         }}
-        aria-label="Open Ruby chat"
-        title="Ask Ruby"
+        aria-label={`Open ${name} chat`}
       >
         {/* Photo + pulse ring */}
         <div className="relative shrink-0">
           <div
-            className="absolute inset-0 rounded-full animate-ping opacity-25"
-            style={{ backgroundColor: glowColor, animationDuration: "3s" }}
+            className="absolute inset-0 rounded-full animate-ping opacity-20"
+            style={{ backgroundColor: accent, animationDuration: "3s" }}
           />
           <div
             className="relative h-14 w-14 overflow-hidden rounded-full"
             style={{
-              boxShadow: `0 0 22px ${glowColor}70`,
-              border: `2.5px solid ${glowColor}80`,
+              boxShadow: `0 0 22px ${glow}`,
+              border: `2.5px solid ${accent}80`,
             }}
           >
-            <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full object-cover" />
+            <AgentAvatarImage src={image} name={name} accent={accent} className="h-full w-full object-cover" />
           </div>
         </div>
 
         {/* Name + status */}
         <div className="text-left min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-base font-black tracking-tight" style={{ color: RUBY_ACCENT }}>
-              Ruby
+            <span className="text-base font-black tracking-tight" style={{ color: accent }}>
+              {name}
             </span>
             <span
               className="rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-              style={{ borderColor: `${RUBY_ACCENT}40`, color: RUBY_ACCENT, backgroundColor: `${RUBY_ACCENT}10` }}
+              style={{ borderColor: `${accent}40`, color: accent, backgroundColor: `${accent}10` }}
             >
               AI
             </span>
-            {isConflict && (
-              <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
-                ⚠ Alert
-              </span>
-            )}
           </div>
-          <p
-            className="text-[11px] leading-snug truncate max-w-[200px] transition-all duration-500 mt-0.5"
-            style={{ color: statusTextColor }}
-          >
-            {statusText}
+          <p className="text-[11px] leading-snug truncate max-w-[260px] mt-0.5 text-[#94a3b8]">
+            {idleLine}
           </p>
-          <p className="text-[9px] mt-0.5 opacity-50" style={{ color: RUBY_ACCENT }}>Tap to chat</p>
+          <p className="text-[9px] mt-0.5 opacity-50" style={{ color: accent }}>Tap to chat</p>
         </div>
       </button>
 
-      {/* ── Ruby Chat Modal — z-[200] so it's always on top ── */}
+      {/* ── Chat Modal — always on top ── */}
       {chatOpen && (
         <>
           <div
@@ -176,27 +198,25 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
           <div
             className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border shadow-2xl"
             style={{
-              borderColor: `${RUBY_ACCENT}55`,
+              borderColor: `${accent}55`,
               backgroundColor: "#0a0a0e",
               height: "min(600px, 85vh)",
             }}
             role="dialog"
             aria-modal="true"
-            aria-label="Ruby chat"
+            aria-label={`${name} chat`}
           >
             {/* Header */}
             <div className="flex items-center gap-3 border-b border-[var(--z-border)] px-5 py-4">
               <div
                 className="h-10 w-10 shrink-0 overflow-hidden rounded-full"
-                style={{ border: `1.5px solid ${RUBY_ACCENT}60`, boxShadow: `0 0 16px ${RUBY_GLOW}` }}
+                style={{ border: `1.5px solid ${accent}60`, boxShadow: `0 0 16px ${glow}` }}
               >
-                <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full" />
+                <AgentAvatarImage src={image} name={name} accent={accent} className="h-full w-full" />
               </div>
               <div>
-                <div className="text-sm font-black text-[var(--z-fg)]">Ruby</div>
-                <div className="text-[10px] text-[var(--z-muted)]">
-                  Schedule AI · {locationName} · {selectedDate}
-                </div>
+                <div className="text-sm font-black text-[var(--z-fg)]">{name}</div>
+                <div className="text-[10px] text-[var(--z-muted)]">{meta.tagline}</div>
               </div>
               <button
                 type="button"
@@ -214,12 +234,12 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                  {msg.role === "ruby" && (
+                  {msg.role === "agent" && (
                     <div
                       className="h-7 w-7 shrink-0 overflow-hidden rounded-full"
-                      style={{ border: `1px solid ${RUBY_ACCENT}60`, boxShadow: `0 0 8px ${RUBY_GLOW}` }}
+                      style={{ border: `1px solid ${accent}60`, boxShadow: `0 0 8px ${glow}` }}
                     >
-                      <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full" />
+                      <AgentAvatarImage src={image} name={name} accent={accent} className="h-full w-full" />
                     </div>
                   )}
                   <div
@@ -229,8 +249,8 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
                         : "rounded-tl-sm text-[var(--z-fg)]"
                     }`}
                     style={
-                      msg.role === "ruby"
-                        ? { backgroundColor: `${RUBY_ACCENT}12`, border: `1px solid ${RUBY_ACCENT}25` }
+                      msg.role === "agent"
+                        ? { backgroundColor: `${accent}12`, border: `1px solid ${accent}25` }
                         : {}
                     }
                   >
@@ -240,15 +260,12 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
               ))}
               {chatLoading && (
                 <div className="flex gap-2">
-                  <div
-                    className="h-7 w-7 shrink-0 overflow-hidden rounded-full"
-                    style={{ border: `1px solid ${RUBY_ACCENT}60` }}
-                  >
-                    <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full" />
+                  <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full" style={{ border: `1px solid ${accent}60` }}>
+                    <AgentAvatarImage src={image} name={name} accent={accent} className="h-full w-full" />
                   </div>
                   <div
                     className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm"
-                    style={{ backgroundColor: `${RUBY_ACCENT}12`, border: `1px solid ${RUBY_ACCENT}25` }}
+                    style={{ backgroundColor: `${accent}12`, border: `1px solid ${accent}25` }}
                   >
                     <span className="inline-flex gap-1">
                       <span className="animate-bounce" style={{ animationDelay: "0ms" }}>·</span>
@@ -268,7 +285,7 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ask Ruby anything about the schedule…"
+                  placeholder={chatPlaceholder ?? `Ask ${name} anything…`}
                   className="flex-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3.5 py-2.5 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none transition-colors"
                   autoFocus
                 />
@@ -276,7 +293,7 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
                   type="submit"
                   disabled={!chatInput.trim() || chatLoading}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border disabled:opacity-40 transition-colors"
-                  style={{ borderColor: `${RUBY_ACCENT}40`, backgroundColor: `${RUBY_ACCENT}15`, color: RUBY_ACCENT }}
+                  style={{ borderColor: `${accent}40`, backgroundColor: `${accent}15`, color: accent }}
                   aria-label="Send"
                 >
                   <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
