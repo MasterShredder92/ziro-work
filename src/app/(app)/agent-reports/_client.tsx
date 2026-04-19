@@ -205,56 +205,93 @@ export function AgentReportsClient({ monthly, weekly }: AgentReportsClientProps)
           </p>
         </div>
 
-        {/* Agent breakdown table */}
-        <div className="rounded-xl border border-[var(--z-border)] overflow-hidden">
-          {/* Table header */}
+        {/* Agent breakdown table (desktop) */}
+        <div className="hidden sm:block rounded-xl border border-[var(--z-border)] overflow-hidden">
           <div
             className="grid border-b bg-[var(--z-surface)] text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]"
-            style={{
-              gridTemplateColumns: "40px 1.5fr 80px 80px 100px 120px 40px",
-              columnGap: "12px",
-              padding: "8px 16px",
-              borderColor: "var(--z-border)",
-            }}
+            style={{ gridTemplateColumns: "40px 1.5fr 80px 80px 100px 120px 40px", columnGap: "12px", padding: "8px 16px", borderColor: "var(--z-border)" }}
           >
-            <div />
-            <div>Agent</div>
-            <div>Tasks</div>
-            <div>Hours</div>
-            <div>Rate</div>
-            <div>Saved</div>
-            <div />
+            <div /><div>Agent</div><div>Tasks</div><div>Hours</div><div>Rate</div><div>Saved</div><div />
           </div>
-
-          {/* Agent rows */}
           {sorted.map((summary) => (
-            <AgentSummaryRow
-              key={summary.agentId}
-              summary={summary}
-              isExpanded={expanded.has(summary.agentId)}
-              onToggle={() => toggle(summary.agentId)}
-            />
+            <AgentSummaryRow key={summary.agentId} summary={summary} isExpanded={expanded.has(summary.agentId)} onToggle={() => toggle(summary.agentId)} />
           ))}
-
-          {/* Totals row */}
           <div
             className="grid items-center border-t bg-[var(--z-surface-2)] font-bold"
-            style={{
-              gridTemplateColumns: "40px 1.5fr 80px 80px 100px 120px 40px",
-              columnGap: "12px",
-              padding: "10px 16px",
-              borderColor: "var(--z-border)",
-            }}
+            style={{ gridTemplateColumns: "40px 1.5fr 80px 80px 100px 120px 40px", columnGap: "12px", padding: "10px 16px", borderColor: "var(--z-border)" }}
           >
             <div />
             <div className="text-sm text-[var(--z-fg)]">Total</div>
             <div className="text-sm text-[var(--z-fg)]">{period.totalTasks}</div>
-            <div className="text-sm text-[var(--z-fg)]">
-              {fmtHours(period.agents.reduce((s, a) => s + a.totalMinutes, 0))}
-            </div>
+            <div className="text-sm text-[var(--z-fg)]">{fmtHours(period.agents.reduce((s, a) => s + a.totalMinutes, 0))}</div>
             <div />
             <div className="text-sm text-[#4ADE80]">{fmtUsd(period.totalSavedUsd)}</div>
             <div />
+          </div>
+        </div>
+
+        {/* Agent cards (mobile) */}
+        <div className="sm:hidden space-y-3">
+          {sorted.map((summary) => {
+            const meta = AGENT_METADATA[summary.agentId];
+            const accent = meta?.accent ?? "#888";
+            const isExp = expanded.has(summary.agentId);
+            return (
+              <div key={summary.agentId} className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--z-border)" }}>
+                <button
+                  onClick={() => toggle(summary.agentId)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                  style={{ background: "var(--z-surface)" }}
+                >
+                  <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full" style={{ boxShadow: `0 0 8px ${accent}66` }}>
+                    {meta ? (
+                      <Image src={meta.imagePath} alt={meta.displayName} fill className="object-cover" />
+                    ) : (
+                      <div className="h-full w-full rounded-full" style={{ background: accent }} />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold" style={{ color: accent }}>{summary.displayName}</div>
+                    <div className="text-[11px] text-[var(--z-muted)]">{summary.roleEquivalent}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-bold text-[#4ADE80]">{fmtUsd(summary.totalSavedUsd)}</div>
+                    <div className="text-[10px] text-[var(--z-muted)]">{summary.totalTasks} tasks · {fmtHours(summary.totalMinutes)}</div>
+                  </div>
+                  <svg className={`h-3 w-3 shrink-0 transition-transform text-[var(--z-muted)] ${isExp ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </button>
+                {isExp && summary.tasks.length > 0 && (
+                  <div className="border-t px-4 py-3 space-y-2" style={{ borderColor: "var(--z-border)", background: "var(--z-surface-2)" }}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--z-muted)]">Recent tasks</p>
+                    {summary.tasks.slice(0, 6).map((task) => (
+                      <div key={task.id} className="flex items-start justify-between gap-3 rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-[var(--z-fg)]">{task.description}</p>
+                          <p className="mt-0.5 text-[10px] text-[var(--z-muted)]">
+                            {new Date(task.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-xs font-semibold text-[#4ADE80]">{fmtUsd((task.minutesSpent / 60) * summary.hourlyRateUsd)}</div>
+                          <div className="text-[10px] text-[var(--z-muted)]">{fmtHours(task.minutesSpent)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {/* Mobile totals */}
+          <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] px-4 py-3 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-[var(--z-muted)] uppercase tracking-widest">Total saved</div>
+              <div className="text-xl font-black text-[#4ADE80]">{fmtUsd(period.totalSavedUsd)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-bold text-[var(--z-fg)]">{period.totalTasks} tasks</div>
+              <div className="text-xs text-[var(--z-muted)]">{fmtHours(period.agents.reduce((s, a) => s + a.totalMinutes, 0))} worked</div>
+            </div>
           </div>
         </div>
 

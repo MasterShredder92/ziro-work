@@ -181,13 +181,13 @@ export function InvoicesClient({
 
         {/* ── Filters ── */}
         <div className="flex flex-wrap items-center gap-3">
-          <form onSubmit={handleSearch} className="flex gap-2">
+          <form onSubmit={handleSearch} className="flex w-full gap-2 sm:w-auto">
             <input
               type="search"
               placeholder="Search name, email, invoice #…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+              className="h-9 w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] sm:w-64"
             />
             <button
               type="submit"
@@ -247,8 +247,8 @@ export function InvoicesClient({
           </span>
         </div>
 
-        {/* ── Table ── */}
-        <div className="rounded-xl border border-[var(--z-border)] overflow-hidden">
+        {/* ── Table (desktop) ── */}
+        <div className="hidden sm:block rounded-xl border border-[var(--z-border)] overflow-hidden">
           <div
             className="grid px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--z-muted)]"
             style={{
@@ -353,6 +353,51 @@ export function InvoicesClient({
                       {badge.label}
                     </span>
                   </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ── Cards (mobile) ── */}
+        <div className="sm:hidden space-y-3">
+          {invoices.length === 0 ? (
+            <div className="rounded-xl border border-[var(--z-border)] px-6 py-12 text-center text-sm text-[var(--z-muted)]">
+              No invoices match your filters.
+            </div>
+          ) : (
+            invoices.map((inv) => {
+              const badge = statusBadge(inv.status);
+              const overdue = isOverdue(inv);
+              const locInfo = inv.location_id ? LOCATION_MAP[inv.location_id] : null;
+              return (
+                <div
+                  key={inv.id}
+                  className="rounded-xl border px-4 py-3 space-y-1.5"
+                  style={{
+                    borderColor: overdue ? "#EF444466" : "var(--z-border)",
+                    background: "var(--z-surface)",
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate font-bold text-[var(--z-fg)]">{inv.customer_name || "—"}</div>
+                      {inv.customer_email && <div className="truncate text-xs text-[var(--z-muted)]">{inv.customer_email}</div>}
+                    </div>
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="font-semibold text-[var(--z-fg)]">{formatCents(inv.amount_cents)}</span>
+                    {locInfo && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${locInfo.color}22`, color: locInfo.color }}>{locInfo.name}</span>}
+                    {inv.invoice_number && <span className="text-[var(--z-muted)]">#{inv.invoice_number}</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--z-muted)]">
+                    {inv.due_date && <span style={{ color: overdue ? "#EF4444" : undefined }}>Due {formatDate(inv.due_date)}{overdue ? " · OVERDUE" : ""}</span>}
+                    {inv.paid_at && <span>Paid {formatDate(inv.paid_at)}</span>}
+                  </div>
+                  {inv.family_id && (
+                    <Link href={`/crm/families/${inv.family_id}`} className="text-[10px] hover:underline" style={{ color: "var(--z-accent)" }}>View family →</Link>
+                  )}
                 </div>
               );
             })
