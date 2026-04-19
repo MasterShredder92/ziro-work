@@ -18,6 +18,7 @@ import {
   linesForAgent,
   primaryLinkForAgent,
 } from "@/components/agent/agentDashboardLines";
+import { AGENT_RATE_CONFIG, SEED_TASKS, buildAgentSummaries } from "@/lib/agents/agentSavings";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -40,30 +41,34 @@ function resolveDashboardAgents(metas: AgentMetadata[]): {
   return { leader, team };
 }
 
-/**
- * Static circular avatar — no floating animation, no orbit ring (dashboard only).
- * Keeps faces out of overlapping text above/below.
- */
-function DashboardAgentFace({
+function fmtUsd(n: number) {
+  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+/** The glowing circle avatar */
+function AgentOrb({
   meta,
   sizePx,
+  isExpanded,
 }: {
   meta: AgentMetadata;
   sizePx: number;
+  isExpanded: boolean;
 }) {
   const img = meta.imagePath;
   const [imgOk, setImgOk] = React.useState(true);
-  const style = {
-    width: sizePx,
-    height: sizePx,
-    borderColor: `color-mix(in oklab, ${meta.accent}, transparent 40%)`,
-    boxShadow: `0 10px 40px ${meta.glow}, inset 0 1px 0 color-mix(in oklab, white, transparent 85%)`,
-  } as React.CSSProperties;
 
   return (
     <div
-      className="relative shrink-0 overflow-hidden rounded-full border-2 bg-[var(--z-surface-2)]"
-      style={style}
+      className="relative shrink-0 overflow-hidden rounded-full border-2 bg-[var(--z-surface-2)] transition-all duration-300"
+      style={{
+        width: sizePx,
+        height: sizePx,
+        borderColor: `color-mix(in oklab, ${meta.accent}, transparent ${isExpanded ? "20%" : "40%"})`,
+        boxShadow: isExpanded
+          ? `0 0 0 4px color-mix(in oklab, ${meta.accent}, transparent 70%), 0 16px 48px ${meta.glow}`
+          : `0 8px 32px ${meta.glow}`,
+      }}
     >
       {img && imgOk ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -80,32 +85,88 @@ function DashboardAgentFace({
   );
 }
 
-function AgentOrbPanel({
+/** Collapsed circle card — just the orb, name, and tagline */
+function AgentCircleCollapsed({
+  meta,
+  savings,
+  onClick,
+}: {
+  meta: AgentMetadata;
+  savings: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group relative flex w-full flex-col items-center gap-3 rounded-2xl border p-5 text-center",
+        "border-[color-mix(in_oklab,var(--z-border),transparent_8%)]",
+        "bg-[color-mix(in_oklab,var(--z-surface-2),transparent_35%)]",
+        "transition-all duration-200",
+        "hover:border-[color-mix(in_oklab,var(--z-agent-accent),transparent_40%)]",
+        "hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-agent-accent),transparent_50%),0_8px_32px_color-mix(in_oklab,var(--z-agent-accent),transparent_80%)]",
+        focusRingClassName(),
+      )}
+      style={{ "--z-agent-accent": meta.accent, "--z-agent-glow": meta.glow } as React.CSSProperties}
+    >
+      {/* Subtle glow blob */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in oklab, ${meta.accent}, transparent 88%), transparent 70%)` }}
+      />
+
+      <AgentOrb meta={meta} sizePx={64} isExpanded={false} />
+
+      <div className="relative space-y-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: meta.accent }}>
+          {getAgent(meta.id)?.role ?? "Agent"}
+        </p>
+        <p className="text-sm font-bold text-[var(--z-fg)]">{meta.displayName}</p>
+        <p className="text-[11px] leading-snug text-[var(--z-muted)]">{meta.tagline}</p>
+      </div>
+
+      {savings > 0 && (
+        <div className="relative rounded-full border px-3 py-1 text-[11px] font-bold"
+          style={{
+            borderColor: `color-mix(in oklab, ${meta.accent}, transparent 60%)`,
+            color: meta.accent,
+            background: `color-mix(in oklab, ${meta.accent}, transparent 88%)`,
+          }}
+        >
+          saved {fmtUsd(savings)} this month
+        </div>
+      )}
+
+      <div className="relative text-[10px] font-semibold text-[var(--z-muted)] group-hover:text-[var(--z-fg)] transition-colors">
+        Click to expand ↓
+      </div>
+    </button>
+  );
+}
+
+/** Expanded panel — full data, actions, savings breakdown */
+function AgentCircleExpanded({
   meta,
   metrics,
   signals,
   loading,
-  variant,
+  savings,
+  onCollapse,
 }: {
   meta: AgentMetadata;
   metrics: DashboardMetrics;
   signals: StudentSignals;
   loading: boolean;
-  variant: "leader" | "team";
+  savings: number;
+  onCollapse: () => void;
 }) {
   const entry = getAgent(meta.id);
-  const specialty = entry?.role ?? "Helper";
-  const orbSize = variant === "leader" ? 88 : 56;
-
-  const style = {
-    "--z-agent-accent": meta.accent,
-    "--z-agent-glow": meta.glow,
-  } as React.CSSProperties;
-
+  const specialty = entry?.role ?? "Agent";
   const lines = linesForAgent(meta.id, metrics, signals);
   const link = primaryLinkForAgent(meta.id);
   const ask = askActionForAgent(meta.id);
-  const hasEstimate = lines.some((l) => l.isEstimate);
+  const rateConfig = AGENT_RATE_CONFIG[meta.id as keyof typeof AGENT_RATE_CONFIG];
 
   const fireAsk = () => {
     if (!ask) return;
@@ -119,125 +180,213 @@ function AgentOrbPanel({
     }
   };
 
-  const dataBlock = (
+  return (
     <div
-      className={cn(
-        "rounded-xl border text-left",
-        "border-[color-mix(in_oklab,var(--z-agent-accent),transparent_75%)]",
-        "bg-[color-mix(in_oklab,var(--z-surface-2),transparent_20%)]",
-        "p-3",
-      )}
+      className="relative overflow-hidden rounded-2xl border p-5 sm:p-6"
+      style={{
+        "--z-agent-accent": meta.accent,
+        "--z-agent-glow": meta.glow,
+        borderColor: `color-mix(in oklab, ${meta.accent}, transparent 45%)`,
+        boxShadow: `0 0 0 1px color-mix(in oklab, ${meta.accent}, transparent 55%), 0 16px 48px ${meta.glow}`,
+        background: `linear-gradient(160deg, color-mix(in oklab, var(--z-surface), transparent 5%) 0%, color-mix(in oklab, var(--z-surface-2), transparent 30%) 100%)`,
+      } as React.CSSProperties}
     >
-      {loading ? (
-        <p className="text-xs text-[var(--z-muted)]">Loading your numbers…</p>
-      ) : (
-        <ul className="space-y-2 text-[11px] leading-snug text-[color-mix(in_oklab,var(--z-fg),transparent_12%)] sm:text-xs">
-          {lines.map((line, i) => (
-            <li
-              key={i}
-              className={line.isEstimate ? "text-[color-mix(in_oklab,var(--z-fg),transparent_28%)]" : ""}
-            >
-              {line.text}
-            </li>
-          ))}
-        </ul>
-      )}
-      {hasEstimate && !loading ? (
-        <p className="mt-2 text-[10px] leading-snug text-[var(--z-muted)]">
-          Dollar estimates use optional env settings so we do not guess your prices in secret.
-        </p>
-      ) : null}
-    </div>
-  );
-
-  const actions = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Link
-        href={link.href}
-        className={cn(
-          "inline-flex h-9 items-center justify-center rounded-full px-4 text-xs font-semibold transition-colors",
-          "bg-[color-mix(in_oklab,var(--z-agent-accent),transparent_12%)]",
-          "text-[var(--z-fg)] ring-1 ring-[color-mix(in_oklab,var(--z-agent-accent),transparent_45%)]",
-          "hover:bg-[color-mix(in_oklab,var(--z-agent-accent),transparent_22%)]",
-          focusRingClassName(),
-        )}
-      >
-        {link.label}
-      </Link>
-      {ask ? (
-        <Button type="button" size="sm" variant="ghost" className="text-[var(--z-muted)]" onClick={fireAsk}>
-          {ask.label}
-        </Button>
-      ) : null}
-    </div>
-  );
-
-  if (variant === "leader") {
-    return (
+      {/* Glow blob */}
       <div
-        style={style}
-        className={cn(
-          "relative overflow-hidden rounded-2xl border",
-          "border-[color-mix(in_oklab,var(--z-agent-accent),transparent_55%)]",
-          "bg-[linear-gradient(165deg,color-mix(in_oklab,var(--z-surface),transparent_5%)_0%,color-mix(in_oklab,var(--z-surface-2),transparent_30%)_100%)]",
-          "p-6 sm:p-8",
-        )}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full opacity-[0.12] blur-3xl"
-          style={{ background: meta.accent }}
-        />
-        <div className="relative flex flex-col items-center text-center">
-          <DashboardAgentFace meta={meta} sizePx={orbSize} />
-          <div className="mt-4 space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: meta.accent }}>
+        aria-hidden
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-[0.14] blur-3xl"
+        style={{ background: meta.accent }}
+      />
+
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
+        {/* Left: orb + name */}
+        <div className="flex flex-col items-center gap-3 sm:items-start">
+          <AgentOrb meta={meta} sizePx={80} isExpanded={true} />
+          {savings > 0 && (
+            <div className="rounded-full border px-3 py-1 text-center text-[11px] font-bold"
+              style={{
+                borderColor: `color-mix(in oklab, ${meta.accent}, transparent 55%)`,
+                color: meta.accent,
+                background: `color-mix(in oklab, ${meta.accent}, transparent 88%)`,
+              }}
+            >
+              {fmtUsd(savings)} saved this month
+            </div>
+          )}
+        </div>
+
+        {/* Right: content */}
+        <div className="min-w-0 flex-1 space-y-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: meta.accent }}>
               {specialty}
             </p>
-            <p className="text-lg font-semibold tracking-tight text-[var(--z-fg)]">{meta.displayName}</p>
+            <p className="mt-0.5 text-lg font-bold text-[var(--z-fg)]">{meta.displayName}</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--z-muted)]">{meta.tagline}</p>
           </div>
-          <p className="mt-2 max-w-md text-xs leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_30%)]">
-            {meta.tagline}
-          </p>
-          <div className="mt-5 w-full max-w-md">{dataBlock}</div>
-          <div className="mt-5 flex justify-center">{actions}</div>
+
+          {/* Data lines */}
+          <div
+            className="rounded-xl border p-3"
+            style={{
+              borderColor: `color-mix(in oklab, ${meta.accent}, transparent 75%)`,
+              background: `color-mix(in oklab, var(--z-surface-2), transparent 20%)`,
+            }}
+          >
+            {loading ? (
+              <p className="text-xs text-[var(--z-muted)]">Loading your numbers…</p>
+            ) : (
+              <ul className="space-y-2 text-[11px] leading-snug text-[color-mix(in_oklab,var(--z-fg),transparent_12%)] sm:text-xs">
+                {lines.map((line, i) => (
+                  <li key={i} className={line.isEstimate ? "text-[var(--z-muted)]" : ""}>
+                    {line.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Rate info */}
+          {rateConfig && (
+            <p className="text-[10px] text-[var(--z-muted)]">
+              Rate basis: {rateConfig.roleEquivalent} · ${rateConfig.hourlyRateUsd}/hr US avg · {rateConfig.rateSource}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={link.href}
+              className={cn(
+                "inline-flex h-9 items-center justify-center rounded-full px-4 text-xs font-semibold transition-colors",
+                "ring-1",
+                focusRingClassName(),
+              )}
+              style={{
+                background: `color-mix(in oklab, ${meta.accent}, transparent 12%)`,
+                color: "var(--z-fg)",
+                ringColor: `color-mix(in oklab, ${meta.accent}, transparent 45%)`,
+              }}
+            >
+              {link.label}
+            </Link>
+            {ask ? (
+              <Button type="button" size="sm" variant="ghost" className="text-[var(--z-muted)]" onClick={fireAsk}>
+                {ask.label}
+              </Button>
+            ) : null}
+            <button
+              onClick={onCollapse}
+              className="ml-auto text-[11px] text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+            >
+              Collapse ↑
+            </button>
+          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+/** Leader card — always expanded, centered, full-width */
+function LeaderCard({
+  meta,
+  metrics,
+  signals,
+  loading,
+  savings,
+}: {
+  meta: AgentMetadata;
+  metrics: DashboardMetrics;
+  signals: StudentSignals;
+  loading: boolean;
+  savings: number;
+}) {
+  const entry = getAgent(meta.id);
+  const specialty = entry?.role ?? "Orchestrator";
+  const lines = linesForAgent(meta.id, metrics, signals);
+  const link = primaryLinkForAgent(meta.id);
+  const ask = askActionForAgent(meta.id);
+  const rateConfig = AGENT_RATE_CONFIG[meta.id as keyof typeof AGENT_RATE_CONFIG];
+
+  const fireAsk = () => {
+    if (!ask) return;
+    try {
+      queueAgentAction(meta.id, ask.action, { source: "dashboard", ...(typeof ask.payload === "object" && ask.payload ? ask.payload : {}) });
+    } catch { /* ignore */ }
+  };
 
   return (
     <div
-      style={style}
-      className={cn(
-        "relative overflow-hidden rounded-2xl border",
-        "border-[color-mix(in_oklab,var(--z-border),transparent_8%)]",
-        "bg-[color-mix(in_oklab,var(--z-surface-2),transparent_35%)]",
-        "p-4 sm:p-5",
-        "transition-[border-color,box-shadow] duration-200",
-        "hover:border-[color-mix(in_oklab,var(--z-agent-accent),transparent_45%)]",
-        "hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-agent-accent),transparent_55%)]",
-      )}
+      className="relative overflow-hidden rounded-2xl border p-6 sm:p-8"
+      style={{
+        "--z-agent-accent": meta.accent,
+        "--z-agent-glow": meta.glow,
+        borderColor: `color-mix(in oklab, ${meta.accent}, transparent 40%)`,
+        boxShadow: `0 0 0 1px color-mix(in oklab, ${meta.accent}, transparent 50%), 0 24px 64px ${meta.glow}`,
+        background: `linear-gradient(165deg, color-mix(in oklab, var(--z-surface), transparent 5%) 0%, color-mix(in oklab, var(--z-surface-2), transparent 30%) 100%)`,
+      } as React.CSSProperties}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="flex shrink-0 justify-center sm:justify-start">
-          <DashboardAgentFace meta={meta} sizePx={orbSize} />
+      <div aria-hidden className="pointer-events-none absolute -right-24 top-0 h-64 w-64 rounded-full opacity-[0.13] blur-3xl" style={{ background: meta.accent }} />
+
+      <div className="relative flex flex-col items-center text-center">
+        <AgentOrb meta={meta} sizePx={96} isExpanded={true} />
+
+        <div className="mt-4 space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: meta.accent }}>{specialty} · Leader</p>
+          <p className="text-xl font-bold tracking-tight text-[var(--z-fg)]">{meta.displayName}</p>
         </div>
-        <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
-          <div>
-            <p
-              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
-              style={{ color: meta.accent }}
-            >
-              {specialty}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold text-[var(--z-fg)]">{meta.displayName}</p>
-            <p className="mt-1 text-xs leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_32%)]">
-              {meta.tagline}
-            </p>
+
+        <p className="mt-2 max-w-md text-xs leading-relaxed text-[var(--z-muted)]">{meta.tagline}</p>
+
+        {savings > 0 && (
+          <div className="mt-3 rounded-full border px-4 py-1.5 text-[11px] font-bold"
+            style={{
+              borderColor: `color-mix(in oklab, ${meta.accent}, transparent 55%)`,
+              color: meta.accent,
+              background: `color-mix(in oklab, ${meta.accent}, transparent 88%)`,
+            }}
+          >
+            orchestrated {fmtUsd(savings)} in savings this month
           </div>
-          {dataBlock}
-          <div className="flex justify-center sm:justify-start">{actions}</div>
+        )}
+
+        <div
+          className="mt-5 w-full max-w-lg rounded-xl border p-4 text-left"
+          style={{
+            borderColor: `color-mix(in oklab, ${meta.accent}, transparent 72%)`,
+            background: `color-mix(in oklab, var(--z-surface-2), transparent 20%)`,
+          }}
+        >
+          {loading ? (
+            <p className="text-xs text-[var(--z-muted)]">Loading…</p>
+          ) : (
+            <ul className="space-y-2 text-xs leading-snug text-[color-mix(in_oklab,var(--z-fg),transparent_12%)]">
+              {lines.map((line, i) => (
+                <li key={i} className={line.isEstimate ? "text-[var(--z-muted)]" : ""}>{line.text}</li>
+              ))}
+            </ul>
+          )}
+          {rateConfig && (
+            <p className="mt-3 text-[10px] text-[var(--z-muted)]">
+              Rate basis: {rateConfig.roleEquivalent} · ${rateConfig.hourlyRateUsd}/hr US avg
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Link
+            href={link.href}
+            className={cn("inline-flex h-9 items-center justify-center rounded-full px-5 text-xs font-semibold transition-colors ring-1", focusRingClassName())}
+            style={{ background: `color-mix(in oklab, ${meta.accent}, transparent 12%)`, color: "var(--z-fg)" }}
+          >
+            {link.label}
+          </Link>
+          {ask ? (
+            <Button type="button" size="sm" variant="ghost" className="text-[var(--z-muted)]" onClick={fireAsk}>
+              {ask.label}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -246,11 +395,9 @@ function AgentOrbPanel({
 
 function TeamDivider() {
   return (
-    <div className="flex items-center gap-3 py-2">
+    <div className="flex items-center gap-3 py-1">
       <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[var(--z-border)]" />
-      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--z-muted)]">
-        Specialists
-      </span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--z-muted)]">Specialists</span>
       <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--z-border)]" />
     </div>
   );
@@ -263,23 +410,54 @@ export function AgentCards() {
   const { signals, loading: sLoading } = useStudentSignals();
   const loading = mLoading || sLoading;
 
+  // Pre-compute savings from seed data
+  const savingsByAgent = React.useMemo(() => {
+    const summaries = buildAgentSummaries(SEED_TASKS);
+    const map: Record<string, number> = {};
+    for (const s of summaries) map[s.agentId] = s.totalSavedUsd;
+    return map;
+  }, []);
+
+  const [expanded, setExpanded] = React.useState<string | null>(null);
+
   return (
-    <div className="space-y-6">
-      {leader ? <AgentOrbPanel meta={leader} metrics={metrics} signals={signals} loading={loading} variant="leader" /> : null}
+    <div className="space-y-5">
+      {/* Leader — always shown fully expanded */}
+      {leader ? (
+        <LeaderCard
+          meta={leader}
+          metrics={metrics}
+          signals={signals}
+          loading={loading}
+          savings={savingsByAgent[leader.id] ?? 0}
+        />
+      ) : null}
 
       {leader && team.length > 0 ? <TeamDivider /> : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {team.map((meta) => (
-          <AgentOrbPanel
-            key={meta.id}
-            meta={meta}
-            metrics={metrics}
-            signals={signals}
-            loading={loading}
-            variant="team"
-          />
-        ))}
+      {/* Team — circles that expand on click */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {team.map((meta) =>
+          expanded === meta.id ? (
+            <div key={meta.id} className="col-span-2 sm:col-span-2 lg:col-span-3">
+              <AgentCircleExpanded
+                meta={meta}
+                metrics={metrics}
+                signals={signals}
+                loading={loading}
+                savings={savingsByAgent[meta.id] ?? 0}
+                onCollapse={() => setExpanded(null)}
+              />
+            </div>
+          ) : (
+            <AgentCircleCollapsed
+              key={meta.id}
+              meta={meta}
+              savings={savingsByAgent[meta.id] ?? 0}
+              onClick={() => setExpanded(meta.id)}
+            />
+          )
+        )}
       </div>
     </div>
   );

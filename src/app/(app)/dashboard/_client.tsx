@@ -5,15 +5,17 @@ import { PageShell } from "@/components/layouts/PageShell";
 import { PageTransition } from "@/components/system/PageTransition";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 
-function MetricsSkeleton() {
+function AgentGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-[5.25rem] animate-pulse rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)]"
-        />
-      ))}
+    <div className="space-y-6">
+      {/* Leader skeleton */}
+      <div className="h-48 animate-pulse rounded-2xl border border-[var(--z-border)] bg-[var(--z-surface-2)]" />
+      {/* Team grid skeleton */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-56 animate-pulse rounded-2xl border border-[var(--z-border)] bg-[var(--z-surface-2)]" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -31,9 +33,9 @@ function BlockSkeleton({ rows }: { rows: number }) {
   );
 }
 
-const DashboardMetricsBar = dynamic(
-  () => import("@/components/dashboard/DashboardMetricsBar").then((m) => ({ default: m.DashboardMetricsBar })),
-  { loading: () => <MetricsSkeleton /> },
+const AgentCards = dynamic(
+  () => import("@/components/agent/AgentCards").then((m) => ({ default: m.AgentCards })),
+  { loading: () => <AgentGridSkeleton /> },
 );
 
 const QuickActions = dynamic(
@@ -44,11 +46,6 @@ const QuickActions = dynamic(
 const ActivityFeed = dynamic(
   () => import("@/components/dashboard/ActivityFeed").then((m) => ({ default: m.ActivityFeed })),
   { loading: () => <BlockSkeleton rows={5} /> },
-);
-
-const AgentCards = dynamic(
-  () => import("@/components/agent/AgentCards").then((m) => ({ default: m.AgentCards })),
-  { loading: () => <BlockSkeleton rows={2} /> },
 );
 
 const AgentPanel = dynamic(
@@ -66,33 +63,24 @@ export function DashboardClient() {
       <PageTransition>
         <div
           className="mx-auto flex max-w-[1600px] flex-col gap-8 lg:flex-row lg:items-start lg:gap-8"
-          data-dashboard-rev="3"
+          data-dashboard-rev="4"
           data-app="ziro-work"
         >
           <div className="flex min-w-0 flex-1 flex-col gap-8">
+            {/* ── Hero header ─────────────────────────────────────── */}
             <header className="border-b border-[color-mix(in_oklab,var(--z-border),transparent_35%)] pb-4">
               <h1 className="bg-gradient-to-br from-[var(--z-fg)] to-[color-mix(in_oklab,var(--z-fg),transparent_25%)] bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-[1.65rem]">
-                Dashboard
+                Your Crew
               </h1>
               <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_38%)]">
-                Snapshot of money, pipeline, and people — then your crew and shortcuts.
+                7 agents working for you right now. Click any one to see exactly what they&apos;re doing and what the numbers say.
               </p>
             </header>
 
-            <DashboardSection
-              id="metrics"
-              title="At a glance"
-              description="Key numbers from invoices and recent activity."
-            >
-              <div data-tour="dashboard-metrics" className="relative z-10">
-                <DashboardMetricsBar />
-              </div>
-            </DashboardSection>
-
+            {/* ── Agent circles — THE hero section ────────────────── */}
             <DashboardSection
               id="team"
-              title="Your team"
-              description="Ziro leads; everyone else has a focused job. Nothing overlaps — scroll and read comfortably."
+              title="Your crew"
               withSurface={false}
             >
               <div data-tour="agent-cards">
@@ -100,12 +88,14 @@ export function DashboardClient() {
               </div>
             </DashboardSection>
 
+            {/* ── Shortcuts ────────────────────────────────────────── */}
             <DashboardSection title="Shortcuts" description="Jump to the work that usually needs a human.">
               <div data-tour="quick-actions">
                 <QuickActions showTitle={false} />
               </div>
             </DashboardSection>
 
+            {/* ── Recent activity ──────────────────────────────────── */}
             <DashboardSection
               title="Recent activity"
               description="Latest events across your studio. The last 7 days show up first."
@@ -116,6 +106,7 @@ export function DashboardClient() {
             </DashboardSection>
           </div>
 
+          {/* ── Right sidebar ─────────────────────────────────────── */}
           <aside
             className="w-full shrink-0 lg:sticky lg:top-5 lg:w-[21rem] xl:w-[22rem]"
             data-tour="agent-panel"
