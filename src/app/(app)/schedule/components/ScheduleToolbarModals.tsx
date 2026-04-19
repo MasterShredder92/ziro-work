@@ -578,6 +578,8 @@ type GoVirtualModalProps = {
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
 };
 
+type VirtualChoice = "virtual" | "in_person" | "not_taking";
+
 export function GoVirtualModal({
   locationId,
   selectedDate,
@@ -587,11 +589,9 @@ export function GoVirtualModal({
   onClose,
   onBlocksChange,
 }: GoVirtualModalProps) {
-  const [scope, setScope] = React.useState<"all" | "location">("location");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
-  const [linksDispatched, setLinksDispatched] = React.useState(0);
 
   const studentsById = React.useMemo(() => {
     const m = new Map<string, Student>();
@@ -599,45 +599,74 @@ export function GoVirtualModal({
     return m;
   }, [students]);
 
-  const targetBlocks = React.useMemo(() => {
-    return blocks.filter(
+  const targetBlocks = React.useMemo(() =>
+    blocks.filter(
       (b) =>
         b.block_date === selectedDate &&
         b.student_id &&
-        b.block_type === "student_session" &&
+        (b.block_type === "student_session" || b.block_type === "first_day") &&
         !b.is_virtual,
-    );
-  }, [blocks, selectedDate]);
+    ),
+  [blocks, selectedDate]);
 
-  async function handleGoVirtual() {
+  // Per-student choice: default all to "virtual"
+  const [choices, setChoices] = React.useState<Record<string, VirtualChoice>>(() => {
+    const init: Record<string, VirtualChoice> = {};
+    for (const b of targetBlocks) if (b.id) init[b.id] = "virtual";
+    return init;
+  });
+
+  // Re-init when targetBlocks changes
+  React.useEffect(() => {
+    setChoices((prev) => {
+      const next: Record<string, VirtualChoice> = {};
+      for (const b of targetBlocks) next[b.id] = prev[b.id] ?? "virtual";
+      return next;
+    });
+  }, [targetBlocks.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const virtualCount = Object.values(choices).filter((c) => c === "virtual").length;
+  const notTakingCount = Object.values(choices).filter((c) => c === "not_taking").length;
+  const inPersonCount = Object.values(choices).filter((c) => c === "in_person").length;
+
+  async function handleCommit() {
     setSaving(true);
     setError(null);
     try {
       const tenantId = blocks[0]?.tenant_id ?? "";
-      // Patch all target blocks to is_virtual = true
       await Promise.all(
-        targetBlocks.map((b) =>
-          fetch(`/api/schedule-blocks/${encodeURIComponent(b.id)}?skip_conflict_check=true`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json", "x-tenant-id": tenantId },
-            body: JSON.stringify({ is_virtual: true, block_type: "virtual" }),
-          }),
-        ),
+        targetBlocks.map((b) => {
+          const choice = choices[b.id] ?? "virtual";
+          if (choice === "virtual") {
+            return fetch(`/api/schedule-blocks/${encodeURIComponent(b.id)}?skip_conflict_check=true`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json", "x-tenant-id": tenantId },
+              body: JSON.stringify({ is_virtual: true, block_type: "virtual" }),
+            });
+          } else if (choice === "not_taking") {
+            // Mark as call_out (family callout) — still charged, just not attending
+            return fetch(`/api/schedule-blocks/${encodeURIComponent(b.id)}?skip_conflict_check=true`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json", "x-tenant-id": tenantId },
+              body: JSON.stringify({ block_type: "call_out", is_family_callout: true, status: "available", notes: "Student declined virtual — still charged" }),
+            });
+          }
+          // in_person: no change needed
+          return Promise.resolve();
+        }),
       );
-      // Stub: generate Google Meet links and dispatch via Gmail/QUO
-      // (Integration keys not yet configured — links would be sent here)
-      const dispatched = targetBlocks.filter((b) => b.student_id).length;
-      setLinksDispatched(dispatched);
 
-      const updatedBlocks = blocks.map((b) =>
-        targetBlocks.some((tb) => tb.id === b.id)
-          ? { ...b, is_virtual: true, block_type: "virtual" as const }
-          : b,
-      );
+      const updatedBlocks = blocks.map((b) => {
+        const choice = choices[b.id];
+        if (!choice || choice === "in_person") return b;
+        if (choice === "virtual") return { ...b, is_virtual: true, block_type: "virtual" as const };
+        if (choice === "not_taking") return { ...b, block_type: "call_out" as const, is_family_callout: true, status: "available" as const };
+        return b;
+      });
       onBlocksChange(updatedBlocks);
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to go virtual");
+      setError(err instanceof Error ? err.message : "Failed to commit");
     } finally {
       setSaving(false);
     }
@@ -645,21 +674,22 @@ export function GoVirtualModal({
 
   if (done) {
     return (
-      <ModalShell title="Gone Virtual" onClose={onClose}>
-        <div className="py-6 text-center">
+      <ModalShell title="Virtual Day Committed" onClose={onClose}>
+        <div className="py-6 text-center space-y-2">
           <div className="mb-3 text-4xl">💻</div>
-          <p className="text-sm font-semibold text-[var(--z-fg)]">
-            {targetBlocks.length} session{targetBlocks.length !== 1 ? "s" : ""} switched to virtual.
+          {virtualCount > 0 && (
+            <p className="text-sm font-semibold text-[var(--z-fg)]">{virtualCount} session{virtualCount !== 1 ? "s" : ""} switched to virtual.</p>
+          )}
+          {notTakingCount > 0 && (
+            <p className="text-sm text-amber-300">{notTakingCount} student{notTakingCount !== 1 ? "s" : ""} marked as not attending — still charged.</p>
+          )}
+          {inPersonCount > 0 && (
+            <p className="text-sm text-emerald-300">{inPersonCount} session{inPersonCount !== 1 ? "s" : ""} staying in-person.</p>
+          )}
+          <p className="text-xs text-[var(--z-muted)] pt-1">
+            Google Meet links queued for virtual sessions (requires Gmail in Settings → Integrations).
           </p>
-          <p className="mt-1 text-xs text-[var(--z-muted)]">
-            {linksDispatched} Google Meet link{linksDispatched !== 1 ? "s" : ""} queued for dispatch
-            {" "}(requires Gmail integration in Settings → Integrations).
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-4 rounded-xl border border-[var(--z-border)] px-4 py-2 text-sm font-semibold text-[var(--z-fg)] hover:bg-white/5"
-          >
+          <button type="button" onClick={onClose} className="mt-4 rounded-xl border border-[var(--z-border)] px-4 py-2 text-sm font-semibold text-[var(--z-fg)] hover:bg-white/5">
             Done
           </button>
         </div>
@@ -670,7 +700,7 @@ export function GoVirtualModal({
   return (
     <ModalShell
       title="Go Virtual"
-      subtitle={`Switch all sessions on ${selectedDate} to virtual`}
+      subtitle={`Choose what each student does on ${selectedDate} — all are still charged`}
       onClose={onClose}
     >
       <div className="space-y-4">
@@ -678,58 +708,89 @@ export function GoVirtualModal({
           <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</div>
         )}
 
-        {/* Preview */}
-        <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-4">
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-            Sessions to switch
-          </div>
-          {targetBlocks.length === 0 ? (
-            <p className="text-sm text-[var(--z-muted)]">No in-person sessions found for this day.</p>
-          ) : (
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {targetBlocks.map((b) => {
-                const student = b.student_id ? studentsById.get(b.student_id) : null;
-                const teacher = teachers.find((t) => t.id === b.teacher_id);
-                return (
-                  <div key={b.id} className="flex items-center gap-2 text-xs">
-                    <span className="text-[var(--z-muted)] w-24 shrink-0">
-                      {minuteToLabel(toMinute(b.start_time))}
-                    </span>
-                    <span className="font-semibold text-[var(--z-fg)] truncate">
-                      {student ? studentFullName(student) : "—"}
-                    </span>
-                    <span className="text-[var(--z-muted)] truncate">
-                      w/ {teacher ? teacherFullName(teacher) : "—"}
-                    </span>
-                  </div>
-                );
-              })}
+        {targetBlocks.length === 0 ? (
+          <p className="text-sm text-[var(--z-muted)]">No in-person sessions found for this day.</p>
+        ) : (
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+            {/* Quick-set all */}
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Set all to</span>
+              <div className="flex gap-1">
+                {(["virtual", "in_person", "not_taking"] as VirtualChoice[]).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setChoices(Object.fromEntries(targetBlocks.map((b) => [b.id, c])))}
+                    className="rounded-lg border border-[var(--z-border)] px-2 py-1 text-[10px] font-semibold text-[var(--z-muted)] hover:bg-white/5 transition-colors"
+                  >
+                    {c === "virtual" ? "💻 Virtual" : c === "in_person" ? "🏢 In-Person" : "❌ Not Taking"}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+
+            {targetBlocks.map((b) => {
+              const student = b.student_id ? studentsById.get(b.student_id) : null;
+              const teacher = teachers.find((t) => t.id === b.teacher_id);
+              const choice = choices[b.id] ?? "virtual";
+              return (
+                <div key={b.id} className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--z-fg)]">
+                        {student ? studentFullName(student) : "—"}
+                      </div>
+                      <div className="text-[10px] text-[var(--z-muted)]">
+                        {minuteToLabel(toMinute(b.start_time))} w/ {teacher ? teacherFullName(teacher) : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  {/* 3-way toggle */}
+                  <div className="grid grid-cols-3 gap-1">
+                    {([
+                      { value: "virtual" as VirtualChoice, label: "💻 Virtual", activeClass: "border-sky-400/60 bg-sky-500/20 text-sky-200" },
+                      { value: "in_person" as VirtualChoice, label: "🏢 In-Person", activeClass: "border-emerald-400/60 bg-emerald-500/20 text-emerald-200" },
+                      { value: "not_taking" as VirtualChoice, label: "❌ Not Taking", activeClass: "border-amber-400/60 bg-amber-500/20 text-amber-200" },
+                    ]).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setChoices((prev) => ({ ...prev, [b.id]: opt.value }))}
+                        className={`rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition-colors ${
+                          choice === opt.value
+                            ? opt.activeClass
+                            : "border-[var(--z-border)] text-[var(--z-muted)] hover:bg-white/5"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {choice === "not_taking" && (
+                    <p className="mt-1.5 text-[10px] text-amber-300/80">Still charged — session logged as family call-out.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Gmail stub notice */}
         <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-300">
-          <span className="font-semibold">💻 Google Meet links</span> will be auto-generated and emailed to
-          teachers and students once Gmail is connected in{" "}
-          <span className="font-semibold">Settings → Integrations</span>.
+          <span className="font-semibold">💻 Google Meet links</span> will be auto-generated and emailed once Gmail is connected in <span className="font-semibold">Settings → Integrations</span>.
         </div>
 
         <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-[var(--z-border)] px-3 py-2.5 text-sm font-semibold text-[var(--z-muted)] hover:bg-white/5"
-          >
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-[var(--z-border)] px-3 py-2.5 text-sm font-semibold text-[var(--z-muted)] hover:bg-white/5">
             Cancel
           </button>
           <button
             type="button"
             disabled={saving || targetBlocks.length === 0}
-            onClick={handleGoVirtual}
+            onClick={handleCommit}
             className="flex-1 rounded-xl border border-sky-400/50 bg-sky-500/20 px-3 py-2.5 text-sm font-semibold text-sky-200 disabled:opacity-50 hover:bg-sky-500/30 transition-colors"
           >
-            {saving ? "Switching…" : `Go Virtual (${targetBlocks.length})`}
+            {saving ? "Committing…" : `Commit (${targetBlocks.length} sessions)`}
           </button>
         </div>
       </div>

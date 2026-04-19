@@ -9,8 +9,7 @@ import { AgentFullChat } from "./AgentFullChat";
 import { AgentAutoCollapseOnScroll } from "./AgentAutoCollapseOnScroll";
 import { AgentUIBoundary } from "./AgentUIBoundary";
 import { AgentInlineSuggestions } from "./AgentInlineSuggestions";
-import { AgentEventLogDrawer } from "./AgentEventLogDrawer";
-import { AgentExperienceDock } from "./AgentExperienceDock";
+// AgentEventLogDrawer and AgentExperienceDock removed — floating dock was covering UI
 import { AgentDomainActionBridge } from "./AgentDomainActionBridge";
 
 /**
@@ -28,8 +27,6 @@ export function AgentOSRoot({ children }: { children: React.ReactNode }) {
         <AgentFullChat />
         <AgentAutoCollapseOnScroll />
         <AgentInlineSuggestions />
-        <AgentExperienceDock />
-        <AgentEventLogDrawer />
         <AgentDomainActionBridge />
       </AgentUIBoundary>
     </AgentOSProvider>

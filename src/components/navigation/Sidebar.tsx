@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -149,29 +150,36 @@ type SidebarProps = {
 
 export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
-  // Collapse to icon-only on /schedule and its sub-pages
   const isSchedulePage = pathname?.startsWith("/schedule") ?? false;
+  // Hover-expand state (only relevant on schedule pages)
+  const [hovered, setHovered] = React.useState(false);
+
+  // When not on schedule page, always show full sidebar
+  // When on schedule page: 64px collapsed, expands to 260px on hover (floats over content)
+  const isExpanded = !isSchedulePage || hovered;
 
   return (
     <aside
+      onMouseEnter={() => isSchedulePage && setHovered(true)}
+      onMouseLeave={() => isSchedulePage && setHovered(false)}
       className={clsx(
-        "fixed left-0 top-0 z-40 h-full border-r border-[#1c1c1e] bg-[#0a0a0c] transition-all duration-300 ease-out",
+        "fixed left-0 top-0 z-40 h-full border-r border-[#1c1c1e] bg-[#0a0a0c]",
         "flex flex-col",
-        isSchedulePage ? "w-[64px]" : "w-[260px]",
+        "transition-[width] duration-200 ease-out",
+        // On schedule pages: always 64px in layout, expands to 260px floating on hover
+        isSchedulePage ? (hovered ? "w-[260px] shadow-2xl" : "w-[64px]") : "w-[260px]",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
       aria-label="Primary navigation"
     >
       {/* Logo / brand */}
       <div className={clsx(
-        "flex items-center border-b border-[#1c1c1e] transition-all duration-300",
-        isSchedulePage ? "justify-center px-0 py-5" : "justify-between px-6 pb-5 pt-7",
+        "flex items-center border-b border-[#1c1c1e] transition-all duration-200 overflow-hidden",
+        isExpanded ? "justify-between px-6 pb-5 pt-7" : "justify-center px-0 py-5",
       )}>
-        {isSchedulePage ? (
-          <div className="text-[#00ff88] font-extrabold text-xl tracking-tighter select-none">Z</div>
-        ) : (
+        {isExpanded ? (
           <>
-            <div className="text-2xl tracking-tighter">
+            <div className="text-2xl tracking-tighter whitespace-nowrap">
               <span className="text-[#00ff88] font-extrabold">ZIRO</span>
               <span className="text-white ml-1 font-light">WORK</span>
             </div>
@@ -184,15 +192,17 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
               Close
             </button>
           </>
+        ) : (
+          <div className="text-[#00ff88] font-extrabold text-xl tracking-tighter select-none">Z</div>
         )}
       </div>
 
       {/* Nav */}
       <nav className={clsx(
-        "flex-1 overflow-y-auto overflow-x-hidden py-4",
-        isSchedulePage ? "px-0 space-y-1" : "px-4 space-y-6",
+        "flex-1 overflow-y-auto overflow-x-hidden py-4 transition-all duration-200",
+        isExpanded ? "px-4 space-y-6" : "px-0 space-y-1",
       )}>
-        {isSchedulePage ? (
+        {!isExpanded ? (
           // Icon-only mode: flat list of icons with tooltips
           <div className="flex flex-col items-center gap-1 px-2">
             {ROUTE_GROUPS.flatMap((g) => g.items).map((item) => {
@@ -211,7 +221,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                   )}
                 >
                   {getIcon(item.href)}
-                  {/* Tooltip */}
+                  {/* Tooltip — shown only in icon-only mode */}
                   <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-md border border-[#2b2b2f] bg-[#0a0a0c] px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
                     {item.label}
                   </span>
@@ -228,7 +238,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
               data-tour={group.id === "lifecycle" ? "lifecycle-stages" : undefined}
             >
               <div className="px-2 pb-2">
-                <div className="text-xs font-semibold text-[#505055] uppercase tracking-wider">
+                <div className="text-xs font-semibold text-[#505055] uppercase tracking-wider whitespace-nowrap">
                   {group.label}
                 </div>
               </div>
@@ -239,14 +249,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                     key={item.id}
                     href={item.href}
                     className={clsx(
-                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors",
+                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
                       isActive
                         ? "bg-[#00ff88]/10 text-[#00ff88]"
                         : "text-[#909098] hover:text-white hover:bg-white/5",
                     )}
                     onClick={onClose}
                   >
-                    <span className={clsx(isActive ? "text-[#00ff88]" : "text-[#505055]")}>
+                    <span className={clsx("shrink-0", isActive ? "text-[#00ff88]" : "text-[#505055]")}>
                       {getIcon(item.href)}
                     </span>
                     {item.label}
@@ -258,8 +268,8 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         )}
       </nav>
 
-      {!isSchedulePage && (
-        <div className="px-6 pb-6 text-xs text-[#505055]">Ziro Work</div>
+      {isExpanded && (
+        <div className="px-6 pb-6 text-xs text-[#505055] whitespace-nowrap">Ziro Work</div>
       )}
     </aside>
   );

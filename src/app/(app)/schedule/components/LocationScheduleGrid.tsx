@@ -2,6 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
+import type { RubyEvent } from "./RubyScheduleBar";
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
@@ -34,6 +35,7 @@ type Props = {
   rooms: ScheduleRoom[];
   locationHours: LocationHoursMap;
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
+  onRubyEvent?: (e: RubyEvent) => void;
 };
 
 // ─── Block type display config ─────────────────────────────────────────────────
@@ -128,9 +130,17 @@ export function LocationScheduleGrid({
 }: Props) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
-  const [roomIdDraft, setRoomIdDraft] = React.useState<string>("");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // ── Booking state (for open_time / unbooked blocks) ──
+  const [bookingStudentQuery, setBookingStudentQuery] = React.useState("");
+  const [bookingStudentId, setBookingStudentId] = React.useState<string | null>(null);
+  const [bookingRecurring, setBookingRecurring] = React.useState(true);
+  // null = not yet determined; true/false = user answered
+  const [bookingFirstDay, setBookingFirstDay] = React.useState<boolean | null>(null);
+  // null = not yet checked; true = existing student; false = new student
+  const [bookingStudentHasBlocks, setBookingStudentHasBlocks] = React.useState<boolean | null>(null);
 
   // ── Compute time bounds from location_hours ──
   const { openMinute, closeMinute, isClosed } = React.useMemo(
@@ -209,9 +219,15 @@ export function LocationScheduleGrid({
   React.useEffect(() => {
     if (selectedBlock) {
       setSessionType(selectedBlock.block_type ?? "student_session");
-      setRoomIdDraft(selectedBlock.room_id ?? "");
+      // Reset booking state whenever a new block is selected
+      setBookingStudentQuery("");
+      setBookingStudentId(null);
+      setBookingRecurring(true);
+      setBookingFirstDay(null);
+      setBookingStudentHasBlocks(null);
+      setError(null);
     }
-  }, [selectedBlock]);
+  }, [selectedBlock?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Patch block ──
   async function patchBlock(block: ProjectedBlock, patch: Partial<ScheduleBlock>) {
@@ -266,6 +282,8 @@ export function LocationScheduleGrid({
       teacher_tally: true,
       status: "booked",
     });
+    const ciStudent = block.student_id ? studentsById.get(block.student_id) : null;
+    onRubyEvent?.({ type: "check_in", message: `✓ ${ciStudent ? studentName(ciStudent) : "Student"} checked in — logged.` });
   }
 
   async function callOut(block: ProjectedBlock) {
@@ -274,6 +292,88 @@ export function LocationScheduleGrid({
       is_family_callout: true,
       status: "available",
     });
+    const coStudent = block.student_id ? studentsById.get(block.student_id) : null;
+    onRubyEvent?.({ type: "call_out", message: `${coStudent ? studentName(coStudent) : "Session"} marked as call-out — still charged.` });
+  }
+
+  // ── Check if a student has any existing blocks (to determine new vs existing) ──
+  async function checkStudentHasBlocks(studentId: string): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `/api/schedule-blocks?student_id=${encodeURIComponent(studentId)}&limit=1`,
+        { headers: { "content-type": "application/json" } },
+      );
+      if (!res.ok) return false;
+      const j = await res.json().catch(() => null);
+      const data = j?.data ?? j;
+      return Array.isArray(data) ? data.length > 0 : false;
+    } catch {
+      return false;
+    }
+  }
+
+  // ── Book a student into an open slot ──
+  async function bookStudent(block: ProjectedBlock) {
+    if (!bookingStudentId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const tenantId = block.tenant_id ?? "";
+      const isFirstDay = bookingFirstDay === true;
+      const blockType: ScheduleBlock["block_type"] = isFirstDay ? "first_day" : "student_session";
+
+      await fetch(
+        `/api/schedule-blocks/${encodeURIComponent(block.source_block_id || block.id)}?skip_conflict_check=true`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({
+            student_id: bookingStudentId,
+            block_type: blockType,
+            status: "booked",
+            is_recurring: bookingRecurring,
+          }),
+        },
+      );
+
+      // If first_day: stub trigger for invoice creation + studio agreement
+      if (isFirstDay) {
+        await fetch("/api/events", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({
+            event_type: "first_day_trigger",
+            student_id: bookingStudentId,
+            block_id: block.source_block_id || block.id,
+            block_date: block.block_date,
+            location_id: locationId,
+            note: "First lesson booked — invoice + studio agreement dispatch pending integration setup",
+          }),
+        }).catch(() => null); // stub — endpoint may not exist yet, fail silently
+      }
+
+      const updated = blocks.map((b) =>
+        b.id === (block.source_block_id || block.id)
+          ? { ...b, student_id: bookingStudentId, block_type: blockType, status: "booked" as const, is_recurring: bookingRecurring }
+          : b,
+      );
+      onBlocksChange(updated);
+      setSelectedBlockId(null);
+      const bookedStudent = students.find((s) => s.id === bookingStudentId);
+      const bookedName = bookedStudent ? studentName(bookedStudent) : "Student";
+      onRubyEvent?.({
+        type: "book_student",
+        message: isFirstDay
+          ? `${bookedName} booked as First Day — invoice + agreement queued.`
+          : `${bookedName} booked as a recurring session.`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to book student";
+      setError(msg);
+      onRubyEvent?.({ type: "error", message: `Booking failed: ${msg}` });
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ── Block position in grid ──
@@ -308,12 +408,14 @@ export function LocationScheduleGrid({
       <div className="flex h-full min-h-0 overflow-auto">
         {/* Time labels column */}
         <div className="sticky left-0 z-10 w-14 shrink-0 bg-[var(--z-bg)]">
-          <div style={{ height: gridHeight + 32 }} className="relative">
-            {slots.map((minute) => (
+          {/* Spacer to align with sticky teacher header */}
+          <div className="h-[var(--teacher-header-h,52px)]" />
+          <div style={{ height: gridHeight }} className="relative">
+            {slots.map((minute, i) => (
               <div
                 key={minute}
-                className="absolute right-2 text-[10px] text-[var(--z-muted)]"
-                style={{ top: ((minute - openMinute) / 30) * 48 + 16 }}
+                className="absolute right-2 text-[10px] text-[var(--z-muted)] leading-none"
+                style={{ top: i * 48 + 2 }}
               >
                 {minuteToLabel(minute)}
               </div>
@@ -485,103 +587,217 @@ export function LocationScheduleGrid({
                   </div>
                 )}
 
-                {/* Student / family info */}
-                {student && (
-                  <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
-                    <div className="font-semibold text-[var(--z-fg)] text-sm">{studentName(student)}</div>
-                    {family && (
-                      <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
-                    )}
-                    {family?.primary_phone && (
-                      <div className="text-[var(--z-muted)]">{family.primary_phone}</div>
-                    )}
-                    <div className="flex gap-2 pt-1">
-                      <Link
-                        href={`/crm/students/${selectedBlock.student_id}`}
-                        className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
-                        onClick={() => setSelectedBlockId(null)}
-                      >
-                        Student →
-                      </Link>
-                      {student.family_id && (
-                        <Link
-                          href={`/crm/families/${student.family_id}`}
-                          className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
-                          onClick={() => setSelectedBlockId(null)}
-                        >
-                          Family →
-                        </Link>
-                      )}
+                {/* ── OPEN SLOT: student booking flow ── */}
+                {(!selectedBlock.student_id && (selectedBlock.block_type === "open_time" || !selectedBlock.block_type)) ? (
+                  <div className="space-y-4">
+                    {/* Student search */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+                        Book a Student
+                      </label>
+                      <input
+                        type="text"
+                        value={bookingStudentQuery}
+                        onChange={(e) => {
+                          setBookingStudentQuery(e.target.value);
+                          setBookingStudentId(null);
+                          setBookingStudentHasBlocks(null);
+                          setBookingFirstDay(null);
+                        }}
+                        placeholder="Type student name…"
+                        className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)]"
+                        autoFocus
+                      />
+                      {/* Autocomplete dropdown */}
+                      {bookingStudentQuery.length >= 1 && !bookingStudentId && (() => {
+                        const q = bookingStudentQuery.toLowerCase();
+                        const matches = students.filter((s) => studentName(s).toLowerCase().includes(q)).slice(0, 8);
+                        if (matches.length === 0) return <div className="text-xs text-[var(--z-muted)] px-1">No students found</div>;
+                        return (
+                          <div className="rounded-lg border border-[var(--z-border)] bg-[#0f0f12] shadow-xl overflow-hidden">
+                            {matches.map((s) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-white/5 transition-colors"
+                                onClick={async () => {
+                                  setBookingStudentId(s.id);
+                                  setBookingStudentQuery(studentName(s));
+                                  const hasBlocks = await checkStudentHasBlocks(s.id);
+                                  setBookingStudentHasBlocks(hasBlocks);
+                                  // Existing student moving times: skip first-day question
+                                  if (hasBlocks) setBookingFirstDay(false);
+                                  else setBookingFirstDay(null); // new student: ask
+                                }}
+                              >
+                                <div className="h-7 w-7 shrink-0 rounded-full bg-[var(--z-surface-2)] flex items-center justify-center text-xs font-bold text-[var(--z-fg)]">
+                                  {studentName(s).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-[var(--z-fg)]">{studentName(s)}</div>
+                                  <div className="text-[10px] text-[var(--z-muted)]">
+                                    {String((s as unknown as Record<string,unknown>).instrument ?? "") || "No instrument"}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
+
+                    {/* First-day question — only for new students */}
+                    {bookingStudentId && bookingStudentHasBlocks === false && bookingFirstDay === null && (
+                      <div className="rounded-xl border border-blue-400/40 bg-blue-500/10 p-4 space-y-3">
+                        <p className="text-sm font-semibold text-blue-200">Is this their first lesson?</p>
+                        <p className="text-xs text-[var(--z-muted)]">
+                          This student has no existing sessions. If it&apos;s their first lesson, we&apos;ll book it as a First Day and queue their invoice + studio agreement once integrations are set up.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBookingFirstDay(true)}
+                            className="flex-1 rounded-xl border border-blue-400/50 bg-blue-500/20 px-3 py-2 text-sm font-semibold text-blue-200 hover:bg-blue-500/30 transition-colors"
+                          >
+                            Yes — First Lesson
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBookingFirstDay(false)}
+                            className="flex-1 rounded-xl border border-[var(--z-border)] px-3 py-2 text-sm font-semibold text-[var(--z-muted)] hover:bg-white/5 transition-colors"
+                          >
+                            No — Regular Session
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Existing student notice */}
+                    {bookingStudentId && bookingStudentHasBlocks === true && (
+                      <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-xs text-[var(--z-muted)]">
+                        Existing student — booking as a recurring session (no first-day trigger).
+                      </div>
+                    )}
+
+                    {/* Recurring toggle — shown once student + first-day are resolved */}
+                    {bookingStudentId && bookingFirstDay !== null && (
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <div
+                          className={`relative h-5 w-9 rounded-full transition-colors ${
+                            bookingRecurring ? "bg-[#00ff88]/70" : "bg-[var(--z-surface-2)] border border-[var(--z-border)]"
+                          }`}
+                          onClick={() => setBookingRecurring((v) => !v)}
+                        >
+                          <div
+                            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                              bookingRecurring ? "translate-x-4" : "translate-x-0.5"
+                            }`}
+                          />
+                        </div>
+                        <span className="text-sm text-[var(--z-fg)]">
+                          {bookingRecurring ? "Recurring every week" : "One-time only"}
+                        </span>
+                      </label>
+                    )}
+
+                    {/* Book button */}
+                    {bookingStudentId && bookingFirstDay !== null && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => bookStudent(selectedBlock)}
+                        className="w-full rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-50 hover:bg-[#00ff88]/25 transition-colors"
+                      >
+                        {saving ? "Booking…" : bookingFirstDay ? "Book as First Lesson" : "Book Session"}
+                      </button>
+                    )}
                   </div>
+                ) : (
+                  /* ── BOOKED BLOCK: existing session controls ── */
+                  <>
+                    {/* Student / family info */}
+                    {student && (
+                      <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
+                        <div className="font-semibold text-[var(--z-fg)] text-sm">{studentName(student)}</div>
+                        {family && (
+                          <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
+                        )}
+                        {family?.primary_phone && (
+                          <div className="text-[var(--z-muted)]">{family.primary_phone}</div>
+                        )}
+                        <div className="flex gap-2 pt-1">
+                          <Link
+                            href={`/crm/students/${selectedBlock.student_id}`}
+                            className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
+                            onClick={() => setSelectedBlockId(null)}
+                          >
+                            Student →
+                          </Link>
+                          {student.family_id && (
+                            <Link
+                              href={`/crm/families/${student.family_id}`}
+                              className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
+                              onClick={() => setSelectedBlockId(null)}
+                            >
+                              Family →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Session type */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+                        Session Type
+                      </label>
+                      <select
+                        value={sessionType}
+                        onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
+                        className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
+                      >
+                        {BLOCK_TYPE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {selectedBlock.student_id && (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => checkIn(selectedBlock)}
+                          className="col-span-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 px-3 py-2.5 text-sm font-semibold text-emerald-100 disabled:opacity-50 hover:bg-emerald-500/30 transition-colors"
+                        >
+                          {saving ? "Saving..." : "✓ Check In"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() =>
+                          patchBlock(selectedBlock, {
+                            block_type: sessionType,
+                            status: ["open_time", "sub", "call_out"].includes(sessionType) ? "available" : "booked",
+                          })
+                        }
+                        className="rounded-xl border border-yellow-400/60 bg-yellow-400/20 px-3 py-2.5 text-sm font-semibold text-yellow-200 disabled:opacity-50 hover:bg-yellow-400/30 transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => callOut(selectedBlock)}
+                        className="rounded-xl border border-red-400/60 bg-red-500/20 px-3 py-2.5 text-sm font-semibold text-red-200 disabled:opacity-50 hover:bg-red-500/30 transition-colors"
+                      >
+                        Call Out
+                      </button>
+                    </div>
+                  </>
                 )}
-
-                {/* Session type */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-                    Session Type
-                  </label>
-                  <select
-                    value={sessionType}
-                    onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
-                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
-                  >
-                    {BLOCK_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Room */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-                    Room
-                  </label>
-                  <select
-                    value={roomIdDraft}
-                    onChange={(e) => setRoomIdDraft(e.target.value)}
-                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
-                  >
-                    <option value="">No room assigned</option>
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>{room.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Actions */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => checkIn(selectedBlock)}
-                    className="col-span-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 px-3 py-2.5 text-sm font-semibold text-emerald-100 disabled:opacity-50 hover:bg-emerald-500/30 transition-colors"
-                  >
-                    {saving ? "Saving..." : "✓ Check In"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() =>
-                      patchBlock(selectedBlock, {
-                        block_type: sessionType,
-                        status: ["open_time", "sub", "call_out"].includes(sessionType) ? "available" : "booked",
-                        room_id: roomIdDraft || null,
-                      })
-                    }
-                    className="rounded-xl border border-yellow-400/60 bg-yellow-400/20 px-3 py-2.5 text-sm font-semibold text-yellow-200 disabled:opacity-50 hover:bg-yellow-400/30 transition-colors"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => callOut(selectedBlock)}
-                    className="rounded-xl border border-red-400/60 bg-red-500/20 px-3 py-2.5 text-sm font-semibold text-red-200 disabled:opacity-50 hover:bg-red-500/30 transition-colors"
-                  >
-                    Call Out
-                  </button>
-                </div>
               </div>
             </div>
           </>

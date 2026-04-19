@@ -13,6 +13,7 @@ import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { LocationScheduleGrid } from "./LocationScheduleGrid";
 import { MobileScheduleView } from "./MobileScheduleView";
 import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
+import { RubyScheduleBar, type RubyEvent } from "./RubyScheduleBar";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 export const LOCATION_CONFIG: Record<string, {
@@ -118,6 +119,18 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   });
   const [loading, setLoading] = React.useState(false);
   const [activeModal, setActiveModal] = React.useState<ToolModal>(null);
+  const [rubyEvent, setRubyEvent] = React.useState<RubyEvent | null>(null);
+
+  // Auto-clear ruby event after 6 seconds
+  React.useEffect(() => {
+    if (!rubyEvent || rubyEvent.type === "idle") return;
+    const t = setTimeout(() => setRubyEvent(null), 6000);
+    return () => clearTimeout(t);
+  }, [rubyEvent]);
+
+  function fireRubyEvent(e: RubyEvent) {
+    setRubyEvent({ ...e, timestamp: Date.now() });
+  }
 
   const weekDays = React.useMemo(
     () => eachDayInclusive(window.start, window.end),
@@ -168,17 +181,35 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const activeSelectedDate = selectedDates[activeLocationId] ?? window.start;
 
   // Utilization for active location on selected date
+  // Rules:
+  //   - not_bookable (locked) blocks are excluded entirely — they are never open or booked
+  //   - open_time blocks with no student = genuinely open
+  //   - student_session / first_day / last_day / sub / makeup / call_out etc with a student = booked
+  //   - blocks without a student that are not open_time (e.g. call_out shell) = not counted as open
   const utilization = React.useMemo(() => {
-    const dayBlocks = activeBlocks.filter((b) => b.block_date === activeSelectedDate);
-    const total = dayBlocks.length;
-    const booked = dayBlocks.filter((b) => b.student_id && b.block_type !== "open_time").length;
-    const open = dayBlocks.filter((b) => !b.student_id || b.block_type === "open_time").length;
-    const pct = total > 0 ? Math.round((booked / total) * 100) : 0;
-    return { total, booked, open, pct };
+    const dayBlocks = activeBlocks.filter(
+      (b) => b.block_date === activeSelectedDate && b.block_type !== "not_bookable",
+    );
+    const booked = dayBlocks.filter(
+      (b) => b.student_id && b.block_type !== "open_time",
+    ).length;
+    const open = dayBlocks.filter(
+      (b) => b.block_type === "open_time" && !b.student_id,
+    ).length;
+    const countable = booked + open;
+    const pct = countable > 0 ? Math.round((booked / countable) * 100) : 0;
+    return { total: countable, booked, open, pct };
   }, [activeBlocks, activeSelectedDate]);
 
   return (
     <div className="space-y-0">
+      {/* ── Ruby Bar ── */}
+      <RubyScheduleBar
+        locationName={activeLocConfig?.name ?? locations.find((l) => l.id === activeLocationId)?.name ?? "Studio"}
+        selectedDate={activeSelectedDate}
+        event={rubyEvent}
+      />
+
       {/* ── Top bar: location tabs + week nav ── */}
       <div className="sticky top-0 z-30 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
         {/* Row 1: location tabs + week nav */}
@@ -224,13 +255,18 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             >
               Next →
             </button>
-            <input
-              type="date"
-              value={window.start}
-              onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
-              className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-xs text-[var(--z-fg)]"
-              title="Jump to week"
-            />
+            <label className="relative cursor-pointer" title="Jump to week">
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-base select-none">
+                📅
+              </span>
+              <input
+                type="date"
+                value={window.start}
+                onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
+                className="h-8 w-8 cursor-pointer rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] opacity-0"
+                title="Jump to week"
+              />
+            </label>
           </div>
         </div>
 
@@ -385,6 +421,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                 rooms={data.rooms}
                 locationHours={data.locationHours}
                 onBlocksChange={handleBlocksChange}
+                onRubyEvent={fireRubyEvent}
               />
             </div>
             {/* Mobile horizontal timeline */}
@@ -418,6 +455,8 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               ...prev,
               [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
             }));
+            fireRubyEvent({ type: "sub_added", message: "Sub block added — schedule updated." });
+            setActiveModal(null);
           }}
         />
       )}
@@ -434,6 +473,8 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               ...prev,
               [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
             }));
+            fireRubyEvent({ type: "call_out", message: "Call-out committed — coverage blocks created and students reassigned." });
+            setActiveModal(null);
           }}
         />
       )}
@@ -450,6 +491,8 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               ...prev,
               [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
             }));
+            fireRubyEvent({ type: "go_virtual", message: "Virtual day committed — sessions updated. Meet links queued once Gmail is connected." });
+            setActiveModal(null);
           }}
         />
       )}
