@@ -1,7 +1,7 @@
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 import { PageShell } from "@/components/layouts/PageShell";
 
-const FinancialsClient = dynamic(() => import("./_client").then((m) => m.FinancialsClient), {
+const FinancialsClient = dynamicImport(() => import("./_client").then((m) => m.FinancialsClient), {
   loading: () => <PageShell title="Financials" />,
 });
 
