@@ -265,7 +265,6 @@ function AgentCircleExpanded({
               style={{
                 background: `color-mix(in oklab, ${meta.accent}, transparent 12%)`,
                 color: "var(--z-fg)",
-                ringColor: `color-mix(in oklab, ${meta.accent}, transparent 45%)`,
               }}
             >
               {link.label}
