@@ -98,9 +98,9 @@ async function executeAction(
 
       // Scope: all_teacher_blocks, today_only, or specific date
       if (action.scope === "today_only" && context.selectedDate) {
-        query = query.eq("date", context.selectedDate);
+        query = query.eq("block_date", context.selectedDate);
       } else if (action.scope === "specific_date" && action.date) {
-        query = query.eq("date", action.date);
+        query = query.eq("block_date", action.date);
       }
 
       // Only update blocks that have students (not open/locked)
@@ -108,7 +108,8 @@ async function executeAction(
         query = query.not("student_id", "is", null);
       }
 
-      const { error, count } = await query.select("id", { count: "exact", head: false });
+      const { data: updatedRows, error } = await query.select("id");
+      const count = updatedRows?.length ?? 0;
 
       if (error) {
         console.error("[Ruby Action] update_blocks error:", error);
