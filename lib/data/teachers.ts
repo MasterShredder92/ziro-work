@@ -1,5 +1,4 @@
 import { getServiceClient } from "@/lib/supabase";
-import { getSupabase } from "@/lib/agents/supabase";
 import { clientFor } from "./_client";
 import type {
   TeacherInsert,
@@ -35,7 +34,7 @@ async function safeQuery<T>(
 
 export async function getTeachersForTenant(tenantId: string): DataResult<Teacher[]> {
   return safeQuery(async () => {
-    const supabase = getSupabase(tenantId);
+    const supabase = getServiceClient();
     const { data, error } = await supabase
       .from("teachers")
       .select("*")
@@ -64,7 +63,7 @@ export async function getTeachersByIds(
   ids: string[],
 ): Promise<Teacher[]> {
   if (ids.length === 0) return [];
-  const supabase = getSupabase(tenantId);
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from("teachers")
     .select("*")
@@ -79,7 +78,7 @@ export async function listTeachers(
   filter?: ListTeachersFilter,
   opts?: ListTeachersOptions,
 ): Promise<Teacher[]> {
-  const supabase = getSupabase(tenantId);
+  const supabase = getServiceClient();
   let query = supabase
     .from("teachers")
     .select("*")
@@ -90,7 +89,8 @@ export async function listTeachers(
     query = query.eq("is_active", filter.is_active);
 
   if (filter?.location_id) {
-    const { data: teacherLinks, error: linkErr } = await supabase
+    const svcClient = getServiceClient();
+    const { data: teacherLinks, error: linkErr } = await svcClient
       .from("teacher_locations")
       .select("teacher_id")
       .eq("location_id", filter.location_id);
