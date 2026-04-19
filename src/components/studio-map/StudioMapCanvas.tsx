@@ -27,7 +27,6 @@ import {
 import type { StudioMapLocationPayload } from "@/app/api/studio-map/location/route";
 import type { StudioMapRosterStudent } from "@/app/api/studio-map/roster/route";
 import {
-  AgentsSatelliteNode,
   CompanyOrbNode,
   LocationOrbNode,
   StudentMiniNode,
@@ -39,17 +38,19 @@ const NODE_TYPES = {
   location: LocationOrbNode,
   teacher: TeacherFlowOrbNode,
   student: StudentMiniNode,
-  agents: AgentsSatelliteNode,
 } satisfies NodeTypes;
 
-const COMPANY_W = 120;
 const COMPANY_H = 120;
-const LOC_W = 96;
-const LOC_H = 112;
-const TE_W = 100;
-const TE_H = 140;
-const ST_W = 72;
-const ST_H = 72;
+
+// Tree layout constants
+const TREE_ORIGIN_X = 80;   // company orb left edge
+const TREE_ORIGIN_Y = 60;   // top padding
+const LOC_COL_X = 280;      // location orbs column x
+const TEACHER_COL_X = 480;  // teacher orbs column x
+const STUDENT_COL_X = 660;  // student orbs column x
+const LOC_ROW_GAP = 160;    // vertical gap between location rows
+const TEACHER_ROW_GAP = 155; // vertical gap between teacher rows
+const STUDENT_ROW_GAP = 90;  // vertical gap between student rows
 
 function formatTeacherName(t: Teacher): string {
   const any = t as Teacher & { display_name?: string | null };
@@ -91,40 +92,68 @@ function openSlotsForTeacher(openSlots: OpenSlot[], teacherId: string): number {
   return openSlots.filter((o) => o.teacherId === teacherId).length;
 }
 
-function ringXY(
-  index: number,
-  total: number,
-  cx: number,
-  cy: number,
-  radius: number,
-  w: number,
-  h: number,
-): { x: number; y: number } {
-  const n = Math.max(total, 1);
-  const angle = (2 * Math.PI * index) / n - Math.PI / 2;
-  return {
-    x: cx + radius * Math.cos(angle) - w / 2,
-    y: cy + radius * Math.sin(angle) - h / 2,
-  };
-}
+// Tree layout: compute vertical slot positions for each entity
+// Returns a map of locationId -> { y, teachers: { teacherId -> { y, students: { studentId -> y } } } }
+type TreeLayout = {
+  locations: Record<string, {
+    y: number;
+    teachers: Record<string, {
+      y: number;
+      students: Record<string, number>;
+    }>;
+  }>;
+};
 
-function studentRingPositions(
-  count: number,
-  cx: number,
-  cy: number,
-): Array<{ x: number; y: number }> {
-  const out: Array<{ x: number; y: number }> = [];
-  const first = Math.min(count, 8);
-  const second = Math.max(0, count - 8);
-  const r1 = 125;
-  const r2 = 195;
-  for (let i = 0; i < first; i++) {
-    out.push(ringXY(i, first, cx, cy, r1, ST_W, ST_H));
+function computeTreeLayout(
+  locations: Array<{ id: string; name: string }>,
+  expandedLocs: Set<string>,
+  locBundles: Record<string, StudioMapLocationPayload>,
+  expandedTeachers: Set<string>,
+  rosters: Record<string, StudioMapRosterStudent[]>,
+  teacherKey: (locId: string, teacherId: string) => string,
+): TreeLayout {
+  const layout: TreeLayout = { locations: {} };
+  let cursor = TREE_ORIGIN_Y;
+
+  for (const loc of locations) {
+    const locY = cursor;
+    layout.locations[loc.id] = { y: locY, teachers: {} };
+
+    const expanded = expandedLocs.has(loc.id);
+    const bundle = locBundles[loc.id];
+
+    if (expanded && bundle && bundle.teachers.length > 0) {
+      // Lay out teachers vertically
+      let teacherCursor = locY;
+      for (const teacher of bundle.teachers) {
+        const tkey = teacherKey(loc.id, teacher.id);
+        const tExpanded = expandedTeachers.has(tkey);
+        const roster = rosters[tkey];
+        const teacherY = teacherCursor;
+        layout.locations[loc.id].teachers[teacher.id] = { y: teacherY, students: {} };
+
+        if (tExpanded && roster && roster.length > 0) {
+          // Lay out students vertically
+          let studentCursor = teacherY;
+          for (const stu of roster) {
+            layout.locations[loc.id].teachers[teacher.id].students[stu.id] = studentCursor;
+            studentCursor += STUDENT_ROW_GAP;
+          }
+          // Teacher row height = max of its own height vs all its students
+          const teacherBlockHeight = Math.max(TEACHER_ROW_GAP, roster.length * STUDENT_ROW_GAP);
+          teacherCursor += teacherBlockHeight;
+        } else {
+          teacherCursor += TEACHER_ROW_GAP;
+        }
+      }
+      // Location row height = max of its own height vs all its teachers
+      cursor = Math.max(locY + LOC_ROW_GAP, teacherCursor + 20);
+    } else {
+      cursor += LOC_ROW_GAP;
+    }
   }
-  for (let i = 0; i < second; i++) {
-    out.push(ringXY(i, second, cx, cy, r2, ST_W, ST_H));
-  }
-  return out;
+
+  return layout;
 }
 
 type CanvasInnerProps = {
@@ -153,10 +182,6 @@ function StudioMapCanvasInner({
   const [teacherLoading, setTeacherLoading] = React.useState<string | null>(null);
   const [locBundles, setLocBundles] = React.useState<Record<string, StudioMapLocationPayload>>({});
   const [rosters, setRosters] = React.useState<Record<string, StudioMapRosterStudent[]>>({});
-
-  const cx = 520;
-  const cy = 340;
-  const rLoc = Math.min(300, 140 + locations.length * 28);
 
   const setLocationQuery = React.useCallback(
     (locationId: string) => {
@@ -225,7 +250,10 @@ function StudioMapCanvasInner({
     [expandedLocs, fetchLocationBundle, locBundles, setLocationQuery],
   );
 
-  const teacherKey = (locationId: string, teacherId: string) => `${locationId}::${teacherId}`;
+  const teacherKey = React.useCallback(
+    (locationId: string, teacherId: string) => `${locationId}::${teacherId}`,
+    [],
+  );
 
   const toggleTeacher = React.useCallback(
     async (locationId: string, teacherId: string) => {
@@ -269,12 +297,26 @@ function StudioMapCanvasInner({
     void toggleLocation(initialFocusLocationId);
   }, [initialFocusLocationId, locations, toggleLocation]);
 
+  // Compute tree layout — no rings, no overlapping
+  const treeLayout = React.useMemo(
+    () => computeTreeLayout(locations, expandedLocs, locBundles, expandedTeachers, rosters, teacherKey),
+    [locations, expandedLocs, locBundles, expandedTeachers, rosters, teacherKey],
+  );
+
+  // Total height of the tree for centering the company orb
+  const treeHeight = React.useMemo(() => {
+    const ys = Object.values(treeLayout.locations).map((l) => l.y);
+    return ys.length ? Math.max(...ys) + LOC_ROW_GAP : LOC_ROW_GAP * 4;
+  }, [treeLayout]);
+
   const nodes: Node[] = React.useMemo(() => {
     const list: Node[] = [];
+    const companyCY = treeHeight / 2;
+
     list.push({
       id: "company",
       type: "company",
-      position: { x: cx - COMPANY_W / 2, y: cy - COMPANY_H / 2 },
+      position: { x: TREE_ORIGIN_X, y: companyCY - COMPANY_H / 2 },
       data: {
         label: companyName,
         subtitle: vanityLine,
@@ -282,17 +324,10 @@ function StudioMapCanvasInner({
       draggable: true,
     });
 
-    list.push({
-      id: "agents",
-      type: "agents",
-      position: { x: cx + 420, y: 40 },
-      data: { href: "/automation" },
-      draggable: true,
-    });
+    locations.forEach((loc) => {
+      const locLayout = treeLayout.locations[loc.id];
+      if (!locLayout) return;
 
-    const nLocs = locations.length || 1;
-    locations.forEach((loc, i) => {
-      const pos = ringXY(i, nLocs, cx, cy, rLoc, LOC_W, LOC_H);
       const expanded = expandedLocs.has(loc.id);
       const loading = locLoading === loc.id;
       const bundle = locBundles[loc.id];
@@ -301,7 +336,7 @@ function StudioMapCanvasInner({
       list.push({
         id: `loc|${loc.id}`,
         type: "location",
-        position: pos,
+        position: { x: LOC_COL_X, y: locLayout.y },
         data: {
           label: loc.name,
           locationId: loc.id,
@@ -325,13 +360,10 @@ function StudioMapCanvasInner({
         end: scheduleWindow.end,
       });
 
-      const lx = pos.x + LOC_W / 2;
-      const ly = pos.y + LOC_H / 2;
-      const rTeach = Math.min(210, 110 + bundle.teachers.length * 14);
-      const tCount = bundle.teachers.length;
+      bundle.teachers.forEach((teacher) => {
+        const tLayout = locLayout.teachers[teacher.id];
+        if (!tLayout) return;
 
-      bundle.teachers.forEach((teacher, j) => {
-        const tp = ringXY(j, tCount, lx, ly, rTeach, TE_W, TE_H);
         const tkey = teacherKey(loc.id, teacher.id);
         const tExpanded = expandedTeachers.has(tkey);
         const tLoad = teacherLoading === tkey;
@@ -342,7 +374,7 @@ function StudioMapCanvasInner({
         list.push({
           id: `teacher|${loc.id}|${teacher.id}`,
           type: "teacher",
-          position: tp,
+          position: { x: TEACHER_COL_X, y: tLayout.y },
           data: {
             label: formatTeacherName(teacher),
             initials: teacherInitials(teacher),
@@ -360,15 +392,13 @@ function StudioMapCanvasInner({
 
         if (!tExpanded || !roster) return;
 
-        const tcx = tp.x + TE_W / 2;
-        const tcy = tp.y + TE_H / 2;
-        const coords = studentRingPositions(roster.length, tcx, tcy);
-        roster.forEach((stu, k) => {
-          const sp = coords[k] ?? { x: tcx + k * 8, y: tcy + 120 };
+        roster.forEach((stu) => {
+          const stuY = tLayout.students[stu.id];
+          if (stuY === undefined) return;
           list.push({
             id: `student|${loc.id}|${teacher.id}|${stu.id}`,
             type: "student",
-            position: sp,
+            position: { x: STUDENT_COL_X, y: stuY },
             data: {
               studentId: stu.id,
               label: stu.name,
@@ -387,9 +417,8 @@ function StudioMapCanvasInner({
     companyName,
     vanityLine,
     locations,
-    cx,
-    cy,
-    rLoc,
+    treeLayout,
+    treeHeight,
     expandedLocs,
     locLoading,
     locBundles,
@@ -399,21 +428,11 @@ function StudioMapCanvasInner({
     scheduleWindow,
     toggleLocation,
     toggleTeacher,
+    teacherKey,
   ]);
 
   const edges: Edge[] = React.useMemo(() => {
     const e: Edge[] = [];
-    e.push({
-      id: "e-company-agents",
-      source: "company",
-      target: "agents",
-      type: "smoothstep",
-      style: {
-        strokeDasharray: "5 5",
-        stroke: "rgba(167,139,250,0.35)",
-        strokeWidth: 1,
-      },
-    });
     for (const loc of locations) {
       const locColors: Record<string, string> = {
         "f7b52dd5-12ee-437f-9c60-f8adf454ac31": "rgba(124,58,237,",
@@ -460,7 +479,7 @@ function StudioMapCanvasInner({
       }
     }
     return e;
-  }, [locations, expandedLocs, locBundles, expandedTeachers, rosters, scheduleWindow]);
+  }, [locations, expandedLocs, locBundles, expandedTeachers, rosters, teacherKey]);
 
   const [rfNodes, setNodes, onNodesChange] = useNodesState(nodes);
   const [rfEdges, setEdges, onEdgesChange] = useEdgesState(edges);
