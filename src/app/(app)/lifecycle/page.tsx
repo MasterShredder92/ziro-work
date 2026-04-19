@@ -9,8 +9,8 @@ export default async function LifecyclePage({
   searchParams?: Promise<{ tab?: string }>;
 }) {
   const scope = await resolveLifecycleTenantScope();
-  const params = await (searchParams ?? Promise.resolve({}));
-  const initialTab = (params.tab as string) || "intake";
+  const params = await (searchParams ?? Promise.resolve({} as { tab?: string }));
+  const initialTab = params.tab ?? "intake";
 
   return (
     <LifecycleTabsClient
