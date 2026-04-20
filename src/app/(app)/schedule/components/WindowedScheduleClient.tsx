@@ -202,7 +202,7 @@ export function WindowedScheduleClient({
     const n = new Date();
     return n.getHours() * 60 + n.getMinutes();
   });
-  const [nowDate, setNowDate] = React.useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [nowDate, setNowDate] = React.useState<string>(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; });
 
   const teacherIds = React.useMemo(() => teachers.map((t) => t.id), [teachers]);
 
@@ -211,7 +211,7 @@ export function WindowedScheduleClient({
     const tick = () => {
       const n = new Date();
       setNowMinute(n.getHours() * 60 + n.getMinutes());
-      setNowDate(n.toISOString().split("T")[0]);
+      setNowDate(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`);
     };
     const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
@@ -220,7 +220,7 @@ export function WindowedScheduleClient({
   // ── Auto check-in loop — runs every 60s, only on today's view ──────────────
   React.useEffect(() => {
     const runAutoCheckin = () => {
-      const today = new Date().toISOString().split("T")[0];
+      const _d = new Date(); const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
       if (selectedDate !== today) return;
       void fetch("/api/schedule-blocks/auto-checkin", { method: "POST" })
         .then(async (res) => {
