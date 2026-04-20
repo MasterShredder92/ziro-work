@@ -97,29 +97,22 @@ export default async function InvoicesPage({
     .select("status,amount_cents,requested_amount,amount_paid_cents,due_date,paid_at,square_location_id")
     .eq("tenant_id", tenantId)
     .gte("due_date", thisMonthStart)
-    .lte("due_date", nextMonthEnd);
+    .lte("due_date", nextMonthEnd)
+    .limit(10000);
 
   const metricRows: Record<string, unknown>[] = allMetricRows ?? [];
 
-  // Build square_location_id → UUID location map from the DB rows
-  // We need to know which sq_location_id maps to which named location.
-  // Fetch the mapping from square_invoices_fact by joining with our known UUIDs.
+  // Build square_location_id → location info from the locations table directly
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: locMapRows } = await (db as any)
-    .from("square_invoices_fact")
-    .select("square_location_id,location_id")
-    .eq("tenant_id", tenantId)
-    .not("square_location_id", "is", null)
-    .limit(500);
+  const { data: locRows } = await (db as any)
+    .from("locations")
+    .select("id,name,color,square_location_id")
+    .eq("tenant_id", tenantId);
 
-  // Build sq_location_id → location name/color
   const sqToLocation: Record<string, { id: string; name: string; color: string }> = {};
-  const uuidToLoc = Object.fromEntries(LOCATIONS.map((l) => [l.id, l]));
-  for (const row of (locMapRows ?? []) as { square_location_id: string; location_id: string | null }[]) {
-    const sqId = row.square_location_id;
-    const uuidId = row.location_id;
-    if (sqId && !sqToLocation[sqId] && uuidId && uuidToLoc[uuidId]) {
-      sqToLocation[sqId] = uuidToLoc[uuidId];
+  for (const loc of (locRows ?? []) as { id: string; name: string; color: string; square_location_id: string | null }[]) {
+    if (loc.square_location_id) {
+      sqToLocation[loc.square_location_id] = { id: loc.id, name: loc.name, color: loc.color };
     }
   }
 

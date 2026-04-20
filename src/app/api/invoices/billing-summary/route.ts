@@ -3,21 +3,8 @@ import { getServiceClient } from "@/lib/supabase";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 export const dynamic = "force-dynamic";
 
-// Internal UUID → location info (used as fallback)
-const UUID_LOCATION_MAP: Record<string, { name: string; color: string }> = {
-  "f7b52dd5-12ee-437f-9c60-f8adf454ac31": { name: "Bellevue", color: "#7C3AED" },
-  "40c67ffc-91b5-46a9-94bd-6ddffdfb7638": { name: "Gretna", color: "#16A34A" },
-  "cebd97d4-c241-4de2-8ade-49e5cc0070d5": { name: "Elkhorn", color: "#0EA5E9" },
-  "d48229c1-b70a-4d29-893e-5079887dab76": { name: "Omaha", color: "#DC2626" },
-};
-
 function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0];
-}
-
-function normalizePaidAt(paidAt: string | null | undefined): string | null {
-  if (!paidAt) return null;
-  return paidAt.slice(0, 10);
 }
 
 type InvoiceRow = {
@@ -25,12 +12,9 @@ type InvoiceRow = {
   amount_cents: number | null;
   requested_amount: number | null;
   amount_paid_cents: number | null;
-  invoice_date: string | null;
   due_date: string | null;
   paid_at: string | null;
   square_location_id: string | null;
-  location_id: string | null;
-  recurring_series_id: string | null;
 };
 
 function computeMetrics(
@@ -42,19 +26,15 @@ function computeMetrics(
 ) {
   const today = toDateStr(new Date());
 
-  // Use due_date as the primary date dimension — invoice_date is when Square created the record
-  // which for recurring invoices can be months/years ago. due_date = when the student owes payment.
   const mtdInvoices = rows.filter(
     (r) => r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd
   );
 
   const collected = rows
     .filter((r) => {
-      // PAID invoices due this month
       if (r.status === "PAID" && r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd) return true;
-      // Also catch PAID invoices where paid_at falls in this month (edge case)
-      const d = normalizePaidAt(r.paid_at);
-      if (d !== null && d >= mtdStart && d <= mtdEnd) return true;
+      const d = r.paid_at ? r.paid_at.slice(0, 10) : null;
+      if (d && d >= mtdStart && d <= mtdEnd) return true;
       return false;
     })
     .reduce((s, r) => s + (r.amount_paid_cents ?? r.amount_cents ?? 0), 0);
@@ -95,21 +75,14 @@ function computeMetrics(
       r.due_date < today
   ).length;
 
-  return {
-    collected,
-    totalInvoiced,
-    discounted,
-    nextMonthProjected,
-    scheduled,
-    outstanding,
-    overdueCount,
-  };
+  return { collected, totalInvoiced, discounted, nextMonthProjected, scheduled, outstanding, overdueCount };
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = getServiceClient() as any;
     const now = new Date();
 
     const mtdStart = toDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -117,45 +90,47 @@ export async function GET(req: NextRequest) {
     const nextStart = toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 1));
     const nextEnd = toDateStr(new Date(now.getFullYear(), now.getMonth() + 2, 0));
 
-    // Fetch from square_invoices_fact — the table the sync writes to
-    const { data: allInvoices, error } = await (db as any)
-      .from("square_invoices_fact")
-      .select("status,amount_cents,requested_amount,amount_paid_cents,invoice_date,due_date,paid_at,square_location_id,location_id,recurring_series_id")
+    // Fetch location map from locations table (has square_location_id column)
+    const { data: locRows } = await db
+      .from("locations")
+      .select("id,name,color,square_location_id")
       .eq("tenant_id", tenantId);
+
+    const sqToLoc: Record<string, { id: string; name: string; color: string }> = {};
+    for (const loc of (locRows ?? []) as { id: string; name: string; color: string; square_location_id: string | null }[]) {
+      if (loc.square_location_id) {
+        sqToLoc[loc.square_location_id] = { id: loc.id, name: loc.name, color: loc.color };
+      }
+    }
+
+    // Fetch all invoices — limit 10000 to bypass Supabase 1000-row default cap
+    const { data: allInvoices, error } = await db
+      .from("square_invoices_fact")
+      .select("status,amount_cents,requested_amount,amount_paid_cents,due_date,paid_at,square_location_id")
+      .eq("tenant_id", tenantId)
+      .limit(10000);
 
     if (error) throw error;
     const invoices: InvoiceRow[] = allInvoices ?? [];
 
-    // Build square_location_id → display info map dynamically
-    const sqLocToInfo: Record<string, { name: string; color: string }> = {};
-    for (const inv of invoices) {
-      const sqId = inv.square_location_id;
-      const uuidId = inv.location_id;
-      if (sqId && !sqLocToInfo[sqId]) {
-        if (uuidId && UUID_LOCATION_MAP[uuidId]) {
-          sqLocToInfo[sqId] = UUID_LOCATION_MAP[uuidId];
-        }
-        // else: unknown Square location — skip from per-location breakdown
-      }
-    }
-
     const allMetrics = computeMetrics(invoices, mtdStart, mtdEnd, nextStart, nextEnd);
 
+    const ORDER = ["Bellevue Music Lessons", "Gretna Music Lessons", "Elkhorn Music Lessons", "Omaha Music Lessons"];
     const locationIds = [...new Set(invoices.map((r) => r.square_location_id).filter(Boolean))] as string[];
     const perLocation = locationIds
-      .filter((sqId) => sqLocToInfo[sqId]) // only known locations
+      .filter((sqId) => sqToLoc[sqId])
       .map((sqId) => {
-        const info = sqLocToInfo[sqId];
+        const info = sqToLoc[sqId];
         const locInvoices = invoices.filter((r) => r.square_location_id === sqId);
         return {
-          id: sqId,
+          id: info.id,
+          squareLocationId: sqId,
           name: info.name,
           color: info.color,
           metrics: computeMetrics(locInvoices, mtdStart, mtdEnd, nextStart, nextEnd),
         };
       });
 
-    const ORDER = ["Bellevue", "Gretna", "Elkhorn", "Omaha"];
     perLocation.sort((a, b) => ORDER.indexOf(a.name) - ORDER.indexOf(b.name));
 
     return NextResponse.json({
