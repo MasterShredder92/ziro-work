@@ -20,7 +20,7 @@ export function DashboardMetricCard({ label, value, trend, icon }: DashboardMetr
       radius="md"
       variant="default"
       className={cn(
-        "min-h-[5.25rem] border-[color-mix(in_oklab,var(--z-border),transparent_25%)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_40%)] transition-[box-shadow,border-color] duration-200",
+        "min-h-[5.25rem] min-w-[9rem] flex-shrink-0 sm:min-w-0 sm:flex-shrink border-[color-mix(in_oklab,var(--z-border),transparent_25%)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_40%)] transition-[box-shadow,border-color] duration-200",
         positive &&
           "border-[color-mix(in_oklab,var(--z-accent),transparent_48%)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--z-accent),transparent_55%)]",
       )}

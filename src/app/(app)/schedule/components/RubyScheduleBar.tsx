@@ -107,10 +107,32 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
   return (
     <>
       {/* ── Ruby inline bar — prominent center piece ── */}
+      {/* Mobile: compact icon-only button */}
       <button
         type="button"
         onClick={() => setChatOpen(true)}
-        className="flex items-center gap-3 rounded-2xl px-4 py-2 transition-all hover:bg-white/5 group"
+        className="flex sm:hidden items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all hover:bg-white/5"
+        style={{
+          background: `linear-gradient(135deg, ${RUBY_ACCENT}10 0%, transparent 60%)`,
+          border: `1px solid ${glowColor}35`,
+        }}
+        aria-label="Open Ruby chat"
+      >
+        <div className="relative shrink-0">
+          <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ backgroundColor: glowColor, animationDuration: "3s" }} />
+          <div className="relative h-8 w-8 overflow-hidden rounded-full" style={{ border: `2px solid ${glowColor}80` }}>
+            <AgentAvatarImage src={RUBY_IMAGE} name="Ruby" accent={RUBY_ACCENT} className="h-full w-full object-cover" />
+          </div>
+        </div>
+        <span className="text-xs font-black tracking-tight" style={{ color: RUBY_ACCENT }}>Ruby</span>
+        {isConflict && <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />}
+      </button>
+
+      {/* Desktop: full bar */}
+      <button
+        type="button"
+        onClick={() => setChatOpen(true)}
+        className="hidden sm:flex items-center gap-3 rounded-2xl px-4 py-2 transition-all hover:bg-white/5 group"
         style={{
           background: `linear-gradient(135deg, ${RUBY_ACCENT}10 0%, transparent 60%)`,
           border: `1px solid ${glowColor}35`,

@@ -68,21 +68,21 @@ export function DashboardClient() {
   return (
     <PageShell
       showBreadcrumb={false}
-      shellClassName="min-h-full bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,color-mix(in_oklab,var(--z-accent),transparent_94%),transparent_52%)] p-4 pt-3 sm:p-6 sm:pt-5"
+      shellClassName="min-h-full bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,color-mix(in_oklab,var(--z-accent),transparent_94%),transparent_52%)] p-3 pt-2 sm:p-6 sm:pt-5"
       mainClassName="mt-0"
     >
       <PageTransition>
         <div
-          className="mx-auto max-w-[1600px] flex flex-col gap-8"
+          className="mx-auto max-w-[1600px] flex flex-col gap-4 sm:gap-8"
           data-dashboard-rev="5"
           data-app="ziro-work"
         >
           {/* ── Hero header ─────────────────────────────────────── */}
-          <header className="border-b border-[color-mix(in_oklab,var(--z-border),transparent_35%)] pb-4">
-            <h1 className="bg-gradient-to-br from-[var(--z-fg)] to-[color-mix(in_oklab,var(--z-fg),transparent_25%)] bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-[1.65rem]">
+          <header className="border-b border-[color-mix(in_oklab,var(--z-border),transparent_35%)] pb-3">
+            <h1 className="bg-gradient-to-br from-[var(--z-fg)] to-[color-mix(in_oklab,var(--z-fg),transparent_25%)] bg-clip-text text-xl font-bold tracking-tight text-transparent sm:text-[1.65rem]">
               Your Crew
             </h1>
-            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_38%)]">
+            <p className="mt-1 hidden max-w-xl text-sm leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_38%)] sm:block">
               7 agents working for you right now. Click any one to see what they&apos;re doing and jump straight to their page.
             </p>
           </header>

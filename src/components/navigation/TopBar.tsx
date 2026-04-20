@@ -7,7 +7,6 @@ import { CommandPalette } from "@/components/command/CommandPalette";
 import { useTenantUi } from "@/components/tenant/TenantUiContext";
 import { getRouteByHref } from "@/lib/routes";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
 import { ClientPageTitle } from "@/components/navigation/ClientPageTitle";
 
 function titleForPath(pathname: string): string {
@@ -55,28 +54,31 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
   return (
     <>
       <header className="flex shrink-0 items-center justify-between gap-[var(--z-space-3)] border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] px-[var(--z-space-4)] py-[var(--z-space-3)] backdrop-blur-md sm:px-[var(--z-space-5)]">
-        <div className="flex min-w-0 flex-1 items-center gap-[var(--z-space-3)]">
-          <Button
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {/* Hamburger — visible only on mobile */}
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={onMenuToggle}
-            className="inline-flex lg:hidden"
-            aria-label="Toggle navigation menu"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#2b2b2f] bg-[#111113] text-[#e0e0e6] active:scale-95 lg:hidden"
+            aria-label="Open navigation menu"
           >
-            Menu
-          </Button>
-          <Button
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+            </svg>
+          </button>
+          {/* Search icon — mobile only */}
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={() => setCommandOpen((v) => !v)}
-            className="inline-flex sm:hidden"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#2b2b2f] bg-[#111113] text-[#909098] active:scale-95 sm:hidden"
             aria-label="Open quick actions"
           >
-            Quick
-          </Button>
-          <div className="hidden min-w-0 flex-1 sm:block">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+              <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M12.5 12.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
             <ClientPageTitle title={pageTitle} />
           </div>
         </div>

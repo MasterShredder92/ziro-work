@@ -33,7 +33,7 @@ export function DashboardMetricsBar() {
   }, [invData]);
 
   return (
-    <section className="grid grid-cols-2 gap-[var(--z-space-3)] sm:grid-cols-3 xl:grid-cols-5">
+    <section className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-5">
       <DashboardMetricCard
         label="Collected This Month"
         value={formatUsdFromCents(metrics.paidThisMonth)}
