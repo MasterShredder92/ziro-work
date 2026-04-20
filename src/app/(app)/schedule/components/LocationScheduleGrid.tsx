@@ -134,6 +134,25 @@ export function LocationScheduleGrid({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // ── Current time indicator ──────────────────────────────────────────────────
+  const [nowMinute, setNowMinute] = React.useState<number>(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  });
+  const [nowDate, setNowDate] = React.useState<string>(() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  });
+  React.useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      setNowMinute(n.getHours() * 60 + n.getMinutes());
+      setNowDate(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`);
+    };
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   // ── Booking state (for open_time / unbooked blocks) ──
   const [bookingStudentQuery, setBookingStudentQuery] = React.useState("");
   const [bookingStudentId, setBookingStudentId] = React.useState<string | null>(null);
@@ -466,6 +485,19 @@ export function LocationScheduleGrid({
                       style={{ top: i * 48, height: 48 }}
                     />
                   ))}
+
+                  {/* ── Current time indicator ── */}
+                  {selectedDate === nowDate && nowMinute >= openMinute && nowMinute <= closeMinute ? (
+                    <div
+                      className="pointer-events-none absolute left-0 right-0 z-30"
+                      style={{ top: ((nowMinute - openMinute) / 30) * 48 }}
+                    >
+                      <div className="flex items-center">
+                        <div className="h-2 w-2 shrink-0 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                        <div className="h-px flex-1 bg-red-500 opacity-80" />
+                      </div>
+                    </div>
+                  ) : null}
 
                   {/* Blocks */}
                   {tBlocks.map((block) => {
