@@ -11,6 +11,8 @@ import type { AIConversation, AIMessage, Json } from "@/lib/types/entities";
 import { resolveAgent, touchAgentUsage } from "./agentRegistry";
 import { resolvePageBindings } from "./pageIntelligence";
 import { touchSkillUsage } from "./skillRegistry";
+import { getToolsForAgent } from "./tools/definitions";
+import { executeTool } from "./tools/executor";
 
 export type ConversationTurnInput = {
   tenantId: string;
@@ -79,7 +81,7 @@ function buildSystemPrompt(
   return cleaned.join("\n\n");
 }
 
-function normalizeTextContent(content: Anthropic.ContentBlock[]): string {
+function extractTextFromContent(content: Anthropic.ContentBlock[]): string {
   return content
     .map((block) => {
       if (block.type === "text") return block.text;
@@ -87,6 +89,103 @@ function normalizeTextContent(content: Anthropic.ContentBlock[]): string {
     })
     .filter(Boolean)
     .join("\n");
+}
+
+/** Run the agentic tool loop: call LLM, execute tools, repeat until text response */
+async function runAgenticLoop(
+  model: string,
+  maxTokens: number,
+  temperature: number | undefined,
+  system: string | undefined,
+  messages: Anthropic.MessageParam[],
+  tools: Anthropic.Tool[],
+  tenantId: string,
+): Promise<{ text: string; usage: Anthropic.Usage }> {
+  const currentMessages = [...messages];
+  let totalUsage: Anthropic.Usage | null = null;
+
+  // Max 5 tool call rounds to prevent infinite loops
+  for (let round = 0; round < 5; round++) {
+    const completion = await anthropic.messages.create({
+      model,
+      max_tokens: maxTokens,
+      temperature,
+      system,
+      messages: currentMessages,
+      ...(tools.length > 0 ? { tools } : {}),
+    });
+
+    // Accumulate usage — spread full Usage object to satisfy type
+    totalUsage = totalUsage
+      ? { ...completion.usage, input_tokens: totalUsage.input_tokens + completion.usage.input_tokens, output_tokens: totalUsage.output_tokens + completion.usage.output_tokens }
+      : completion.usage;
+
+    // If no tool calls, return the text response
+    if (completion.stop_reason !== "tool_use") {
+      return {
+        text: extractTextFromContent(completion.content),
+        usage: totalUsage ?? completion.usage,
+      };
+    }
+
+    // Process tool calls
+    const toolUseBlocks = completion.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
+    );
+
+    if (toolUseBlocks.length === 0) {
+      return {
+        text: extractTextFromContent(completion.content),
+        usage: totalUsage ?? completion.usage,
+      };
+    }
+
+    // Add assistant message with tool calls to history
+    currentMessages.push({
+      role: "assistant",
+      content: completion.content,
+    });
+
+    // Execute all tool calls and collect results
+    const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
+      toolUseBlocks.map(async (block) => {
+        const result = await executeTool(
+          block.name,
+          block.input as Record<string, unknown>,
+          tenantId,
+        );
+        return {
+          type: "tool_result" as const,
+          tool_use_id: block.id,
+          content: JSON.stringify(result),
+        };
+      }),
+    );
+
+    // Add tool results to history
+    currentMessages.push({
+      role: "user",
+      content: toolResults,
+    });
+  }
+
+  // Fallback: ask for final response without tools
+  const finalCompletion = await anthropic.messages.create({
+    model,
+    max_tokens: maxTokens,
+    temperature,
+    system,
+    messages: currentMessages,
+  });
+
+  totalUsage = totalUsage
+    ? { ...finalCompletion.usage, input_tokens: totalUsage.input_tokens + finalCompletion.usage.input_tokens, output_tokens: totalUsage.output_tokens + finalCompletion.usage.output_tokens }
+    : finalCompletion.usage;
+
+  return {
+    text: extractTextFromContent(finalCompletion.content),
+    usage: totalUsage ?? finalCompletion.usage,
+  };
 }
 
 export async function runTurn(
@@ -142,32 +241,39 @@ export async function runTurn(
       ? effectiveAgent.business_context
       : null,
     skill?.system_prompt_fragment,
+    // Tool usage instructions appended to system prompt
+    `You have access to tools that let you take real actions in ZiroWork. When a user asks you to update a student, reschedule a lesson, or look up information — USE THE TOOLS. Do not ask the user to do it themselves. Do not say you "can't" do something if you have a tool for it. Execute the action, confirm what you did, and show the result.`,
   ]);
 
-  const completion = await anthropic.messages.create({
-    model: input.model ?? DEFAULT_MODEL,
-    max_tokens: input.maxTokens ?? 1024,
-    temperature: input.temperature,
-    system,
-    messages: [
-      ...priorTurns,
-      { role: "user", content: input.input },
-    ],
-  });
+  // Get tools for this agent
+  const agentName = effectiveAgent?.name ?? null;
+  const tools = getToolsForAgent(agentName);
 
-  const assistantText = normalizeTextContent(completion.content);
+  const messages: Anthropic.MessageParam[] = [
+    ...priorTurns,
+    { role: "user", content: input.input },
+  ];
+
+  const { text: assistantText, usage } = await runAgenticLoop(
+    input.model ?? DEFAULT_MODEL,
+    input.maxTokens ?? 1024,
+    input.temperature,
+    system,
+    messages,
+    tools,
+    input.tenantId,
+  );
 
   const assistantMessage = await appendAIMessage(input.tenantId, {
     conversation_id: conversation.id,
     profile_id: input.profileId,
     role: "assistant",
     content: assistantText,
-    model: completion.model,
-    usage: (completion.usage as unknown as Json) ?? null,
+    model: input.model ?? DEFAULT_MODEL,
+    usage: (usage as unknown as Json) ?? null,
     metadata: asJsonObject({
       agent_id: effectiveAgent?.id ?? null,
       skill_id: skill?.id ?? null,
-      stop_reason: completion.stop_reason,
     }) as Json,
   });
 
@@ -184,7 +290,7 @@ export async function runTurn(
     assistantMessage,
     agentId: effectiveAgent?.id ?? null,
     skillId: skill?.id ?? null,
-    usage: completion.usage ?? null,
+    usage: usage ?? null,
   };
 }
 
