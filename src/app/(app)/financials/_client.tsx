@@ -8,12 +8,12 @@ import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Expense = {
   id: string;
-  label: string;
-  amount: number; // in cents
+  label: string;        // maps to DB description
+  amount: number;       // in cents (DB: amount_cents)
   category: string;
-  location_id: string;
-  date: string;
-  recurring: boolean;
+  location_id: string | null;
+  date: string;         // maps to DB effective_date
+  recurring: boolean;   // maps to DB is_recurring
   frequency?: "weekly" | "monthly" | "quarterly" | "annual";
   note?: string;
 };
@@ -37,10 +37,25 @@ const LOCATIONS = [
 function fmt(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
-// fmtInput reserved for future use
+
+// Map DB row → Expense type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function dbRowToExpense(row: any): Expense {
+  return {
+    id: row.id,
+    label: row.description ?? "",
+    amount: row.amount_cents ?? 0,
+    category: row.category ?? "Other",
+    location_id: row.location_id ?? null,
+    date: row.effective_date ?? "",
+    recurring: row.is_recurring ?? false,
+    frequency: row.frequency ?? undefined,
+    note: undefined,
+  };
+}
 
 // ─── Expense Form ─────────────────────────────────────────────────────────────
-function ExpenseForm({ onAdd }: { onAdd: (e: Omit<Expense, "id">) => void }) {
+function ExpenseForm({ onAdd, saving }: { onAdd: (e: Omit<Expense, "id">) => void; saving: boolean }) {
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Rent");
@@ -48,14 +63,13 @@ function ExpenseForm({ onAdd }: { onAdd: (e: Omit<Expense, "id">) => void }) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<"weekly" | "monthly" | "quarterly" | "annual">("monthly");
-  const [note, setNote] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const cents = Math.round(parseFloat(amount) * 100);
     if (!label || isNaN(cents) || cents <= 0) return;
-    onAdd({ label, amount: cents, category, location_id: locationId, date, recurring, frequency: recurring ? frequency : undefined, note: note || undefined });
-    setLabel(""); setAmount(""); setNote("");
+    onAdd({ label, amount: cents, category, location_id: locationId, date, recurring, frequency: recurring ? frequency : undefined });
+    setLabel(""); setAmount("");
   }
 
   return (
@@ -100,15 +114,13 @@ function ExpenseForm({ onAdd }: { onAdd: (e: Omit<Expense, "id">) => void }) {
             </select>
           )}
         </div>
-        <input
-          placeholder="Note (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none sm:col-span-2"
-        />
       </div>
-      <button type="submit" className="mt-4 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
-        + Add Expense
+      <button
+        type="submit"
+        disabled={saving}
+        className="mt-4 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors disabled:opacity-50"
+      >
+        {saving ? "Saving…" : "+ Add Expense"}
       </button>
     </form>
   );
@@ -120,10 +132,16 @@ export function FinancialsClient() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filterLocation, setFilterLocation] = useState("all");
   const [revenueLoading, setRevenueLoading] = useState(true);
+  const [expensesLoading, setExpensesLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Load revenue summary
+  // Current month for expense filter
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  // Load revenue summary — no-store to bypass cache
   useEffect(() => {
-    fetch("/api/invoices/billing-summary")
+    fetch("/api/invoices/billing-summary", { cache: "no-store" })
       .then((r) => r.json())
       .then((res) => {
         setRevenue(res.data?.allSchools ?? null);
@@ -132,25 +150,46 @@ export function FinancialsClient() {
       .catch(() => setRevenueLoading(false));
   }, []);
 
-  // Load expenses from localStorage (until DB table is wired)
-  useEffect(() => {
+  // Load expenses from DB
+  const loadExpenses = useCallback(() => {
+    setExpensesLoading(true);
+    fetch(`/api/expenses`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((res) => {
+        setExpenses((res.data ?? []).map(dbRowToExpense));
+        setExpensesLoading(false);
+      })
+      .catch(() => setExpensesLoading(false));
+  }, []);
+
+  useEffect(() => { loadExpenses(); }, [loadExpenses]);
+
+  async function addExpense(e: Omit<Expense, "id">) {
+    setSaving(true);
     try {
-      const stored = localStorage.getItem("zw_expenses");
-      if (stored) setExpenses(JSON.parse(stored));
-    } catch {}
-  }, []);
-
-  const saveExpenses = useCallback((updated: Expense[]) => {
-    setExpenses(updated);
-    try { localStorage.setItem("zw_expenses", JSON.stringify(updated)); } catch {}
-  }, []);
-
-  function addExpense(e: Omit<Expense, "id">) {
-    saveExpenses([...expenses, { ...e, id: crypto.randomUUID() }]);
+      const res = await fetch("/api/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: e.label,
+          amount_cents: e.amount,
+          category: e.category,
+          location_id: e.location_id,
+          date: e.date,
+          recurring: e.recurring,
+          frequency: e.frequency ?? null,
+        }),
+      });
+      if (res.ok) { loadExpenses(); }
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function removeExpense(id: string) {
-    saveExpenses(expenses.filter((e) => e.id !== id));
+  async function removeExpense(id: string) {
+    // Optimistic remove
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    await fetch(`/api/expenses/${id}`, { method: "DELETE" });
   }
 
   // Filtered expenses
@@ -166,15 +205,14 @@ export function FinancialsClient() {
   // CSV export
   function exportCSV() {
     const rows = [
-      ["Date", "Description", "Category", "Location", "Amount", "Recurring", "Note"],
+      ["Date", "Description", "Category", "Location", "Amount", "Recurring"],
       ...filtered.map((e) => [
         e.date,
         e.label,
         e.category,
-        LOCATIONS.find((l) => l.id === e.location_id)?.name ?? e.location_id,
+        LOCATIONS.find((l) => l.id === e.location_id)?.name ?? "All",
         (e.amount / 100).toFixed(2),
         e.recurring ? (e.frequency ?? "yes") : "no",
-        e.note ?? "",
       ]),
     ];
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -182,7 +220,7 @@ export function FinancialsClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `expenses-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `expenses-${currentMonth}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -221,13 +259,13 @@ export function FinancialsClient() {
               ))}
             </div>
           ) : (
-            <div className="text-sm text-[#505055]">Could not load revenue data.</div>
+            <div className="text-sm text-[#505055]">Could not load revenue data. Run a Square sync first.</div>
           )}
         </div>
 
         {/* P&L Summary */}
         <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-5">
-          <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-[#505055]">P&L — Owner Take-Home</h2>
+          <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-[#505055]">P&amp;L — Owner Take-Home</h2>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#909098]">Collected This Month</span>
@@ -250,13 +288,13 @@ export function FinancialsClient() {
             </div>
           </div>
           <p className="mt-3 text-xs text-[#404048]">
-            Payroll estimate is 50% of collected revenue. Connect Square and add all expenses for an exact figure.
+            Payroll estimate is 50% of collected revenue. Add all expenses below for an exact figure.
           </p>
         </div>
 
         {/* Expense Tracker */}
         <div>
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
             <h2 className="text-xs font-bold uppercase tracking-widest text-[#505055]">Expenses</h2>
             <div className="flex items-center gap-2">
               <select
@@ -276,10 +314,14 @@ export function FinancialsClient() {
             </div>
           </div>
 
-          <ExpenseForm onAdd={addExpense} />
+          <ExpenseForm onAdd={addExpense} saving={saving} />
 
           <div className="mt-4 space-y-2">
-            {filtered.length === 0 ? (
+            {expensesLoading ? (
+              <div className="space-y-2">
+                {[1,2,3].map((i) => <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />)}
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[#1c1c1e] p-6 text-center text-sm text-[#505055]">
                 No expenses yet. Add your first expense above.
               </div>
@@ -297,8 +339,7 @@ export function FinancialsClient() {
                         )}
                       </div>
                       <div className="text-xs text-[#505055]">
-                        {e.category} · {LOCATIONS.find((l) => l.id === e.location_id)?.name ?? "—"} · {e.date}
-                        {e.note ? ` · ${e.note}` : ""}
+                        {e.category} · {LOCATIONS.find((l) => l.id === e.location_id)?.name ?? "All Locations"} · {e.date}
                       </div>
                     </div>
                     <span className="shrink-0 text-sm font-bold text-red-400">− {fmt(e.amount)}</span>
