@@ -44,16 +44,28 @@ function toDate(dt: string | null | undefined): string | null {
 }
 
 async function squareFetch(path: string, accessToken: string): Promise<{ ok: boolean; status: number; body: any }> {
-  const res = await fetch(`https://connect.squareup.com${path}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Square-Version": "2024-01-17",
-      "Content-Type": "application/json",
-    },
-  });
-  let body: any;
-  try { body = await res.json(); } catch { body = {}; }
-  return { ok: res.ok, status: res.status, body };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(`https://connect.squareup.com${path}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Square-Version": "2024-01-17",
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+    });
+    let body: any;
+    try { body = await res.json(); } catch { body = {}; }
+    return { ok: res.ok, status: res.status, body };
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      return { ok: false, status: 408, body: { errors: [{ detail: "Request timed out after 15s" }] } };
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -140,74 +152,80 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // ── Step 3: Fetch customers and link to families/students ────────────
+        // ── Step 3: Fetch customers and link to families/students (non-blocking) ─
         send({ status: "running", message: "Syncing Square customers…" });
-        let customerCursor: string | undefined;
-        const squareCustomers: Record<string, any>[] = [];
-        do {
-          const params = new URLSearchParams({ limit: "100" });
-          if (customerCursor) params.set("cursor", customerCursor);
-          const custRes = await squareFetch(`/v2/customers?${params.toString()}`, accessToken);
-          if (!custRes.ok) {
-            errors.push(`Customers fetch failed: ${custRes.body?.errors?.[0]?.detail ?? custRes.status}`);
-            break;
-          }
-          const batch: Record<string, any>[] = custRes.body?.customers ?? [];
-          squareCustomers.push(...batch);
-          customerCursor = custRes.body?.cursor as string | undefined;
-        } while (customerCursor);
-        stats.customersFetched = squareCustomers.length;
-
-        // Match Square customers to families/students by email
-        for (const cust of squareCustomers) {
-          const squareCustId: string = cust.id;
-          const email: string | null = cust.email_address ?? null;
-          if (!email) continue;
-
-          const { data: matchedFamilies } = await (db as any)
-            .from("families")
-            .select("id, square_customer_id")
-            .eq("tenant_id", tenantId)
-            .ilike("primary_email", email)
-            .limit(1);
-
-          if (matchedFamilies?.length > 0) {
-            const fam = matchedFamilies[0];
-            if (!fam.square_customer_id) {
-              await (db as any)
-                .from("families")
-                .update({ square_customer_id: squareCustId, updated_at: new Date().toISOString() })
-                .eq("id", fam.id)
-                .eq("tenant_id", tenantId);
-              customerToFamily[squareCustId] = fam.id;
-              stats.customersLinked++;
-            } else {
-              customerToFamily[fam.square_customer_id] = fam.id;
+        try {
+          let customerCursor: string | undefined;
+          const squareCustomers: Record<string, any>[] = [];
+          do {
+            const params = new URLSearchParams({ limit: "100" });
+            if (customerCursor) params.set("cursor", customerCursor);
+            const custRes = await squareFetch(`/v2/customers?${params.toString()}`, accessToken);
+            if (!custRes.ok) {
+              errors.push(`Customers fetch failed: ${custRes.body?.errors?.[0]?.detail ?? custRes.status}`);
+              break;
             }
-            continue;
-          }
+            const batch: Record<string, any>[] = custRes.body?.customers ?? [];
+            squareCustomers.push(...batch);
+            customerCursor = custRes.body?.cursor as string | undefined;
+          } while (customerCursor);
+          stats.customersFetched = squareCustomers.length;
 
-          const { data: matchedStudents } = await (db as any)
-            .from("students")
-            .select("id, family_id, square_customer_id")
-            .eq("tenant_id", tenantId)
-            .ilike("email", email)
-            .limit(1);
+          // Match Square customers to families/students by email
+          for (const cust of squareCustomers) {
+            const squareCustId: string = cust.id;
+            const email: string | null = cust.email_address ?? null;
+            if (!email) continue;
 
-          if (matchedStudents?.length > 0) {
-            const stu = matchedStudents[0];
-            if (!stu.square_customer_id) {
-              await (db as any)
-                .from("students")
-                .update({ square_customer_id: squareCustId, updated_at: new Date().toISOString() })
-                .eq("id", stu.id)
-                .eq("tenant_id", tenantId);
-              customerToStudent[squareCustId] = stu.id;
-              if (stu.family_id) customerToStudentFamily[squareCustId] = stu.family_id;
-              stats.customersLinked++;
-              if (stu.family_id) customerToFamily[squareCustId] = stu.family_id;
+            const { data: matchedFamilies } = await (db as any)
+              .from("families")
+              .select("id, square_customer_id")
+              .eq("tenant_id", tenantId)
+              .ilike("primary_email", email)
+              .limit(1);
+
+            if (matchedFamilies?.length > 0) {
+              const fam = matchedFamilies[0];
+              if (!fam.square_customer_id) {
+                await (db as any)
+                  .from("families")
+                  .update({ square_customer_id: squareCustId, updated_at: new Date().toISOString() })
+                  .eq("id", fam.id)
+                  .eq("tenant_id", tenantId);
+                customerToFamily[squareCustId] = fam.id;
+                stats.customersLinked++;
+              } else {
+                customerToFamily[fam.square_customer_id] = fam.id;
+              }
+              continue;
+            }
+
+            const { data: matchedStudents } = await (db as any)
+              .from("students")
+              .select("id, family_id, square_customer_id")
+              .eq("tenant_id", tenantId)
+              .ilike("email", email)
+              .limit(1);
+
+            if (matchedStudents?.length > 0) {
+              const stu = matchedStudents[0];
+              if (!stu.square_customer_id) {
+                await (db as any)
+                  .from("students")
+                  .update({ square_customer_id: squareCustId, updated_at: new Date().toISOString() })
+                  .eq("id", stu.id)
+                  .eq("tenant_id", tenantId);
+                customerToStudent[squareCustId] = stu.id;
+                if (stu.family_id) customerToStudentFamily[squareCustId] = stu.family_id;
+                stats.customersLinked++;
+                if (stu.family_id) customerToFamily[squareCustId] = stu.family_id;
+              }
             }
           }
+        } catch (custErr: any) {
+          // Customer sync is non-critical — log and continue to invoices + payments
+          errors.push(`Customer sync skipped: ${custErr?.message ?? "unknown error"}`);
+          console.warn("[Square Sync] Customer step failed, continuing:", custErr);
         }
 
         send({
