@@ -17,54 +17,64 @@ type InvoiceRow = {
   square_location_id: string | null;
 };
 
+/**
+ * Compute billing metrics for a set of invoice rows.
+ * Logic mirrors invoices/page.tsx metricsForSqLocation() exactly.
+ */
 function computeMetrics(
   rows: InvoiceRow[],
   mtdStart: string,
   mtdEnd: string,
   nextStart: string,
-  nextEnd: string
+  nextEnd: string,
+  today: string,
 ) {
-  const today = toDateStr(new Date());
-
-  const mtdInvoices = rows.filter(
-    (r) => r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd
+  // Rows due this month
+  const mtdRows = rows.filter(
+    (r) => r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd,
   );
 
+  // Collected = PAID invoices with due_date this month OR paid_at this month
   const collected = rows
     .filter((r) => {
-      if (r.status === "PAID" && r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd) return true;
-      const d = r.paid_at ? r.paid_at.slice(0, 10) : null;
-      if (d && d >= mtdStart && d <= mtdEnd) return true;
+      const status = r.status;
+      const dueDate = r.due_date;
+      const paidAt = r.paid_at ? r.paid_at.slice(0, 10) : null;
+      if (status === "PAID" && dueDate && dueDate >= mtdStart && dueDate <= mtdEnd) return true;
+      if (paidAt && paidAt >= mtdStart && paidAt <= mtdEnd) return true;
       return false;
     })
     .reduce((s, r) => s + (r.amount_paid_cents ?? r.amount_cents ?? 0), 0);
 
-  const totalInvoiced = mtdInvoices.reduce(
+  // Total invoiced = sum of requested_amount (or amount_cents) for MTD rows
+  const totalInvoiced = mtdRows.reduce(
     (s, r) => s + (r.requested_amount ?? r.amount_cents ?? 0),
-    0
+    0,
   );
 
-  const actualCharged = mtdInvoices.reduce((s, r) => s + (r.amount_cents ?? 0), 0);
+  // Actual charged = amount_cents for MTD rows (after discounts)
+  const actualCharged = mtdRows.reduce((s, r) => s + (r.amount_cents ?? 0), 0);
+
+  // Discounted = difference between requested and actual
   const discounted = Math.max(0, totalInvoiced - actualCharged);
 
+  // Scheduled payments = SCHEDULED or UNPAID (all, not date-filtered — matches invoices page)
   const scheduled = rows
-    .filter(
-      (r) =>
-        r.status === "SCHEDULED" ||
-        (r.status === "UNPAID" && r.due_date && r.due_date > mtdEnd)
-    )
+    .filter((r) => r.status === "SCHEDULED" || r.status === "UNPAID")
     .reduce((s, r) => s + (r.amount_cents ?? 0), 0);
 
+  // Next month projected = rows due next month, using requested_amount ?? amount_cents
   const nextMonthProjected = rows
     .filter((r) => r.due_date && r.due_date >= nextStart && r.due_date <= nextEnd)
-    .reduce((s, r) => s + (r.amount_cents ?? 0), 0);
+    .reduce((s, r) => s + (r.requested_amount ?? r.amount_cents ?? 0), 0);
 
+  // Outstanding = UNPAID or PARTIALLY_PAID with due_date <= today
   const outstanding = rows
     .filter(
       (r) =>
         (r.status === "UNPAID" || r.status === "PARTIALLY_PAID") &&
         r.due_date &&
-        r.due_date <= today
+        r.due_date <= today,
     )
     .reduce((s, r) => s + (r.amount_cents ?? 0), 0);
 
@@ -72,10 +82,18 @@ function computeMetrics(
     (r) =>
       (r.status === "UNPAID" || r.status === "PARTIALLY_PAID") &&
       r.due_date &&
-      r.due_date < today
+      r.due_date < today,
   ).length;
 
-  return { collected, totalInvoiced, discounted, nextMonthProjected, scheduled, outstanding, overdueCount };
+  return {
+    collected,
+    totalInvoiced,
+    discounted,
+    nextMonthProjected,
+    scheduled,
+    outstanding,
+    overdueCount,
+  };
 }
 
 export async function GET(_req: NextRequest) {
@@ -84,39 +102,54 @@ export async function GET(_req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = getServiceClient() as any;
     const now = new Date();
+    const today = toDateStr(now);
 
     const mtdStart = toDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
     const mtdEnd = toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     const nextStart = toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 1));
     const nextEnd = toDateStr(new Date(now.getFullYear(), now.getMonth() + 2, 0));
 
-    // Fetch location map from locations table (has square_location_id column)
+    // Fetch location map
     const { data: locRows } = await db
       .from("locations")
       .select("id,name,color,square_location_id")
       .eq("tenant_id", tenantId);
 
     const sqToLoc: Record<string, { id: string; name: string; color: string }> = {};
-    for (const loc of (locRows ?? []) as { id: string; name: string; color: string; square_location_id: string | null }[]) {
+    for (const loc of (locRows ?? []) as {
+      id: string;
+      name: string;
+      color: string;
+      square_location_id: string | null;
+    }[]) {
       if (loc.square_location_id) {
         sqToLoc[loc.square_location_id] = { id: loc.id, name: loc.name, color: loc.color };
       }
     }
 
-    // Fetch all invoices — limit 10000 to bypass Supabase 1000-row default cap
+    // ── Fetch invoices for current + next month only (same window as invoices page) ──
+    // This is the critical fix: restrict to due_date in [mtdStart, nextEnd]
+    // so the numbers match the invoices page exactly.
     const { data: allInvoices, error } = await db
       .from("square_invoices_fact")
-      .select("status,amount_cents,requested_amount,amount_paid_cents,due_date,paid_at,square_location_id")
+      .select(
+        "status,amount_cents,requested_amount,amount_paid_cents,due_date,paid_at,square_location_id",
+      )
       .eq("tenant_id", tenantId)
+      .gte("due_date", mtdStart)
+      .lte("due_date", nextEnd)
       .limit(10000);
 
     if (error) throw error;
     const invoices: InvoiceRow[] = allInvoices ?? [];
 
-    const allMetrics = computeMetrics(invoices, mtdStart, mtdEnd, nextStart, nextEnd);
+    const allMetrics = computeMetrics(invoices, mtdStart, mtdEnd, nextStart, nextEnd, today);
 
-    const ORDER = ["Bellevue Music Lessons", "Gretna Music Lessons", "Elkhorn Music Lessons", "Omaha Music Lessons"];
-    const locationIds = [...new Set(invoices.map((r) => r.square_location_id).filter(Boolean))] as string[];
+    const ORDER = ["Bellevue", "Gretna", "Elkhorn", "Omaha"];
+    const locationIds = [
+      ...new Set(invoices.map((r) => r.square_location_id).filter(Boolean)),
+    ] as string[];
+
     const perLocation = locationIds
       .filter((sqId) => sqToLoc[sqId])
       .map((sqId) => {
@@ -127,11 +160,14 @@ export async function GET(_req: NextRequest) {
           squareLocationId: sqId,
           name: info.name,
           color: info.color,
-          metrics: computeMetrics(locInvoices, mtdStart, mtdEnd, nextStart, nextEnd),
+          metrics: computeMetrics(locInvoices, mtdStart, mtdEnd, nextStart, nextEnd, today),
         };
       });
 
-    perLocation.sort((a, b) => ORDER.indexOf(a.name) - ORDER.indexOf(b.name));
+    // Sort by canonical order (match by short name)
+    perLocation.sort(
+      (a, b) => ORDER.indexOf(a.name) - ORDER.indexOf(b.name),
+    );
 
     return NextResponse.json({
       data: { allSchools: allMetrics, locations: perLocation },
@@ -140,7 +176,7 @@ export async function GET(_req: NextRequest) {
     console.error("[billing-summary]", err);
     return NextResponse.json(
       { error: "Failed to compute billing summary" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
