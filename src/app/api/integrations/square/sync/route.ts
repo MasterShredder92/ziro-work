@@ -214,12 +214,12 @@ export async function POST(req: NextRequest) {
                 customer_email: primaryRecipient.email_address ?? null,
                 amount_cents: toCents(computedAmountMoney),
                 requested_amount: toCents(computedAmountMoney),
-                amount_paid: toCents(totalCompletedAmountMoney),
+                amount_paid_cents: toCents(totalCompletedAmountMoney),
                 due_date: dueDate,
                 invoice_date: toDate(inv.created_at),
                 square_created_at: inv.created_at ?? null,
                 paid_at: null,
-                raw_data: inv,
+                raw_json: inv,
                 synced_at: new Date().toISOString(),
               };
 
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
             for (let i = 0; i < rows.length; i += 50) {
               const batch = rows.slice(i, i + 50);
               const { error } = await (db as any)
-                .from("square_invoices")
+                .from("square_invoices_fact")
                 .upsert(batch, { onConflict: "square_invoice_id" });
               if (error) { errors.push(error.message); }
               else { stats.invoicesUpserted += batch.length; }
