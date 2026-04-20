@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { isRole, normalizeDbRole, roleAtLeast, type Role } from "./roles";

@@ -9,9 +9,8 @@ import {
   listStudentsForFamily,
 } from "@/lib/crm";
 import type { Family as FamilyRow } from "@/lib/types/entities";
-import { rewriteMigratedSupabaseFileUrl } from "@/lib/storage/rewriteMigratedSupabaseUrl";
 import { getCRMTenantId } from "../../_tenant";
-import { CRMLayout, CRMNav, KpiTile, TableShell } from "../../_components";
+import { CRMLayout, CRMNav, KpiTile } from "../../_components";
 import { FamilyEditClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";

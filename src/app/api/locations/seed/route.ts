@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";

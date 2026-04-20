@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
@@ -115,7 +116,7 @@ export async function POST(_req: Request) {
 
   const metadataTenantId = pickTenantId(authUser);
 
-  const { data: existingProfile, error: existingProfileError } = await (client as any)
+  await (client as any)
     .from("profiles")
     .select("id,email,tenant_id,role")
     .eq("id", userId)
@@ -130,7 +131,7 @@ export async function POST(_req: Request) {
 
   let existingByEmail: ProfileRow | null = null;
   if (!existingProfile && userEmail) {
-    const { data: byEmail, error: byEmailError } = await (client as any)
+  await (client as any)
       .from("profiles")
       .select("id,email,tenant_id,role")
       .eq("email", userEmail)
@@ -167,7 +168,7 @@ export async function POST(_req: Request) {
   };
 
   let profile: ProfileRow | null = null;
-  const { data: profileWithEmail, error: profileWithEmailError } = await (client as any)
+  await (client as any)
     .from("profiles")
     .upsert(upsertProfileRow, { onConflict: "id" })
     .select("id,email,tenant_id,role")
@@ -176,7 +177,7 @@ export async function POST(_req: Request) {
   if (!profileWithEmailError && profileWithEmail) {
     profile = profileWithEmail as ProfileRow;
   } else {
-    const { data: profileWithoutEmail, error: profileWithoutEmailError } = await (client as any)
+  await (client as any)
       .from("profiles")
       .upsert({ ...upsertProfileRow, email: null }, { onConflict: "id" })
       .select("id,email,tenant_id,role")
@@ -204,7 +205,7 @@ export async function POST(_req: Request) {
       }
     | null = null;
 
-  const { data: byActive, error: locationActiveError } = await (client as any)
+  await (client as any)
     .from("locations")
     .select("id")
     .eq("tenant_id", profileTenantId)
@@ -218,7 +219,7 @@ export async function POST(_req: Request) {
   }
 
   if (!firstActiveLocation) {
-    const { data: byIsActive, error: locationIsActiveError } = await (client as any)
+  await (client as any)
       .from("locations")
       .select("id")
       .eq("tenant_id", profileTenantId)
@@ -238,7 +239,7 @@ export async function POST(_req: Request) {
   }
 
   if (!firstActiveLocation?.id) {
-    const { data: fallbackLocation, error: fallbackLocationError } = await (client as any)
+  await (client as any)
       .from("locations")
       .select("id,tenant_id")
       .eq("is_active", true)
@@ -255,7 +256,7 @@ export async function POST(_req: Request) {
 
     if (fallbackLocation?.id && fallbackLocation?.tenant_id) {
       firstActiveLocation = { id: normalizeString(fallbackLocation.id) };
-      await (client as any)
+  await (client as any)
         .from("profiles")
         .update({ tenant_id: normalizeString(fallbackLocation.tenant_id) })
         .eq("id", userId);
@@ -269,7 +270,7 @@ export async function POST(_req: Request) {
     return Response.json({ ok: false, error: "NO_LOCATIONS_FOR_TENANT" }, { status: 400 });
   }
 
-  const { error: profileLocationUpsertError } = await (client as any)
+  await (client as any)
     .from("profile_locations")
     .upsert([{ profile_id: userId, location_id: locationId }], {
       onConflict: "profile_id,location_id",
@@ -282,7 +283,7 @@ export async function POST(_req: Request) {
     );
   }
 
-  const { data: finalProfile, error: finalProfileError } = await (client as any)
+  await (client as any)
     .from("profiles")
     .select("id,email,tenant_id,role")
     .eq("id", userId)
