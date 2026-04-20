@@ -12,6 +12,7 @@ import type { Family as FamilyRow } from "@/lib/types/entities";
 import { rewriteMigratedSupabaseFileUrl } from "@/lib/storage/rewriteMigratedSupabaseUrl";
 import { getCRMTenantId } from "../../_tenant";
 import { CRMLayout, CRMNav, KpiTile, TableShell } from "../../_components";
+import { FamilyEditClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function FamilyProfilePage({
     >
       <CRMNav current="families" />
 
+      {/* KPI tiles */}
       <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
         <KpiTile
           label="Balance"
@@ -105,225 +107,15 @@ export default async function FamilyProfilePage({
         />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-4">
-          <h3 className="mb-3 text-sm font-semibold text-[#d4d4d4]">
-            Primary guardian
-          </h3>
-          <dl className="space-y-2 text-sm">
-            <Row
-              label="Name"
-              value={
-                family.primary_contact_name ??
-                family.parent_name ??
-                ([family.parent_first_name, family.parent_last_name]
-                  .filter(Boolean)
-                  .join(" ") ||
-                  null)
-              }
-            />
-            <Row label="Email" value={family.primary_email ?? null} />
-            <Row label="Phone" value={family.primary_phone ?? null} />
-            <Row
-              label="Emergency contact"
-              value={family.emergency_contact_name ?? null}
-            />
-          </dl>
-        </div>
-
-        <div className="rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-4">
-          <h3 className="mb-3 text-sm font-semibold text-[#d4d4d4]">
-            Emergency & other
-          </h3>
-          {family.emergency_contact_name || family.emergency_contact_phone ? (
-            <dl className="space-y-2 text-sm">
-              <Row
-                label="Emergency contact"
-                value={family.emergency_contact_name ?? null}
-              />
-              <Row
-                label="Emergency phone"
-                value={family.emergency_contact_phone ?? null}
-              />
-              <Row
-                label="Relationship"
-                value={family.emergency_contact_relationship ?? null}
-              />
-            </dl>
-          ) : (
-            <div className="text-xs text-[#707078]">
-              No emergency contact on file.
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-4 lg:col-span-2">
-          <h3 className="mb-3 text-sm font-semibold text-[#d4d4d4]">Students</h3>
-          {students.length === 0 ? (
-            <div className="text-xs text-[#707078]">No students linked.</div>
-          ) : (
-            <TableShell
-              headers={[
-                "Student",
-                "Studio",
-                "Teacher",
-                "Rate",
-                "Paid",
-                "Mil.",
-                "Status",
-              ]}
-            >
-              {students.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-[#14141a] last:border-0 text-sm"
-                >
-                  <td className="px-3 py-2 font-semibold text-[#f0f0f0]">
-                    <Link
-                      href={`/crm/students/${s.id}`}
-                      className="hover:text-[#00ff88]"
-                    >
-                      {s.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-[#909098]">
-                    {s.location_id
-                      ? locationNameById[s.location_id] ?? s.location_id
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-[#909098]">
-                    {s.teacher_label ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-[#909098]">
-                    {typeof s.rate_per_session === "number"
-                      ? `$${s.rate_per_session.toFixed(2)}`
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-[#909098]">
-                    {typeof s.total_paid === "number"
-                      ? `$${s.total_paid.toFixed(2)}`
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-[#909098]">
-                    {s.is_military ? "Yes" : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-[#909098]">{s.status ?? "—"}</td>
-                </tr>
-              ))}
-            </TableShell>
-          )}
-        </div>
-      </div>
-
-      <h2 className="mt-8 mb-3 text-sm font-semibold uppercase tracking-wider text-[#909098]">
-        Family files
-      </h2>
-      {familyFileRows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#1c1c1e] bg-[#0a0a0c] p-4 text-sm text-[#707078]">
-          No files linked to this family yet.
-        </div>
-      ) : (
-        <TableShell
-          headers={["Type", "Name", "Status", "Link"]}
-        >
-          {familyFileRows.map((f) => {
-            const href = rewriteMigratedSupabaseFileUrl(f.file_url ?? "");
-            return (
-              <tr key={f.id} className="border-b border-[#1c1c1e] last:border-0">
-                <td className="px-4 py-2 text-[#909098]">{f.file_type ?? "—"}</td>
-                <td className="px-4 py-2 text-[#d4d4d4]">{f.file_name ?? "—"}</td>
-                <td className="px-4 py-2 text-[#909098]">
-                  {f.signwell_status ?? "—"}
-                </td>
-                <td className="px-4 py-2">
-                  {href ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-[#00ff88] hover:underline"
-                    >
-                      Open
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </TableShell>
-      )}
-
-      <h2 className="mt-8 mb-3 text-sm font-semibold uppercase tracking-wider text-[#909098]">
-        Active enrollments
-      </h2>
-      {familyEnrollments.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#1c1c1e] bg-[#0a0a0c] p-4 text-sm text-[#707078]">
-          No enrollments linked to students in this family.
-        </div>
-      ) : (
-        <TableShell
-          headers={["Student", "Teacher", "Status", "Start", "End"]}
-        >
-          {familyEnrollments.map((e) => (
-            <tr key={e.id} className="border-b border-[#1c1c1e] last:border-0">
-              <td className="px-4 py-2 text-[#909098]">
-                <Link
-                  href={`/crm/students/${e.student_id}`}
-                  className="hover:text-[#00ff88]"
-                >
-                  {e.student_id}
-                </Link>
-              </td>
-              <td className="px-4 py-2 text-[#909098]">
-                <Link
-                  href={`/crm/teachers/${e.teacher_id}`}
-                  className="hover:text-[#00ff88]"
-                >
-                  {e.teacher_id}
-                </Link>
-              </td>
-              <td className="px-4 py-2 text-[#909098]">{e.status}</td>
-              <td className="px-4 py-2 text-[#909098]">{e.start_date ?? "—"}</td>
-              <td className="px-4 py-2 text-[#909098]">{e.end_date ?? "—"}</td>
-            </tr>
-          ))}
-        </TableShell>
-      )}
-
-      <h2 className="mt-8 mb-3 text-sm font-semibold uppercase tracking-wider text-[#909098]">
-        Communication
-      </h2>
-      <TableShell headers={["Channel", "Address"]}>
-        {family.primary_email ? (
-          <tr>
-            <td className="px-4 py-2 text-xs uppercase text-[#606068]">Email</td>
-            <td className="px-4 py-2 text-[#d4d4d4]">{family.primary_email}</td>
-          </tr>
-        ) : null}
-        {family.primary_phone ? (
-          <>
-            <tr>
-              <td className="px-4 py-2 text-xs uppercase text-[#606068]">SMS</td>
-              <td className="px-4 py-2 text-[#d4d4d4]">{family.primary_phone}</td>
-            </tr>
-            <tr>
-              <td className="px-4 py-2 text-xs uppercase text-[#606068]">Phone</td>
-              <td className="px-4 py-2 text-[#d4d4d4]">{family.primary_phone}</td>
-            </tr>
-          </>
-        ) : null}
-      </TableShell>
+      {/* Client-side edit component (tabs: View / Edit) */}
+      <FamilyEditClient
+        family={family as Record<string, unknown>}
+        tenantId={tenantId}
+        students={students as unknown as Array<Record<string, unknown>>}
+        locationNameById={locationNameById}
+        familyFileRows={familyFileRows as unknown as Array<Record<string, unknown>>}
+        familyEnrollments={familyEnrollments as unknown as Array<Record<string, unknown>>}
+      />
     </CRMLayout>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="flex items-center justify-between border-b border-[#14141a] pb-1 last:border-0">
-      <dt className="text-xs uppercase tracking-wider text-[#606068]">{label}</dt>
-      <dd className="text-[#d4d4d4]">{value ?? "—"}</dd>
-    </div>
   );
 }

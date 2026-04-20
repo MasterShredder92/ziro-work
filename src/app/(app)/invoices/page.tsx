@@ -34,6 +34,7 @@ export default async function InvoicesPage({
     location_id?: string;
     search?: string;
     page?: string;
+    date_range?: string;
   }>;
 }) {
   const tenantId = await getCRMTenantId();
@@ -51,6 +52,8 @@ export default async function InvoicesPage({
   const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split("T")[0];
 
   // ── Filtered invoice list ──────────────────────────────────────────────────
+  // Default to current month unless "all" date range is explicitly requested
+  const dateRange = params.date_range ?? "month";
   let query = db
     .from("square_invoices")
     .select(
@@ -60,6 +63,20 @@ export default async function InvoicesPage({
     .eq("tenant_id", tenantId)
     .order("invoice_date", { ascending: false })
     .range(offset, offset + pageSize - 1);
+
+  // Apply date range filter (default: current month)
+  if (dateRange === "month") {
+    query = query.gte("invoice_date", thisMonthStart).lte("invoice_date", thisMonthEnd);
+  } else if (dateRange === "quarter") {
+    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1).toISOString().split("T")[0];
+    const qEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0).toISOString().split("T")[0];
+    query = query.gte("invoice_date", qStart).lte("invoice_date", qEnd);
+  } else if (dateRange === "year") {
+    const yStart = `${now.getFullYear()}-01-01`;
+    const yEnd = `${now.getFullYear()}-12-31`;
+    query = query.gte("invoice_date", yStart).lte("invoice_date", yEnd);
+  }
+  // dateRange === "all" → no date filter
 
   if (params.status && params.status !== "all") query = query.eq("status", params.status.toUpperCase());
   if (params.location_id) query = query.eq("location_id", params.location_id);
@@ -137,6 +154,7 @@ export default async function InvoicesPage({
       initialStatus={params.status ?? "all"}
       initialLocationId={params.location_id ?? ""}
       initialSearch={params.search ?? ""}
+      initialDateRange={dateRange}
       billingMetrics={billingMetrics}
     />
   );

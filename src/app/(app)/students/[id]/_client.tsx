@@ -9,7 +9,7 @@ import { loadStudentSurface, type StudentSurfaceDTO } from "./actions";
 import { PageTransition } from "@/components/system/PageTransition";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-type Tab = "profile" | "sessions" | "timeline";
+type Tab = "profile" | "edit" | "sessions" | "timeline";
 
 type Invoice = {
   id: string;
@@ -18,6 +18,30 @@ type Invoice = {
   due_date?: string | null;
   paid_date?: string | null;
   description?: string | null;
+};
+
+type StudentRaw = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  instrument?: string | null;
+  status?: string | null;
+  bio?: string | null;
+  goals?: string | null;
+  learning_style?: string | null;
+  teacher_notes?: string | null;
+  experience?: string | null;
+  notes?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  date_of_birth?: string | null;
+  start_date?: string | null;
+  rate_per_session?: number | null;
+  blocks_per_week?: number | null;
+  tags?: string[] | null;
+  teacher_id?: string | null;
+  family_id?: string | null;
+  tenant_id: string;
 };
 
 function invoiceStatusBadge(s: string) {
@@ -95,22 +119,242 @@ function SessionsTab({ studentId }: { studentId: string }) {
   );
 }
 
+// ─── Student Edit Form ────────────────────────────────────────────────────────
+function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; tenantId: string; onSaved: () => void }) {
+  const [raw, setRaw] = useState<StudentRaw | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Form fields
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [instrument, setInstrument] = useState("");
+  const [status, setStatus] = useState("active");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [ratePerSession, setRatePerSession] = useState("");
+  const [blocksPerWeek, setBlocksPerWeek] = useState("");
+  const [bio, setBio] = useState("");
+  const [goals, setGoals] = useState("");
+  const [learningStyle, setLearningStyle] = useState("");
+  const [experience, setExperience] = useState("");
+  const [teacherNotes, setTeacherNotes] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/students/${studentId}`, {
+      headers: { "x-tenant-id": tenantId },
+    })
+      .then(r => r.json())
+      .then(res => {
+        const s: StudentRaw = res.data;
+        setRaw(s);
+        setFirstName(s.first_name ?? "");
+        setLastName(s.last_name ?? "");
+        setInstrument(s.instrument ?? "");
+        setStatus(s.status ?? "active");
+        setEmail(s.email ?? "");
+        setPhone(s.phone ?? "");
+        setDateOfBirth(s.date_of_birth ?? "");
+        setStartDate(s.start_date ?? "");
+        setRatePerSession(s.rate_per_session != null ? String(s.rate_per_session) : "");
+        setBlocksPerWeek(s.blocks_per_week != null ? String(s.blocks_per_week) : "");
+        setBio(s.bio ?? "");
+        setGoals(s.goals ?? "");
+        setLearningStyle(s.learning_style ?? "");
+        setExperience(s.experience ?? "");
+        setTeacherNotes(s.teacher_notes ?? "");
+        setNotes(s.notes ?? "");
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [studentId, tenantId]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveStatus("idle");
+    setSaveError(null);
+    try {
+      const patch: Record<string, unknown> = {
+        first_name: firstName,
+        last_name: lastName,
+        instrument: instrument || null,
+        status,
+        email: email || null,
+        phone: phone || null,
+        date_of_birth: dateOfBirth || null,
+        start_date: startDate || null,
+        rate_per_session: ratePerSession ? parseFloat(ratePerSession) : undefined,
+        blocks_per_week: blocksPerWeek ? parseInt(blocksPerWeek, 10) : undefined,
+        bio: bio || null,
+        goals: goals || null,
+        learning_style: learningStyle || null,
+        experience: experience || null,
+        teacher_notes: teacherNotes || null,
+        notes: notes || null,
+      };
+      const res = await fetch(`/api/students/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+      }
+      setSaveStatus("success");
+      setTimeout(() => { setSaveStatus("idle"); onSaved(); }, 2000);
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-10 animate-pulse rounded-lg bg-white/5" />)}</div>;
+  }
+  if (!raw) {
+    return <div className="text-sm text-red-400">Could not load student data.</div>;
+  }
+
+  const inputCls = "w-full rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none";
+  const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[#505055] mb-1";
+  const sectionCls = "rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4 space-y-3";
+
+  return (
+    <div className="space-y-4">
+      {/* Basic Info */}
+      <div className={sectionCls}>
+        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Basic Info</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>First Name</label>
+            <input className={inputCls} value={firstName} onChange={e => setFirstName(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>Last Name</label>
+            <input className={inputCls} value={lastName} onChange={e => setLastName(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Instrument</label>
+            <input className={inputCls} value={instrument} onChange={e => setInstrument(e.target.value)} placeholder="Guitar, Piano…" />
+          </div>
+          <div>
+            <label className={labelCls}>Status</label>
+            <select className={inputCls} value={status} onChange={e => setStatus(e.target.value)}>
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+              <option value="inactive">Inactive</option>
+              <option value="former">Former</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Email</label>
+            <input className={inputCls} type="email" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>Phone</label>
+            <input className={inputCls} type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Date of Birth</label>
+            <input className={inputCls} type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>Start Date</label>
+            <input className={inputCls} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Rate / Session ($)</label>
+            <input className={inputCls} type="number" min="0" step="0.01" value={ratePerSession} onChange={e => setRatePerSession(e.target.value)} placeholder="0.00" />
+          </div>
+          <div>
+            <label className={labelCls}>Blocks / Week</label>
+            <input className={inputCls} type="number" min="0" step="1" value={blocksPerWeek} onChange={e => setBlocksPerWeek(e.target.value)} placeholder="1" />
+          </div>
+        </div>
+      </div>
+
+      {/* Learning Profile */}
+      <div className={sectionCls}>
+        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Learning Profile</div>
+        <div>
+          <label className={labelCls}>Bio</label>
+          <textarea className={inputCls} rows={2} value={bio} onChange={e => setBio(e.target.value)} placeholder="Brief student bio…" />
+        </div>
+        <div>
+          <label className={labelCls}>Goals</label>
+          <textarea className={inputCls} rows={2} value={goals} onChange={e => setGoals(e.target.value)} placeholder="What does this student want to achieve?" />
+        </div>
+        <div>
+          <label className={labelCls}>Learning Style</label>
+          <input className={inputCls} value={learningStyle} onChange={e => setLearningStyle(e.target.value)} placeholder="Visual, auditory, kinesthetic…" />
+        </div>
+        <div>
+          <label className={labelCls}>Prior Experience</label>
+          <input className={inputCls} value={experience} onChange={e => setExperience(e.target.value)} placeholder="Beginner, 2 years, etc." />
+        </div>
+      </div>
+
+      {/* Teacher Notes */}
+      <div className={sectionCls}>
+        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Teacher Notes</div>
+        <div>
+          <label className={labelCls}>Private Teacher Notes</label>
+          <textarea className={inputCls} rows={3} value={teacherNotes} onChange={e => setTeacherNotes(e.target.value)} placeholder="Notes visible only to teachers and admins…" />
+        </div>
+        <div>
+          <label className={labelCls}>General Notes</label>
+          <textarea className={inputCls} rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="General notes…" />
+        </div>
+      </div>
+
+      {/* Save */}
+      {saveStatus === "success" && <p className="text-sm text-green-500">Student profile saved successfully.</p>}
+      {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
+      <div className="flex gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex-1 rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save Profile"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function StudentDetailLoaded({ studentId }: { studentId: string }) {
   const [data, setData] = useState<StudentSurfaceDTO | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("profile");
 
-  useEffect(() => {
-    let cancelled = false;
+  function reload() {
+    setLoading(true);
     void loadStudentSurface(studentId, DEFAULT_TENANT_ID).then((res) => {
-      if (cancelled) return;
       setLoading(false);
       if (!res.ok) { setErr(res.error); setData(null); }
       else { setErr(null); setData(res.data); }
     });
-    return () => { cancelled = true; };
-  }, [studentId]);
+  }
+
+  useEffect(() => { reload(); }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const agentStatus = useMemo(() => {
     if (!data) return "idle" as const;
@@ -121,7 +365,8 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "profile", label: "Profile" },
-    { id: "sessions", label: "Sessions & Invoices" },
+    { id: "edit", label: "Edit" },
+    { id: "sessions", label: "Sessions" },
     { id: "timeline", label: "Timeline" },
   ];
 
@@ -133,12 +378,12 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
         {data && (
           <>
             <PageHeader title={data.studentName} subtitle={`${data.stageName} · ${data.riskBand} risk`} />
-            <div className="flex gap-1 border-b border-[#1c1c1e]">
+            <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">
               {TABS.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`px-4 py-2.5 text-sm font-semibold transition-colors ${
+                  className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${
                     tab === t.id
                       ? "border-b-2 border-[#00ff88] text-[#00ff88]"
                       : "text-[#505055] hover:text-[#909098]"
@@ -157,6 +402,13 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
                 nextActions={data.nextActions}
                 currentStageName={data.stageName}
                 blockers={data.blockers}
+              />
+            )}
+            {tab === "edit" && (
+              <StudentEditForm
+                studentId={studentId}
+                tenantId={DEFAULT_TENANT_ID}
+                onSaved={() => { reload(); setTab("profile"); }}
               />
             )}
             {tab === "sessions" && <SessionsTab studentId={studentId} />}

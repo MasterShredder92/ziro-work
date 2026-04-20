@@ -95,6 +95,20 @@ const ROW_HEIGHT = 64;      // px per teacher row
 const LABEL_COL_W = 56;     // px for time labels column
 const TEACHER_COL_W = 80;   // px for teacher name column
 
+const BLOCK_TYPES = [
+  { value: "student_session", label: "Student Session" },
+  { value: "open_time", label: "Open Time" },
+  { value: "sub", label: "Sub" },
+  { value: "virtual", label: "Virtual" },
+  { value: "makeup_session", label: "Makeup Session" },
+  { value: "call_out", label: "Call Out" },
+  { value: "first_day", label: "First Day" },
+  { value: "last_day", label: "Last Day" },
+  { value: "meet_greet", label: "Meet & Greet" },
+  { value: "teacher_training", label: "Teacher Training" },
+  { value: "not_bookable", label: "Not Bookable" },
+];
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 type Props = {
   locationId: string;
@@ -108,11 +122,14 @@ type Props = {
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
 };
 
-// ─── Check-in sheet ───────────────────────────────────────────────────────────
-function CheckInSheet({
+// ─── Full Block Edit Sheet ────────────────────────────────────────────────────
+function BlockEditSheet({
   block,
   student,
   family,
+  teachers,
+  students,
+  onSave,
   onCheckIn,
   onCallOut,
   onClose,
@@ -122,6 +139,9 @@ function CheckInSheet({
   block: ProjectedBlock;
   student: Student | null;
   family: Family | null;
+  teachers: Teacher[];
+  students: Student[];
+  onSave: (patch: Partial<ScheduleBlock>) => void;
   onCheckIn: () => void;
   onCallOut: () => void;
   onClose: () => void;
@@ -133,6 +153,26 @@ function CheckInSheet({
   const instr = student ? (student as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
   const emoji = instr ? instrumentEmoji(instr) : "";
 
+  const [blockType, setBlockType] = React.useState<ScheduleBlock["block_type"]>((block.block_type as ScheduleBlock["block_type"]) ?? "student_session");
+  const [studentId, setStudentId] = React.useState(block.student_id ?? "");
+  const [teacherId, setTeacherId] = React.useState(block.teacher_id ?? "");
+  const [isVirtual, setIsVirtual] = React.useState(block.is_virtual ?? false);
+  const [isRecurring, setIsRecurring] = React.useState(block.is_recurring ?? false);
+  const [notes, setNotes] = React.useState(block.notes ?? "");
+  const [tab, setTab] = React.useState<"actions" | "edit">("actions");
+
+  function handleSave() {
+    const patch: Partial<ScheduleBlock> = {
+      block_type: blockType as ScheduleBlock["block_type"],
+      student_id: studentId || null,
+      teacher_id: teacherId,
+      is_virtual: isVirtual,
+      is_recurring: isRecurring,
+      notes: notes || null,
+    };
+    onSave(patch);
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
@@ -140,19 +180,16 @@ function CheckInSheet({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-t-2xl border-t p-5 pb-8 animate-in slide-in-from-bottom-4 duration-300"
-        style={{ background: "var(--z-surface)", borderColor: "var(--z-border)" }}
+        className="w-full max-w-lg rounded-t-2xl border-t animate-in slide-in-from-bottom-4 duration-300"
+        style={{ background: "var(--z-surface)", borderColor: "var(--z-border)", maxHeight: "90dvh", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle bar */}
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--z-border)]" />
+        <div className="mx-auto mt-3 mb-1 h-1 w-10 shrink-0 rounded-full bg-[var(--z-border)]" />
 
-        {/* Block info */}
-        <div className="mb-4 flex items-start gap-3">
-          <div
-            className="h-10 w-1.5 shrink-0 rounded-full"
-            style={{ background: color.border }}
-          />
+        {/* Block header */}
+        <div className="flex items-start gap-3 px-5 py-3 shrink-0">
+          <div className="h-10 w-1.5 shrink-0 rounded-full" style={{ background: color.border }} />
           <div className="min-w-0 flex-1">
             {student ? (
               <div className="text-base font-bold text-[var(--z-fg)]">
@@ -164,6 +201,8 @@ function CheckInSheet({
             )}
             <div className="text-xs text-[var(--z-muted)]">
               {minuteToLabel(toMinute(block.start_time))} – {minuteToLabel(toMinute(block.end_time))}
+              {block.is_recurring && <span className="ml-2 text-[10px] font-semibold text-purple-400">↻ Recurring</span>}
+              {block.is_virtual && <span className="ml-2 text-[10px] font-semibold text-blue-400">📹 Virtual</span>}
             </div>
             {family && (
               <div className="text-xs text-[var(--z-muted)]">
@@ -172,49 +211,181 @@ function CheckInSheet({
               </div>
             )}
           </div>
+          <button onClick={onClose} className="shrink-0 text-[var(--z-muted)] hover:text-[var(--z-fg)] text-lg">✕</button>
         </div>
 
-        {error && (
-          <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            {error}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="space-y-2">
-          {!block.checked_in && block.student_id && (
-            <button
-              onClick={onCheckIn}
-              disabled={saving}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 py-3 text-sm font-bold text-emerald-100 disabled:opacity-50"
-            >
-              {saving ? (
-                <span className="animate-pulse">Saving…</span>
-              ) : (
-                <>✓ Check In</>
-              )}
+        {/* Tabs */}
+        <div className="flex border-b border-[var(--z-border)] px-3 shrink-0">
+          {(["actions", "edit"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${tab === t ? "border-b-2 border-[var(--z-accent)] text-[var(--z-accent)]" : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"}`}>
+              {t === "actions" ? "Actions" : "Edit Block"}
             </button>
-          )}
-          {block.checked_in && (
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-400/60 bg-emerald-500/10 py-3 text-sm font-bold text-emerald-300">
-              ✓ Already Checked In
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto flex-1 p-5 pb-8">
+          {error && (
+            <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              {error}
             </div>
           )}
-          {!block.checked_in && block.student_id && (
-            <button
-              onClick={onCallOut}
-              disabled={saving}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/60 bg-red-500/10 py-3 text-sm font-semibold text-red-300 disabled:opacity-50"
-            >
-              Mark Call Out
-            </button>
+
+          {tab === "actions" && (
+            <div className="space-y-2">
+              {!block.checked_in && block.student_id && (
+                <button
+                  onClick={onCheckIn}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 py-3 text-sm font-bold text-emerald-100 disabled:opacity-50"
+                >
+                  {saving ? <span className="animate-pulse">Saving…</span> : <>✓ Check In</>}
+                </button>
+              )}
+              {block.checked_in && (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-400/60 bg-emerald-500/10 py-3 text-sm font-bold text-emerald-300">
+                  ✓ Already Checked In
+                </div>
+              )}
+              {!block.checked_in && block.student_id && (
+                <button
+                  onClick={onCallOut}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/60 bg-red-500/10 py-3 text-sm font-semibold text-red-300 disabled:opacity-50"
+                >
+                  Mark Call Out
+                </button>
+              )}
+              <button
+                onClick={() => setTab("edit")}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] py-3 text-sm font-semibold text-[var(--z-fg)]"
+              >
+                ✏️ Edit Block Details
+              </button>
+              <button
+                onClick={onClose}
+                className="flex w-full items-center justify-center rounded-xl border border-[var(--z-border)] py-3 text-sm text-[var(--z-muted)]"
+              >
+                Cancel
+              </button>
+            </div>
           )}
-          <button
-            onClick={onClose}
-            className="flex w-full items-center justify-center rounded-xl border border-[var(--z-border)] py-3 text-sm text-[var(--z-muted)]"
-          >
-            Cancel
-          </button>
+
+          {tab === "edit" && (
+            <div className="space-y-4">
+              {/* Block Type */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--z-muted)] uppercase tracking-wider">Block Type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {BLOCK_TYPES.map(bt => (
+                    <button key={bt.value} onClick={() => setBlockType(bt.value as ScheduleBlock["block_type"])}
+                      className="rounded-full border px-3 py-1 text-xs font-semibold transition-colors"
+                      style={{
+                        borderColor: blockType === bt.value ? "var(--z-accent)" : "var(--z-border)",
+                        background: blockType === bt.value ? "rgba(99,102,241,0.15)" : "var(--z-surface)",
+                        color: blockType === bt.value ? "var(--z-accent)" : "var(--z-muted)",
+                      }}>
+                      {bt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Student */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--z-muted)] uppercase tracking-wider">Student</label>
+                <select
+                  value={studentId}
+                  onChange={e => setStudentId(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                >
+                  <option value="">— No student (open time) —</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>{studentName(s)}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Teacher */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--z-muted)] uppercase tracking-wider">Teacher</label>
+                <select
+                  value={teacherId}
+                  onChange={e => setTeacherId(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                >
+                  <option value="">— Select teacher —</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>{teacherName(t)}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Toggles */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsVirtual(!isVirtual)}
+                  className="flex flex-1 items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors"
+                  style={{
+                    borderColor: isVirtual ? "#0284c7" : "var(--z-border)",
+                    background: isVirtual ? "rgba(14,165,233,0.12)" : "var(--z-surface)",
+                    color: isVirtual ? "#38bdf8" : "var(--z-muted)",
+                  }}
+                >
+                  📹 Virtual
+                  <div className={`h-5 w-9 rounded-full transition-colors ${isVirtual ? "bg-blue-500" : "bg-[var(--z-border)]"}`}>
+                    <div className={`mt-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${isVirtual ? "translate-x-4 ml-0.5" : "translate-x-0.5"}`} />
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRecurring(!isRecurring)}
+                  className="flex flex-1 items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors"
+                  style={{
+                    borderColor: isRecurring ? "#7c3aed" : "var(--z-border)",
+                    background: isRecurring ? "rgba(139,92,246,0.12)" : "var(--z-surface)",
+                    color: isRecurring ? "#a78bfa" : "var(--z-muted)",
+                  }}
+                >
+                  ↻ Recurring
+                  <div className={`h-5 w-9 rounded-full transition-colors ${isRecurring ? "bg-purple-500" : "bg-[var(--z-border)]"}`}>
+                    <div className={`mt-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${isRecurring ? "translate-x-4 ml-0.5" : "translate-x-0.5"}`} />
+                  </div>
+                </button>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--z-muted)] uppercase tracking-wider">Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Add notes…"
+                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] resize-none"
+                />
+              </div>
+
+              {/* Save / Cancel */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex flex-1 items-center justify-center rounded-xl bg-[var(--z-accent)] py-3 text-sm font-bold text-[var(--z-on-accent)] disabled:opacity-50"
+                >
+                  {saving ? "Saving…" : "Save Changes"}
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex items-center justify-center rounded-xl border border-[var(--z-border)] px-4 py-3 text-sm text-[var(--z-muted)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -625,15 +796,18 @@ export function MobileScheduleView({
         );
       })()}
 
-      {/* ── Check-in bottom sheet ── */}
+      {/* ── Full block edit sheet ── */}
       {selectedBlock && (
-        <CheckInSheet
+        <BlockEditSheet
           block={selectedBlock}
           student={selectedBlock.student_id ? (studentsById.get(selectedBlock.student_id) ?? null) : null}
           family={(() => {
             const s = selectedBlock.student_id ? studentsById.get(selectedBlock.student_id) : null;
             return s?.family_id ? (familiesById.get(s.family_id) ?? null) : null;
           })()}
+          teachers={teachers}
+          students={students}
+          onSave={(patch) => patchBlock(selectedBlock, patch)}
           onCheckIn={() => checkIn(selectedBlock)}
           onCallOut={() => callOut(selectedBlock)}
           onClose={() => { setSelectedBlockId(null); setError(null); }}

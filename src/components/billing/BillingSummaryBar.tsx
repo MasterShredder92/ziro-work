@@ -21,7 +21,7 @@ function MetricRow({ label, value, color }: { label: string; value: string; colo
 function MetricsCard({ m }: { m: BillingMetrics }) {
   return (
     <div
-      className="rounded-xl border bg-[#0a0a0c] p-4 min-w-[220px]"
+      className="w-full sm:w-auto rounded-xl border bg-[#0a0a0c] p-4 sm:min-w-[220px]"
       style={{ borderColor: `${m.color}33` }}
     >
       <div className="mb-3 flex items-center gap-2">

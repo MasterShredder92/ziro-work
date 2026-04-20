@@ -41,6 +41,9 @@ export function StudioInfoSettingsClient() {
   const [timezone, setTimezone] = React.useState("America/New_York");
   const [billingCycle, setBillingCycle] = React.useState("monthly");
   const [logoName, setLogoName] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<"idle" | "success" | "error">("idle");
+  const [saveError, setSaveError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const name =
@@ -51,6 +54,37 @@ export function StudioInfoSettingsClient() {
     setTimezone(String(schedule.timezone ?? "America/New_York"));
     setBillingCycle(String(schedule.default_billing_cycle ?? "monthly"));
   }, [schedule, kpi]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveStatus("idle");
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schedule: {
+            studio_display_name: studioName,
+            timezone,
+            default_billing_cycle: billingCycle,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+      }
+      setSaveStatus("success");
+      await settings.reload();
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <PageShell title="Studio Info">
@@ -111,9 +145,22 @@ export function StudioInfoSettingsClient() {
           </div>
         </SettingsGroup>
 
+        {saveStatus === "success" && (
+          <p className="text-sm text-green-500">Settings saved successfully.</p>
+        )}
+        {saveStatus === "error" && saveError && (
+          <p className="text-sm text-[var(--z-danger)]">Error: {saveError}</p>
+        )}
+
         <div className="flex flex-wrap gap-[var(--z-space-3)]">
-          <Button type="button" variant="primary" size="md" disabled>
-            Save changes
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={saving || settings.isLoading}
+            onClick={handleSave}
+          >
+            {saving ? "Saving…" : "Save changes"}
           </Button>
           <Button type="button" variant="ghost" size="md" onClick={() => settings.reload()}>
             Reload from server

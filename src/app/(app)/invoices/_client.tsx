@@ -50,6 +50,7 @@ interface InvoicesClientProps {
   initialStatus: string;
   initialLocationId: string;
   initialSearch: string;
+  initialDateRange: string;
   billingMetrics?: BillingMetrics[];
 }
 
@@ -146,6 +147,7 @@ export function InvoicesClient({
   initialStatus,
   initialLocationId,
   initialSearch,
+  initialDateRange,
   billingMetrics,
 }: InvoicesClientProps) {
   const router = useRouter();
@@ -155,6 +157,7 @@ export function InvoicesClient({
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
   const [locationId, setLocationId] = useState(initialLocationId);
+  const [dateRange, setDateRange] = useState(initialDateRange);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -173,17 +176,22 @@ export function InvoicesClient({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate({ search, status, location_id: locationId });
+    navigate({ search, status, location_id: locationId, date_range: dateRange });
   };
 
   const handleStatusChange = (s: string) => {
     setStatus(s);
-    navigate({ search, status: s, location_id: locationId });
+    navigate({ search, status: s, location_id: locationId, date_range: dateRange });
   };
 
   const handleLocationChange = (id: string) => {
     setLocationId(id);
-    navigate({ search, status, location_id: id });
+    navigate({ search, status, location_id: id, date_range: dateRange });
+  };
+
+  const handleDateRangeChange = (dr: string) => {
+    setDateRange(dr);
+    navigate({ search, status, location_id: locationId, date_range: dr });
   };
 
   const handlePageChange = (p: number) => {
@@ -234,6 +242,24 @@ export function InvoicesClient({
 
         {/* ── Filters ── */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Date range filter */}
+          <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
+            {(["month", "quarter", "year", "all"] as const).map((dr) => (
+              <button
+                key={dr}
+                onClick={() => handleDateRangeChange(dr)}
+                className="px-3 py-1.5 capitalize transition-colors"
+                style={{
+                  background: dateRange === dr ? "var(--z-accent)" : "var(--z-surface)",
+                  color: dateRange === dr ? "var(--z-on-accent)" : "var(--z-muted)",
+                  fontWeight: dateRange === dr ? 700 : 400,
+                }}
+              >
+                {dr === "month" ? "This Month" : dr === "quarter" ? "This Quarter" : dr === "year" ? "This Year" : "All Time"}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={handleSearch} className="flex w-full gap-2 sm:w-auto">
             <input
               type="search"

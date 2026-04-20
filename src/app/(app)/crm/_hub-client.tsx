@@ -53,13 +53,14 @@ function invoiceStatusBadge(s: string) {
 }
 function displayName(name: string): string { return name.replace(/\s+Family$/i, "").trim(); }
 
-function FamilyDetailPanel({ family, onClose }: { family: Family; onClose: () => void }) {
+function FamilyDetailContent({ family, onClose }: { family: Family; onClose: () => void }) {
   const [tab, setTab] = useState<"students" | "invoices" | "timeline">("students");
   const [students, setStudents] = useState<Student[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const locConfig = family.primary_location_id ? LOCATION_MAP[family.primary_location_id] : null;
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -78,26 +79,27 @@ function FamilyDetailPanel({ family, onClose }: { family: Family; onClose: () =>
       setLoading(false);
     });
   }, [family.id]);
+
   return (
-    <div className="flex h-full flex-col border-l border-[#1c1c1e] bg-[#0a0a0c]">
+    <div className="flex h-full flex-col bg-[#0a0a0c]">
       {locConfig && <div className="h-1 w-full shrink-0" style={{ backgroundColor: locConfig.color }} />}
-      <div className="flex items-center justify-between border-b border-[#1c1c1e] px-6 py-4">
-        <div>
-          <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b border-[#1c1c1e] px-4 py-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="text-base font-bold text-white">{displayName(family.name)}</div>
             {locConfig && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${locConfig.color}20`, color: locConfig.color }}>{locConfig.name}</span>}
           </div>
           <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[#505055]">
-            {family.primary_email && <span>{family.primary_email}</span>}
+            {family.primary_email && <span className="truncate">{family.primary_email}</span>}
             {family.primary_phone && <span>{family.primary_phone}</span>}
             {family.balance_owed != null && family.balance_owed > 0 && <span className="font-semibold text-red-400">${family.balance_owed.toFixed(2)} owed</span>}
           </div>
         </div>
-        <button onClick={onClose} className="text-[#505055] hover:text-white transition-colors text-lg">✕</button>
+        <button onClick={onClose} className="ml-3 shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-[#505055] hover:bg-white/10 hover:text-white transition-colors text-lg">✕</button>
       </div>
-      <div className="flex border-b border-[#1c1c1e] px-4">
+      <div className="flex border-b border-[#1c1c1e] px-2">
         {(["students", "invoices", "timeline"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${tab === t ? "border-b-2 border-[#00ff88] text-[#00ff88]" : "text-[#505055] hover:text-[#909098]"}`}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} className={`px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${tab === t ? "border-b-2 border-[#00ff88] text-[#00ff88]" : "text-[#505055] hover:text-[#909098]"}`}>{t}</button>
         ))}
       </div>
       <div className="flex-1 overflow-y-auto p-4">
@@ -160,6 +162,39 @@ function FamilyDetailPanel({ family, onClose }: { family: Family; onClose: () =>
   );
 }
 
+/** Desktop side panel */
+function FamilyDetailPanel({ family, onClose }: { family: Family; onClose: () => void }) {
+  return (
+    <div className="flex h-full flex-col border-l border-[#1c1c1e]">
+      <FamilyDetailContent family={family} onClose={onClose} />
+    </div>
+  );
+}
+
+/** Mobile full-screen bottom sheet */
+function FamilyDetailSheet({ family, onClose }: { family: Family; onClose: () => void }) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Sheet */}
+      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border-t border-[#1c1c1e] bg-[#0a0a0c] shadow-2xl"
+        style={{ maxHeight: "92dvh", height: "92dvh" }}>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="h-1 w-10 rounded-full bg-[#2b2b2f]" />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <FamilyDetailContent family={family} onClose={onClose} />
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function CRMHubClient() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("all");
@@ -168,6 +203,14 @@ export function CRMHubClient() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     fetch("/api/locations/options").then(r => r.json()).then(res => {
@@ -201,18 +244,23 @@ export function CRMHubClient() {
   return (
     <PageTransition>
       <div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-[#1c1c1e] px-6 py-4">
+        <div className="shrink-0 border-b border-[#1c1c1e] px-4 py-4 md:px-6">
           <div className="flex items-center justify-between gap-4">
             <PageHeader title="Families & Students" subtitle="All families, students, and their session history" />
-            <Link href="/crm/families/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ New Family</Link>
+            <Link href="/crm/families/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-3 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ New</Link>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {["all", ...LOCATIONS.map(l => l.id)].map(locId => {
               const locCfg = locId !== "all" ? LOCATION_MAP[locId] : null;
               const isActive = selectedLocationId === locId;
               return (
-                <button key={locId} onClick={() => { setSelectedLocationId(locId); setSelectedFamily(null); }} className="rounded-full px-3 py-1 text-xs font-semibold transition-colors border"
-                  style={isActive && locCfg ? { backgroundColor: `${locCfg.color}20`, color: locCfg.color, borderColor: `${locCfg.color}50` } : isActive ? { backgroundColor: "#00ff8815", color: "#00ff88", borderColor: "#00ff8830" } : { backgroundColor: "transparent", color: "#505055", borderColor: "#1c1c1e" }}>
+                <button key={locId} onClick={() => { setSelectedLocationId(locId); setSelectedFamily(null); }}
+                  className="rounded-full px-3 py-1 text-xs font-semibold transition-colors border"
+                  style={isActive && locCfg
+                    ? { backgroundColor: `${locCfg.color}20`, color: locCfg.color, borderColor: `${locCfg.color}50` }
+                    : isActive
+                    ? { backgroundColor: "#00ff8815", color: "#00ff88", borderColor: "#00ff8840" }
+                    : { backgroundColor: "transparent", color: "#505055", borderColor: "#1c1c1e" }}>
                   {getLocName(locId)}
                 </button>
               );
@@ -224,11 +272,13 @@ export function CRMHubClient() {
                 <button key={s.id} onClick={() => setStatusFilter(s.id)} className={`px-3 py-1.5 transition-colors ${statusFilter === s.id ? "bg-white/8 text-white" : "text-[#505055] hover:text-[#909098]"}`}>{s.label}</button>
               ))}
             </div>
-            <input type="text" placeholder="Search families..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-1.5 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none" />
+            <input type="text" placeholder="Search families..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 min-w-0 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-1.5 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none" />
           </div>
         </div>
+
         <div className="flex flex-1 overflow-hidden">
-          <div className={`flex flex-col overflow-y-auto border-r border-[#1c1c1e] transition-all duration-200 ${selectedFamily ? "w-80 shrink-0" : "flex-1"}`}>
+          {/* Family list — always full width on mobile, narrows on desktop when panel open */}
+          <div className={`flex flex-col overflow-y-auto border-r border-[#1c1c1e] transition-all duration-200 ${(!isMobile && selectedFamily) ? "w-80 shrink-0" : "flex-1"}`}>
             {loading ? (
               <div className="p-4 space-y-2">{[1,2,3,4,5].map(i => <div key={i} className="h-16 animate-pulse rounded-lg bg-white/5" />)}</div>
             ) : families.length === 0 ? (
@@ -268,11 +318,15 @@ export function CRMHubClient() {
               </div>
             )}
           </div>
-          {selectedFamily && (
+
+          {/* Desktop side panel */}
+          {!isMobile && selectedFamily && (
             <div className="flex-1 overflow-hidden">
               <FamilyDetailPanel family={selectedFamily} onClose={() => setSelectedFamily(null)} />
             </div>
           )}
+
+          {/* Desktop AI sidebar (only when no family selected) */}
           {!selectedFamily && (
             <div className="hidden xl:flex w-72 shrink-0 flex-col border-l border-[#1c1c1e] bg-[#0a0a0c] p-4">
               <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035] mb-3">AI Assistant</div>
@@ -288,6 +342,11 @@ export function CRMHubClient() {
           )}
         </div>
       </div>
+
+      {/* Mobile bottom sheet */}
+      {isMobile && selectedFamily && (
+        <FamilyDetailSheet family={selectedFamily} onClose={() => setSelectedFamily(null)} />
+      )}
     </PageTransition>
   );
 }
