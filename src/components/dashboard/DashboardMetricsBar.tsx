@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   Banknote,
   CalendarClock,
@@ -8,59 +8,66 @@ import {
   Sparkles,
   Tag,
 } from "lucide-react";
-import { useInvoices } from "@/hooks/data";
-import { DASHBOARD_TENANT_ID } from "./constants";
-import { computeDashboardMetrics } from "./computeDashboardMetrics";
 import { DashboardMetricCard } from "./DashboardMetricCard";
 import { formatUsdFromCents } from "./dashboardFormat";
 
+type BillingSummaryMetrics = {
+  collected: number;
+  totalInvoiced: number;
+  discounted: number;
+  nextMonthProjected: number;
+  scheduled: number;
+};
+
 export function DashboardMetricsBar() {
-  const tenantId = DASHBOARD_TENANT_ID;
+  const [metrics, setMetrics] = useState<BillingSummaryMetrics | null>(null);
 
-  const invoiceParams = useMemo(
-    () => ({
-      tenantId,
-      page: { mode: "offset" as const, page: 1, pageSize: 200 },
-    }),
-    [tenantId],
-  );
-
-  const { data: invData } = useInvoices(invoiceParams);
-
-  const metrics = useMemo(() => {
-    const invoices = invData?.items ?? [];
-    return computeDashboardMetrics(invoices, []);
-  }, [invData]);
+  useEffect(() => {
+    fetch("/api/invoices/billing-summary", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        const all = json?.data?.allSchools;
+        if (!all) return;
+        setMetrics({
+          collected: all.collected ?? 0,
+          totalInvoiced: all.totalInvoiced ?? 0,
+          discounted: all.discounted ?? 0,
+          nextMonthProjected: all.nextMonthProjected ?? 0,
+          scheduled: all.scheduled ?? 0,
+        });
+      })
+      .catch(() => null);
+  }, []);
 
   return (
     <section className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-5">
       <DashboardMetricCard
         label="Collected This Month"
-        value={formatUsdFromCents(metrics.paidThisMonth)}
-        trend={metrics.paidThisMonth > 0 ? "up" : "flat"}
+        value={metrics ? formatUsdFromCents(metrics.collected) : "—"}
+        trend={metrics && metrics.collected > 0 ? "up" : "flat"}
         icon={<Sparkles className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
         label="Total Invoiced"
-        value={formatUsdFromCents(metrics.totalInvoicedThisMonth)}
-        trend={metrics.totalInvoicedThisMonth > 0 ? "up" : "flat"}
+        value={metrics ? formatUsdFromCents(metrics.totalInvoiced) : "—"}
+        trend={metrics && metrics.totalInvoiced > 0 ? "up" : "flat"}
         icon={<Banknote className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
         label="Discounted"
-        value={formatUsdFromCents(metrics.discountedThisMonth)}
-        trend={metrics.discountedThisMonth > 0 ? "down" : "flat"}
+        value={metrics ? formatUsdFromCents(metrics.discounted) : "—"}
+        trend={metrics && metrics.discounted > 0 ? "down" : "flat"}
         icon={<Tag className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
         label="Next Month Projected"
-        value={formatUsdFromCents(metrics.nextMonthProjected)}
+        value={metrics ? formatUsdFromCents(metrics.nextMonthProjected) : "—"}
         trend="up"
         icon={<ChevronUp className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
         label="Scheduled Payments"
-        value={formatUsdFromCents(metrics.outstanding)}
+        value={metrics ? formatUsdFromCents(metrics.scheduled) : "—"}
         trend="flat"
         icon={<CalendarClock className="h-4 w-4" aria-hidden />}
       />

@@ -101,7 +101,7 @@ RESPONSE STYLE
     accent: "#fb923c",
     glow: "rgba(251,146,60,0.45)",
     tagline: "Schedules, conflicts, and lesson logistics.",
-    pages: ["/roster", "/schedule", "/schedule/events", "/schedule/rooms"],
+    pages: ["/schedule", "/schedule/events", "/schedule/rooms", "/roster"],
     skills: [
       "Teacher availability and schedule block management",
       "Student lesson scheduling and rescheduling",
@@ -154,7 +154,7 @@ RESPONSE STYLE
     accent: "#f472b6",
     glow: "rgba(244,114,182,0.45)",
     tagline: "Tracks who needs attention before they disappear.",
-    pages: ["/families", "/crm/enrollments", "/payroll", "/lifecycle"],
+    pages: ["/lifecycle/ongoing-lessons", "/lifecycle/client-care", "/lifecycle/retention", "/lifecycle/win-backs", "/payroll", "/families"],
     skills: [
       "Attendance tracking and absence pattern detection",
       "Student engagement scoring",
@@ -265,7 +265,7 @@ RESPONSE STYLE
     accent: "#a78bfa",
     glow: "rgba(167,139,250,0.45)",
     tagline: "Converts prospects into enrolled students.",
-    pages: ["/crm/leads", "/lifecycle", "/students/[id]", "/crm"],
+    pages: ["/lifecycle/inquiries", "/lifecycle/follow-up", "/lifecycle/scheduling", "/lifecycle/enrollment", "/crm/leads", "/crm"],
     skills: [
       "Lead scoring and prioritization",
       "Trial lesson scheduling and follow-up",
@@ -320,7 +320,7 @@ RESPONSE STYLE
     accent: "#f87171",
     glow: "rgba(248,113,113,0.45)",
     tagline: "Teacher performance, curriculum, and coordination.",
-    pages: ["/teachers", "/teachers/[id]", "/crm"],
+    pages: ["/teachers", "/teachers/[id]"],
     skills: [
       "Teacher profile and performance management",
       "W-9 and contractor compliance (all teachers are 1099)",
