@@ -17,7 +17,7 @@ type PayrollRow = {
   needs_1099?: boolean;
   w9_completed_at?: string | null;
   session_count: number;
-  location_counts: Record<string, number>;
+  location_breakdown: { location_id: string; location_name: string; location_color: string; session_count: number; gross_pay_cents: number }[];
   gross_pay_cents: number;
   location_ids: string[];
 };
@@ -53,7 +53,7 @@ function monthRange(offset = 0) {
 
 export function PayrollClient() {
   const [rows, setRows] = useState<PayrollRow[]>([]);
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [_summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [locationFilter, setLocationFilter] = useState("all");
   const [monthOffset, setMonthOffset] = useState(0);
@@ -257,22 +257,19 @@ function PayrollDetailPanel({ row, onClose }: { row: PayrollRow; onClose: () => 
           <div className="mt-2 text-xs text-[#909098]">{row.session_count} sessions × ${row.pay_rate_per_half_hour}/30min</div>
         </div>
         {/* Sessions by location */}
-        {Object.keys(row.location_counts).length > 0 && (
+        {row.location_breakdown.length > 0 && (
           <section>
             <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035] mb-2">Sessions by Location</div>
             <div className="space-y-1.5">
-              {Object.entries(row.location_counts).map(([locId, count]) => {
-                const lc = LOCATION_MAP[locId];
-                return (
-                  <div key={locId} className="flex items-center justify-between rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: lc?.color ?? "#505055" }} />
-                      <span className="text-xs text-[#909098]">{lc?.name ?? locId}</span>
-                    </div>
-                    <span className="text-xs font-bold text-white">{count} sessions</span>
+              {row.location_breakdown.map((lb) => (
+                <div key={lb.location_id} className="flex items-center justify-between rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: lb.location_color }} />
+                    <span className="text-xs text-[#909098]">{lb.location_name}</span>
                   </div>
-                );
-              })}
+                  <span className="text-xs font-bold text-white">{lb.session_count} sessions</span>
+                </div>
+              ))}
             </div>
           </section>
         )}
@@ -280,7 +277,7 @@ function PayrollDetailPanel({ row, onClose }: { row: PayrollRow; onClose: () => 
         <section>
           <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035] mb-2">Tax Status</div>
           <div className="flex items-center justify-between rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-2">
-            <span className="text-xs text-[#909098]">{row.needs_1099 ? "1099 Contractor" : "W-2 Employee"}</span>
+            <span className="text-xs text-[#909098]">1099 Contractor</span>
             {row.w9_completed_at ? (
               <span className="text-xs font-semibold text-[#22c55e]">W-9 on file ✓</span>
             ) : row.needs_1099 ? (

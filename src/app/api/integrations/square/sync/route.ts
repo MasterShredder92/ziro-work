@@ -360,6 +360,7 @@ export async function POST(req: NextRequest) {
                 tender_bucket: tenderBucket,
                 created_at_square: pay.created_at ?? null,
                 updated_at_square: pay.updated_at ?? null,
+                team_member_id: (pay.team_member_id as string) ?? null,
                 raw_json: pay,
                 synced_at: new Date().toISOString(),
               };

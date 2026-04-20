@@ -37,9 +37,7 @@ const LOCATIONS = [
 function fmt(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
-function fmtInput(cents: number) {
-  return (cents / 100).toFixed(2);
-}
+// fmtInput reserved for future use
 
 // ─── Expense Form ─────────────────────────────────────────────────────────────
 function ExpenseForm({ onAdd }: { onAdd: (e: Omit<Expense, "id">) => void }) {
@@ -254,23 +252,6 @@ export function FinancialsClient() {
           <p className="mt-3 text-xs text-[#404048]">
             Payroll estimate is 50% of collected revenue. Connect Square and add all expenses for an exact figure.
           </p>
-        </div>
-
-        {/* Bank Connection Stub */}
-        <div className="rounded-xl border border-dashed border-[#2b2b2f] bg-[#0a0a0c] p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1c1c1e] text-lg">🏦</div>
-            <div>
-              <div className="text-sm font-bold text-white">Connect Bank Account</div>
-              <div className="text-xs text-[#505055]">Auto-import transactions via Plaid — coming soon. Add your Plaid API key in Settings → Integrations to activate.</div>
-            </div>
-            <button
-              disabled
-              className="ml-auto shrink-0 rounded-lg border border-[#2b2b2f] px-4 py-2 text-xs font-semibold text-[#505055] cursor-not-allowed"
-            >
-              Connect Plaid
-            </button>
-          </div>
         </div>
 
         {/* Expense Tracker */}
