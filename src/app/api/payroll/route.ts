@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
     .eq("tenant_id", tenantId)
     .gte("block_date", startDate)
     .lt("block_date", endDate)
-    .in("block_type", ["lesson", "makeup", "trial"]);
+    // Valid block_type enum values for paid sessions:
+    // student_session = regular lesson, makeup_session = makeup, meet_greet = trial/intro
+    .in("block_type", ["student_session", "makeup_session", "meet_greet", "first_day", "virtual", "sub"]);
 
   if (locationId) {
     blocksQuery = blocksQuery.eq("location_id", locationId);
