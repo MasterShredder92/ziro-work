@@ -21,7 +21,7 @@ type Expense = {
 type RevenueSummary = {
   collected: number;
   totalInvoiced: number;
-  discounted: number;
+  outstanding: number;
   nextMonthProjected: number;
   scheduled: number;
 };
@@ -248,7 +248,7 @@ export function FinancialsClient() {
               {[
                 { label: "Collected", value: fmt(revenue.collected), color: "text-[#00ff88]" },
                 { label: "Total Invoiced", value: fmt(revenue.totalInvoiced), color: "text-white" },
-                { label: "Discounted", value: fmt(revenue.discounted), color: "text-amber-400" },
+                { label: "Outstanding", value: fmt(revenue.outstanding), color: "text-red-500" },
                 { label: "Next Month Projected", value: fmt(revenue.nextMonthProjected), color: "text-[#0EA5E9]" },
                 { label: "Scheduled Payments", value: fmt(revenue.scheduled), color: "text-[#909098]" },
               ].map((m) => (

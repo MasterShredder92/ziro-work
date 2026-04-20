@@ -730,7 +730,7 @@ export function LocationScheduleGrid({
                         )}
                         <div className="flex gap-2 pt-1">
                           <Link
-                            href={`/crm/students/${selectedBlock.student_id}`}
+                            href={`/students/${selectedBlock.student_id}`}
                             className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
                             onClick={() => setSelectedBlockId(null)}
                           >
@@ -738,7 +738,7 @@ export function LocationScheduleGrid({
                           </Link>
                           {student.family_id && (
                             <Link
-                              href={`/crm/families/${student.family_id}`}
+                              href={`/crm?family=${student.family_id}`}
                               className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
                               onClick={() => setSelectedBlockId(null)}
                             >

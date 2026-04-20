@@ -14,7 +14,7 @@ import { formatUsdFromCents } from "./dashboardFormat";
 type BillingSummaryMetrics = {
   collected: number;
   totalInvoiced: number;
-  discounted: number;
+  outstanding: number;
   nextMonthProjected: number;
   scheduled: number;
 };
@@ -31,7 +31,7 @@ export function DashboardMetricsBar() {
         setMetrics({
           collected: all.collected ?? 0,
           totalInvoiced: all.totalInvoiced ?? 0,
-          discounted: all.discounted ?? 0,
+          outstanding: all.outstanding ?? 0,
           nextMonthProjected: all.nextMonthProjected ?? 0,
           scheduled: all.scheduled ?? 0,
         });
@@ -54,9 +54,10 @@ export function DashboardMetricsBar() {
         icon={<Banknote className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
-        label="Discounted"
-        value={metrics ? formatUsdFromCents(metrics.discounted) : "—"}
-        trend={metrics && metrics.discounted > 0 ? "down" : "flat"}
+        label="Outstanding"
+        value={metrics ? formatUsdFromCents(metrics.outstanding) : "—"}
+        trend={metrics && metrics.outstanding > 0 ? "down" : "flat"}
+        valueClassName="text-red-500"
         icon={<Tag className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard

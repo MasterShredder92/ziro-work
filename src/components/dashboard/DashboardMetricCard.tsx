@@ -9,9 +9,10 @@ export type DashboardMetricCardProps = {
   value: ReactNode;
   trend?: "up" | "down" | "flat";
   icon?: ReactNode;
+  valueClassName?: string;
 };
 
-export function DashboardMetricCard({ label, value, trend, icon }: DashboardMetricCardProps) {
+export function DashboardMetricCard({ label, value, trend, icon, valueClassName }: DashboardMetricCardProps) {
   const positive = trend === "up";
 
   return (
@@ -30,7 +31,7 @@ export function DashboardMetricCard({ label, value, trend, icon }: DashboardMetr
           <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-[var(--z-muted)]">
             {label}
           </p>
-          <p className="truncate text-lg font-bold tracking-tight text-[var(--z-fg)] sm:text-xl">
+          <p className={cn("truncate text-lg font-bold tracking-tight text-[var(--z-fg)] sm:text-xl", valueClassName)}>
             {value}
           </p>
         </div>

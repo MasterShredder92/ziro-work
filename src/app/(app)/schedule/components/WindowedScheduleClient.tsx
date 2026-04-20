@@ -193,8 +193,59 @@ export function WindowedScheduleClient({
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
   const [roomIdDraft, setRoomIdDraft] = React.useState<string>("");
   const [isVirtualDraft, setIsVirtualDraft] = React.useState(false);
+  // Cancel session modal state
+  const [cancelModalOpen, setCancelModalOpen] = React.useState(false);
+  const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelTargetBlock, setCancelTargetBlock] = React.useState<ProjectedBlock | null>(null);
+  // Current time indicator — updates every 30 seconds
+  const [nowMinute, setNowMinute] = React.useState<number>(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  });
+  const [nowDate, setNowDate] = React.useState<string>(() => new Date().toISOString().split("T")[0]);
 
   const teacherIds = React.useMemo(() => teachers.map((t) => t.id), [teachers]);
+
+  // ── Current time indicator ticker ──────────────────────────────────────────
+  React.useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      setNowMinute(n.getHours() * 60 + n.getMinutes());
+      setNowDate(n.toISOString().split("T")[0]);
+    };
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── Auto check-in loop — runs every 60s, only on today's view ──────────────
+  React.useEffect(() => {
+    const runAutoCheckin = () => {
+      const today = new Date().toISOString().split("T")[0];
+      if (selectedDate !== today) return;
+      void fetch("/api/schedule-blocks/auto-checkin", { method: "POST" })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json() as { updated: number; blocks: Array<{ id: string; teacher_tally: boolean }> };
+          if (!data.updated || !data.blocks?.length) return;
+          // Patch local state for updated blocks
+          const key = keyOf(window);
+          setBlocksByWindow((prev) => {
+            const rows = [...(prev[key] ?? [])];
+            for (const updated of data.blocks) {
+              const idx = rows.findIndex((r) => r.id === updated.id);
+              if (idx >= 0) {
+                rows[idx] = { ...rows[idx], checked_in: true, checked_in_at: new Date().toISOString(), teacher_tally: updated.teacher_tally };
+              }
+            }
+            return { ...prev, [key]: rows };
+          });
+        })
+        .catch(() => null);
+    };
+    runAutoCheckin();
+    const id = setInterval(runAutoCheckin, 60_000);
+    return () => clearInterval(id);
+  }, [selectedDate, window]);
 
   React.useEffect(() => {
     const key = keyOf(window);
@@ -579,6 +630,34 @@ export function WindowedScheduleClient({
     await createSubCoverage(block);
   }
 
+  async function cancelSessionWithReason(block: ProjectedBlock, reason: string): Promise<void> {
+    // 1. Mark block as cancelled call-out with the provided reason
+    await patchBlock(block, {
+      status: "available",
+      block_type: "call_out",
+      is_family_callout: true,
+      callout_reason: reason,
+      checked_in: false,
+      teacher_tally: false,
+    });
+    // 2. Write activity log entry under the student
+    if (block.student_id && block.tenant_id) {
+      const studentLabel = studentNames.get(block.student_id) ?? "Student";
+      void fetch("/api/activity-log", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          entity_type: "student",
+          entity_id: block.student_id,
+          entity_name: studentLabel,
+          action: "session_cancelled",
+          details: `Session on ${block.block_date} ${block.start_time.slice(0, 5)}–${block.end_time.slice(0, 5)} cancelled. Reason: ${reason}`,
+          location_id: block.location_id,
+        }),
+      }).catch(() => null);
+    }
+  }
+
   async function virtualizeBlock(block: ProjectedBlock): Promise<void> {
     await patchBlock(block, {
       is_virtual: true,
@@ -761,6 +840,18 @@ export function WindowedScheduleClient({
                   {slots.slice(0, -1).map((minute) => (
                     <div key={`${teacher.id}-${minute}`} className="h-12 border-b border-[var(--z-border)]/80" />
                   ))}
+                  {/* ── Current time indicator ── */}
+                  {selectedDate === nowDate && nowMinute >= startMinute && nowMinute <= endMinute ? (
+                    <div
+                      className="pointer-events-none absolute left-0 right-0 z-30"
+                      style={{ top: ((nowMinute - startMinute) / 30) * 48 }}
+                    >
+                      <div className="flex items-center">
+                        <div className="h-2 w-2 shrink-0 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                        <div className="h-px flex-1 bg-red-500 opacity-80" />
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="pointer-events-none absolute inset-0">
                     {blocks.map((block) => {
                       const start = toMinute(block.start_time);
@@ -800,6 +891,60 @@ export function WindowedScheduleClient({
           </div>
         </div>
       </div>
+
+      {/* ── Cancel Session Modal ── */}
+      {cancelModalOpen && cancelTargetBlock ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+            onClick={() => setCancelModalOpen(false)}
+            aria-label="Close cancel modal"
+          />
+          <div className="relative z-10 w-full max-w-md rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] p-5 shadow-2xl">
+            <div className="mb-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--z-muted)]">Cancel Session</div>
+              <div className="mt-1 text-base font-semibold text-[var(--z-fg)]">
+                {cancelTargetBlock.student_id ? studentNames.get(cancelTargetBlock.student_id) ?? "Student" : "Open block"}
+              </div>
+              <div className="text-xs text-[var(--z-muted)]">
+                {cancelTargetBlock.block_date} · {cancelTargetBlock.start_time.slice(0, 5)}–{cancelTargetBlock.end_time.slice(0, 5)}
+              </div>
+            </div>
+            <label className="block text-xs">
+              <span className="mb-1 block font-semibold text-[var(--z-fg)]">Reason for cancellation <span className="text-red-400">*</span></span>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={3}
+                placeholder="e.g. Student sick, family emergency, teacher unavailable..."
+                className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-red-400/60"
+              />
+            </label>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="flex-1 rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+              >
+                Keep Session
+              </button>
+              <button
+                type="button"
+                disabled={saving || !cancelReason.trim()}
+                onClick={async () => {
+                  await cancelSessionWithReason(cancelTargetBlock, cancelReason.trim());
+                  setCancelModalOpen(false);
+                  setSelectedBlockId(null);
+                }}
+                className="flex-1 rounded-md border border-red-400/60 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-200 disabled:opacity-40"
+              >
+                {saving ? "Cancelling..." : "Confirm Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {selectedBlock ? (
         <div className="fixed inset-0 z-[75] flex items-center justify-center p-4">
@@ -889,7 +1034,7 @@ export function WindowedScheduleClient({
               <div className="grid grid-cols-1 gap-2 text-xs">
                 {selectedBlock.student_id ? (
                   <Link
-                    href={`/crm/students/${selectedBlock.student_id}`}
+                    href={`/students/${selectedBlock.student_id}`}
                     className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-[var(--z-fg)] hover:bg-white/5"
                   >
                     Open student profile
@@ -906,7 +1051,7 @@ export function WindowedScheduleClient({
                   return typeof familyId === "string" && familyId.trim() ? (
                     <div className="space-y-1">
                       <Link
-                        href={`/crm/families/${familyId}`}
+                        href={`/crm?family=${familyId}`}
                         className="block rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-[var(--z-fg)] hover:bg-white/5"
                       >
                         Open family account
@@ -954,9 +1099,11 @@ export function WindowedScheduleClient({
               <button
                 type="button"
                 disabled={saving}
-                onClick={() =>
-                  callOutBlock(selectedBlock)
-                }
+                onClick={() => {
+                  setCancelTargetBlock(selectedBlock);
+                  setCancelReason("");
+                  setCancelModalOpen(true);
+                }}
                 className="w-full rounded-md border border-red-400/60 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-200"
               >
                 Cancel Session
