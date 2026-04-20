@@ -42,17 +42,19 @@ function computeMetrics(
 ) {
   const today = toDateStr(new Date());
 
+  // Use due_date as the primary date dimension — invoice_date is when Square created the record
+  // which for recurring invoices can be months/years ago. due_date = when the student owes payment.
   const mtdInvoices = rows.filter(
-    (r) => r.invoice_date && r.invoice_date >= mtdStart && r.invoice_date <= mtdEnd
+    (r) => r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd
   );
 
   const collected = rows
     .filter((r) => {
-      // Primary: paid_at in current month
+      // PAID invoices due this month
+      if (r.status === "PAID" && r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd) return true;
+      // Also catch PAID invoices where paid_at falls in this month (edge case)
       const d = normalizePaidAt(r.paid_at);
       if (d !== null && d >= mtdStart && d <= mtdEnd) return true;
-      // Fallback: PAID status with invoice_date in current month (when paid_at is missing)
-      if (r.status === "PAID" && r.invoice_date && r.invoice_date >= mtdStart && r.invoice_date <= mtdEnd) return true;
       return false;
     })
     .reduce((s, r) => s + (r.amount_paid_cents ?? r.amount_cents ?? 0), 0);
