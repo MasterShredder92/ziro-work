@@ -48,8 +48,12 @@ function computeMetrics(
 
   const collected = rows
     .filter((r) => {
+      // Primary: paid_at in current month
       const d = normalizePaidAt(r.paid_at);
-      return d !== null && d >= mtdStart && d <= mtdEnd;
+      if (d !== null && d >= mtdStart && d <= mtdEnd) return true;
+      // Fallback: PAID status with invoice_date in current month (when paid_at is missing)
+      if (r.status === "PAID" && r.invoice_date && r.invoice_date >= mtdStart && r.invoice_date <= mtdEnd) return true;
+      return false;
     })
     .reduce((s, r) => s + (r.amount_paid_cents ?? r.amount_cents ?? 0), 0);
 

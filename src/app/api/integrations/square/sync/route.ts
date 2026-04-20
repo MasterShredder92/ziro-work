@@ -224,8 +224,13 @@ export async function POST(req: NextRequest) {
               };
 
               if ((inv.status as string)?.toUpperCase() === "PAID") {
+                // Try payment_requests[].completed_at first
                 for (const pr of paymentRequests) {
                   if (pr.completed_at) { row.paid_at = toDate(pr.completed_at); break; }
+                }
+                // Fallback: use invoice updated_at (Square updates it when paid)
+                if (!row.paid_at && inv.updated_at) {
+                  row.paid_at = toDate(inv.updated_at);
                 }
               }
 
