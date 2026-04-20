@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getBrowserSupabaseClient } from "@/lib/supabase.browser";
 
 function getProjectRef(): string {
@@ -134,6 +135,14 @@ export function LoginForm({
       >
         {busy ? "Signing in..." : "Sign in"}
       </button>
+      <div className="text-center">
+        <Link
+          href="/forgot-password"
+          className="text-xs text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors underline underline-offset-2"
+        >
+          Forgot password?
+        </Link>
+      </div>
     </form>
   );
 }
