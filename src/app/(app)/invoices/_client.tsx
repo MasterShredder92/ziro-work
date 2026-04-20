@@ -111,8 +111,12 @@ function SquareSyncButton() {
     try {
       const res = await fetch("/api/integrations/square/sync", { method: "POST" });
       const j = await res.json().catch(() => ({}));
-      setResult(j.message ?? (res.ok ? "Sync complete" : "Sync failed"));
-      if (res.ok) router.refresh();
+      if (res.ok) {
+        setResult(j.message ?? "Sync complete");
+        router.refresh();
+      } else {
+        setResult(j.error ?? j.message ?? `Sync failed (${res.status})`);
+      }
     } catch {
       setResult("Sync failed — check connection");
     } finally {

@@ -5,6 +5,7 @@ import { PageShell } from "@/components/layouts/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useStudents } from "@/hooks/data/useStudents";
 import { useTenantUi } from "@/components/tenant/TenantUiContext";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 const PAGE = { mode: "offset" as const, page: 1, pageSize: 500 };
 
@@ -21,6 +22,7 @@ export function StudentsClient() {
   return (
     <PageShell title="Students">
       <div className="mx-auto max-w-5xl space-y-[var(--z-space-6)]">
+        <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about any student…" pageContext={{ page: "students", count }} />
         <PageHeader
           title="Students"
           subtitle={

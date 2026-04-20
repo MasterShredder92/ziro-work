@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const { session, tenantId } = await resolveContext(req);
-    requireRole(session, "admin");
-    requirePermission(session, "admin.settings.write");
+    requireRole(session, "director");
+    // directors can read and write their own studio settings
     const body = (await readJson<TenantSettingsInput>(req)) ?? {};
     const data = await writeSettings(tenantId, body);
     return ok({ data });

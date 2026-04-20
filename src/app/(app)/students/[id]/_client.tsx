@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { AgentPanel } from "@/components/agent/AgentPanel";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { StudentTimeline } from "@/components/students/StudentTimeline";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { loadStudentSurface, type StudentSurfaceDTO } from "./actions";
@@ -116,6 +116,74 @@ function SessionsTab({ studentId }: { studentId: string }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── Student Profile View ───────────────────────────────────────────────────────
+function StudentProfileView({ studentId }: { studentId: string }) {
+  const [student, setStudent] = useState<StudentRaw | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/students/${studentId}`)
+      .then((r) => r.json())
+      .then((res) => {
+        setStudent(res.data ?? res ?? null);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [studentId]);
+
+  if (loading) {
+    return <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-10 animate-pulse rounded-lg bg-white/5" />)}</div>;
+  }
+  if (!student) {
+    return <div className="text-sm text-[#505055]">Student details unavailable.</div>;
+  }
+
+  const rows: { label: string; value: string | null | undefined }[] = [
+    { label: "Instrument", value: student.instrument },
+    { label: "Status", value: student.status },
+    { label: "Email", value: student.email },
+    { label: "Phone", value: student.phone },
+    { label: "Date of Birth", value: student.date_of_birth },
+    { label: "Start Date", value: student.start_date },
+    { label: "Rate / Session", value: student.rate_per_session != null ? `$${student.rate_per_session}` : null },
+    { label: "Blocks / Week", value: student.blocks_per_week != null ? String(student.blocks_per_week) : null },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Contact & basics snapshot */}
+      <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] divide-y divide-[var(--z-border)]">
+        {rows.map(({ label, value }) => (
+          <div key={label} className="flex items-center justify-between px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">{label}</span>
+            <span className="text-sm text-[var(--z-fg)]">{value ?? <span className="text-[#303035]">—</span>}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Learning profile */}
+      {(student.bio || student.goals || student.learning_style || student.experience) && (
+        <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4 space-y-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Learning Profile</div>
+          {student.bio && <div><div className="text-xs text-[#505055] mb-0.5">Bio</div><div className="text-sm text-[var(--z-fg)]">{student.bio}</div></div>}
+          {student.goals && <div><div className="text-xs text-[#505055] mb-0.5">Goals</div><div className="text-sm text-[var(--z-fg)]">{student.goals}</div></div>}
+          {student.learning_style && <div><div className="text-xs text-[#505055] mb-0.5">Learning Style</div><div className="text-sm text-[var(--z-fg)]">{student.learning_style}</div></div>}
+          {student.experience && <div><div className="text-xs text-[#505055] mb-0.5">Prior Experience</div><div className="text-sm text-[var(--z-fg)]">{student.experience}</div></div>}
+        </div>
+      )}
+
+      {/* Notes */}
+      {(student.teacher_notes || student.notes) && (
+        <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4 space-y-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Notes</div>
+          {student.teacher_notes && <div><div className="text-xs text-[#505055] mb-0.5">Teacher Notes</div><div className="text-sm text-[var(--z-fg)]">{student.teacher_notes}</div></div>}
+          {student.notes && <div><div className="text-xs text-[#505055] mb-0.5">General Notes</div><div className="text-sm text-[var(--z-fg)]">{student.notes}</div></div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -373,12 +441,31 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
 
   return (
     <PageTransition>
-      <div className="mx-auto max-w-6xl space-y-6" data-tour="student-detail">
+      <div className="mx-auto max-w-6xl space-y-4" data-tour="student-detail">
         {loading && <div className="text-sm text-[var(--z-muted)]">Loading…</div>}
         {err && <div className="text-sm text-[var(--z-danger)]">{err}</div>}
         {data && (
           <>
             <PageHeader title={data.studentName} subtitle={`${data.stageName} · ${data.riskBand} risk`} />
+
+            {/* ── STAR agent bar — always at top, not a tab ── */}
+            <AgentPageBar
+              agentId="star"
+              chatPlaceholder="Ask STAR about this student…"
+              pageContext={{
+                page: "student-profile",
+                studentId,
+                studentName: data.studentName,
+                stageName: data.stageName,
+                riskBand: data.riskBand,
+                agentSummary: data.agentSummary,
+                nextActions: data.nextActions,
+                blockers: data.blockers,
+                agentStatus,
+              }}
+            />
+
+            {/* ── Tabs ── */}
             <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">
               {TABS.map((t) => (
                 <button
@@ -394,17 +481,9 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
                 </button>
               ))}
             </div>
-            {tab === "profile" && (
-              <AgentPanel
-                agentName={data.agentDisplayName}
-                avatarUrl={null}
-                status={agentStatus}
-                summary={data.agentSummary}
-                nextActions={data.nextActions}
-                currentStageName={data.stageName}
-                blockers={data.blockers}
-              />
-            )}
+
+            {/* ── Tab content ── */}
+            {tab === "profile" && <StudentProfileView studentId={studentId} />}
             {tab === "edit" && (
               <StudentEditForm
                 studentId={studentId}

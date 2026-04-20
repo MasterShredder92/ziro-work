@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 const LOCATION_CONFIG: Record<string, { color: string; accent: string; border: string }> = {
@@ -454,6 +455,7 @@ export function RosterClient({ families, students, teacherNames, locationStats }
 
   return (
     <PageShell title="Roster">
+      <AgentPageBar agentId="ruby" chatPlaceholder="Ask Ruby about the roster2026" pageContext={{ page: "roster" }} />
       <div className="space-y-6">
         {/* ── Summary bar ── */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

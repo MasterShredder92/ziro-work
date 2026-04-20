@@ -41,6 +41,9 @@ export function StudioInfoSettingsClient() {
   const [timezone, setTimezone] = React.useState("America/New_York");
   const [billingCycle, setBillingCycle] = React.useState("monthly");
   const [logoName, setLogoName] = React.useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = React.useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = React.useState(false);
+  const [logoError, setLogoError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"idle" | "success" | "error">("idle");
   const [saveError, setSaveError] = React.useState<string | null>(null);
@@ -53,7 +56,27 @@ export function StudioInfoSettingsClient() {
     setStudioName(String(name));
     setTimezone(String(schedule.timezone ?? "America/New_York"));
     setBillingCycle(String(schedule.default_billing_cycle ?? "monthly"));
+    if (schedule.logo_url) setLogoUrl(String(schedule.logo_url));
   }, [schedule, kpi]);
+
+  async function handleLogoUpload(file: File) {
+    setLogoUploading(true);
+    setLogoError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/logo", { method: "POST", body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((j as { error?: string }).error ?? `HTTP ${res.status}`);
+      setLogoUrl((j as { url?: string }).url ?? null);
+      setLogoName(file.name);
+      await settings.reload();
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setLogoUploading(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -117,30 +140,40 @@ export function StudioInfoSettingsClient() {
           />
         </SettingsGroup>
 
-        <SettingsGroup title="Logo (UI only)">
+        <SettingsGroup title="Studio Logo">
           <p className="text-xs text-[var(--z-muted)]">
-            Upload preview is local—wire storage when your tenant asset pipeline is ready.
+            Upload your studio logo. It will be saved and displayed across ZiroWork.
           </p>
           <div className="flex flex-wrap items-center gap-[var(--z-space-3)]">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[var(--z-radius-md)] border border-dashed border-[var(--z-border-2)] bg-[var(--z-surface-2)] text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[var(--z-muted)]">
-              Logo
+            <div className="flex h-16 w-16 items-center justify-center rounded-[var(--z-radius-md)] border border-dashed border-[var(--z-border-2)] bg-[var(--z-surface-2)] overflow-hidden">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Studio logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[var(--z-muted)]">Logo</span>
+              )}
             </div>
             <div className="flex flex-col gap-[var(--z-space-2)] sm:flex-row sm:items-center">
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
+                disabled={logoUploading}
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";
                   input.accept = "image/*";
-                  input.onchange = () => setLogoName(input.files?.[0]?.name ?? null);
+                  input.onchange = () => {
+                    const file = input.files?.[0];
+                    if (file) void handleLogoUpload(file);
+                  };
                   input.click();
                 }}
               >
-                Choose file
+                {logoUploading ? "Uploading…" : "Choose file"}
               </Button>
-              {logoName ? <span className="text-xs text-[var(--z-muted)]">{logoName}</span> : null}
+              {logoName && !logoUploading ? <span className="text-xs text-[var(--z-muted)]">{logoName}</span> : null}
+              {logoError ? <span className="text-xs text-[var(--z-danger)]">{logoError}</span> : null}
             </div>
           </div>
         </SettingsGroup>

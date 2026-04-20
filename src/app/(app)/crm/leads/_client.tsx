@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Lead } from "@/lib/types/crm";
+import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 /** Matches `Database["public"]["Enums"]["lead_stage"]` — keep in sync with `leads/page.tsx` grouping. */
 export const LEAD_KANBAN_STAGES = [
@@ -131,8 +132,10 @@ export function LeadKanbanBoard({
     }
   }
 
+  const totalLeads = Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0);
   return (
     <div>
+      <AgentPageBar agentId="star" chatPlaceholder="Ask STAR about your leads…" pageContext={{ page: "leads", totalLeads, stages: LEAD_KANBAN_STAGES }} />
       {err ? (
         <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
           {err}

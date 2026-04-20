@@ -178,8 +178,8 @@ export function AgentReportsClient({ monthly, weekly }: AgentReportsClientProps)
         />
 
         {/* Period toggle */}
-        <div className="flex items-center gap-3">
-          <div className="flex overflow-hidden rounded-lg border border-[var(--z-border)] text-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex overflow-hidden rounded-lg border border-[var(--z-border)] text-sm w-fit">
             {(["monthly", "weekly"] as const).map((v) => (
               <button
                 key={v}
