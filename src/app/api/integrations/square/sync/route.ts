@@ -77,10 +77,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let sinceDate: string | null = null;
+  // Default to first day of current month (month-to-date) unless caller passes a specific since date
+  const now = new Date();
+  const defaultSince = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  let sinceDate: string = defaultSince;
   try {
-    const body = await req.json().catch(() => ({})) as { since?: string };
-    if (body.since && /^\d{4}-\d{2}-\d{2}$/.test(body.since)) {
+    const body = await req.json().catch(() => ({})) as { since?: string; all?: boolean };
+    if (body.all === true) {
+      sinceDate = "2020-01-01"; // full backfill
+    } else if (body.since && /^\d{4}-\d{2}-\d{2}$/.test(body.since)) {
       sinceDate = body.since;
     }
   } catch { /* no body */ }
@@ -162,7 +167,8 @@ export async function POST(req: NextRequest) {
           do {
             const params = new URLSearchParams({ location_id: loc.id, limit: "200" });
             if (cursor) params.set("cursor", cursor);
-
+            // Always filter by date — default is month-to-date
+            params.set("filter.date_range.start_date", sinceDate);
             const invRes = await squareFetch(`/v2/invoices?${params.toString()}`, accessToken);
             if (!invRes.ok) {
               errors.push(`Location ${loc.id}: ${invRes.body?.errors?.[0]?.detail ?? invRes.status}`);
@@ -192,7 +198,7 @@ export async function POST(req: NextRequest) {
                 tenant_id: tenantId,
                 square_invoice_id: inv.id as string,
                 square_location_id: inv.location_id ?? loc.id,
-                location_id: inv.location_id ?? loc.id,
+                location_id: null, // Square location IDs are not UUIDs — kept in square_location_id
                 square_customer_id: sqCustId,
                 family_id: familyId,
                 invoice_number: inv.invoice_number ?? null,
@@ -286,7 +292,7 @@ export async function POST(req: NextRequest) {
                 tenant_id: tenantId,
                 square_payment_id: pay.id as string,
                 square_location_id: pay.location_id ?? loc.id,
-                location_id: pay.location_id ?? loc.id,
+                location_id: null, // Square location IDs are not UUIDs — kept in square_location_id
                 status: pay.status ?? "UNKNOWN",
                 reporting_date: reportingDate,
                 amount_money_cents: amtMoney.amount ?? null,
@@ -329,7 +335,7 @@ export async function POST(req: NextRequest) {
         console.log("[Square Sync] Complete:", stats);
 
         const finalMessage = [
-          sinceDate ? `Incremental sync from ${sinceDate}.` : "Full history sync complete.",
+          `Sync from ${sinceDate} complete.`,
           `${stats.invoicesUpserted} invoices synced (${stats.invoicesLinked} linked to families).`,
           `${stats.paymentsUpserted} payments synced.`,
           stats.customersLinked > 0 ? `${stats.customersLinked} new customers linked.` : "",
