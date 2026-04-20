@@ -153,6 +153,44 @@ export function LocationScheduleGrid({
     return () => clearInterval(id);
   }, []);
 
+  // ── Cancel session modal state ──────────────────────────────────────────────
+  const [cancelTarget, setCancelTarget] = React.useState<ProjectedBlock | null>(null);
+  const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelSaving, setCancelSaving] = React.useState(false);
+
+  async function confirmCancel() {
+    if (!cancelTarget || !cancelReason.trim()) return;
+    setCancelSaving(true);
+    try {
+      // Mark block as cancelled with reason
+      await patchBlock(cancelTarget, {
+        block_type: "call_out",
+        is_family_callout: false,
+        status: "available",
+        callout_reason: cancelReason.trim(),
+      } as Partial<ScheduleBlock>);
+      // Write activity log entry
+      const student = cancelTarget.student_id ? studentsById.get(cancelTarget.student_id) : null;
+      await fetch("/api/activity-log", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          entity_type: "student",
+          entity_id: cancelTarget.student_id,
+          action: "session_cancelled",
+          note: `Session on ${cancelTarget.block_date ?? selectedDate} (${cancelTarget.start_time}–${cancelTarget.end_time}) cancelled. Reason: ${cancelReason.trim()}`,
+          metadata: { block_id: cancelTarget.id, reason: cancelReason.trim(), date: cancelTarget.block_date ?? selectedDate },
+        }),
+      });
+      onRubyEvent?.({ type: "call_out", message: `${student ? studentName(student) : "Session"} cancelled — ${cancelReason.trim()}` });
+      setCancelTarget(null);
+      setCancelReason("");
+      setSelectedBlockId(null);
+    } finally {
+      setCancelSaving(false);
+    }
+  }
+
   // ── Booking state (for open_time / unbooked blocks) ──
   const [bookingStudentQuery, setBookingStudentQuery] = React.useState("");
   const [bookingStudentId, setBookingStudentId] = React.useState<string | null>(null);
@@ -836,6 +874,16 @@ export function LocationScheduleGrid({
                       >
                         Call Out
                       </button>
+                      {selectedBlock.student_id && (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => { setCancelTarget(selectedBlock); setCancelReason(""); }}
+                          className="col-span-2 rounded-xl border border-orange-400/60 bg-orange-500/15 px-3 py-2.5 text-sm font-semibold text-orange-200 disabled:opacity-50 hover:bg-orange-500/25 transition-colors"
+                        >
+                          Cancel Session
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -844,6 +892,50 @@ export function LocationScheduleGrid({
           </>
         );
       })()}
+
+      {/* ── Cancel Session Modal ── */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setCancelTarget(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-sm rounded-2xl border border-orange-400/30 bg-[#0f0f12] p-6 shadow-2xl space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-white">Cancel Session</h3>
+            <p className="text-xs text-[#909098]">
+              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)!) : "Session"} &mdash; {cancelTarget.start_time} – {cancelTarget.end_time}
+            </p>
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Reason <span className="text-orange-400">*</span></label>
+              <textarea
+                autoFocus
+                rows={3}
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="Enter reason for cancellation…"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-orange-400/50 focus:outline-none resize-none"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                className="flex-1 rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2.5 text-sm font-semibold text-[#909098] hover:text-white transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={!cancelReason.trim() || cancelSaving}
+                onClick={confirmCancel}
+                className="flex-1 rounded-xl border border-orange-400/60 bg-orange-500/20 px-3 py-2.5 text-sm font-semibold text-orange-200 disabled:opacity-40 hover:bg-orange-500/30 transition-colors"
+              >
+                {cancelSaving ? "Cancelling…" : "Confirm Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

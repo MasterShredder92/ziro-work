@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { PageShell } from "@/components/layouts/PageShell";
 import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
@@ -134,6 +134,7 @@ export function FinancialsClient() {
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [expensesLoading, setExpensesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   // Current month for expense filter
   const now = new Date();
@@ -190,6 +191,31 @@ export function FinancialsClient() {
     // Optimistic remove
     setExpenses((prev) => prev.filter((e) => e.id !== id));
     await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+  }
+
+  async function saveEditedExpense(updated: Expense) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/expenses/${updated.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: updated.label,
+          amount_cents: updated.amount,
+          category: updated.category,
+          location_id: updated.location_id,
+          date: updated.date,
+          recurring: updated.recurring,
+          frequency: updated.frequency ?? null,
+        }),
+      });
+      if (res.ok) {
+        setEditingExpense(null);
+        loadExpenses();
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Filtered expenses
@@ -328,7 +354,11 @@ export function FinancialsClient() {
             ) : (
               <>
                 {filtered.map((e) => (
-                  <div key={e.id} className="flex items-center gap-3 rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-3">
+                  <div
+                    key={e.id}
+                    className="flex items-center gap-3 rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-3 cursor-pointer hover:border-[#2b2b2f] hover:bg-[#111113] transition-colors group"
+                    onClick={() => setEditingExpense(e)}
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-white truncate">{e.label}</span>
@@ -337,13 +367,17 @@ export function FinancialsClient() {
                             {e.frequency ?? "recurring"}
                           </span>
                         )}
+                        <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-[#505055] transition-opacity">Edit</span>
                       </div>
                       <div className="text-xs text-[#505055]">
                         {e.category} · {LOCATIONS.find((l) => l.id === e.location_id)?.name ?? "All Locations"} · {e.date}
                       </div>
                     </div>
                     <span className="shrink-0 text-sm font-bold text-red-400">− {fmt(e.amount)}</span>
-                    <button onClick={() => removeExpense(e.id)} className="shrink-0 text-[#404048] hover:text-red-400 transition-colors text-sm">✕</button>
+                    <button
+                      onClick={(ev) => { ev.stopPropagation(); removeExpense(e.id); }}
+                      className="shrink-0 text-[#404048] hover:text-red-400 transition-colors text-sm"
+                    >✕</button>
                   </div>
                 ))}
                 <div className="flex items-center justify-between rounded-lg border border-[#1c1c1e] bg-[#111113] p-3">
@@ -356,6 +390,155 @@ export function FinancialsClient() {
         </div>
 
       </div>
+
+      {/* ── Edit Expense Modal ── */}
+      {editingExpense && (
+        <EditExpenseModal
+          expense={editingExpense}
+          saving={saving}
+          onSave={saveEditedExpense}
+          onClose={() => setEditingExpense(null)}
+        />
+      )}
     </PageShell>
+  );
+}
+
+// ─── Edit Expense Modal ───────────────────────────────────────────────────────
+function EditExpenseModal({
+  expense,
+  saving,
+  onSave,
+  onClose,
+}: {
+  expense: Expense;
+  saving: boolean;
+  onSave: (e: Expense) => void;
+  onClose: () => void;
+}) {
+  const [label, setLabel] = useState(expense.label);
+  const [amount, setAmount] = useState(String(expense.amount / 100));
+  const [category, setCategory] = useState(expense.category);
+  const [locationId, setLocationId] = useState(expense.location_id ?? "");
+  const [date, setDate] = useState(expense.date);
+  const [recurring, setRecurring] = useState(expense.recurring);
+  const [frequency, setFrequency] = useState<"weekly" | "monthly" | "quarterly" | "annual">(expense.frequency ?? "monthly");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!label.trim() || !amount) return;
+    onSave({
+      ...expense,
+      label: label.trim(),
+      amount: Math.round(parseFloat(amount) * 100),
+      category,
+      location_id: locationId || null,
+      date,
+      recurring,
+      frequency: recurring ? frequency : undefined,
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md rounded-2xl border border-[#2b2b2f] bg-[#0f0f12] p-6 shadow-2xl space-y-4"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <h3 className="text-base font-bold text-white">Edit Expense</h3>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Label</label>
+            <input
+              type="text"
+              required
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Amount ($)</label>
+              <input
+                type="number"
+                required
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Date</label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+              >
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Location</label>
+              <select
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="accent-[#00ff88]" />
+            Recurring
+          </label>
+          {recurring && (
+            <select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as typeof frequency)}
+              className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+            >
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="annual">Annual</option>
+            </select>
+          )}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2.5 text-sm font-semibold text-[#909098] hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-40 hover:bg-[#00ff88]/25 transition-colors"
+            >
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

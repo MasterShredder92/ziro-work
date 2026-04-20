@@ -1,6 +1,5 @@
 "use client";
-
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
@@ -50,7 +49,8 @@ interface InvoicesClientProps {
   initialStatus: string;
   initialLocationId: string;
   initialSearch: string;
-  initialDateRange: string;
+  initialMonthOffset: number;
+  viewLabel: string;
   billingMetrics?: BillingMetrics[];
 }
 
@@ -151,7 +151,8 @@ export function InvoicesClient({
   initialStatus,
   initialLocationId,
   initialSearch,
-  initialDateRange,
+  initialMonthOffset,
+  viewLabel,
   billingMetrics,
 }: InvoicesClientProps) {
   const router = useRouter();
@@ -161,7 +162,8 @@ export function InvoicesClient({
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
   const [locationId, setLocationId] = useState(initialLocationId);
-  const [dateRange, setDateRange] = useState(initialDateRange);
+  const [monthOffset, setMonthOffset] = useState(initialMonthOffset);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -169,7 +171,7 @@ export function InvoicesClient({
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(updates)) {
-        if (v) params.set(k, v);
+        if (v !== undefined && v !== "") params.set(k, v);
         else params.delete(k);
       }
       params.delete("page");
@@ -180,22 +182,22 @@ export function InvoicesClient({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate({ search, status, location_id: locationId, date_range: dateRange });
+    navigate({ search, status, location_id: locationId, month_offset: String(monthOffset) });
   };
 
   const handleStatusChange = (s: string) => {
     setStatus(s);
-    navigate({ search, status: s, location_id: locationId, date_range: dateRange });
+    navigate({ search, status: s, location_id: locationId, month_offset: String(monthOffset) });
   };
 
   const handleLocationChange = (id: string) => {
     setLocationId(id);
-    navigate({ search, status, location_id: id, date_range: dateRange });
+    navigate({ search, status, location_id: id, month_offset: String(monthOffset) });
   };
 
-  const handleDateRangeChange = (dr: string) => {
-    setDateRange(dr);
-    navigate({ search, status, location_id: locationId, date_range: dr });
+  const handleMonthChange = (offset: number) => {
+    setMonthOffset(offset);
+    navigate({ search, status, location_id: locationId, month_offset: String(offset) });
   };
 
   const handlePageChange = (p: number) => {
@@ -244,25 +246,42 @@ export function InvoicesClient({
           </div>
         </div>
 
+        {/* ── Month navigation + Create Invoice ── */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleMonthChange(monthOffset - 1)}
+              className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-sm text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+            >
+              ←
+            </button>
+            <span className="min-w-[160px] text-center text-sm font-semibold text-[var(--z-fg)]">{viewLabel}</span>
+            <button
+              onClick={() => handleMonthChange(monthOffset + 1)}
+              disabled={monthOffset >= 1}
+              className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-sm text-[var(--z-muted)] hover:text-[var(--z-fg)] disabled:opacity-40 transition-colors"
+            >
+              →
+            </button>
+            {monthOffset !== 0 && (
+              <button
+                onClick={() => handleMonthChange(0)}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-xs text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+              >
+                Today
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="rounded-lg bg-[var(--z-accent)] px-4 py-1.5 text-sm font-semibold text-[var(--z-on-accent)] hover:opacity-90 transition-opacity"
+          >
+            + Create Invoice
+          </button>
+        </div>
+
         {/* ── Filters ── */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Date range filter */}
-          <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
-            {(["month", "quarter", "year", "all"] as const).map((dr) => (
-              <button
-                key={dr}
-                onClick={() => handleDateRangeChange(dr)}
-                className="px-3 py-1.5 capitalize transition-colors"
-                style={{
-                  background: dateRange === dr ? "var(--z-accent)" : "var(--z-surface)",
-                  color: dateRange === dr ? "var(--z-on-accent)" : "var(--z-muted)",
-                  fontWeight: dateRange === dr ? 700 : 400,
-                }}
-              >
-                {dr === "month" ? "This Month" : dr === "quarter" ? "This Quarter" : dr === "year" ? "This Year" : "All Time"}
-              </button>
-            ))}
-          </div>
 
           <form onSubmit={handleSearch} className="flex w-full gap-2 sm:w-auto">
             <input
@@ -512,7 +531,147 @@ export function InvoicesClient({
           </div>
         )}
       </div>
+
+      {/* ── Create Invoice Modal ── */}
+      {showCreateModal && (
+        <CreateInvoiceModal onClose={() => setShowCreateModal(false)} />
+      )}
     </PageShell>
   );
 }
 
+// ── Create Invoice Modal ─────────────────────────────────────────────────────
+function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
+  const [customerName, setCustomerName] = React.useState("");
+  const [customerEmail, setCustomerEmail] = React.useState("");
+  const [amountDollars, setAmountDollars] = React.useState("");
+  const [dueDate, setDueDate] = React.useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [note, setNote] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!customerName.trim() || !amountDollars || !dueDate) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/invoices/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          customer_name: customerName.trim(),
+          customer_email: customerEmail.trim() || null,
+          amount_cents: Math.round(parseFloat(amountDollars) * 100),
+          due_date: dueDate,
+          note: note.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? "Failed to create invoice");
+      }
+      setSuccess(true);
+      setTimeout(() => { onClose(); window.location.reload(); }, 1500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md rounded-2xl border border-[#2b2b2f] bg-[#0f0f12] p-6 shadow-2xl space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold text-white">Create Invoice</h3>
+        {success ? (
+          <p className="text-sm text-[#00ff88] font-semibold">Invoice created successfully!</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Customer Name <span className="text-[#00ff88]">*</span></label>
+              <input
+                type="text"
+                required
+                value={customerName}
+                onChange={e => setCustomerName(e.target.value)}
+                placeholder="Family or student name"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Email</label>
+              <input
+                type="email"
+                value={customerEmail}
+                onChange={e => setCustomerEmail(e.target.value)}
+                placeholder="customer@email.com"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Amount ($) <span className="text-[#00ff88]">*</span></label>
+                <input
+                  type="number"
+                  required
+                  min="0.01"
+                  step="0.01"
+                  value={amountDollars}
+                  onChange={e => setAmountDollars(e.target.value)}
+                  placeholder="45.00"
+                  className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Due Date <span className="text-[#00ff88]">*</span></label>
+                <input
+                  type="date"
+                  required
+                  value={dueDate}
+                  onChange={e => setDueDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Note</label>
+              <textarea
+                rows={2}
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Optional note or description"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none resize-none"
+              />
+            </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2.5 text-sm font-semibold text-[#909098] hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !customerName.trim() || !amountDollars || !dueDate}
+                className="flex-1 rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-40 hover:bg-[#00ff88]/25 transition-colors"
+              >
+                {saving ? "Creating…" : "Create Invoice"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -250,6 +250,10 @@ export function CRMHubClient() {
             <PageHeader title="Families & Students" subtitle="All families, students, and their session history" />
             <Link href="/crm/families/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-3 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ New</Link>
           </div>
+          <div className="mt-3">
+            <AgentPageBar agentId="vader" chatPlaceholder="Ask Vader about families or messaging…"
+              pageContext={{ page: "crm-families", totalFamilies: families.length, activeCount, inactiveCount, selectedLocation: selectedLocationId !== "all" ? getLocName(selectedLocationId) : "All Locations" }} />
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {["all", ...LOCATIONS.map(l => l.id)].map(locId => {
               const locCfg = locId !== "all" ? LOCATION_MAP[locId] : null;
@@ -327,20 +331,7 @@ export function CRMHubClient() {
             </div>
           )}
 
-          {/* Desktop AI sidebar (only when no family selected) */}
-          {!selectedFamily && (
-            <div className="hidden xl:flex w-72 shrink-0 flex-col border-l border-[#1c1c1e] bg-[#0a0a0c] p-4">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035] mb-3">AI Assistant</div>
-              <AgentPageBar agentId="vader" chatPlaceholder="Ask Vader about families or messaging…"
-                pageContext={{ page: "crm-families", totalFamilies: families.length, activeCount, inactiveCount, selectedLocation: selectedLocationId !== "all" ? getLocName(selectedLocationId) : "All Locations" }} />
-              <div className="mt-4 space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">Quick Actions</div>
-                <Link href="/lifecycle" className="flex items-center gap-2 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-xs font-semibold text-[#909098] hover:text-white hover:border-[#2b2b2f] transition-colors"><span>📋</span> View Lifecycle</Link>
-                <Link href="/lifecycle?tab=win-back" className="flex items-center gap-2 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-xs font-semibold text-[#909098] hover:text-white hover:border-[#2b2b2f] transition-colors"><span>🔄</span> Win-Back Inactive</Link>
-                <Link href="/crm/families/new" className="flex items-center gap-2 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-xs font-semibold text-[#909098] hover:text-white hover:border-[#2b2b2f] transition-colors"><span>➕</span> New Family</Link>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
 

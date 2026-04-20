@@ -99,6 +99,10 @@ export function PayrollClient() {
               <button onClick={() => setMonthOffset(o => o + 1)} disabled={monthOffset >= 0} className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-1.5 text-xs text-[#909098] hover:text-white disabled:opacity-40 transition-colors">Next →</button>
             </div>
           </div>
+          <div className="mb-3">
+            <AgentPageBar agentId="bub" chatPlaceholder="Ask Bub about payroll or teacher pay…"
+              pageContext={{ page: "payroll", period: period.label, totalGross: filteredGross, totalSessions: filteredSessions }} />
+          </div>
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-3">
@@ -204,23 +208,11 @@ export function PayrollClient() {
             )}
           </div>
 
-          {/* Side panel: detail or agent bar */}
-          <div className="hidden xl:flex w-80 shrink-0 flex-col border-l border-[#1c1c1e] bg-[#0a0a0c]">
-            {selectedRow ? (
+          {selectedRow && (
+            <div className="w-full lg:w-96 shrink-0 border-l border-[#1c1c1e] bg-[#0a0a0c] overflow-y-auto">
               <PayrollDetailPanel row={selectedRow} onClose={() => setSelectedRow(null)} />
-            ) : (
-              <div className="p-4 space-y-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">AI Assistant</div>
-                <AgentPageBar agentId="bub" chatPlaceholder="Ask Bub about payroll or teacher pay…"
-                  pageContext={{ page: "payroll", period: period.label, totalGross: filteredGross, totalSessions: filteredSessions }} />
-                <div className="space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">Quick Links</div>
-                  <Link href="/teachers" className="flex items-center gap-2 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-xs font-semibold text-[#909098] hover:text-white hover:border-[#2b2b2f] transition-colors">👩‍🏫 Teacher Directory</Link>
-                  <Link href="/financials" className="flex items-center gap-2 rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-xs font-semibold text-[#909098] hover:text-white hover:border-[#2b2b2f] transition-colors">📊 Financials</Link>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </PageTransition>

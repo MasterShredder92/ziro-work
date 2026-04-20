@@ -37,7 +37,7 @@ export default async function InvoicesPage({
     location_id?: string;
     search?: string;
     page?: string;
-    date_range?: string;
+    month_offset?: string;
   }>;
 }) {
   const tenantId = await getCRMTenantId();
@@ -47,16 +47,25 @@ export default async function InvoicesPage({
   const pageSize = 100;
   const offset = (page - 1) * pageSize;
 
-  // Date helpers — use due_date as primary dimension
+  // Month-block navigation: offset from current month (0 = current, -1 = prev, +1 = next, +2 = month after next)
   const now = new Date();
+  const monthOffset = parseInt(params.month_offset ?? "0", 10);
+  const targetYear = now.getFullYear();
+  const targetMonth = now.getMonth() + monthOffset; // JS handles overflow correctly
+  const viewStart = new Date(targetYear, targetMonth, 1).toISOString().split("T")[0];
+  const viewEnd = new Date(targetYear, targetMonth + 1, 0).toISOString().split("T")[0];
+
+  // For billing metrics bar — always current + next month
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split("T")[0];
   const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split("T")[0];
+
+  // Month label for display
+  const viewLabel = new Date(targetYear, targetMonth, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const today = now.toISOString().split("T")[0];
 
-  // ── Filtered invoice list ──────────────────────────────────────────────────
-  const dateRange = params.date_range ?? "month";
+  // ── Filtered invoice list ──────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (db as any)
     .from("square_invoices_fact")
@@ -65,21 +74,10 @@ export default async function InvoicesPage({
       { count: "exact" }
     )
     .eq("tenant_id", tenantId)
+    .gte("due_date", viewStart)
+    .lte("due_date", viewEnd)
     .order("due_date", { ascending: false })
     .range(offset, offset + pageSize - 1);
-
-  // Apply date range filter using due_date
-  if (dateRange === "month") {
-    query = query.gte("due_date", thisMonthStart).lte("due_date", thisMonthEnd);
-  } else if (dateRange === "quarter") {
-    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1).toISOString().split("T")[0];
-    const qEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0).toISOString().split("T")[0];
-    query = query.gte("due_date", qStart).lte("due_date", qEnd);
-  } else if (dateRange === "year") {
-    const yStart = `${now.getFullYear()}-01-01`;
-    const yEnd = `${now.getFullYear()}-12-31`;
-    query = query.gte("due_date", yStart).lte("due_date", yEnd);
-  }
 
   if (params.status && params.status !== "all") query = query.eq("status", params.status.toUpperCase());
   if (params.location_id) query = query.eq("square_location_id", params.location_id);
@@ -226,7 +224,8 @@ export default async function InvoicesPage({
       initialStatus={params.status ?? "all"}
       initialLocationId={params.location_id ?? ""}
       initialSearch={params.search ?? ""}
-      initialDateRange={dateRange}
+      initialMonthOffset={monthOffset}
+      viewLabel={viewLabel}
       billingMetrics={billingMetrics}
     />
   );
