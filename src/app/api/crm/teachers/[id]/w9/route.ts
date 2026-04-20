@@ -128,6 +128,7 @@ export async function POST(
     .eq("tenant_id", tenantId);
 
   // Never return the encrypted TIN in the response
-  const { tin_encrypted: _omit, ...safeW9 } = w9 as Record<string, unknown>;
+  const { tin_encrypted: _omitTin, ...safeW9 } = w9 as Record<string, unknown>;
+  void _omitTin; // intentionally excluded from response
   return NextResponse.json({ ok: true, data: safeW9 });
 }

@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 import * as React from "react";
 import { useParams } from "next/navigation";
@@ -25,6 +24,12 @@ type TeacherRaw = {
 type Location = { id: string; name: string };
 type Tab = "profile" | "edit" | "w9" | "students";
 type AvailabilitySlot = { start_time: string; end_time: string; is_active?: boolean };
+type W9Record = {
+  id: string; legal_name: string; business_name?: string | null;
+  tax_classification: string; address: string; city: string; state: string; zip: string;
+  tin_type: string; tin_last_four: string; signature_name: string;
+  signed_at: string; status: string;
+};
 
 const inputCls = "w-full rounded-xl border border-[#1c1c1e] bg-[#111113] px-3 py-2.5 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/40 focus:outline-none";
 const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[#505055] mb-1";
@@ -71,6 +76,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
       <div className="flex items-center gap-4 rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#1a1a1e]">
           {teacher.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={teacher.photo_url} alt={displayName} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xl font-bold text-[#00ff88]">{displayName.charAt(0).toUpperCase()}</div>
@@ -271,6 +277,9 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
   const [saving, setSaving] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"idle" | "success" | "error">("idle");
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [existingW9, setExistingW9] = React.useState<W9Record | null>(null);
+  const [loadingW9, setLoadingW9] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
   const [legalName, setLegalName] = React.useState("");
   const [businessName, setBusinessName] = React.useState("");
   const [taxClassification, setTaxClassification] = React.useState("individual");
@@ -284,6 +293,33 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
   const [signatureName, setSignatureName] = React.useState("");
   const [agreed, setAgreed] = React.useState(false);
   const w9Complete = teacher.w9_status === "complete" || teacher.w9_status === "signed";
+
+  React.useEffect(() => {
+    setLoadingW9(true);
+    fetch(`/api/crm/teachers/${teacher.id}/w9`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.data) {
+          setExistingW9(res.data as W9Record);
+          // Pre-fill form fields from existing record
+          setLegalName(res.data.legal_name ?? "");
+          setBusinessName(res.data.business_name ?? "");
+          setTaxClassification(res.data.tax_classification ?? "individual");
+          setTaxClassificationOther(res.data.tax_classification_other ?? "");
+          setAddress(res.data.address ?? "");
+          setCity(res.data.city ?? "");
+          setState(res.data.state ?? "");
+          setZip(res.data.zip ?? "");
+          setTinType(res.data.tin_type ?? "ssn");
+          setSignatureName(res.data.signature_name ?? "");
+        } else {
+          // No existing W9 — show the form immediately
+          setShowForm(true);
+        }
+      })
+      .catch(() => { setShowForm(true); })
+      .finally(() => setLoadingW9(false));
+  }, [teacher.id]);
 
   async function handleSubmit() {
     if (!agreed) { setSaveError("You must certify the information is correct."); return; }
@@ -300,76 +336,151 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
         const body = await res.json().catch(() => ({})) as { message?: string; error?: string };
         throw new Error(body.message ?? body.error ?? `HTTP ${res.status}`);
       }
+      const result = await res.json() as { data?: W9Record };
+      if (result.data) {
+        setExistingW9(result.data);
+        // Refresh form fields from saved data
+        setLegalName(result.data.legal_name ?? "");
+        setBusinessName(result.data.business_name ?? "");
+        setTaxClassification(result.data.tax_classification ?? "individual");
+        setAddress(result.data.address ?? "");
+        setCity(result.data.city ?? "");
+        setState(result.data.state ?? "");
+        setZip(result.data.zip ?? "");
+        setTinType(result.data.tin_type ?? "ssn");
+        setSignatureName(result.data.signature_name ?? "");
+        setTin(""); // clear TIN field after save
+      }
       setSaveStatus("success");
+      setTimeout(() => { setSaveStatus("idle"); setShowForm(false); setAgreed(false); }, 2000);
     } catch (err) {
       setSaveStatus("error"); setSaveError(err instanceof Error ? err.message : "Submission failed");
     } finally { setSaving(false); }
   }
 
+  const taxClassificationLabel: Record<string, string> = {
+    individual: "Individual / Sole Proprietor", c_corp: "C Corporation", s_corp: "S Corporation",
+    partnership: "Partnership", trust: "Trust / Estate", llc: "LLC", other: "Other",
+  };
+
+  if (loadingW9) {
+    return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />)}</div>;
+  }
+
   return (
     <div className="space-y-4">
+      {/* Status banner */}
       <div className={`rounded-xl border p-4 ${w9Complete ? "border-[#00ff88]/30 bg-[#00ff88]/5" : "border-amber-500/30 bg-amber-500/5"}`}>
-        <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${w9Complete ? "bg-[#00ff88]" : "bg-amber-400"}`} />
-          <span className="text-sm font-semibold text-white">W9 Status: <span className={w9Complete ? "text-[#00ff88]" : "text-amber-400"}>{teacher.w9_status ?? "Not submitted"}</span></span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${w9Complete ? "bg-[#00ff88]" : "bg-amber-400"}`} />
+            <span className="text-sm font-semibold text-white">W9 Status: <span className={w9Complete ? "text-[#00ff88]" : "text-amber-400"}>{teacher.w9_status ?? "Not submitted"}</span></span>
+          </div>
+          {existingW9 && !showForm && (
+            <button onClick={() => setShowForm(true)} className="text-xs text-[#505055] hover:text-white underline">Update W9</button>
+          )}
         </div>
-        {teacher.w9_completed_at && <div className="mt-1 text-xs text-[#505055]">Completed: {teacher.w9_completed_at}</div>}
+        {teacher.w9_completed_at && <div className="mt-1 text-xs text-[#505055]">Completed: {new Date(teacher.w9_completed_at).toLocaleDateString()}</div>}
         {teacher.contract_pdf_url && <a href={teacher.contract_pdf_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-[#00ff88] underline">View W9 PDF →</a>}
       </div>
-      <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">W-9 — Request for Taxpayer Identification</div>
-        <p className="text-xs text-[#505055]">All fields are required. Your TIN is encrypted and never shown in plain text.</p>
-        <div><label className={labelCls}>Legal Name *</label><input className={inputCls} value={legalName} onChange={e => setLegalName(e.target.value)} placeholder="Full legal name as shown on tax return" /></div>
-        <div><label className={labelCls}>Business Name (if different)</label><input className={inputCls} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="DBA or business name" /></div>
-        <div>
-          <label className={labelCls}>Federal Tax Classification *</label>
-          <select className={inputCls} value={taxClassification} onChange={e => setTaxClassification(e.target.value)}>
-            <option value="individual">Individual / Sole Proprietor</option>
-            <option value="c_corp">C Corporation</option><option value="s_corp">S Corporation</option>
-            <option value="partnership">Partnership</option><option value="trust">Trust / Estate</option>
-            <option value="llc">LLC</option><option value="other">Other</option>
-          </select>
+
+      {/* Existing W9 summary (read-only) */}
+      {existingW9 && !showForm && (
+        <div className={sectionCls}>
+          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">W-9 on File</div>
+          <div className="divide-y divide-[#1c1c1e]">
+            {[
+              { label: "Legal Name", value: existingW9.legal_name },
+              { label: "Business Name", value: existingW9.business_name },
+              { label: "Tax Classification", value: taxClassificationLabel[existingW9.tax_classification] ?? existingW9.tax_classification },
+              { label: "Address", value: `${existingW9.address}, ${existingW9.city}, ${existingW9.state} ${existingW9.zip}` },
+              { label: "TIN Type", value: existingW9.tin_type === "ssn" ? "SSN" : "EIN" },
+              { label: "TIN", value: `****${existingW9.tin_last_four}` },
+              { label: "Signed By", value: existingW9.signature_name },
+              { label: "Signed At", value: new Date(existingW9.signed_at).toLocaleDateString() },
+            ].filter(r => r.value).map(({ label, value }) => (
+              <div key={label} className="flex items-center justify-between py-2.5">
+                <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">{label}</span>
+                <span className="text-sm text-white">{value}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        {taxClassification === "other" && <div><label className={labelCls}>Specify</label><input className={inputCls} value={taxClassificationOther} onChange={e => setTaxClassificationOther(e.target.value)} /></div>}
-      </div>
-      <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Address</div>
-        <div><label className={labelCls}>Street Address *</label><input className={inputCls} value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" /></div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-1"><label className={labelCls}>City *</label><input className={inputCls} value={city} onChange={e => setCity(e.target.value)} /></div>
-          <div><label className={labelCls}>State *</label><input className={inputCls} value={state} onChange={e => setState(e.target.value)} placeholder="NE" maxLength={2} /></div>
-          <div><label className={labelCls}>ZIP *</label><input className={inputCls} value={zip} onChange={e => setZip(e.target.value)} placeholder="68101" /></div>
-        </div>
-      </div>
-      <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Taxpayer Identification Number</div>
-        <div>
-          <label className={labelCls}>TIN Type *</label>
-          <select className={inputCls} value={tinType} onChange={e => setTinType(e.target.value)}>
-            <option value="ssn">Social Security Number (SSN)</option>
-            <option value="ein">Employer Identification Number (EIN)</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>{tinType === "ssn" ? "SSN" : "EIN"} *</label>
-          <input className={inputCls} type="password" value={tin} onChange={e => setTin(e.target.value)} placeholder={tinType === "ssn" ? "XXX-XX-XXXX" : "XX-XXXXXXX"} autoComplete="off" />
-          <p className="mt-1 text-xs text-[#505055]">Encrypted and stored securely. Never displayed in plain text.</p>
-        </div>
-      </div>
-      <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Certification & Signature</div>
-        <p className="text-xs text-[#505055]">Under penalties of perjury, I certify that the TIN shown is my correct taxpayer identification number, I am not subject to backup withholding, and I am a U.S. citizen or other U.S. person.</p>
-        <div><label className={labelCls}>Signature (type full legal name) *</label><input className={inputCls} value={signatureName} onChange={e => setSignatureName(e.target.value)} placeholder="Type your full legal name to sign" /></div>
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#00ff88]" />
-          <span className="text-xs text-[#909098]">I certify under penalties of perjury that the information provided is true, correct, and complete.</span>
-        </label>
-      </div>
-      {saveStatus === "success" && <p className="text-sm text-green-500">W9 submitted successfully.</p>}
-      {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
-      <button onClick={handleSubmit} disabled={saving || !agreed} className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
-        {saving ? "Submitting…" : "Submit W9"}
-      </button>
+      )}
+
+      {/* W9 form — shown when no existing W9 or user clicks Update */}
+      {showForm && (
+        <>
+          <div className={sectionCls}>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">W-9 — Request for Taxpayer Identification</div>
+            <p className="text-xs text-[#505055]">All fields are required. Your TIN is encrypted and never shown in plain text.</p>
+            <div><label className={labelCls}>Legal Name *</label><input className={inputCls} value={legalName} onChange={e => setLegalName(e.target.value)} placeholder="Full legal name as shown on tax return" /></div>
+            <div><label className={labelCls}>Business Name (if different)</label><input className={inputCls} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="DBA or business name" /></div>
+            <div>
+              <label className={labelCls}>Federal Tax Classification *</label>
+              <select className={inputCls} value={taxClassification} onChange={e => setTaxClassification(e.target.value)}>
+                <option value="individual">Individual / Sole Proprietor</option>
+                <option value="c_corp">C Corporation</option><option value="s_corp">S Corporation</option>
+                <option value="partnership">Partnership</option><option value="trust">Trust / Estate</option>
+                <option value="llc">LLC</option><option value="other">Other</option>
+              </select>
+            </div>
+            {taxClassification === "other" && <div><label className={labelCls}>Specify</label><input className={inputCls} value={taxClassificationOther} onChange={e => setTaxClassificationOther(e.target.value)} /></div>}
+          </div>
+          <div className={sectionCls}>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Address</div>
+            <div><label className={labelCls}>Street Address *</label><input className={inputCls} value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" /></div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-1"><label className={labelCls}>City *</label><input className={inputCls} value={city} onChange={e => setCity(e.target.value)} /></div>
+              <div><label className={labelCls}>State *</label><input className={inputCls} value={state} onChange={e => setState(e.target.value)} placeholder="NE" maxLength={2} /></div>
+              <div><label className={labelCls}>ZIP *</label><input className={inputCls} value={zip} onChange={e => setZip(e.target.value)} placeholder="68101" /></div>
+            </div>
+          </div>
+          <div className={sectionCls}>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Taxpayer Identification Number</div>
+            <div>
+              <label className={labelCls}>TIN Type *</label>
+              <select className={inputCls} value={tinType} onChange={e => setTinType(e.target.value)}>
+                <option value="ssn">Social Security Number (SSN)</option>
+                <option value="ein">Employer Identification Number (EIN)</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{tinType === "ssn" ? "SSN" : "EIN"} *</label>
+              <input className={inputCls} type="password" value={tin} onChange={e => setTin(e.target.value)} placeholder={tinType === "ssn" ? "XXX-XX-XXXX" : "XX-XXXXXXX"} autoComplete="off" />
+              <p className="mt-1 text-xs text-[#505055]">Encrypted and stored securely. Never displayed in plain text.</p>
+            </div>
+          </div>
+          <div className={sectionCls}>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Certification & Signature</div>
+            <p className="text-xs text-[#505055]">Under penalties of perjury, I certify that the TIN shown is my correct taxpayer identification number, I am not subject to backup withholding, and I am a U.S. citizen or other U.S. person.</p>
+            <div><label className={labelCls}>Signature (type full legal name) *</label><input className={inputCls} value={signatureName} onChange={e => setSignatureName(e.target.value)} placeholder="Type your full legal name to sign" /></div>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#00ff88]" />
+              <span className="text-xs text-[#909098]">I certify under penalties of perjury that the information provided is true, correct, and complete.</span>
+            </label>
+          </div>
+          {saveStatus === "success" && <p className="text-sm text-green-500">W9 submitted successfully.</p>}
+          {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
+          <div className="flex gap-3">
+            {existingW9 && (
+              <button onClick={() => { setShowForm(false); setSaveStatus("idle"); setSaveError(null); }} className="flex-1 rounded-xl border border-[#1c1c1e] py-3 text-sm font-semibold text-[#909098] hover:text-white">
+                Cancel
+              </button>
+            )}
+            <button onClick={handleSubmit} disabled={saving || !agreed} className="flex-1 rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
+              {saving ? "Submitting…" : existingW9 ? "Update W9" : "Submit W9"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* No W9 yet and form not shown — shouldn't happen but fallback */}
+      {!existingW9 && !showForm && (
+        <button onClick={() => setShowForm(true)} className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black">
+          Complete W9
+        </button>
+      )}
     </div>
   );
 }
