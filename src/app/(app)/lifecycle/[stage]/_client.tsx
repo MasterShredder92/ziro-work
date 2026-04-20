@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { LifecycleStageId } from "@/lib/lifecycle/types";
-import { AgentPanel } from "@/components/agent/AgentPanel";
 import { StageHeader } from "@/components/stages/StageHeader";
 import { StageStudentList } from "@/components/stages/StageStudentList";
 import { loadLifecycleStageSurface, type LifecycleStageSurfaceDTO } from "./actions";
@@ -69,12 +68,6 @@ function StageSurfaceLoaded({
     };
   }, [locationId, stageId, tenantId]);
 
-  const agentStatus = useMemo(() => {
-    if (!data) return "idle" as const;
-    if (data.students.some((s) => s.blockers.length > 0)) return "blocked" as const;
-    return "active" as const;
-  }, [data]);
-
   const nextActions = useMemo(() => {
     if (!data) return [];
     return [
@@ -95,14 +88,30 @@ function StageSurfaceLoaded({
         ) : null}
         {data ? (
           <>
-            <StageHeader stageName={data.stageName} description={data.stageDescription} agentName={data.agentDisplayName} />
-            <AgentPanel
+            {/* Stage header — agent name shown as badge inside */}
+            <StageHeader
+              stageName={data.stageName}
+              description={data.stageDescription}
               agentName={data.agentDisplayName}
-              avatarUrl={null}
-              status={agentStatus}
-              summary={data.agentSummary}
-              nextActions={nextActions}
             />
+            {/* Agent summary + next steps — inline, no duplicate card */}
+            <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-[var(--z-space-5)] py-[var(--z-space-4)] space-y-[var(--z-space-3)]">
+              <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_22%)]">
+                {data.agentSummary}
+              </p>
+              {nextActions.length > 0 ? (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]">
+                    Next steps
+                  </div>
+                  <ol className="list-decimal space-y-1 pl-5 text-sm text-[color-mix(in_oklab,var(--z-fg),transparent_10%)]">
+                    {nextActions.map((a, i) => (
+                      <li key={`${a}-${i}`}>{a}</li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
+            </div>
             <StageStudentList students={data.students} />
           </>
         ) : null}

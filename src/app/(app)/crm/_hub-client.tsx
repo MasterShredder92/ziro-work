@@ -66,7 +66,7 @@ function FamilyDetailContent({ family, onClose }: { family: Family; onClose: () 
     setLoading(true);
     Promise.all([
       fetch(`/api/crm/students?familyId=${family.id}`).then(r => r.json()).catch(() => ({ data: [] })),
-      fetch(`/api/invoices?familyId=${family.id}`).then(r => r.json()).catch(() => ({ data: [] })),
+      fetch(`/api/billing/invoices?family_id=${family.id}`).then(r => r.json()).catch(() => ({ data: [] })),
     ]).then(([sRes, iRes]) => {
       setStudents(Array.isArray(sRes.data) ? sRes.data : []);
       setInvoices(Array.isArray(iRes.data) ? iRes.data : []);

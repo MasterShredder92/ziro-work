@@ -157,11 +157,12 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     Promise.all(
       locations.map(async (loc) => {
         if (blocksByLocationWindow[loc.id]?.[windowKey]) return null;
-        const url = `/api/schedule-blocks?locationId=${encodeURIComponent(loc.id)}&start=${window.start}&end=${window.end}`;
+        const url = `/api/schedule-blocks?locationId=${encodeURIComponent(loc.id)}&date_from=${window.start}&date_to=${window.end}`;
         const res = await fetch(url).catch(() => null);
         if (!res?.ok) return null;
         const json = await res.json().catch(() => null);
-        return { locId: loc.id, blocks: (json?.blocks ?? json ?? []) as ScheduleBlock[] };
+        const rawBlocks = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        return { locId: loc.id, blocks: rawBlocks as ScheduleBlock[] };
       }),
     ).then((results) => {
       setBlocksByLocationWindow((prev) => {
