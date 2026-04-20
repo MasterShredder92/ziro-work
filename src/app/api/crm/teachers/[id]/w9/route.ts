@@ -8,17 +8,20 @@ import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
  * POST /api/crm/teachers/[id]/w9  — submit / upsert W9 for teacher
  */
 
+type RouteContext = { params: Promise<{ id: string }> };
+
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext
 ) {
+  const { id } = await ctx.params;
   const db = getServiceClient();
   const tenantId = DEFAULT_TENANT_ID;
 
   const { data, error } = await (db as any)
     .from("teacher_w9")
     .select("id, teacher_id, tenant_id, legal_name, business_name, tax_classification, tax_classification_other, address, city, state, zip, tin_type, tin_last_four, signature_name, exempt_payee_code, fatca_exemption_code, signed_at, status, pdf_url, pdf_generated_at, created_at, updated_at")
-    .eq("teacher_id", params.id)
+    .eq("teacher_id", id)
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -36,8 +39,9 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext
 ) {
+  const { id } = await ctx.params;
   const db = getServiceClient();
   const tenantId = DEFAULT_TENANT_ID;
 
@@ -84,7 +88,7 @@ export async function POST(
     .from("teacher_w9")
     .upsert(
       {
-        teacher_id: params.id,
+        teacher_id: id,
         tenant_id: tenantId,
         legal_name,
         business_name: business_name || null,
@@ -110,7 +114,6 @@ export async function POST(
     .single();
 
   if (w9Error) {
-    // If the table doesn't exist yet, return a helpful error
     if (w9Error.code === "42P01") {
       return NextResponse.json(
         { error: "teacher_w9 table not found. Run the migration SQL in Supabase first." },
@@ -124,7 +127,7 @@ export async function POST(
   await (db as any)
     .from("teachers")
     .update({ w9_status: "complete", w9_completed_at: now, updated_at: now })
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("tenant_id", tenantId);
 
   // Never return the encrypted TIN in the response

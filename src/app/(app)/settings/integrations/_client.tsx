@@ -32,15 +32,17 @@ function IntegrationCard({
   description,
   icon,
   status,
+  defaultOpen,
   children,
 }: {
   name: string;
   description: string;
   icon: React.ReactNode;
   status: "connected" | "disconnected" | "stub";
+  defaultOpen?: boolean;
   children?: React.ReactNode;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(defaultOpen ?? false);
 
   return (
     <div
@@ -85,6 +87,147 @@ function IntegrationCard({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Square sync card ─────────────────────────────────────────────────────────
+type SyncStatus = "idle" | "running" | "success" | "error";
+
+function SquareCard() {
+  const [syncStatus, setSyncStatus] = React.useState<SyncStatus>("idle");
+  const [syncResult, setSyncResult] = React.useState<string | null>(null);
+  const [since, setSince] = React.useState("");
+
+  async function runSync() {
+    setSyncStatus("running");
+    setSyncResult(null);
+    try {
+      const body = since.trim() ? JSON.stringify({ since: since.trim() }) : undefined;
+      const res = await fetch("/api/integrations/square/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      const json = await res.json() as { message?: string; error?: string; stats?: Record<string, number> };
+      if (!res.ok) {
+        setSyncStatus("error");
+        setSyncResult(json.error ?? `Error ${res.status}`);
+      } else {
+        setSyncStatus("success");
+        setSyncResult(json.message ?? "Sync complete.");
+      }
+    } catch (err) {
+      setSyncStatus("error");
+      setSyncResult(err instanceof Error ? err.message : "Network error");
+    }
+  }
+
+  const statusColor = syncStatus === "success" ? "#86efac" : syncStatus === "error" ? "#fca5a5" : "var(--z-muted)";
+
+  return (
+    <IntegrationCard
+      name="Square"
+      description="Point-of-sale, invoices, payments, and customer records. Your primary billing source."
+      icon="◼"
+      status="connected"
+      defaultOpen
+    >
+      <div className="space-y-4">
+
+        {/* What Square syncs */}
+        <div className="rounded-lg border px-4 py-3 text-xs" style={{ borderColor: "rgba(0,255,136,0.2)", background: "rgba(0,255,136,0.04)" }}>
+          <p className="mb-1.5 font-bold text-[#00ff88]">What gets synced</p>
+          <ul className="space-y-1 text-[var(--z-muted)]">
+            <li>• All invoices — linked to student/family records by email</li>
+            <li>• All payment history — full backfill, no date limit</li>
+            <li>• Customer records — auto-matched to families and students</li>
+            <li>• Real-time updates via webhook (invoice paid, refunds, etc.)</li>
+          </ul>
+        </div>
+
+        {/* Sync Now */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-[var(--z-fg)]">Manual sync</p>
+          <p className="text-xs text-[var(--z-muted)]">
+            Hit <strong>Sync Now</strong> to pull all invoices and payments from Square into Ziro.
+            Leave the date blank to pull your full history (recommended for first run).
+            To only pull recent data, enter a start date like <code className="rounded bg-[var(--z-surface)] px-1">2026-01-01</code>.
+          </p>
+          <div className="flex items-end gap-3">
+            <div className="w-44">
+              <Input
+                label="From date (optional)"
+                value={since}
+                onChange={(e) => setSince(e.target.value)}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={syncStatus === "running"}
+              onClick={runSync}
+            >
+              {syncStatus === "running" ? "Syncing…" : "Sync Now"}
+            </Button>
+          </div>
+
+          {syncStatus === "running" && (
+            <div className="flex items-center gap-2 text-xs text-[var(--z-muted)]">
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              Pulling data from Square — this may take 1–3 minutes for a full history sync…
+            </div>
+          )}
+
+          {syncResult && syncStatus !== "running" && (
+            <div
+              className="rounded-lg border px-3 py-2 text-xs"
+              style={{
+                borderColor: syncStatus === "success" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)",
+                background: syncStatus === "success" ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+                color: statusColor,
+              }}
+            >
+              {syncResult}
+            </div>
+          )}
+        </div>
+
+        {/* Webhook info */}
+        <div className="space-y-2 border-t pt-4" style={{ borderColor: "var(--z-border)" }}>
+          <p className="text-xs font-semibold text-[var(--z-fg)]">Live webhook (real-time updates)</p>
+          <p className="text-xs text-[var(--z-muted)]">
+            Once synced, Square will push every new payment, invoice, and customer change to Ziro automatically.
+            In your{" "}
+            <a
+              href="https://developer.squareup.com/apps"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--z-accent)] underline"
+            >
+              Square Developer Dashboard
+            </a>
+            , add this webhook URL and subscribe to the events listed below.
+          </p>
+          <div
+            className="rounded-lg border px-3 py-2 font-mono text-xs"
+            style={{ borderColor: "var(--z-border)", background: "var(--z-surface)", color: "#00ff88" }}
+          >
+            https://ziro-work.vercel.app/api/integrations/square/webhook
+          </div>
+          <p className="text-[10px] text-[var(--z-muted)]">
+            Subscribe to: <code className="rounded bg-[var(--z-surface)] px-1">invoice.*</code>{" "}
+            <code className="rounded bg-[var(--z-surface)] px-1">payment.*</code>{" "}
+            <code className="rounded bg-[var(--z-surface)] px-1">customer.*</code>{" "}
+            <code className="rounded bg-[var(--z-surface)] px-1">refund.*</code>
+          </p>
+        </div>
+      </div>
+    </IntegrationCard>
   );
 }
 
@@ -137,6 +280,50 @@ export function IntegrationsSettingsClient() {
           No API calls are made until you wire the corresponding environment variables in your deployment.
           Save is intentionally disabled until the backend pipeline is connected.
         </div>
+
+        <SettingsGroup title="Payments & billing">
+          {/* Square — primary billing integration */}
+          <SquareCard />
+
+          {/* Stripe */}
+          <IntegrationCard
+            name="Stripe"
+            description="Invoice payments, subscription billing, and payout management."
+            icon="💳"
+            status={stubStatus(stripePublishable)}
+          >
+            <div className="space-y-3">
+              <Input
+                label="Publishable Key"
+                value={stripePublishable}
+                onChange={(e) => setStripePublishable(e.target.value)}
+                placeholder="pk_live_••••••••"
+              />
+              <Input
+                label="Secret Key"
+                value={stripeSecret}
+                onChange={(e) => setStripeSecret(e.target.value)}
+                placeholder="sk_live_••••••••"
+                type="password"
+              />
+              <Input
+                label="Webhook Signing Secret"
+                value={stripeWebhook}
+                onChange={(e) => setStripeWebhook(e.target.value)}
+                placeholder="whsec_••••••••"
+                type="password"
+              />
+              <p className="text-[10px] text-[var(--z-muted)]">
+                Set <code className="rounded bg-[var(--z-surface)] px-1">STRIPE_PUBLISHABLE_KEY</code>,{" "}
+                <code className="rounded bg-[var(--z-surface)] px-1">STRIPE_SECRET_KEY</code>, and{" "}
+                <code className="rounded bg-[var(--z-surface)] px-1">STRIPE_WEBHOOK_SECRET</code> in Vercel.
+              </p>
+              <Button type="button" variant="secondary" size="sm" disabled>
+                Save Stripe config
+              </Button>
+            </div>
+          </IntegrationCard>
+        </SettingsGroup>
 
         <SettingsGroup title="Email providers">
           {/* QUO */}
@@ -257,47 +444,6 @@ export function IntegrationsSettingsClient() {
               </p>
               <Button type="button" variant="secondary" size="sm" disabled>
                 Save Twilio config
-              </Button>
-            </div>
-          </IntegrationCard>
-        </SettingsGroup>
-
-        <SettingsGroup title="Payments">
-          {/* Stripe */}
-          <IntegrationCard
-            name="Stripe"
-            description="Invoice payments, subscription billing, and payout management."
-            icon="💳"
-            status={stubStatus(stripePublishable)}
-          >
-            <div className="space-y-3">
-              <Input
-                label="Publishable Key"
-                value={stripePublishable}
-                onChange={(e) => setStripePublishable(e.target.value)}
-                placeholder="pk_live_••••••••"
-              />
-              <Input
-                label="Secret Key"
-                value={stripeSecret}
-                onChange={(e) => setStripeSecret(e.target.value)}
-                placeholder="sk_live_••••••••"
-                type="password"
-              />
-              <Input
-                label="Webhook Signing Secret"
-                value={stripeWebhook}
-                onChange={(e) => setStripeWebhook(e.target.value)}
-                placeholder="whsec_••••••••"
-                type="password"
-              />
-              <p className="text-[10px] text-[var(--z-muted)]">
-                Set <code className="rounded bg-[var(--z-surface)] px-1">STRIPE_PUBLISHABLE_KEY</code>,{" "}
-                <code className="rounded bg-[var(--z-surface)] px-1">STRIPE_SECRET_KEY</code>, and{" "}
-                <code className="rounded bg-[var(--z-surface)] px-1">STRIPE_WEBHOOK_SECRET</code> in Vercel.
-              </p>
-              <Button type="button" variant="secondary" size="sm" disabled>
-                Save Stripe config
               </Button>
             </div>
           </IntegrationCard>
