@@ -20,15 +20,29 @@ type TeacherRaw = {
   teaching_strengths?: string | null; musical_strengths_background?: string | null;
   w9_status?: string | null; w9_completed_at?: string | null;
   contract_status?: string | null; contract_pdf_url?: string | null;
+  // Matching & placement fields
+  personality?: string | null;
+  style_genre_strengths?: string | null;
+  preferred_age_range?: string | null;
+  acceptable_age_range?: string | null;
+  skill_levels_by_instrument?: string | null;
+  best_first_lesson_fit?: string | null;
+  best_match_students?: string | null;
+  use_caution_internal_placement_notes?: string | null;
+  meet_and_greet_fit?: string | null;
+  substitute_coverage?: string | null;
+  customer_facing_match_summary?: string | null;
+  internal_matching_tags?: string | null;
+  internal_match_notes?: string | null;
 };
 type Location = { id: string; name: string };
-type Tab = "profile" | "edit" | "w9" | "students";
+type Tab = "profile" | "edit" | "w9" | "contract" | "students";
 type AvailabilitySlot = { start_time: string; end_time: string; is_active?: boolean };
 type W9Record = {
   id: string; legal_name: string; business_name?: string | null;
   tax_classification: string; address: string; city: string; state: string; zip: string;
   tin_type: string; tin_last_four: string; signature_name: string;
-  signed_at: string; status: string;
+  signed_at: string; status: string; pdf_url?: string | null;
 };
 
 const inputCls = "w-full rounded-xl border border-[#1c1c1e] bg-[#111113] px-3 py-2.5 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/40 focus:outline-none";
@@ -100,28 +114,139 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
           </div>
         ))}
       </div>
-      {(teacher.instruments?.length || teacher.primary_instruments) && (
+      {/* Instruments */}
+      {(teacher.instruments?.length || teacher.primary_instruments || teacher.secondary_instruments) && (
         <div className={sectionCls}>
           <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Instruments</div>
-          <div className="flex flex-wrap gap-2">
-            {(teacher.instruments ?? []).map(inst => <span key={inst} className="rounded-full border border-[#1c1c1e] bg-[#111113] px-3 py-1 text-xs text-white">{inst}</span>)}
-            {teacher.primary_instruments && <span className="rounded-full border border-[#1c1c1e] bg-[#111113] px-3 py-1 text-xs text-white">{teacher.primary_instruments}</span>}
-          </div>
+          {(teacher.instruments?.length || teacher.primary_instruments) && (
+            <div>
+              <div className="text-xs text-[#505055] mb-1">Primary</div>
+              <div className="flex flex-wrap gap-2">
+                {(teacher.instruments ?? []).map(inst => <span key={inst} className="rounded-full border border-[#1c1c1e] bg-[#111113] px-3 py-1 text-xs text-white">{inst}</span>)}
+                {teacher.primary_instruments && teacher.primary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#00ff88]/30 bg-[#00ff88]/5 px-3 py-1 text-xs text-[#00ff88]">{i}</span>)}
+              </div>
+            </div>
+          )}
+          {teacher.secondary_instruments && (
+            <div>
+              <div className="text-xs text-[#505055] mb-1">Secondary / Can Cover</div>
+              <div className="flex flex-wrap gap-2">
+                {teacher.secondary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-1 text-xs text-[#a0a0aa]">{i}</span>)}
+              </div>
+            </div>
+          )}
+          {teacher.skill_levels_by_instrument && (
+            <div><div className="text-xs text-[#505055] mb-0.5">Skill Levels</div><div className="text-sm text-white">{teacher.skill_levels_by_instrument}</div></div>
+          )}
+          {teacher.style_genre_strengths && (
+            <div>
+              <div className="text-xs text-[#505055] mb-1">Style / Genre Strengths</div>
+              <div className="flex flex-wrap gap-2">
+                {teacher.style_genre_strengths.split(',').map(s => s.trim()).filter(Boolean).map(s => <span key={s} className="rounded-full border border-[#1c1c1e] bg-[#111113] px-3 py-1 text-xs text-[#a0a0aa]">{s}</span>)}
+              </div>
+            </div>
+          )}
         </div>
       )}
-      {(teacher.bio || teacher.lesson_style || teacher.teaching_strengths || teacher.musical_strengths_background) && (
+
+      {/* Teaching Profile */}
+      {(teacher.bio || teacher.personality || teacher.lesson_style || teacher.teaching_strengths || teacher.musical_strengths_background) && (
         <div className={sectionCls}>
           <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Teaching Profile</div>
           {teacher.bio && <div><div className="text-xs text-[#505055] mb-0.5">Bio</div><div className="text-sm text-white">{teacher.bio}</div></div>}
+          {teacher.personality && (
+            <div>
+              <div className="text-xs text-[#505055] mb-1">Personality</div>
+              <div className="flex flex-wrap gap-2">
+                {teacher.personality.split(',').map(p => p.trim()).filter(Boolean).map(p => <span key={p} className="rounded-full border border-[#505055]/40 bg-[#1a1a1e] px-3 py-1 text-xs text-white">{p}</span>)}
+              </div>
+            </div>
+          )}
           {teacher.lesson_style && <div><div className="text-xs text-[#505055] mb-0.5">Lesson Style</div><div className="text-sm text-white">{teacher.lesson_style}</div></div>}
           {teacher.teaching_strengths && <div><div className="text-xs text-[#505055] mb-0.5">Teaching Strengths</div><div className="text-sm text-white">{teacher.teaching_strengths}</div></div>}
           {teacher.musical_strengths_background && <div><div className="text-xs text-[#505055] mb-0.5">Musical Background</div><div className="text-sm text-white">{teacher.musical_strengths_background}</div></div>}
         </div>
       )}
-      {teacher.director_notes && (
+
+      {/* Student Matching */}
+      {(teacher.preferred_age_range || teacher.acceptable_age_range || teacher.best_first_lesson_fit || teacher.best_match_students || teacher.customer_facing_match_summary) && (
         <div className={sectionCls}>
-          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Director Notes</div>
-          <div className="text-sm text-white">{teacher.director_notes}</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Student Matching</div>
+          {teacher.customer_facing_match_summary && <div><div className="text-xs text-[#505055] mb-0.5">Summary</div><div className="text-sm text-white">{teacher.customer_facing_match_summary}</div></div>}
+          {teacher.preferred_age_range && <div><div className="text-xs text-[#505055] mb-0.5">Preferred Age Range</div><div className="text-sm text-white">{teacher.preferred_age_range}</div></div>}
+          {teacher.acceptable_age_range && <div><div className="text-xs text-[#505055] mb-0.5">Acceptable Age Range</div><div className="text-sm text-white">{teacher.acceptable_age_range}</div></div>}
+          {teacher.best_first_lesson_fit && <div><div className="text-xs text-[#505055] mb-0.5">Best First Lesson Fit</div><div className="text-sm text-white">{teacher.best_first_lesson_fit}</div></div>}
+          {teacher.best_match_students && <div><div className="text-xs text-[#505055] mb-0.5">Best Match Students</div><div className="text-sm text-white">{teacher.best_match_students}</div></div>}
+          {teacher.meet_and_greet_fit && <div><div className="text-xs text-[#505055] mb-0.5">Meet &amp; Greet Fit</div><div className="text-sm text-white">{teacher.meet_and_greet_fit}</div></div>}
+          {teacher.substitute_coverage && <div><div className="text-xs text-[#505055] mb-0.5">Substitute Coverage</div><div className="text-sm text-white">{teacher.substitute_coverage}</div></div>}
+        </div>
+      )}
+
+      {/* Internal / Director Only */}
+      {(teacher.use_caution_internal_placement_notes || teacher.internal_matching_tags || teacher.internal_match_notes || teacher.director_notes) && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-amber-500/60">Internal — Director Only</div>
+          {teacher.use_caution_internal_placement_notes && (
+            <div>
+              <div className="text-xs text-amber-400/70 mb-0.5">⚠ Use Caution</div>
+              <div className="text-sm text-amber-100">{teacher.use_caution_internal_placement_notes}</div>
+            </div>
+          )}
+          {teacher.director_notes && <div><div className="text-xs text-amber-400/70 mb-0.5">Director Notes</div><div className="text-sm text-amber-100">{teacher.director_notes}</div></div>}
+          {teacher.internal_match_notes && <div><div className="text-xs text-amber-400/70 mb-0.5">Internal Match Notes</div><div className="text-sm text-amber-100">{teacher.internal_match_notes}</div></div>}
+          {teacher.internal_matching_tags && (
+            <div>
+              <div className="text-xs text-amber-400/70 mb-1">Matching Tags</div>
+              <div className="flex flex-wrap gap-2">
+                {teacher.internal_matching_tags.split(',').map(t => t.trim()).filter(Boolean).map(t => <span key={t} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">{t}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {teacher.contract_pdf_url && (
+        <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] px-4 py-3 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">Contract PDF</span>
+          <a href={teacher.contract_pdf_url} target="_blank" rel="noopener noreferrer" className="text-sm text-[#00ff88] underline">View Contract →</a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContractModule({ teacher }: { teacher: TeacherRaw }) {
+  const contractSigned = teacher.contract_status === "signed" || teacher.contract_status === "complete";
+  return (
+    <div className="space-y-4">
+      {/* Status banner */}
+      <div className={`rounded-xl border p-4 ${contractSigned ? "border-[#00ff88]/30 bg-[#00ff88]/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${contractSigned ? "bg-[#00ff88]" : "bg-amber-400"}`} />
+          <span className="text-sm font-semibold text-white">Contract Status: <span className={contractSigned ? "text-[#00ff88]" : "text-amber-400"}>{teacher.contract_status ?? "Not on file"}</span></span>
+        </div>
+        {teacher.contract_pdf_url && (
+          <a href={teacher.contract_pdf_url} target="_blank" rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
+            View Contract PDF →
+          </a>
+        )}
+      </div>
+      {/* Info rows */}
+      <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] divide-y divide-[#1c1c1e]">
+        {[
+          { label: "Contract Status", value: teacher.contract_status ?? "Not on file" },
+          { label: "Tax Classification", value: "1099 Independent Contractor" },
+          { label: "W9 Status", value: teacher.w9_status ?? "Not submitted" },
+        ].map(({ label, value }) => (
+          <div key={label} className="flex items-center justify-between px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">{label}</span>
+            <span className="text-sm text-white">{value}</span>
+          </div>
+        ))}
+      </div>
+      {!teacher.contract_pdf_url && (
+        <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4">
+          <p className="text-sm text-[#505055]">No contract PDF on file. Upload a signed contract to the teacher&apos;s record to store it here.</p>
         </div>
       )}
     </div>
@@ -381,7 +506,7 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
           )}
         </div>
         {teacher.w9_completed_at && <div className="mt-1 text-xs text-[#505055]">Completed: {new Date(teacher.w9_completed_at).toLocaleDateString()}</div>}
-        {teacher.contract_pdf_url && <a href={teacher.contract_pdf_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-[#00ff88] underline">View W9 PDF →</a>}
+        {existingW9?.pdf_url && <a href={existingW9.pdf_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-[#00ff88] underline">View W9 PDF →</a>}
       </div>
 
       {/* Existing W9 summary (read-only) */}
@@ -486,11 +611,20 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
 }
 
 function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
-  const [students, setStudents] = React.useState<{ id: string; name?: string | null; instrument?: string | null; status?: string | null }[]>([]);
+  type StudentRow = { id: string; first_name?: string | null; last_name?: string | null; display_name?: string | null; instrument?: string | null; status?: string | null };
+  const [students, setStudents] = React.useState<StudentRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
-    fetch(`/api/students?teacherId=${teacherId}`).then(r => r.json())
-      .then(res => { setStudents(Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : []); setLoading(false); })
+    // Use teacher_id (snake_case) — the correct param name — and request up to 500 to avoid the default 200 cap
+    fetch(`/api/students?teacher_id=${teacherId}&limit=500`).then(r => r.json())
+      .then(res => {
+        const raw: StudentRow[] = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : [];
+        // Deduplicate by student id (a student assigned to this teacher is one student regardless of how many blocks they have)
+        const seen = new Set<string>();
+        const unique = raw.filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
+        setStudents(unique);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [teacherId]);
   if (loading) return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />)}</div>;
@@ -498,15 +632,18 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
   return (
     <div className="space-y-2">
       <div className="text-xs text-[#505055] mb-2">{students.length} student{students.length !== 1 ? "s" : ""} assigned</div>
-      {students.map(s => (
-        <div key={s.id} className="flex items-center justify-between rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] px-4 py-3">
-          <div>
-            <div className="text-sm font-medium text-white">{s.name ?? `Student ${s.id.slice(0, 8)}`}</div>
-            {s.instrument && <div className="text-xs text-[#505055]">{s.instrument}</div>}
+      {students.map(s => {
+        const displayName = s.display_name ?? [s.first_name, s.last_name].filter(Boolean).join(" ") ?? "—";
+        return (
+          <div key={s.id} className="flex items-center justify-between rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] px-4 py-3">
+            <div>
+              <div className="text-sm font-medium text-white">{displayName}</div>
+              {s.instrument && <div className="text-xs text-[#505055]">{s.instrument}</div>}
+            </div>
+            {s.status && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status?.toLowerCase() === "active" || s.status?.toLowerCase() === "enrolled" ? "bg-[#00ff88]/10 text-[#00ff88]" : "bg-white/5 text-[#909098]"}`}>{s.status}</span>}
           </div>
-          {s.status && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status === "active" ? "bg-[#00ff88]/10 text-[#00ff88]" : "bg-white/5 text-[#909098]"}`}>{s.status}</span>}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -531,7 +668,7 @@ export function TeacherDetailClient() {
         fetch(`/api/locations?tenantId=${DEFAULT_TENANT_ID}`).then(r => r.json()).catch(() => ({ data: [] })),
         fetch(`/api/crm/teachers/${id}/locations`).then(r => r.json()).catch(() => ({ data: [] })),
         fetch(`/api/crm/teachers/${id}/availability`).then(r => r.json()).catch(() => ({ data: [] })),
-        fetch(`/api/students?teacherId=${id}`).then(r => r.json()).catch(() => ({ data: [] })),
+        fetch(`/api/students?teacher_id=${id}&limit=500`).then(r => r.json()).catch(() => ({ data: [] })),
       ]);
       if (teacherRes.data) { setTeacher(teacherRes.data); } else { setErr("Teacher not found."); }
       setAllLocations(Array.isArray(locationsRes.data) ? locationsRes.data : []);
@@ -539,8 +676,9 @@ export function TeacherDetailClient() {
       setAssignedLocationIds(assigned.map((a: { location_id?: string; id?: string }) => a.location_id ?? a.id ?? "").filter(Boolean));
       const avail = Array.isArray(availRes.data) ? availRes.data : [];
       setAvailabilitySlots(avail);
-      const studs = Array.isArray(studentsRes.data) ? studentsRes.data : Array.isArray(studentsRes) ? studentsRes : [];
-      setStudentCount(studs.length);
+      const studsRaw: { id: string }[] = Array.isArray(studentsRes.data) ? studentsRes.data : Array.isArray(studentsRes) ? studentsRes : [];
+      const uniqueStudentIds = new Set(studsRaw.map((s: { id: string }) => s.id));
+      setStudentCount(uniqueStudentIds.size);
     } catch (e) { setErr(e instanceof Error ? e.message : "Failed to load teacher"); }
     finally { setLoading(false); }
   }
@@ -551,7 +689,7 @@ export function TeacherDetailClient() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "profile", label: "Profile" }, { id: "edit", label: "Edit" },
-    { id: "w9", label: "W9" }, { id: "students", label: "Students" },
+    { id: "w9", label: "W9" }, { id: "contract", label: "Contract" }, { id: "students", label: "Students" },
   ];
 
   const displayName = teacher
@@ -588,6 +726,7 @@ export function TeacherDetailClient() {
               {tab === "profile" && <TeacherProfileView teacher={teacher} locations={allLocations.filter(l => assignedLocationIds.includes(l.id))} capacitySlots={capacitySlots} studentCount={studentCount} />}
               {tab === "edit" && <TeacherEditForm teacher={teacher} allLocations={allLocations} assignedLocationIds={assignedLocationIds} onSaved={() => { void load(); setTab("profile"); }} />}
               {tab === "w9" && <W9Module teacher={teacher} />}
+              {tab === "contract" && <ContractModule teacher={teacher} />}
               {tab === "students" && <TeacherStudentsTab teacherId={id} />}
             </>
           )}
