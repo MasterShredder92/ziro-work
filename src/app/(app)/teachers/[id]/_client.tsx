@@ -24,13 +24,35 @@ type TeacherRaw = {
 };
 type Location = { id: string; name: string };
 type Tab = "profile" | "edit" | "w9" | "students";
+type AvailabilitySlot = { start_time: string; end_time: string; is_active?: boolean };
 
 const inputCls = "w-full rounded-xl border border-[#1c1c1e] bg-[#111113] px-3 py-2.5 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/40 focus:outline-none";
 const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[#505055] mb-1";
 const sectionCls = "rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4 space-y-3";
 
-function TeacherProfileView({ teacher, locations }: { teacher: TeacherRaw; locations: Location[] }) {
+/** Parse "HH:MM:SS" or "HH:MM" into total minutes */
+function timeToMinutes(t: string): number {
+  const parts = t.split(":").map(Number);
+  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+}
+
+/** Calculate total 30-min slots from availability records */
+function calcCapacitySlots(slots: AvailabilitySlot[]): number {
+  return slots
+    .filter(s => s.is_active !== false)
+    .reduce((sum, s) => {
+      const mins = timeToMinutes(s.end_time) - timeToMinutes(s.start_time);
+      return sum + Math.floor(mins / 30);
+    }, 0);
+}
+
+function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }: {
+  teacher: TeacherRaw; locations: Location[]; capacitySlots: number | null; studentCount: number | null;
+}) {
   const displayName = teacher.display_name ?? teacher.name ?? [teacher.first_name, teacher.last_name].filter(Boolean).join(" ") ?? "—";
+  const capacityStr = capacitySlots != null
+    ? `${studentCount ?? "?"} / ${capacitySlots} slots`
+    : teacher.max_students != null ? String(teacher.max_students) : null;
   const rows: { label: string; value: string | null | undefined }[] = [
     { label: "Status", value: teacher.status ?? (teacher.is_active ? "active" : "inactive") },
     { label: "Role", value: teacher.teacher_role },
@@ -38,9 +60,8 @@ function TeacherProfileView({ teacher, locations }: { teacher: TeacherRaw; locat
     { label: "Phone", value: teacher.phone },
     { label: "Hire Date", value: teacher.hire_date },
     { label: "Rate / Block", value: teacher.rate_per_block != null ? `$${teacher.rate_per_block}` : null },
-    { label: "Pay Rate / 30min", value: teacher.pay_rate_per_half_hour != null ? `$${teacher.pay_rate_per_half_hour}` : null },
-    { label: "Max Students", value: teacher.max_students != null ? String(teacher.max_students) : null },
-    { label: "Tax Form", value: teacher.needs_1099 ? "1099" : "W-2" },
+    { label: "Capacity", value: capacityStr },
+    { label: "Tax Form", value: "1099 / W-9" },
     { label: "W9 Status", value: teacher.w9_status },
     { label: "Contract Status", value: teacher.contract_status },
     { label: "Sub Available", value: (teacher.is_sub_available || teacher.sub_available) ? "Yes" : "No" },
@@ -116,9 +137,6 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
   const [teacherRole, setTeacherRole] = React.useState(teacher.teacher_role ?? "");
   const [hireDate, setHireDate] = React.useState(teacher.hire_date ?? "");
   const [ratePerBlock, setRatePerBlock] = React.useState(teacher.rate_per_block != null ? String(teacher.rate_per_block) : "");
-  const [payRateHalfHour, setPayRateHalfHour] = React.useState(teacher.pay_rate_per_half_hour != null ? String(teacher.pay_rate_per_half_hour) : "");
-  const [maxStudents, setMaxStudents] = React.useState(teacher.max_students != null ? String(teacher.max_students) : "");
-  const [needs1099, setNeeds1099] = React.useState(teacher.needs_1099 ?? false);
   const [isSubAvailable, setIsSubAvailable] = React.useState(teacher.is_sub_available ?? teacher.sub_available ?? false);
   const [bio, setBio] = React.useState(teacher.bio ?? "");
   const [lessonStyle, setLessonStyle] = React.useState(teacher.lesson_style ?? "");
@@ -143,9 +161,8 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         email: email || null, phone: phone || null, status: status || null,
         teacher_role: teacherRole || null, hire_date: hireDate || null,
         rate_per_block: ratePerBlock ? parseFloat(ratePerBlock) : undefined,
-        pay_rate_per_half_hour: payRateHalfHour ? parseFloat(payRateHalfHour) : undefined,
-        max_students: maxStudents ? parseInt(maxStudents, 10) : undefined,
-        needs_1099: needs1099, is_sub_available: isSubAvailable, sub_available: isSubAvailable,
+        needs_1099: true, // always 1099 contractor
+        is_sub_available: isSubAvailable, sub_available: isSubAvailable,
         bio: bio || null, lesson_style: lessonStyle || null,
         teaching_strengths: teachingStrengths || null,
         musical_strengths_background: musicalBackground || null,
@@ -200,15 +217,17 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
       </div>
       <div className={sectionCls}>
         <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Compensation</div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className={labelCls}>Rate / Block ($)</label><input className={inputCls} type="number" min="0" step="0.01" value={ratePerBlock} onChange={e => setRatePerBlock(e.target.value)} placeholder="0.00" /></div>
-          <div><label className={labelCls}>Pay Rate / 30min ($)</label><input className={inputCls} type="number" min="0" step="0.01" value={payRateHalfHour} onChange={e => setPayRateHalfHour(e.target.value)} placeholder="0.00" /></div>
+        <div>
+          <label className={labelCls}>Rate / Block ($)</label>
+          <input className={inputCls} type="number" min="0" step="0.01" value={ratePerBlock} onChange={e => setRatePerBlock(e.target.value)} placeholder="0.00" />
         </div>
-        <div><label className={labelCls}>Max Students</label><input className={inputCls} type="number" min="0" step="1" value={maxStudents} onChange={e => setMaxStudents(e.target.value)} placeholder="e.g. 20" /></div>
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={needs1099} onChange={e => setNeeds1099(e.target.checked)} className="h-4 w-4 accent-[#00ff88]" /><span className="text-sm text-white">Needs 1099 (contractor)</span></label>
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={isSubAvailable} onChange={e => setIsSubAvailable(e.target.checked)} className="h-4 w-4 accent-[#00ff88]" /><span className="text-sm text-white">Available for sub coverage</span></label>
+        <div className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2.5 text-xs text-[#505055]">
+          All teachers are <span className="font-semibold text-[#00ff88]">1099 independent contractors</span>. Capacity is auto-calculated from their weekly availability schedule.
         </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={isSubAvailable} onChange={e => setIsSubAvailable(e.target.checked)} className="h-4 w-4 accent-[#00ff88]" />
+          <span className="text-sm text-white">Available for sub coverage</span>
+        </label>
       </div>
       {allLocations.length > 0 && (
         <div className={sectionCls}>
@@ -387,6 +406,8 @@ export function TeacherDetailClient() {
   const [teacher, setTeacher] = React.useState<TeacherRaw | null>(null);
   const [allLocations, setAllLocations] = React.useState<Location[]>([]);
   const [assignedLocationIds, setAssignedLocationIds] = React.useState<string[]>([]);
+  const [availabilitySlots, setAvailabilitySlots] = React.useState<AvailabilitySlot[]>([]);
+  const [studentCount, setStudentCount] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState<string | null>(null);
   const [tab, setTab] = React.useState<Tab>("profile");
@@ -394,15 +415,21 @@ export function TeacherDetailClient() {
   async function load() {
     setLoading(true);
     try {
-      const [teacherRes, locationsRes, assignedRes] = await Promise.all([
+      const [teacherRes, locationsRes, assignedRes, availRes, studentsRes] = await Promise.all([
         fetch(`/api/crm/teachers/${id}`).then(r => r.json()),
         fetch(`/api/locations?tenantId=${DEFAULT_TENANT_ID}`).then(r => r.json()).catch(() => ({ data: [] })),
         fetch(`/api/crm/teachers/${id}/locations`).then(r => r.json()).catch(() => ({ data: [] })),
+        fetch(`/api/crm/teachers/${id}/availability`).then(r => r.json()).catch(() => ({ data: [] })),
+        fetch(`/api/students?teacherId=${id}`).then(r => r.json()).catch(() => ({ data: [] })),
       ]);
       if (teacherRes.data) { setTeacher(teacherRes.data); } else { setErr("Teacher not found."); }
       setAllLocations(Array.isArray(locationsRes.data) ? locationsRes.data : []);
       const assigned = Array.isArray(assignedRes.data) ? assignedRes.data : [];
       setAssignedLocationIds(assigned.map((a: { location_id?: string; id?: string }) => a.location_id ?? a.id ?? "").filter(Boolean));
+      const avail = Array.isArray(availRes.data) ? availRes.data : [];
+      setAvailabilitySlots(avail);
+      const studs = Array.isArray(studentsRes.data) ? studentsRes.data : Array.isArray(studentsRes) ? studentsRes : [];
+      setStudentCount(studs.length);
     } catch (e) { setErr(e instanceof Error ? e.message : "Failed to load teacher"); }
     finally { setLoading(false); }
   }
@@ -415,9 +442,12 @@ export function TeacherDetailClient() {
     { id: "profile", label: "Profile" }, { id: "edit", label: "Edit" },
     { id: "w9", label: "W9" }, { id: "students", label: "Students" },
   ];
+
   const displayName = teacher
     ? teacher.display_name ?? teacher.name ?? [teacher.first_name, teacher.last_name].filter(Boolean).join(" ") ?? "Teacher"
     : "Teacher";
+
+  const capacitySlots = availabilitySlots.length > 0 ? calcCapacitySlots(availabilitySlots) : null;
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden p-[var(--z-space-6)]">
@@ -444,7 +474,7 @@ export function TeacherDetailClient() {
                   </button>
                 ))}
               </div>
-              {tab === "profile" && <TeacherProfileView teacher={teacher} locations={allLocations.filter(l => assignedLocationIds.includes(l.id))} />}
+              {tab === "profile" && <TeacherProfileView teacher={teacher} locations={allLocations.filter(l => assignedLocationIds.includes(l.id))} capacitySlots={capacitySlots} studentCount={studentCount} />}
               {tab === "edit" && <TeacherEditForm teacher={teacher} allLocations={allLocations} assignedLocationIds={assignedLocationIds} onSaved={() => { void load(); setTab("profile"); }} />}
               {tab === "w9" && <W9Module teacher={teacher} />}
               {tab === "students" && <TeacherStudentsTab teacherId={id} />}

@@ -86,7 +86,8 @@ export async function loadStudentSurface(
       nextActions.push(`Align work with ${def.name} exit criteria.`);
     }
 
-    const studentName = (student.name as string) ?? "Student";
+    const rawStudent = student as Record<string, unknown>;
+    const studentName = [rawStudent.first_name, rawStudent.last_name].filter(Boolean).join(" ") || (rawStudent.name as string) || "Student";
     const agentSummary = `${studentName} is in ${def.name}. Risk band is ${ctx.riskBand}.`;
 
     return {
