@@ -153,45 +153,48 @@ export function LocationScheduleGrid({
     return () => clearInterval(id);
   }, []);
 
-  // ── Cancel session modal state ──────────────────────────────────────────────
+  // ── Cancel session modal state ───────────────────────────────────────────────────────
   const [cancelTarget, setCancelTarget] = React.useState<ProjectedBlock | null>(null);
   const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("recurring");
   const [cancelSaving, setCancelSaving] = React.useState(false);
 
   async function confirmCancel() {
     if (!cancelTarget || !cancelReason.trim()) return;
     setCancelSaving(true);
     try {
-      // Mark block as cancelled with reason
-      await patchBlock(cancelTarget, {
-        block_type: "call_out",
-        is_family_callout: false,
-        status: "available",
-        callout_reason: cancelReason.trim(),
-      } as Partial<ScheduleBlock>);
-      // Write activity log entry
-      const student = cancelTarget.student_id ? studentsById.get(cancelTarget.student_id) : null;
-      await fetch("/api/activity-log", {
+      const res = await fetch("/api/schedule-blocks/cancel-session", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          entity_type: "student",
-          entity_id: cancelTarget.student_id,
-          action: "session_cancelled",
-          note: `Session on ${cancelTarget.block_date ?? selectedDate} (${cancelTarget.start_time}–${cancelTarget.end_time}) cancelled. Reason: ${cancelReason.trim()}`,
-          metadata: { block_id: cancelTarget.id, reason: cancelReason.trim(), date: cancelTarget.block_date ?? selectedDate },
+          block_id: cancelTarget.source_block_id ?? cancelTarget.id,
+          block_date: cancelTarget.block_date ?? selectedDate,
+          student_id: cancelTarget.student_id,
+          reason: cancelReason.trim(),
+          scope: cancelScope,
         }),
       });
-      onRubyEvent?.({ type: "call_out", message: `${student ? studentName(student) : "Session"} cancelled — ${cancelReason.trim()}` });
+      if (!res.ok) throw new Error("Cancel failed");
+      // Optimistically revert the block in local state
+      if (cancelScope === "recurring") {
+        onBlocksChange(
+          blocks.map((b) => {
+            const isBase = b.id === (cancelTarget.source_block_id ?? cancelTarget.id);
+            if (!isBase) return b;
+            return { ...b, student_id: null, block_type: "open_time" as const, status: "available" as const };
+          })
+        );
+      }
+      const student = cancelTarget.student_id ? studentsById.get(cancelTarget.student_id) : null;
+      onRubyEvent?.({ type: "call_out", message: `${student ? studentName(student) : "Session"} cancelled (${cancelScope}) — ${cancelReason.trim()}` });
       setCancelTarget(null);
       setCancelReason("");
+      setCancelScope("recurring");
       setSelectedBlockId(null);
     } finally {
       setCancelSaving(false);
     }
-  }
-
-  // ── Booking state (for open_time / unbooked blocks) ──
+  } // ── Booking state (for open_time / unbooked blocks) ──
   const [bookingStudentQuery, setBookingStudentQuery] = React.useState("");
   const [bookingStudentId, setBookingStudentId] = React.useState<string | null>(null);
   const [bookingRecurring, setBookingRecurring] = React.useState(true);
@@ -903,8 +906,44 @@ export function LocationScheduleGrid({
           >
             <h3 className="text-base font-bold text-white">Cancel Session</h3>
             <p className="text-xs text-[#909098]">
-              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)!) : "Session"} &mdash; {cancelTarget.start_time} – {cancelTarget.end_time}
+              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)!) : "Session"} — {cancelTarget.start_time} – {cancelTarget.end_time}
             </p>
+
+            {/* Single vs Recurring choice */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Cancel scope</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCancelScope("single")}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    cancelScope === "single"
+                      ? "border-orange-400/60 bg-orange-500/20 text-orange-200"
+                      : "border-[#2b2b2f] bg-[#1a1a1e] text-[#909098] hover:text-white"
+                  }`}
+                >
+                  This lesson only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCancelScope("recurring")}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    cancelScope === "recurring"
+                      ? "border-orange-400/60 bg-orange-500/20 text-orange-200"
+                      : "border-[#2b2b2f] bg-[#1a1a1e] text-[#909098] hover:text-white"
+                  }`}
+                >
+                  All recurring
+                </button>
+              </div>
+              <p className="text-[10px] text-[#505055]">
+                {cancelScope === "single"
+                  ? "Only this one session will be reverted to open time."
+                  : "This session and all future recurring sessions will be reverted to open time."}
+              </p>
+            </div>
+
+            {/* Reason */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Reason <span className="text-orange-400">*</span></label>
               <textarea
@@ -916,10 +955,11 @@ export function LocationScheduleGrid({
                 className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-orange-400/50 focus:outline-none resize-none"
               />
             </div>
+
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => setCancelTarget(null)}
+                onClick={() => { setCancelTarget(null); setCancelReason(""); setCancelScope("recurring"); }}
                 className="flex-1 rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2.5 text-sm font-semibold text-[#909098] hover:text-white transition-colors"
               >
                 Back

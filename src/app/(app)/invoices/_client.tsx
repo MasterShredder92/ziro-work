@@ -542,6 +542,14 @@ export function InvoicesClient({
 
 // ── Create Invoice Modal ─────────────────────────────────────────────────────
 function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
+  // Family search autocomplete
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchResults, setSearchResults] = React.useState<{ id: string; name: string; primary_email: string | null }[]>([]);
+  const [selectedFamilyId, setSelectedFamilyId] = React.useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const [searching, setSearching] = React.useState(false);
+
+  // Invoice fields
   const [customerName, setCustomerName] = React.useState("");
   const [customerEmail, setCustomerEmail] = React.useState("");
   const [amountDollars, setAmountDollars] = React.useState("");
@@ -553,6 +561,44 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
+
+  // Debounced family search
+  React.useEffect(() => {
+    if (!searchQuery.trim() || selectedFamilyId) { setSearchResults([]); setShowDropdown(false); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/families?search=${encodeURIComponent(searchQuery.trim())}&limit=10`);
+        if (res.ok) {
+          const j = await res.json();
+          const items = (j?.data ?? []) as { id: string; name: string; primary_email: string | null }[];
+          setSearchResults(items);
+          setShowDropdown(items.length > 0);
+        }
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [searchQuery, selectedFamilyId]);
+
+  function selectFamily(f: { id: string; name: string; primary_email: string | null }) {
+    setSelectedFamilyId(f.id);
+    setCustomerName(f.name);
+    setCustomerEmail(f.primary_email ?? "");
+    setSearchQuery(f.name);
+    setShowDropdown(false);
+    setSearchResults([]);
+  }
+
+  function clearFamily() {
+    setSelectedFamilyId(null);
+    setSearchQuery("");
+    setCustomerName("");
+    setCustomerEmail("");
+    setSearchResults([]);
+    setShowDropdown(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -566,6 +612,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({
           customer_name: customerName.trim(),
           customer_email: customerEmail.trim() || null,
+          family_id: selectedFamilyId,
           amount_cents: Math.round(parseFloat(amountDollars) * 100),
           due_date: dueDate,
           note: note.trim() || null,
@@ -596,6 +643,50 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
           <p className="text-sm text-[#00ff88] font-semibold">Invoice created successfully!</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
+
+            {/* Family search autocomplete */}
+            <div className="space-y-1 relative">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">
+                Family <span className="text-[#00ff88]">*</span>
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); if (selectedFamilyId) clearFamily(); }}
+                  placeholder="Search by family name or email…"
+                  className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none pr-8"
+                />
+                {searching && (
+                  <span className="absolute right-3 text-[10px] text-[#505055]">searching…</span>
+                )}
+                {selectedFamilyId && (
+                  <button type="button" onClick={clearFamily} className="absolute right-3 text-[#505055] hover:text-white text-xs">✕</button>
+                )}
+              </div>
+              {showDropdown && (
+                <div className="absolute z-10 w-full mt-1 rounded-xl border border-[#2b2b2f] bg-[#0f0f12] shadow-2xl overflow-hidden">
+                  {searchResults.map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => selectFamily(f)}
+                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-[#1a1a1e] transition-colors"
+                    >
+                      <span className="text-white font-medium">{f.name}</span>
+                      {f.primary_email && <span className="ml-2 text-[#505055] text-xs">{f.primary_email}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedFamilyId && (
+                <p className="text-[10px] text-[#00ff88]">Family selected — name and email pre-filled below</p>
+              )}
+            </div>
+
+            {/* Auto-populated fields (editable) */}
             <div className="space-y-1">
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Customer Name <span className="text-[#00ff88]">*</span></label>
               <input
@@ -603,7 +694,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
                 required
                 value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
-                placeholder="Family or student name"
+                placeholder="Auto-filled from family selection"
                 className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
               />
             </div>
@@ -613,10 +704,11 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
                 type="email"
                 value={customerEmail}
                 onChange={e => setCustomerEmail(e.target.value)}
-                placeholder="customer@email.com"
+                placeholder="Auto-filled from family selection"
                 className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
               />
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Amount ($) <span className="text-[#00ff88]">*</span></label>
