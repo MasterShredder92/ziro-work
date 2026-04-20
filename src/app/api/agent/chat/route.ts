@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import { AGENT_METADATA } from "@/lib/agents/agentMetadata";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL ?? undefined,
-});
 
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
   bub: `You are Bub, the billing and finance AI for Ziro Work music school software.
@@ -74,32 +68,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No message provided" }, { status: 400 });
     }
 
+    // Lazy-initialize Anthropic inside the handler — never at module load time
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
     const meta = AGENT_METADATA[agentId] ?? AGENT_METADATA["ziro"];
     const basePrompt = systemPrompt ?? AGENT_SYSTEM_PROMPTS[agentId] ?? AGENT_SYSTEM_PROMPTS["ziro"];
 
-    // Build context string
     const contextStr = Object.keys(context).length > 0
       ? `\n\nCurrent page context: ${JSON.stringify(context, null, 2)}`
       : "";
 
+    const systemContent = basePrompt + contextStr;
     const recentHistory = history.slice(-10);
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: basePrompt + contextStr },
-      ...recentHistory.map((h) => ({
-        role: h.role as "user" | "assistant",
-        content: h.content,
-      })),
+
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+      ...recentHistory,
       { role: "user", content: message },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages,
+    const response = await anthropic.messages.create({
+      model: "claude-3-5-haiku-20241022",
       max_tokens: 400,
-      temperature: 0.7,
+      system: systemContent,
+      messages,
     });
 
-    const reply = completion.choices[0]?.message?.content ?? `Got it — I'm ${meta.displayName} and I'm on it.`;
+    const reply =
+      (response.content[0] as { type: string; text?: string })?.text ??
+      `Got it — I'm ${meta.displayName} and I'm on it.`;
 
     return NextResponse.json({ reply, agentId });
   } catch (err) {

@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getServiceClient } from "@/lib/supabase";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL ?? undefined,
-});
 
 const SYSTEM_PROMPT = `You are Ruby, the schedule AI assistant for Ziro Work music school management software.
 You have direct access to the schedule and can take real actions on it.
@@ -24,7 +18,7 @@ ACTIONS YOU CAN TAKE:
 
 LOCATION COLORS:
 - Bellevue: purple (#7C3AED)
-- Elkhorn: blue (#0EA5E9)  
+- Elkhorn: blue (#0EA5E9)
 - Gretna: green (#16A34A)
 - Omaha: red (#DC2626)
 
@@ -65,7 +59,6 @@ async function executeAction(
     const db = getServiceClient();
 
     if (action.type === "update_blocks") {
-      // Find teacher by name
       const nameParts = (action.teacherName as string).toLowerCase().split(/\s+/);
       const { data: teachers } = await db
         .from("teachers")
@@ -83,7 +76,6 @@ async function executeAction(
         return { success: false, message: `I couldn't find a teacher named "${action.teacherName}". Check the spelling and try again.` };
       }
 
-      // Build update query
       let query = db
         .from("schedule_blocks")
         .update({
@@ -96,14 +88,12 @@ async function executeAction(
         .eq("tenant_id", tenantId)
         .eq("teacher_id", teacher.id);
 
-      // Scope: all_teacher_blocks, today_only, or specific date
       if (action.scope === "today_only" && context.selectedDate) {
         query = query.eq("block_date", context.selectedDate);
       } else if (action.scope === "specific_date" && action.date) {
         query = query.eq("block_date", action.date);
       }
 
-      // Only update blocks that have students (not open/locked)
       if (action.blockType !== "open") {
         query = query.not("student_id", "is", null);
       }
@@ -118,8 +108,8 @@ async function executeAction(
 
       return {
         success: true,
-        message: `Done — updated ${count ?? "all"} blocks for ${action.teacherName} to ${action.blockType.replace(/_/g, " ")}.`,
-        count: count ?? 0,
+        message: `Done — updated ${count} blocks for ${action.teacherName} to ${action.blockType.replace(/_/g, " ")}.`,
+        count,
       };
     }
 
@@ -143,28 +133,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No message provided" }, { status: 400 });
     }
 
-    // Build conversation history (last 10 messages for context)
+    // Lazy-initialize Anthropic inside the handler — never at module load time
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
     const recentHistory = history.slice(-10);
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...recentHistory.map((h) => ({
-        role: h.role as "user" | "assistant",
-        content: h.content,
-      })),
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+      ...recentHistory,
       {
         role: "user",
         content: `[Context: Location=${context.locationName ?? "Unknown"}, Date=${context.selectedDate ?? "today"}]\n\n${message}`,
       },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages,
+    const response = await anthropic.messages.create({
+      model: "claude-3-5-haiku-20241022",
       max_tokens: 400,
-      temperature: 0.7,
+      system: SYSTEM_PROMPT,
+      messages,
     });
 
-    const rawReply = completion.choices[0]?.message?.content ?? "Got it.";
+    const rawReply =
+      (response.content[0] as { type: string; text?: string })?.text ?? "Got it.";
 
     // Check if reply contains an action
     const actionMatch = rawReply.match(/ACTION:(\{[^}]+\})/);
@@ -172,7 +162,6 @@ export async function POST(req: NextRequest) {
     let actionResult: ActionResult | null = null;
 
     if (actionMatch) {
-      // Strip the ACTION: line from the visible reply
       reply = rawReply.replace(/ACTION:\{[^}]+\}\n?/, "").trim();
       actionResult = await executeAction(actionMatch[1], context);
 
@@ -183,15 +172,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      reply,
-      action: actionResult,
-    });
+    return NextResponse.json({ reply, action: actionResult });
   } catch (err) {
     console.error("[Ruby Chat] Error:", err);
     return NextResponse.json(
       { reply: "I'm having trouble connecting right now. Try again in a second." },
-      { status: 200 } // Return 200 so the UI shows the message, not an error
+      { status: 200 }
     );
   }
 }
