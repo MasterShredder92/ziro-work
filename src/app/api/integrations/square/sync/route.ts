@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Default to first day of current month (month-to-date) unless caller passes a specific since date
+  // Default: pull current month + next month so projected invoices are always captured
   const now = new Date();
   const defaultSince = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   let sinceDate: string = defaultSince;
@@ -89,6 +89,10 @@ export async function POST(req: NextRequest) {
       sinceDate = body.since;
     }
   } catch { /* no body */ }
+
+  // End date: last day of next month (so we capture scheduled/projected invoices)
+  const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  const endDate = `${nextMonthEnd.getFullYear()}-${String(nextMonthEnd.getMonth() + 1).padStart(2, "0")}-${String(nextMonthEnd.getDate()).padStart(2, "0")}`;
 
   const tenantId = DEFAULT_TENANT_ID;
   const db = getServiceClient();
@@ -167,8 +171,9 @@ export async function POST(req: NextRequest) {
           do {
             const params = new URLSearchParams({ location_id: loc.id, limit: "200" });
             if (cursor) params.set("cursor", cursor);
-            // Always filter by date — default is month-to-date
+            // Filter by date range: current month start through end of next month
             params.set("filter.date_range.start_date", sinceDate);
+            params.set("filter.date_range.end_date", endDate);
             const invRes = await squareFetch(`/v2/invoices?${params.toString()}`, accessToken);
             if (!invRes.ok) {
               errors.push(`Location ${loc.id}: ${invRes.body?.errors?.[0]?.detail ?? invRes.status}`);
