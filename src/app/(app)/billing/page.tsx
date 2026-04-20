@@ -230,7 +230,7 @@ export default async function BillingPage() {
       </section>
 
       <div className="text-[11px] text-[var(--z-muted)] pt-2">
-        Generated at {new Date(data.generatedAt).toLocaleString()}
+        Generated at <span suppressHydrationWarning>{new Date(data.generatedAt).toLocaleString()}</span>
       </div>
     </>
   );

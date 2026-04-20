@@ -96,11 +96,13 @@ type SyncStatus = "idle" | "running" | "success" | "error";
 function SquareCard() {
   const [syncStatus, setSyncStatus] = React.useState<SyncStatus>("idle");
   const [syncResult, setSyncResult] = React.useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = React.useState<string | null>(null);
   const [since, setSince] = React.useState("");
 
   async function runSync() {
     setSyncStatus("running");
     setSyncResult(null);
+    setSyncProgress("Connecting to Square…");
     try {
       const body = since.trim() ? JSON.stringify({ since: since.trim() }) : undefined;
       const res = await fetch("/api/integrations/square/sync", {
@@ -108,17 +110,49 @@ function SquareCard() {
         headers: { "Content-Type": "application/json" },
         body,
       });
-      const json = await res.json() as { message?: string; error?: string; stats?: Record<string, number> };
-      if (!res.ok) {
-        setSyncStatus("error");
-        setSyncResult(json.error ?? `Error ${res.status}`);
-      } else {
-        setSyncStatus("success");
-        setSyncResult(json.message ?? "Sync complete.");
+
+      if (!res.body) throw new Error("No response body from sync endpoint");
+
+      // Consume the SSE stream for live progress updates
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6)) as {
+              status: string; message?: string; error?: string;
+              stats?: Record<string, number>;
+            };
+            if (event.status === "running") {
+              setSyncProgress(event.message ?? "Syncing…");
+            } else if (event.status === "success") {
+              setSyncStatus("success");
+              setSyncResult(event.message ?? "Sync complete.");
+              setSyncProgress(null);
+            } else if (event.status === "error") {
+              setSyncStatus("error");
+              setSyncResult(event.error ?? "Sync failed.");
+              setSyncProgress(null);
+            }
+          } catch { /* ignore malformed events */ }
+        }
       }
+
+      // If stream ended without a final status event, treat as done
+      setSyncStatus((prev) => prev === "running" ? "success" : prev);
+      setSyncProgress(null);
     } catch (err) {
       setSyncStatus("error");
       setSyncResult(err instanceof Error ? err.message : "Network error");
+      setSyncProgress(null);
     }
   }
 
@@ -174,12 +208,15 @@ function SquareCard() {
           </div>
 
           {syncStatus === "running" && (
-            <div className="flex items-center gap-2 text-xs text-[var(--z-muted)]">
-              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Pulling data from Square — this may take 1–3 minutes for a full history sync…
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs text-[var(--z-muted)]">
+                <svg className="h-3.5 w-3.5 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                {syncProgress ?? "Syncing…"}
+              </div>
+              <p className="text-[10px] text-[var(--z-muted)] opacity-60">Full history sync may take 2–5 minutes. Stay on this page.</p>
             </div>
           )}
 
