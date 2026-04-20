@@ -455,7 +455,7 @@ export function RosterClient({ families, students, teacherNames, locationStats }
 
   return (
     <PageShell title="Roster">
-      <AgentPageBar agentId="ruby" chatPlaceholder="Ask Ruby about the roster2026" pageContext={{ page: "roster" }} />
+      <AgentPageBar agentId="ruby" chatPlaceholder="Ask Ruby about the roster or schedule…" pageContext={{ page: "roster" }} />
       <div className="space-y-6">
         {/* ── Summary bar ── */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

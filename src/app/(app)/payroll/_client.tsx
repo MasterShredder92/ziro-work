@@ -211,7 +211,7 @@ export function PayrollClient() {
             ) : (
               <div className="p-4 space-y-4">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">AI Assistant</div>
-                <AgentPageBar agentId="stewie" chatPlaceholder="Ask Stewie about payroll or teacher pay…"
+                <AgentPageBar agentId="bub" chatPlaceholder="Ask Bub about payroll or teacher pay…"
                   pageContext={{ page: "payroll", period: period.label, totalGross: filteredGross, totalSessions: filteredSessions }} />
                 <div className="space-y-2">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">Quick Links</div>

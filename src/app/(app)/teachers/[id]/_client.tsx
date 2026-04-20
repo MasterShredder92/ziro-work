@@ -570,8 +570,8 @@ export function TeacherDetailClient() {
             <>
               <PageHeader title={displayName} subtitle={teacher.status ?? (teacher.is_active ? "active" : "inactive")} />
               <AgentPageBar
-                agentId="ziro"
-                chatPlaceholder="Ask Ziro about this teacher…"
+                agentId="vader"
+                chatPlaceholder="Ask Vader about this teacher…"
                 pageContext={{ page: "teacher-profile", teacherId: id, teacherName: displayName, status: teacher.status, w9Status: teacher.w9_status, contractStatus: teacher.contract_status, ratePerBlock: teacher.rate_per_block }}
               />
               <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">

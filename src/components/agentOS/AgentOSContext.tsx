@@ -123,6 +123,8 @@ function safeMeta(id: string): AgentMetadata {
       accent: "var(--z-accent)",
       glow: "color-mix(in oklab, var(--z-accent), transparent 55%)",
       tagline: "Agent",
+      role: "Assistant",
+      suggestedPrompts: [],
     }
   );
 }

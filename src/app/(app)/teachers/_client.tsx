@@ -282,7 +282,7 @@ export function TeachersClient() {
           {!selectedTeacher && (
             <div className="hidden xl:flex w-72 shrink-0 flex-col border-l border-[#1c1c1e] bg-[#0a0a0c] p-4">
               <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035] mb-3">AI Assistant</div>
-              <AgentPageBar agentId="ziro" chatPlaceholder="Ask Ziro about teachers or staffing…"
+              <AgentPageBar agentId="vader" chatPlaceholder="Ask Vader about teachers or staffing…"
                 pageContext={{ page: "teachers", totalTeachers: filtered.length, locationFilter, statusFilter }} />
               <div className="mt-4 space-y-2">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">Quick Actions</div>

@@ -448,10 +448,10 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
           <>
             <PageHeader title={data.studentName} subtitle={`${data.stageName} · ${data.riskBand} risk`} />
 
-            {/* ── STAR agent bar — always at top, not a tab ── */}
+            {/* ── Sid agent bar — always at top, not a tab ── */}
             <AgentPageBar
-              agentId="star"
-              chatPlaceholder="Ask STAR about this student…"
+              agentId="sid"
+              chatPlaceholder="Ask Sid about this student…"
               pageContext={{
                 page: "student-profile",
                 studentId,
