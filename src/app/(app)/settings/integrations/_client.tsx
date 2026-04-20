@@ -97,14 +97,12 @@ function SquareCard() {
   const [syncStatus, setSyncStatus] = React.useState<SyncStatus>("idle");
   const [syncResult, setSyncResult] = React.useState<string | null>(null);
   const [syncProgress, setSyncProgress] = React.useState<string | null>(null);
-  const [since, setSince] = React.useState("");
-
   async function runSync() {
     setSyncStatus("running");
     setSyncResult(null);
     setSyncProgress("Connecting to Square…");
     try {
-      const body = since.trim() ? JSON.stringify({ since: since.trim() }) : undefined;
+      const body = undefined; // always month-to-date
       const res = await fetch("/api/integrations/square/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -172,10 +170,9 @@ function SquareCard() {
         <div className="rounded-lg border px-4 py-3 text-xs" style={{ borderColor: "rgba(0,255,136,0.2)", background: "rgba(0,255,136,0.04)" }}>
           <p className="mb-1.5 font-bold text-[#00ff88]">What gets synced</p>
           <ul className="space-y-1 text-[var(--z-muted)]">
-            <li>• All invoices — linked to student/family records by email</li>
-            <li>• All payment history — full backfill, no date limit</li>
-            <li>• Customer records — auto-matched to families and students</li>
-            <li>• Real-time updates via webhook (invoice paid, refunds, etc.)</li>
+            <li>• Invoices and payments for the current month (month-to-date)</li>
+            <li>• Linked to student/family records by email match</li>
+            <li>• Real-time updates via webhook (invoice paid, refunds, new payments)</li>
           </ul>
         </div>
 
@@ -183,19 +180,9 @@ function SquareCard() {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-[var(--z-fg)]">Manual sync</p>
           <p className="text-xs text-[var(--z-muted)]">
-            Hit <strong>Sync Now</strong> to pull all invoices and payments from Square into Ziro.
-            Leave the date blank to pull your full history (recommended for first run).
-            To only pull recent data, enter a start date like <code className="rounded bg-[var(--z-surface)] px-1">2026-01-01</code>.
+            Pulls all invoices and payments for the <strong>current month</strong> from Square. Use this if the dashboard numbers look stale.
           </p>
-          <div className="flex items-end gap-3">
-            <div className="w-44">
-              <Input
-                label="From date (optional)"
-                value={since}
-                onChange={(e) => setSince(e.target.value)}
-                placeholder="YYYY-MM-DD"
-              />
-            </div>
+          <div className="flex items-center gap-3">
             <Button
               type="button"
               variant="primary"
@@ -216,7 +203,7 @@ function SquareCard() {
                 </svg>
                 {syncProgress ?? "Syncing…"}
               </div>
-              <p className="text-[10px] text-[var(--z-muted)] opacity-60">Full history sync may take 2–5 minutes. Stay on this page.</p>
+              <p className="text-[10px] text-[var(--z-muted)] opacity-60">Month-to-date sync usually completes in under 30 seconds.</p>
             </div>
           )}
 
@@ -254,7 +241,7 @@ function SquareCard() {
             className="rounded-lg border px-3 py-2 font-mono text-xs"
             style={{ borderColor: "var(--z-border)", background: "var(--z-surface)", color: "#00ff88" }}
           >
-            https://ziro-work.vercel.app/api/integrations/square/webhook
+            https://app.zirowork.com/api/integrations/square/webhook
           </div>
           <p className="text-[10px] text-[var(--z-muted)]">
             Subscribe to: <code className="rounded bg-[var(--z-surface)] px-1">invoice.*</code>{" "}
