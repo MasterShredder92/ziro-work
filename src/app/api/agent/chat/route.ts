@@ -372,21 +372,17 @@ export async function POST(req: NextRequest) {
     const tenantId = session?.tenantId || clientContext.tenantId || DEFAULT_TENANT_ID;
     const userId = session?.userId || clientContext.userId;
 
-    // --- MANUS PROXY FALLBACK ---
-    // This is the production-grade way to handle missing keys in the ZiroWork deployment.
-    // It routes requests through the internal proxy that already has project-level authorization.
-    const apiKey = process.env.OPENAI_API_KEY || process.env.ZIRO_OPENAI_API_KEY || "manus-internal-bypass";
-    const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_API_BASE || "https://api.manus.im/api/llm-proxy/v1";
+    // --- DIRECT OPENAI CONNECTION ---
+    // We are using a direct connection to the OpenAI API to bypass the 403 Forbidden errors from the proxy.
+    const apiKey = process.env.OPENAI_API_KEY || process.env.ZIRO_OPENAI_API_KEY;
+    const baseURL = "https://api.openai.com/v1";
 
-    const openai = new OpenAI({ 
-      apiKey, 
-      baseURL,
-      defaultHeaders: {
-        "User-Agent": "ZiroWork-Agent-System/1.0",
-        "X-Manus-Project-ID": "MpHTFbpebL2KJDPbzjVjAv",
-        "X-Manus-Client": "Manus-Autonomous-Agent"
-      }
-    });
+    if (!apiKey) {
+      console.error("CRITICAL: No OpenAI API key found in environment variables.");
+      return NextResponse.json({ error: "Agent brain offline. Please configure OPENAI_API_KEY in Vercel settings." }, { status: 500 });
+    }
+
+    const openai = new OpenAI({ apiKey, baseURL });
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const now = new Date();
     const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- ALWAYS use 'get_operator_context' first if the user asks about 'this' location, 'today', or 'this block' to see what they are looking at.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
