@@ -221,7 +221,7 @@ function AgentCircleExpanded({
         id: `dashboard-ask-${meta.id}`,
         label: ask.label,
         intent: "summon",
-        payload: ask.payload,
+        payload: ask.payload as Record<string, unknown>,
       });
     } else {
       openFullChat();
