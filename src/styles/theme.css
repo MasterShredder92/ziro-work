@@ -1,0 +1,99 @@
+/* Dark Theme (Default) */
+:root,
+[data-theme="dark"],
+.dark-theme {
+  /* Primary Colors */
+  --z-accent: #00ff88;
+  --z-on-accent: #000000;
+  
+  /* Surfaces */
+  --z-surface: #0a0a0c;
+  --z-surface-2: #1a1a1e;
+  --z-surface-3: #2a2a2f;
+  --z-surface-hover: #1a1a1e;
+  
+  /* Text */
+  --z-fg: #f0f0f0;
+  --z-fg-secondary: #909098;
+  --z-fg-tertiary: #505055;
+  
+  /* Borders */
+  --z-border: #1c1c1e;
+  --z-border-light: #2b2b2f;
+  
+  /* Status Colors */
+  --z-success: #10b981;
+  --z-warning: #f59e0b;
+  --z-error: #ef4444;
+  --z-info: #3b82f6;
+  
+  /* Semantic */
+  --z-overlay: rgba(0, 0, 0, 0.5);
+  --z-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* Light Theme */
+[data-theme="light"],
+.light-theme {
+  /* Primary Colors */
+  --z-accent: #00d966;
+  --z-on-accent: #000000;
+  
+  /* Surfaces */
+  --z-surface: #ffffff;
+  --z-surface-2: #f5f5f7;
+  --z-surface-3: #e8e8eb;
+  --z-surface-hover: #f0f0f2;
+  
+  /* Text */
+  --z-fg: #1a1a1a;
+  --z-fg-secondary: #666666;
+  --z-fg-tertiary: #999999;
+  
+  /* Borders */
+  --z-border: #e0e0e3;
+  --z-border-light: #d0d0d3;
+  
+  /* Status Colors */
+  --z-success: #059669;
+  --z-warning: #d97706;
+  --z-error: #dc2626;
+  --z-info: #2563eb;
+  
+  /* Semantic */
+  --z-overlay: rgba(0, 0, 0, 0.3);
+  --z-shadow: rgba(0, 0, 0, 0.1);
+}
+
+/* Schedule Block Colors - PRESERVED across both themes */
+:root {
+  /* Lesson Block Colors */
+  --block-student-session: #3b82f6;
+  --block-open-time: #8b5cf6;
+  --block-first-day: #ec4899;
+  --block-last-day: #f59e0b;
+  --block-not-bookable: #6b7280;
+  --block-sub: #10b981;
+  --block-call-out: #ef4444;
+  --block-meet-greet: #06b6d4;
+  --block-teacher-training: #f97316;
+  --block-makeup-session: #a855f7;
+  --block-virtual: #14b8a6;
+  
+  /* Block Status Colors */
+  --block-available: #10b981;
+  --block-booked: #3b82f6;
+  --block-unavailable: #6b7280;
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Prevent transitions on theme change for schedule blocks */
+[class*="block-"],
+[class*="schedule"],
+[data-block-type] {
+  transition: none !important;
+}

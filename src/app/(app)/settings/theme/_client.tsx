@@ -7,6 +7,7 @@ import { SettingsSection } from "@/components/settings/SettingsSection";
 import { Card } from "@/components/ui/Card";
 import { Select, type SelectOption } from "@/components/ui/Select";
 import { Slider } from "@/components/ui/Slider";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const THEME_KEY = "zirowork.theme.v1";
 
@@ -81,6 +82,15 @@ export function ThemeSettingsClient() {
           ← All settings
         </Link>
       </div>
+
+      <SettingsSection
+        title="Light/Dark Mode"
+        description="Choose between light and dark themes. Your preference is saved automatically."
+      >
+        <Card variant="elevated" padding="md" radius="lg" shadow="sm">
+          <ThemeToggle />
+        </Card>
+      </SettingsSection>
 
       <SettingsSection
         title="Charcoal + neon controls"

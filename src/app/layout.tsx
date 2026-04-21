@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@/styles/theme.css";
 import defaultSiteMetadata from "@/lib/seo/metadata";
 
 const inter = Inter({
