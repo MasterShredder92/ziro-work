@@ -46,15 +46,6 @@ const SID_TOOLS = [
       required: ["student_id"],
     },
   },
-  {
-    name: "search_students",
-    description: "Search roster for students by name.",
-    input_schema: {
-      type: "object",
-      properties: { query: { type: "string" } },
-      required: ["query"],
-    },
-  },
 ];
 
 const RUBY_TOOLS = [
@@ -142,7 +133,8 @@ const SHARED_TOOLS = [
   }
 ];
 
-const ALL_TOOLS = [
+// Deduplicate tools by name to avoid Anthropic's "Tool names must be unique" error
+const ALL_TOOLS_COMBINED = [
   ...SID_TOOLS,
   ...RUBY_TOOLS,
   ...VADER_TOOLS,
@@ -150,7 +142,16 @@ const ALL_TOOLS = [
   ...BUB_TOOLS,
   ...RAVEN_TOOLS,
   ...SHARED_TOOLS
-].map(convertToAnthropic);
+];
+
+const toolNameSet = new Set<string>();
+const ALL_TOOLS = ALL_TOOLS_COMBINED
+  .filter(tool => {
+    if (toolNameSet.has(tool.name)) return false;
+    toolNameSet.add(tool.name);
+    return true;
+  })
+  .map(convertToAnthropic);
 
 // --- TOOL EXECUTION ENGINE ---
 
