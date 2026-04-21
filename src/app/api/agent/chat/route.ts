@@ -309,7 +309,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const { message, agentId = "ziro", context = {}, history = [] } = await req.json();
-    const openai = new OpenAI();
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const now = new Date();
