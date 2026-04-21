@@ -270,8 +270,8 @@ export function LocationScheduleGrid({
     );
   }
 
-  const startMin = toMinute(dayHours.openTime);
-  const endMin = toMinute(dayHours.closeTime);
+  const startMin = dayHours.openMinute;
+  const endMin = dayHours.closeMinute;
   const totalMinutes = endMin - startMin;
   const timeLabels = [];
   for (let m = startMin; m < endMin; m += 30) {
