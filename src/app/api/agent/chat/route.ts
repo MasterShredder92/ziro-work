@@ -450,6 +450,17 @@ const VADER_TOOLS = [
     },
   },
   {
+    name: "get_all_teachers",
+    description: "Fetch a list of all teachers in the studio with their basic profile info.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        limit: { type: "number", description: "Max results to return (default 50)" },
+      },
+      required: [],
+    },
+  },
+  {
     name: "get_pedagogical_advice",
     description: "Analyze student notes, parent feedback, and lesson history to provide the teacher with specific coaching and teaching strategies.",
     input_schema: {
@@ -968,6 +979,15 @@ async function executeTool(
         .limit(10);
       if (error) return `Error searching teachers: ${error.message}`;
       if (!data || data.length === 0) return `No teachers found matching "${q}".`;
+      return JSON.stringify(data);
+    }
+    if (toolName === "get_all_teachers") {
+      const { data, error } = await db
+        .from("teachers")
+        .select("id, first_name, last_name, display_name, instruments, locations, personality_type, bio")
+        .eq("tenant_id", tenantId)
+        .limit((input.limit as number) ?? 50);
+      if (error) return `Error fetching all teachers: ${error.message}`;
       return JSON.stringify(data);
     }
     if (toolName === "update_teacher") {
