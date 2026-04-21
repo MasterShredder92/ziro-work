@@ -265,6 +265,7 @@ export async function POST(req: NextRequest) {
 
       // Handle tool calls
       for (const toolCall of assistantMessage.tool_calls) {
+        if (toolCall.type !== "function") continue;
         const result = await executeTool(
           toolCall.function.name, 
           JSON.parse(toolCall.function.arguments), 
