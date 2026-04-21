@@ -15,6 +15,7 @@ ACTIONS YOU CAN TAKE:
 - Change a block's type (e.g. make it "booked_session", "open", "call_out", "makeup_session", "virtual")
 - You can identify blocks by teacher name + time slot
 - When asked to change block types for a teacher's students, you update all their booked blocks
+- Move a student from one block to another. If the user doesn't specify the current time, you look it up automatically.
 
 LOCATION COLORS:
 - Bellevue: purple (#7C3AED)
@@ -32,6 +33,7 @@ BLOCK TYPE COLORS:
 
 When you take an action, respond with a JSON action block followed by your message:
 ACTION:{"type":"update_blocks","teacherName":"Angelica Gonzalez","blockType":"booked_session","scope":"all_teacher_blocks"}
+ACTION:{"type":"move_student","studentName":"Riley Whitaker","toTeacher":"Noah Zywiec","toTime":"4:30 PM"}
 
 Always confirm what you did in plain language after the action.
 If you need more info to complete an action, ask one specific question.`;
@@ -110,6 +112,94 @@ async function executeAction(
         success: true,
         message: `Done — updated ${count} blocks for ${action.teacherName} to ${action.blockType.replace(/_/g, " ")}.`,
         count,
+      };
+    }
+
+    if (action.type === "move_student") {
+      const studentName = (action.studentName as string).toLowerCase();
+      const toTeacherName = (action.toTeacher as string).toLowerCase();
+      const toTime = action.toTime; // e.g. "4:30 PM"
+      const date = context.selectedDate || new Date().toISOString().split("T")[0];
+
+      // 1. Find Student
+      const { data: students } = await db
+        .from("students")
+        .select("id, first_name, last_name")
+        .eq("tenant_id", tenantId);
+      
+      const student = (students ?? []).find(s => 
+        `${s.first_name} ${s.last_name}`.toLowerCase().includes(studentName)
+      );
+
+      if (!student) return { success: false, message: `I couldn't find a student named "${action.studentName}".` };
+
+      // 2. Find Destination Teacher
+      const { data: teachers } = await db
+        .from("teachers")
+        .select("id, first_name, last_name, display_name")
+        .eq("tenant_id", tenantId);
+      
+      const teacher = (teachers ?? []).find(t => 
+        `${t.first_name} ${t.last_name}`.toLowerCase().includes(toTeacherName) || 
+        (t.display_name && t.display_name.toLowerCase().includes(toTeacherName))
+      );
+
+      if (!teacher) return { success: false, message: `I couldn't find a teacher named "${action.toTeacher}".` };
+
+      // 3. Find current block for the student on this date (to clear it)
+      const { data: currentBlocks } = await db
+        .from("schedule_blocks")
+        .select("id, start_time, teacher_id")
+        .eq("tenant_id", tenantId)
+        .eq("student_id", student.id)
+        .eq("block_date", date);
+      
+      // 4. Find target block (must be open_time)
+      // Note: start_time in DB is usually "16:30:00" format. We need to convert "4:30 PM" to that.
+      let targetTimeStr = toTime;
+      if (toTime.includes("PM") || toTime.includes("AM")) {
+        const [time, modifier] = toTime.split(" ");
+        let [hours, minutes] = time.split(":");
+        if (hours === "12") hours = "00";
+        if (modifier === "PM") hours = (parseInt(hours, 10) + 12).toString();
+        targetTimeStr = `${hours.padStart(2, "0")}:${minutes}:00`;
+      }
+
+      const { data: targetBlocks } = await db
+        .from("schedule_blocks")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("teacher_id", teacher.id)
+        .eq("block_date", date)
+        .eq("start_time", targetTimeStr)
+        .limit(1);
+
+      if (!targetBlocks || targetBlocks.length === 0) {
+        return { success: false, message: `I couldn't find an available slot for ${action.toTeacher} at ${toTime} today.` };
+      }
+
+      // 5. Perform the move (transaction-like)
+      // Clear old block
+      if (currentBlocks && currentBlocks.length > 0) {
+        await db.from("schedule_blocks").update({
+          student_id: null,
+          block_type: "open",
+          updated_at: new Date().toISOString()
+        }).eq("id", currentBlocks[0].id);
+      }
+
+      // Update new block
+      const { error: moveError } = await db.from("schedule_blocks").update({
+        student_id: student.id,
+        block_type: "booked_session",
+        updated_at: new Date().toISOString()
+      }).eq("id", targetBlocks[0].id);
+
+      if (moveError) return { success: false, message: `Failed to move the lesson: ${moveError.message}` };
+
+      return { 
+        success: true, 
+        message: `Successfully moved ${student.first_name} ${student.last_name} to ${teacher.first_name}'s ${toTime} slot today.` 
       };
     }
 

@@ -191,12 +191,12 @@ export function RubyScheduleBar({ locationName, selectedDate, event }: Props) {
       {chatOpen && (
         <>
           <div
-            className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm"
             onClick={() => setChatOpen(false)}
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[10001] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border shadow-2xl"
             style={{
               borderColor: `${RUBY_ACCENT}55`,
               backgroundColor: "#0a0a0e",
