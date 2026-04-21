@@ -212,9 +212,13 @@ header("6. AGENT TOOL WIRING — Tool loop coverage")
 
 CHAT_ROUTE = API_DIR / "agent" / "chat" / "route.ts"
 AGENT_TOOL_REQUIREMENTS = {
+    "ziro": ["assign_agent_task", "get_agent_reports", "audit_agent_output"],
     "sid": ["update_student", "search_students", "get_family", "update_family"],
     "star": ["update_lead", "search_leads", "send_email"],
-    "bub": ["list_invoices", "get_invoice"],
+    "bub": ["list_invoices", "get_invoice", "calculate_payroll", "analyze_bank_csv", "manage_expense", "offboard_student_billing", "access_payment_processor"],
+    "stewie": ["generate_progress_report", "trigger_review_loop", "get_retention_health"],
+    "vader": ["get_teacher", "update_teacher", "flesh_out_lesson_note", "check_teacher_compliance", "get_pedagogical_advice", "translate_parent_note"],
+    "raven": ["queue_message", "get_communication_queue", "search_message_library", "get_communication_log"],
 }
 
 if CHAT_ROUTE.exists():

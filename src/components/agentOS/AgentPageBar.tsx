@@ -252,12 +252,12 @@ export function AgentPageBar({
       {chatOpen && (
         <>
           <div
-            className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm"
             onClick={() => setChatOpen(false)}
             aria-hidden
           />
           <div
-            className="fixed z-[201] flex w-full max-w-lg flex-col rounded-2xl border shadow-2xl"
+            className="fixed z-[9999] flex w-full max-w-lg flex-col rounded-2xl border shadow-2xl"
             style={{
               borderColor: `${accent}55`,
               backgroundColor: "#0a0a0e",
