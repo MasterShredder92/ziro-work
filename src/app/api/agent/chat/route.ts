@@ -227,8 +227,19 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // Initialize Manus-native OpenAI client with pre-configured defaults
-    const openai = new OpenAI();
+    // Use official MANUS_API_KEY for production stability
+    const apiKey = process.env.MANUS_API_KEY;
+    
+    if (!apiKey) {
+      return NextResponse.json({ 
+        error: "Agent brain offline. Please add MANUS_API_KEY to Vercel environment variables." 
+      }, { status: 500 });
+    }
+
+    const openai = new OpenAI({
+      apiKey: apiKey,
+      baseURL: "https://api.manus.im/v1",
+    });
     
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
@@ -280,7 +291,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Final fallback if max rounds hit
     return NextResponse.json({ 
       content: [{ type: "text", text: "I've performed several actions. Please let me know if you need anything else." }], 
       stop_reason: "end_turn" 
