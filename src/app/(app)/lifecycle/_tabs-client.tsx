@@ -52,7 +52,7 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* ── Header ── */}
-      <div className="shrink-0 px-6 pt-6 pb-0 space-y-4">
+      <div className="shrink-0 w-full px-6 pt-6 pb-0 space-y-4">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-[var(--z-muted)] font-semibold">
             Customer Lifecycle
@@ -142,7 +142,7 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
       </div>
 
       {/* ── Stage content ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-[var(--z-space-6)]">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-[var(--z-space-6)] w-full">
         <StageSurfaceClient
           key={safeActiveTab}
           stageId={safeActiveTab}

@@ -100,7 +100,7 @@ export function QuickActions({ showTitle = true }: QuickActionsProps) {
           </h2>
         </div>
       ) : null}
-      <div className="grid grid-cols-1 gap-[var(--z-space-3)] lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-[var(--z-space-3)] lg:grid-cols-2 xl:grid-cols-4">
         <QuickActionCard
           title={`New leads · ${formatShortNumber(counts.newLeads)}`}
           description="Triage fresh pipeline activity and follow-ups."

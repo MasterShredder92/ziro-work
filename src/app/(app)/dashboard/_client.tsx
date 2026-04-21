@@ -75,7 +75,7 @@ export function DashboardClient() {
     >
       <PageTransition>
         <div
-          className="mx-auto max-w-[1600px] flex flex-col gap-4 sm:gap-8"
+          className="mx-auto w-full flex flex-col gap-4 sm:gap-8"
           data-dashboard-rev="5"
           data-app="ziro-work"
         >

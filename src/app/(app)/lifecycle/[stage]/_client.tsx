@@ -78,7 +78,7 @@ function StageSurfaceLoaded({
 
   return (
     <PageTransition>
-      <div className="mx-auto max-w-6xl space-y-[var(--z-space-8)]">
+      <div className="mx-auto w-full space-y-[var(--z-space-8)]">
         {loading ? <div className="text-sm text-[var(--z-muted)]">Loading…</div> : null}
         {err ? <div className="text-sm text-[var(--z-danger)]">{err}</div> : null}
         {data?.warnings?.length ? (

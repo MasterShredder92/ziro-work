@@ -314,7 +314,7 @@ export async function POST(req: NextRequest) {
 
     for (let round = 0; round < 5; round++) {
       const response = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
+        model: "gpt-4.1-mini",
         max_tokens: 4096,
         messages: messages,
         system: systemContent,
@@ -345,7 +345,7 @@ export async function POST(req: NextRequest) {
 
     // If we hit the round limit, return the last response
     const finalResponse = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "gpt-4.1-mini",
       max_tokens: 4096,
       messages: messages,
       system: systemContent,

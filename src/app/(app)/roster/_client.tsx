@@ -458,7 +458,7 @@ export function RosterClient({ families, students, teacherNames, locationStats }
       <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about any student on the roster…" pageContext={{ page: "roster" }} />
       <div className="space-y-6">
         {/* ── Summary bar ── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
           {[
             { val: totalActive,   label: "Active students",  color: "var(--z-accent)" },
             { val: totalFamilies, label: "Active families",  color: "var(--z-fg)"     },
@@ -477,7 +477,7 @@ export function RosterClient({ families, students, teacherNames, locationStats }
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--z-muted)]">
             Click a studio to filter
           </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
             {locationStats.map((stat) => (
               <LocationCard key={stat.id} stat={stat} isActive={activeLocationId === stat.id} onClick={() => toggleLocation(stat.id)} />
             ))}

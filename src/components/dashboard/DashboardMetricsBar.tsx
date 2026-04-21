@@ -40,7 +40,7 @@ export function DashboardMetricsBar() {
   }, []);
 
   return (
-    <section className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-5">
+    <section className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-5 2xl:grid-cols-5">
       <DashboardMetricCard
         label="Collected This Month"
         value={metrics ? formatUsdFromCents(metrics.collected) : "—"}
