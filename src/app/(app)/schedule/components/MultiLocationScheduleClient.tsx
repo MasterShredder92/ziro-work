@@ -13,7 +13,7 @@ import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { LocationScheduleGrid } from "./LocationScheduleGrid";
 import { MobileScheduleView } from "./MobileScheduleView";
 import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
-import { RubyScheduleBar, type RubyEvent } from "./RubyScheduleBar";
+import { type RubyEvent } from "./RubyScheduleBar";
 import { ScheduleRoomsPanel } from "./ScheduleRoomsPanel";
 
 // ─── Location config ──────────────────────────────────────────────────────────
@@ -184,11 +184,6 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const activeSelectedDate = selectedDates[activeLocationId] ?? window.start;
 
   // Utilization for active location on selected date
-  // Rules:
-  //   - not_bookable (locked) blocks are excluded entirely — they are never open or booked
-  //   - open_time blocks with no student = genuinely open
-  //   - student_session / first_day / last_day / sub / makeup / call_out etc with a student = booked
-  //   - blocks without a student that are not open_time (e.g. call_out shell) = not counted as open
   const utilization = React.useMemo(() => {
     const dayBlocks = activeBlocks.filter(
       (b) => b.block_date === activeSelectedDate && b.block_type !== "not_bookable",
@@ -208,7 +203,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     <div className="space-y-0">
       {/* ── Single compact top bar ── */}
       <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Row 1: location tabs | Ruby | week nav + tools */}
+        {/* Row 1: location tabs | Ruby (Removed) | week nav + tools */}
         <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
           {/* Location pills */}
           {locations.map((loc) => {
@@ -261,14 +256,8 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             </button>
           </div>
 
-          {/* Ruby — centered, inline */}
-          <div className="flex-1 flex justify-center">
-            <RubyScheduleBar
-              locationName={activeLocConfig?.name ?? locations.find((l) => l.id === activeLocationId)?.name ?? "Studio"}
-              selectedDate={activeSelectedDate}
-              event={rubyEvent}
-            />
-          </div>
+          {/* Center space (Ruby removed) */}
+          <div className="flex-1" />
 
           {/* Week nav + date jump */}
           <div className="flex shrink-0 items-center gap-1.5">
@@ -319,44 +308,57 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                   type="button"
                   disabled={isClosed}
                   onClick={() => setSelectedDates((prev) => ({ ...prev, [activeLocationId]: day }))}
-                  style={isSelected && !isClosed ? {
-                    borderColor: activeLocConfig?.border ?? "var(--z-border)",
-                    backgroundColor: activeLocConfig?.accent ?? "transparent",
-                    color: activeLocConfig?.textColor ?? "inherit",
-                  } : {}}
-                  className={`flex min-w-[44px] flex-col items-center rounded-md border px-1.5 py-1 text-center transition-all ${
-                    isClosed
-                      ? "cursor-not-allowed border-transparent opacity-30"
-                      : isSelected
-                      ? "border"
-                      : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
+                  className={`flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1.5 transition-all ${
+                    isSelected
+                      ? "bg-[var(--z-accent)] text-black"
+                      : isClosed
+                        ? "opacity-20 cursor-not-allowed"
+                        : isToday
+                          ? "bg-[var(--z-surface-2)] text-[var(--z-accent)] border border-[var(--z-accent)]/30"
+                          : "text-[var(--z-muted)] hover:bg-white/5 hover:text-[var(--z-fg)]"
                   }`}
                 >
-                  <span className="text-[9px] font-semibold uppercase tracking-wide">{label}</span>
-                  <span className={`text-sm font-bold leading-none ${isToday ? "text-yellow-400" : ""}`}>{sub}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                  <span className="text-sm font-black leading-none">{sub}</span>
                 </button>
               );
             })}
-            {loading && <span className="ml-1 text-[10px] text-[var(--z-muted)] animate-pulse">Loading…</span>}
 
-            {/* Toolbar */}
-            <div className="ml-auto flex shrink-0 items-center gap-1 pl-1">
-              {/* Utilization */}
-              <div className="flex items-center gap-1 rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1">
-                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: utilization.pct >= 80 ? "#22c55e" : utilization.pct >= 50 ? "#eab308" : "#ef4444" }} />
-                <span className="text-[10px] font-bold text-[var(--z-fg)]">{utilization.pct}%</span>
-                <span className="hidden text-[9px] text-[var(--z-muted)] sm:inline">{utilization.open} open</span>
+            {/* Utilization indicator */}
+            <div className="mx-2 h-8 w-[1px] bg-[var(--z-border)] opacity-50" />
+            <div className="flex shrink-0 flex-col justify-center px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Utilization</span>
+                <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#00ff88]"}`}>
+                  {utilization.pct}%
+                </span>
               </div>
-              <button type="button" onClick={() => setActiveModal("sub")} className="flex items-center gap-1 rounded-md border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-1 text-[10px] font-bold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
-                <svg viewBox="0 0 14 14" fill="none" className="h-2.5 w-2.5" aria-hidden><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                Sub
+              <div className="text-[11px] font-bold text-[var(--z-fg)]">
+                {utilization.booked} <span className="text-[var(--z-muted)] font-medium">booked ·</span> {utilization.open} <span className="text-[var(--z-muted)] font-medium">open</span>
+              </div>
+            </div>
+
+            {/* Toolbar buttons */}
+            <div className="ml-auto flex items-center gap-1.5 pr-1">
+              <button
+                type="button"
+                onClick={() => setActiveModal("sub")}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-[var(--z-accent)]/50 hover:bg-[var(--z-accent)]/5 transition-all"
+              >
+                + Sub
               </button>
-              <button type="button" onClick={() => setActiveModal("callout")} className="flex items-center gap-1 rounded-md border border-orange-400/30 bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-300 hover:bg-orange-500/20 transition-colors">
-                <svg viewBox="0 0 14 14" fill="none" className="h-2.5 w-2.5" aria-hidden><path d="M7 2v5M7 9v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/></svg>
+              <button
+                type="button"
+                onClick={() => setActiveModal("callout")}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-red-500/50 hover:bg-red-500/5 transition-all"
+              >
                 Call Out
               </button>
-              <button type="button" onClick={() => setActiveModal("virtual")} className="flex items-center gap-1 rounded-md border border-sky-400/30 bg-sky-500/10 px-2 py-1 text-[10px] font-bold text-sky-300 hover:bg-sky-500/20 transition-colors">
-                <svg viewBox="0 0 14 14" fill="none" className="h-2.5 w-2.5" aria-hidden><rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M9 7l-4-2v4l4-2z" fill="currentColor"/></svg>
+              <button
+                type="button"
+                onClick={() => setActiveModal("virtual")}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all"
+              >
                 Virtual
               </button>
             </div>
@@ -364,121 +366,56 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
         )}
       </div>
 
-      {/* ── Rooms view ── */}
-      {activeView === "rooms" && (
-        <ScheduleRoomsPanel
-          locationId={activeLocationId}
-          locationName={activeLocConfig?.name ?? locations.find((l) => l.id === activeLocationId)?.name ?? "Studio"}
-          locationColor={activeLocConfig?.color ?? "#00ff88"}
-          rooms={activeData?.rooms ?? []}
-          onRubyEvent={fireRubyEvent}
-        />
-      )}
+      {/* ── Main content area ── */}
+      <div className="relative">
+        {loading && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--z-bg)]/40 backdrop-blur-[1px]">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--z-accent)] border-t-transparent" />
+          </div>
+        )}
 
-      {/* ── Active location grid ── */}
-      {activeView === "schedule" && locations.map((loc) => {
-        if (loc.id !== activeLocationId) return null;
-        const data = locationDataMap[loc.id];
-        if (!data) return null;
-        const currentBlocks = blocksByLocationWindow[loc.id]?.[windowKey] ?? data.blocks;
-        const selectedDate = selectedDates[loc.id] ?? window.start;
-        const cfg = LOCATION_CONFIG[loc.id];
-        const handleBlocksChange = (newBlocks: ScheduleBlock[]) => {
-          setBlocksByLocationWindow((prev) => ({
-            ...prev,
-            [loc.id]: { ...(prev[loc.id] ?? {}), [windowKey]: newBlocks },
-          }));
-        };
-        return (
-          <React.Fragment key={loc.id}>
-            {/* Desktop grid */}
-            <div className="hidden sm:block">
-              <LocationScheduleGrid
-                locationId={loc.id}
-                locationName={loc.name}
-                locationConfig={cfg}
-                selectedDate={selectedDate}
-                blocks={currentBlocks}
-                teachers={data.teachers}
-                students={data.students}
-                families={data.families}
-                availability={data.availability}
-                rooms={data.rooms}
-                locationHours={data.locationHours}
-                onBlocksChange={handleBlocksChange}
-                onRubyEvent={fireRubyEvent}
-              />
-            </div>
-            {/* Mobile horizontal timeline */}
-            <div className="block sm:hidden">
-              <MobileScheduleView
-                locationId={loc.id}
-                locationConfig={cfg}
-                selectedDate={selectedDate}
-                blocks={currentBlocks}
-                teachers={data.teachers}
-                students={data.students}
-                families={data.families}
-                locationHours={data.locationHours}
-                onBlocksChange={handleBlocksChange}
-              />
-            </div>
-          </React.Fragment>
-        );
-      })}
+        {activeView === "schedule" ? (
+          <LocationScheduleGrid
+            locationId={activeLocationId}
+            locationName={activeLocConfig?.name ?? "Studio"}
+            selectedDate={activeSelectedDate}
+            blocks={activeBlocks.filter((b) => b.block_date === activeSelectedDate)}
+            teachers={activeData?.teachers ?? []}
+            students={activeData?.students ?? []}
+            families={activeData?.families ?? []}
+            rooms={activeData?.rooms ?? []}
+            onRubyEvent={fireRubyEvent}
+          />
+        ) : (
+          <ScheduleRoomsPanel
+            locationId={activeLocationId}
+            locationName={activeLocConfig?.name ?? "Studio"}
+            rooms={activeData?.rooms ?? []}
+            onRubyEvent={fireRubyEvent}
+          />
+        )}
+      </div>
 
-      {/* ── Toolbar Modals ── */}
-      {activeModal === "sub" && activeData && (
+      {/* ── Modals ── */}
+      {activeModal === "sub" && (
         <SubModal
           locationId={activeLocationId}
-          selectedDate={activeSelectedDate}
-          teachers={activeData.teachers}
-          blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
-          onBlocksChange={(newBlocks) => {
-            setBlocksByLocationWindow((prev) => ({
-              ...prev,
-              [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
-            }));
-            fireRubyEvent({ type: "sub_added", message: "Sub block added — schedule updated." });
-            setActiveModal(null);
-          }}
+          onSuccess={(e) => { setActiveModal(null); fireRubyEvent(e); }}
         />
       )}
-      {activeModal === "callout" && activeData && (
+      {activeModal === "callout" && (
         <CallOutModal
           locationId={activeLocationId}
-          selectedDate={activeSelectedDate}
-          teachers={activeData.teachers}
-          students={activeData.students}
-          blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
-          onBlocksChange={(newBlocks) => {
-            setBlocksByLocationWindow((prev) => ({
-              ...prev,
-              [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
-            }));
-            fireRubyEvent({ type: "call_out", message: "Call-out committed — coverage blocks created and students reassigned." });
-            setActiveModal(null);
-          }}
+          onSuccess={(e) => { setActiveModal(null); fireRubyEvent(e); }}
         />
       )}
-      {activeModal === "virtual" && activeData && (
+      {activeModal === "virtual" && (
         <GoVirtualModal
           locationId={activeLocationId}
-          selectedDate={activeSelectedDate}
-          teachers={activeData.teachers}
-          students={activeData.students}
-          blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
-          onBlocksChange={(newBlocks) => {
-            setBlocksByLocationWindow((prev) => ({
-              ...prev,
-              [activeLocationId]: { ...(prev[activeLocationId] ?? {}), [windowKey]: newBlocks },
-            }));
-            fireRubyEvent({ type: "go_virtual", message: "Virtual day committed — sessions updated. Meet links queued once Gmail is connected." });
-            setActiveModal(null);
-          }}
+          onSuccess={(e) => { setActiveModal(null); fireRubyEvent(e); }}
         />
       )}
     </div>
