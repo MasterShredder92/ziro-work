@@ -351,7 +351,7 @@ TONE & STYLE
       "Invoice status tracking and payment reconciliation",
       "Revenue reporting by location and time period",
       "Teacher payroll calculation (sessions × rate per block)",
-      "Expense analysis and "take-home" optimization",
+      "Expense analysis and 'take-home' optimization",
       "Student offboarding and invoice pausing",
       "Square/Stripe transaction audit",
     ],

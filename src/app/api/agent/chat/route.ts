@@ -130,7 +130,7 @@ const ZIRO_TOOLS = [
   },
 ];
 
-const VADER_TOOLS = [
+const STAR_TOOLS = [
   sendEmailToolDefinition,
   {
     name: "get_lead",
@@ -1116,7 +1116,7 @@ export async function POST(req: NextRequest) {
       agentId === "ziro" ? ZIRO_TOOLS :
       agentId === "sid" ? SID_TOOLS :
       agentId === "ruby" ? RUBY_TOOLS :
-      agentId === "star" ? STAR_TOOLS :
+     agentId === "star" ? STAR_TOOLS :
       agentId === "bub" ? BUB_TOOLS :
       agentId === "stewie" ? STEWIE_TOOLS :
       agentId === "raven" ? RAVEN_TOOLS :
