@@ -43,12 +43,16 @@ function getEnrollmentNotes(row: Enrollment): string {
 }
 
 function withEnrollmentNotes(row: Enrollment, notes: string): Enrollment {
-  const metadata =
-    (row as Enrollment & { metadata?: Record<string, unknown> }).metadata ?? {};
+  const currentMetadata = (row as any).metadata || {};
+  const metadataObj =
+    typeof currentMetadata === "object" && currentMetadata !== null
+      ? currentMetadata
+      : {};
+
   return {
     ...row,
     metadata: {
-      ...metadata,
+      ...metadataObj,
       notes: notes || null,
     },
   } as Enrollment;
