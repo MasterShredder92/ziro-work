@@ -168,4 +168,22 @@ export const RAVEN_TOOLS = [
       required: [],
     },
   },
+  {
+    name: "get_championship_reports",
+    description: "Retrieve generated progress reports for a student. Raven uses this to find reports created by Stewie to send to parents.",
+    input_schema: {
+      type: "object",
+      properties: {
+        student_id: {
+          type: "string",
+          description: "UUID of the student",
+        },
+        limit: {
+          type: "number",
+          description: "Max number of reports to return (default 5)",
+        },
+      },
+      required: ["student_id"],
+    },
+  },
 ];

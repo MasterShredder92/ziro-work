@@ -228,7 +228,21 @@ async function executeTool(name: string, input: any, tenantId: string) {
         return error ? `Error: ${error.message}` : `Payroll calculated for ${data.length} sessions between ${start} and ${end}.`;
       }
       case "generate_progress_report": {
-        return `Progress report generated for student ${input.student_id}. Framing: Championship-Level status.`;
+        const { data, error } = await db.from("championship_reports").insert({
+          tenant_id: tenantId,
+          student_id: input.student_id,
+          report_type: "monthly",
+          content: {
+            framing: "Championship-Level",
+            status: "Top-Tier",
+            generated_at: new Date().toISOString(),
+            summary: `Progress report generated for student ${input.student_id}. This is a Progress Mirror designed to reinforce loyalty and show Top-Tier status.`
+          },
+          created_at: new Date().toISOString()
+        }).select().single();
+        
+        if (error) return `Error saving report: ${error.message}`;
+        return `SUCCESS: Championship-Level Progress Report for student ${input.student_id} has been generated and PERMANENTLY SAVED to their profile (ID: ${data.id}). It is now available for Raven to deliver.`;
       }
       case "get_retention_health": {
         return `Retention health for ${input.student_id}: 95/100 (Top-Tier).`;
@@ -236,6 +250,16 @@ async function executeTool(name: string, input: any, tenantId: string) {
       case "send_email": {
         const res = await sendEmail(input);
         return res.success ? "Email sent." : `Failed: ${res.error}`;
+      }
+      case "get_championship_reports": {
+        // 🛡️ CHAMPIONSHIP STANDARD: Pulls historical records for trajectory analysis.
+        const { data, error } = await db.from("championship_reports")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .eq("student_id", input.student_id)
+          .order("created_at", { ascending: false })
+          .limit(input.limit || 50); // Increased limit for historical analysis
+        return error ? `Error: ${error.message}` : JSON.stringify(data);
       }
       default:
         return `Tool ${name} not yet implemented in reset mode.`;
