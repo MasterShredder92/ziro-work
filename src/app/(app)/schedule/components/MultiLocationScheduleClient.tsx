@@ -254,21 +254,38 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             );
           })}
 
-          {/* Ruby Profile Card Toggle */}
+          {/* Ruby Production Agent Card */}
           <button
             type="button"
             onClick={() => setIsRubySidebarOpen(true)}
-            className="ml-auto group flex items-center gap-3 rounded-xl border border-[#fb923c]/30 bg-[#fb923c]/10 px-4 py-2 transition-all hover:bg-[#fb923c]/20 hover:border-[#fb923c]/50"
+            className="ml-auto group relative flex items-center gap-4 rounded-2xl border border-[#fb923c]/30 bg-[#fb923c]/5 px-5 py-3 transition-all hover:bg-[#fb923c]/15 hover:border-[#fb923c]/60 hover:shadow-[0_0_40px_rgba(251,146,60,0.25)]"
           >
-            <div className="relative">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#fb923c] to-[#ea580c] flex items-center justify-center text-lg shadow-[0_0_10px_rgba(251,146,60,0.3)]">
-                🗓️
+            {/* Glow Blob */}
+            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#fb923c] opacity-0 blur-3xl transition-opacity group-hover:opacity-[0.15]" />
+            
+            <div className="relative shrink-0">
+              <div className="h-12 w-12 rounded-full border-2 border-[#fb923c]/40 overflow-hidden bg-[var(--z-surface-2)] shadow-[0_4px_20px_rgba(251,146,60,0.3)] transition-transform group-hover:scale-110">
+                <img 
+                  src="/static/agents/ruby.png" 
+                  alt="Ruby" 
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=Ruby&background=fb923c&color=fff";
+                  }}
+                />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#00ff88] border-2 border-[#0f0f12]" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#00ff88] border-2 border-[#0f0f12] shadow-sm" />
             </div>
-            <div className="text-left">
-              <div className="text-[10px] font-black text-white leading-none uppercase tracking-tighter">RUBY</div>
-              <div className="text-[9px] font-bold text-[#fb923c] leading-none uppercase tracking-widest mt-0.5">ONLINE</div>
+
+            <div className="relative text-left min-w-[120px]">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-[#fb923c] uppercase tracking-[0.2em] leading-none">Scheduler</span>
+                <span className="h-1 w-1 rounded-full bg-[#00ff88]" />
+              </div>
+              <h3 className="text-lg font-black text-white tracking-tighter leading-none mt-1">RUBY</h3>
+              <p className="text-[9px] font-bold text-[var(--z-muted)] uppercase tracking-widest mt-1 group-hover:text-white transition-colors">
+                Command Master Operator →
+              </p>
             </div>
           </button>
 
