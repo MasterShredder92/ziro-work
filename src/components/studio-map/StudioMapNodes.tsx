@@ -97,6 +97,17 @@ export type AgentsNodeData = {
   href: string;
 };
 
+export type AgentPipelineNodeData = {
+  agentId: string;
+  name: string;
+  role: string;
+  accent: string;
+  glow: string;
+  image: string;
+  status?: string;
+  isDirector?: boolean;
+};
+
 // ── Company orb (center / owner) ──────────────────────────────────────────────
 export function CompanyOrbNode({ data }: NodeProps) {
   const d = data as CompanyNodeData;
@@ -261,6 +272,66 @@ export function StudentMiniNode({ data }: NodeProps) {
         </span>
       </Link>
     </>
+  );
+}
+
+// ── Agent Pipeline Node (The Senior Operator Card) ──────────────────────────
+export function AgentPipelineNode({ data }: NodeProps) {
+  const d = data as AgentPipelineNodeData;
+  const isZiro = d.isDirector;
+
+  return (
+    <div className="relative group">
+      {/* Background Glow */}
+      <div 
+        className="absolute inset-0 rounded-2xl blur-xl opacity-20 transition-opacity group-hover:opacity-40"
+        style={{ backgroundColor: d.accent }}
+      />
+      
+      <div 
+        className={cn(
+          "relative flex flex-col items-center gap-3 p-4 rounded-2xl border-2 bg-[#0a0a0f] transition-all duration-300",
+          isZiro ? "w-48 h-56 scale-110" : "w-40 h-48",
+          focusRingClassName()
+        )}
+        style={{ 
+          borderColor: `${d.accent}44`,
+          boxShadow: `0 0 20px ${d.glow}`
+        }}
+      >
+        {/* Agent Image */}
+        <div 
+          className={cn(
+            "relative rounded-full overflow-hidden border-2",
+            isZiro ? "h-20 w-20" : "h-16 w-16"
+          )}
+          style={{ borderColor: d.accent }}
+        >
+          <img src={d.image} alt={d.name} className="h-full w-full object-cover" />
+        </div>
+
+        {/* Info */}
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="text-xs font-black tracking-tight text-white uppercase">{d.name}</span>
+            {isZiro && (
+              <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-white/10 text-white border border-white/20">DIR</span>
+            )}
+          </div>
+          <p className="text-[9px] font-medium text-white/50 leading-tight mt-1">{d.role}</p>
+        </div>
+
+        {/* Status / Live Indicator */}
+        <div className="mt-auto flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/5 border border-white/10">
+          <div className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: d.accent }} />
+          <span className="text-[8px] font-bold uppercase tracking-wider text-white/70">{d.status || "Ready"}</span>
+        </div>
+
+        {/* Connection Handles */}
+        <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+        <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      </div>
+    </div>
   );
 }
 
