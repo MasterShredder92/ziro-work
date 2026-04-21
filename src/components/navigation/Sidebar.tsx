@@ -20,7 +20,7 @@ const ICONS: Record<string, React.ReactNode> = {
   "/agent-map": <Icon><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2" fill="currentColor"/><circle cx="14" cy="7" r="1.5" fill="currentColor"/><circle cx="14" cy="13" r="1.5" fill="currentColor"/><circle cx="6" cy="7" r="1.5" fill="currentColor"/><circle cx="6" cy="13" r="1.5" fill="currentColor"/></Icon>,
   "/studio-map": <Icon><path d="M10 2L2 6v8l8 4 8-4V6L10 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M2 6l8 4m0 0l8-4m-8 4v8" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></Icon>,
   "/crm": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11l1.5 1.5L20 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></Icon>,
-  "/student/profile": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
+  "/roster": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
   "/teachers": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/></Icon>,
   "/invoices": <Icon><rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
   "/payroll": <Icon><circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 6v1.5m0 5V14m2.5-6.5c0-.828-.895-1.5-2.5-1.5S7.5 6.672 7.5 7.5c0 1.657 5 1.657 5 3.5 0 .828-.895 1.5-2.5 1.5S7.5 11.828 7.5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
@@ -58,7 +58,7 @@ const GROUPS = [
     label: "PEOPLE",
     items: [
       { href: "/crm",      label: "Families & Students" },
-      { href: "/student/profile", label: "Student Profile" },
+      { href: "/roster",   label: "Student Roster"      },
       { href: "/teachers", label: "Teachers"             },
     ],
   },

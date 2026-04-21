@@ -25,15 +25,13 @@ export type { ProgressGoalStatus, ProgressSkillStatus, ProgressCheckpointStatus,
 
 export type ProgressReport = {
   id: string;
-  tenantId: string;
-  studentId: string;
-  generatedAt: string;
-  period: { start: string; end: string };
-  summary: string;
-  skillsMastered: number;
-  checkpointsPassed: number;
-  evidenceCount: number;
-  teacherFeedbackDensity: number;
+  tenant_id: string;
+  student_id: string;
+  report_type: string;
+  file_url: string;
+  content: any;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ProgressKpis = {

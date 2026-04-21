@@ -22,9 +22,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       .order("created_at", { ascending: false });
 
     if (error) return serverError(error);
-    if (!data || data.length === 0) return notFound();
-
-    return ok({ data });
+    return ok({ data: data || [] });
   } catch (err) {
     return serverError(err);
   }
