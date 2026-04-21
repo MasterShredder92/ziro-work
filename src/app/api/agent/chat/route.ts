@@ -1194,6 +1194,9 @@ export async function POST(req: NextRequest) {
     }
 
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error("[Agent Chat] CRITICAL: ANTHROPIC_API_KEY is missing from environment variables.");
+    }
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const agentDef = AGENT_DEFINITIONS[agentId] ?? AGENT_DEFINITIONS["ziro"];
@@ -1220,7 +1223,7 @@ export async function POST(req: NextRequest) {
       agentId === "ziro" ? ZIRO_TOOLS :
       agentId === "sid" ? SID_TOOLS :
       agentId === "ruby" ? RUBY_TOOLS :
-     agentId === "star" ? STAR_TOOLS :
+      agentId === "star" ? STAR_TOOLS :
       agentId === "bub" ? BUB_TOOLS :
       agentId === "stewie" ? STEWIE_TOOLS :
       agentId === "raven" ? RAVEN_TOOLS :
@@ -1242,14 +1245,14 @@ export async function POST(req: NextRequest) {
 
     let reply = "";
     let iterations = 0;
-    const MAX_ITER = 15; // Further increased for very deep bulk tasks
+    const MAX_ITER = 20; // Maximum depth for very large studio tasks
 
     while (iterations < MAX_ITER) {
       iterations++;
       const response = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20241022",
-        max_tokens: 4096, // Increased token limit for larger responses
-        system: systemContent + "\n\nSTRATEGIC DIRECTIVE: For bulk tasks (like updating all teacher bios), process them in batches of 3-5 to prevent timeouts. If you reach 10 iterations, provide a status update on what's done and what's left, then continue until complete.",
+        max_tokens: 4096,
+        system: systemContent + "\n\nSTRATEGIC DIRECTIVE: For studio-wide tasks (like updating 40+ teacher bios), you MUST process them in small batches of 2-3 at a time to prevent server timeouts. After each batch of 3, tell the user exactly which teachers you just finished and that you are continuing with the next batch. Do not try to do more than 3 in a single tool call.",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tools: tools.length > 0 ? (tools as any) : undefined,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
