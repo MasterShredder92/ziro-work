@@ -13,9 +13,6 @@ import OpenAI from "openai";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Initialize Manus-native OpenAI client (pre-configured with base_url and api_key)
-const openai = new OpenAI();
-
 // --- TOOL DEFINITIONS (OPENAI FORMAT) ---
 
 const convertToOpenAI = (tool: any) => ({
@@ -230,6 +227,9 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
+    // Initialize Manus-native OpenAI client inside the request to avoid build-time validation
+    const openai = new OpenAI();
+    
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
     const session = await getSession();
