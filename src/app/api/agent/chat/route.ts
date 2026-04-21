@@ -50,7 +50,7 @@ const SID_TOOLS = [
   },
   {
     name: "search_students",
-    description: "Search roster by name/email.",
+    description: "Search roster for students by name.",
     parameters: {
       type: "object",
       properties: { query: { type: "string" } },
@@ -101,6 +101,39 @@ const RUBY_TOOLS = [
         new_time: { type: "string" },
       },
       required: ["block_id", "new_date", "new_time"],
+    },
+  },
+];
+
+const SHARED_TOOLS = [
+  {
+    name: "search_teachers",
+    description: "Search roster for teachers by name.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "search_students",
+    description: "Search roster for students by name.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_schedule",
+    description: "Fetch schedule for a specific teacher or location on a given date.",
+    parameters: {
+      type: "object",
+      properties: {
+        teacher_id: { type: "string", description: "Teacher UUID" },
+        location_id: { type: "string", description: "Location UUID" },
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
     },
   },
 ];
@@ -266,38 +299,7 @@ export async function POST(req: NextRequest) {
     ];
     else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
 
-    const sharedTools = [
-      {
-        name: "get_schedule",
-        description: "Fetch schedule for a specific teacher or location on a given date.",
-        parameters: {
-          type: "object",
-          properties: {
-            teacher_id: { type: "string", description: "Teacher UUID" },
-            location_id: { type: "string", description: "Location UUID" },
-            date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
-          },
-        },
-      },
-      {
-        name: "search_teachers",
-        description: "Search roster for teachers by name.",
-        parameters: {
-          type: "object",
-          properties: { query: { type: "string" } },
-          required: ["query"],
-        },
-      },
-      {
-        name: "search_students",
-        description: "Search roster for students by name.",
-        parameters: {
-          type: "object",
-          properties: { query: { type: "string" } },
-          required: ["query"],
-        },
-      }
-    ].map(convertToOpenAI);
+    const sharedTools = SHARED_TOOLS.map(convertToOpenAI);
 
     const finalTools = [...rawTools];
     sharedTools.forEach(st => {
@@ -318,6 +320,7 @@ export async function POST(req: NextRequest) {
         model: "gpt-4.1-mini",
         messages: [{ role: "system", content: systemContent }, ...messages],
         tools: finalTools.length > 0 ? finalTools : undefined,
+        tool_choice: "auto",
       });
 
       const assistantMessage = response.choices[0].message;
@@ -350,8 +353,8 @@ export async function POST(req: NextRequest) {
       content: [{ type: "text", text: finalResponse.choices[0].message.content || "" }],
       stop_reason: "end_turn"
     });
-
-  } catch (e: any) {
-    return NextResponse.json({ error: `Agent System Error: ${e.message}` }, { status: 500 });
+  } catch (error: any) {
+    console.error("Agent Chat Error:", error);
+    return NextResponse.json({ error: error.message || "An unexpected error occurred." }, { status: 500 });
   }
 }
