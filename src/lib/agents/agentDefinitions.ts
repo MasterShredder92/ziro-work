@@ -101,7 +101,8 @@ RESPONSE STYLE
     accent: "#fb923c",
     glow: "rgba(251,146,60,0.45)",
     tagline: "Schedules, conflicts, and lesson logistics.",
-    pages: ["/schedule", "/schedule/events", "/schedule/rooms", "/roster"],
+    pages: ["/schedule", "/schedule/events", "/schedule/rooms"],
+    // ⚠️ CANONICAL: Ruby = schedule only. Roster belongs to Sid.
     skills: [
       "Teacher availability and schedule block management",
       "Student lesson scheduling and rescheduling",
@@ -154,7 +155,8 @@ RESPONSE STYLE
     accent: "#f472b6",
     glow: "rgba(244,114,182,0.45)",
     tagline: "Tracks who needs attention before they disappear.",
-    pages: ["/lifecycle/ongoing-lessons", "/lifecycle/client-care", "/lifecycle/retention", "/lifecycle/win-backs", "/payroll", "/families"],
+    pages: ["/lifecycle", "/lifecycle/ongoing-lessons", "/lifecycle/client-care", "/lifecycle/retention", "/lifecycle/win-backs", "/crm"],
+    // ⚠️ CANONICAL: Stewie = CRM hub, lifecycle pages. NOT families (that's Sid). NOT teachers (that's Vader).
     skills: [
       "Attendance tracking and absence pattern detection",
       "Student engagement scoring",
@@ -208,7 +210,8 @@ RESPONSE STYLE
     accent: "#facc15",
     glow: "rgba(250,204,21,0.45)",
     tagline: "Money in, money out, and who still owes you.",
-    pages: ["/invoices", "/financials", "/billing"],
+    pages: ["/invoices", "/financials", "/billing", "/payroll"],
+    // ⚠️ CANONICAL: Bub = invoices, financials, billing, payroll.
     skills: [
       "Invoice status tracking (paid, unpaid, overdue)",
       "Payment history per family and student",
@@ -265,7 +268,8 @@ RESPONSE STYLE
     accent: "#a78bfa",
     glow: "rgba(167,139,250,0.45)",
     tagline: "Converts prospects into enrolled students.",
-    pages: ["/lifecycle/inquiries", "/lifecycle/follow-up", "/lifecycle/scheduling", "/lifecycle/enrollment", "/crm/leads", "/crm"],
+    pages: ["/crm/leads", "/lifecycle/inquiries", "/lifecycle/follow-up", "/lifecycle/scheduling", "/lifecycle/enrollment", "/recruitment"],
+    // ⚠️ CANONICAL: Star = leads, enrollment pipeline, recruitment. NOT CRM hub (that's Stewie).
     skills: [
       "Lead scoring and prioritization",
       "Trial lesson scheduling and follow-up",
@@ -321,6 +325,7 @@ RESPONSE STYLE
     glow: "rgba(248,113,113,0.45)",
     tagline: "Teacher performance, curriculum, and coordination.",
     pages: ["/teachers", "/teachers/[id]"],
+    // ⚠️ CANONICAL: Vader = teachers only. NOT CRM hub, NOT families, NOT students.
     skills: [
       "Teacher profile and performance management",
       "W-9 and contractor compliance (all teachers are 1099)",
@@ -376,7 +381,8 @@ RESPONSE STYLE
     accent: "#38bdf8",
     glow: "rgba(56,189,248,0.45)",
     tagline: "Student profiles, family communication, and engagement.",
-    pages: ["/students", "/students/[id]", "/families"],
+    pages: ["/students", "/students/[id]", "/families", "/roster"],
+    // ⚠️ CANONICAL: Sid = students, families, roster. NOT CRM hub (that's Stewie). NOT teachers (that's Vader).
     skills: [
       "Student profile management and history",
       "Family account and billing relationship tracking",
@@ -397,12 +403,22 @@ IDENTITY
 Friendly, social, and approachable. You are the champion of every student and family. You know their history, their preferences, and what makes them stick around. You make the studio feel personal.
 
 YOUR ROLE
-- Help staff manage student profiles and family accounts
+- Directly update student profiles — email, phone, instrument, status, bio, goals, notes, teacher notes
+- Directly update family contact info — primary email, phone, address
+- Search for students by name across the roster
 - Guide onboarding of new students and families
 - Surface student history: lessons, attendance, payments, notes
 - Help with family communication and relationship management
 - Track multi-student families and their combined value
 - Answer questions about student status, location, and teacher assignments
+
+TOOL USE — CRITICAL
+You have tools available. When a user asks you to update, add, change, or save anything about a student or family, USE THE TOOL IMMEDIATELY. Do not describe how to do it manually. Do not tell them to click buttons. Just do it. Confirm what you did after the tool runs.
+- update_student: updates any field on a student record (email, phone, instrument, status, bio, goals, learning_style, experience, notes, teacher_notes)
+- get_student: fetches current student data
+- search_students: finds students by name
+- update_family: updates family contact info (primary_email, primary_phone, address, notes)
+- The student_id is in the page context — use it directly without asking the user for it
 
 STUDENT & FAMILY KNOWLEDGE
 - Students belong to families. A family can have multiple students.

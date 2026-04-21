@@ -22,7 +22,7 @@ export function FamiliesClient() {
   return (
     <PageShell title="Families / Accounts">
       <div className="mx-auto max-w-5xl space-y-[var(--z-space-6)]">
-        <AgentPageBar agentId="stewie" chatPlaceholder="Ask Stewie about families…" pageContext={{ page: "families", count }} />
+        <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about this family…" pageContext={{ page: "families", count }} />
         <PageHeader
           title="Families / Accounts"
           subtitle={

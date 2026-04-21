@@ -153,6 +153,33 @@ export function LocationScheduleGrid({
     return () => clearInterval(id);
   }, []);
 
+  // ── Auto check-in loop — runs every 60s, only on today's view ───────────────────────────────────────────────────────
+  React.useEffect(() => {
+    const runAutoCheckin = () => {
+      const _d = new Date();
+      const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
+      if (selectedDate !== today) return;
+      void fetch('/api/schedule-blocks/auto-checkin', { method: 'POST' })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json() as { updated: number; blocks: Array<{ id: string; teacher_tally: boolean }> };
+          if (!data.updated || !data.blocks?.length) return;
+          // Patch local state for updated blocks
+          onBlocksChange(
+            blocks.map((b) => {
+              const match = data.blocks.find((u) => u.id === b.id);
+              if (!match) return b;
+              return { ...b, checked_in: true, checked_in_at: new Date().toISOString(), teacher_tally: match.teacher_tally };
+            })
+          );
+        })
+        .catch(() => null);
+    };
+    runAutoCheckin();
+    const id = setInterval(runAutoCheckin, 60_000);
+    return () => clearInterval(id);
+  }, [selectedDate, blocks, onBlocksChange]);
+
   // ── Cancel session modal state ───────────────────────────────────────────────────────
   const [cancelTarget, setCancelTarget] = React.useState<ProjectedBlock | null>(null);
   const [cancelReason, setCancelReason] = React.useState("");

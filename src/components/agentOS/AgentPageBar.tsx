@@ -90,10 +90,34 @@ export function AgentPageBar({
   const [chatLoading, setChatLoading] = React.useState(false);
   const [idleLine] = React.useState(() => statusLine ?? randomIdle(agentId));
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const chatModalRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // On desktop (md+) center the modal; on mobile keep it anchored to bottom
+  React.useEffect(() => {
+    if (!chatOpen) return;
+    function reposition() {
+      const el = chatModalRef.current;
+      if (!el) return;
+      if (window.innerWidth >= 768) {
+        el.style.bottom = "auto";
+        el.style.top = "50%";
+        el.style.transform = "translate(-50%, -50%)";
+        el.style.borderRadius = "1rem";
+      } else {
+        el.style.bottom = "0";
+        el.style.top = "auto";
+        el.style.transform = "translateX(-50%)";
+        el.style.borderRadius = "1rem 1rem 0 0";
+      }
+    }
+    reposition();
+    window.addEventListener("resize", reposition);
+    return () => window.removeEventListener("resize", reposition);
+  }, [chatOpen]);
 
   const accent = meta.accent;
   const glow = meta.glow;
@@ -196,12 +220,21 @@ export function AgentPageBar({
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border shadow-2xl"
+            className="fixed z-[201] flex w-full max-w-lg flex-col rounded-2xl border shadow-2xl"
             style={{
               borderColor: `${accent}55`,
               backgroundColor: "#0a0a0e",
-              height: "min(600px, 85vh)",
+              /* Mobile: anchor to bottom so keyboard pushes it up naturally */
+              bottom: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              /* On larger screens: center vertically */
+              height: "min(600px, 85dvh)",
+              /* Prevent iOS bounce from shrinking the panel */
+              maxHeight: "100dvh",
             }}
+            // On md+ screens, switch to centered modal
+            ref={chatModalRef}
             role="dialog"
             aria-modal="true"
             aria-label={`${name} chat`}
@@ -283,10 +316,12 @@ export function AgentPageBar({
               <form onSubmit={(e) => { e.preventDefault(); sendChat(); }} className="flex items-center gap-2">
                 <input
                   type="text"
+                  inputMode="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder={chatPlaceholder ?? `Ask ${name} anything…`}
                   className="flex-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3.5 py-2.5 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none transition-colors"
+                  style={{ fontSize: "16px" }}
                   autoFocus
                 />
                 <button

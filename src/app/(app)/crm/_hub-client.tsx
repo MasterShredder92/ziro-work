@@ -251,7 +251,7 @@ export function CRMHubClient() {
             <Link href="/crm/families/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-3 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ New</Link>
           </div>
           <div className="mt-3">
-            <AgentPageBar agentId="vader" chatPlaceholder="Ask Vader about families or messaging…"
+            <AgentPageBar agentId="stewie" chatPlaceholder="Ask Stewie about retention or engagement…"
               pageContext={{ page: "crm-families", totalFamilies: families.length, activeCount, inactiveCount, selectedLocation: selectedLocationId !== "all" ? getLocName(selectedLocationId) : "All Locations" }} />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">

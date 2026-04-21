@@ -3,6 +3,8 @@ import { z } from "zod";
 import { enrollStudent, listEnrollmentsFor } from "@/lib/crm";
 import { badRequest, created, ok, readJson, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../_context";
+import { emitEvent } from "@/lib/events/emitEvent";
+import { processAgentEvent } from "@/lib/agents/eventProcessor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +48,35 @@ export async function POST(req: NextRequest) {
       return badRequest("Invalid enrollment payload", parsed.error.flatten());
     }
     const row = await enrollStudent(resolved.context.tenantId, parsed.data);
+    const tenantId = resolved.context.tenantId;
+    // Emit student.enrolled so agents can react (Star sends welcome, Bub sets up billing)
+    await emitEvent({
+      tenantId,
+      eventType: "student.enrolled",
+      entityType: "student",
+      entityId: parsed.data.studentId,
+      payload: { enrollment: row, teacherId: parsed.data.teacherId },
+    });
+    // Emit invoice.created trigger so Bub agent can generate the first invoice
+    const invoiceEvent = {
+      tenantId,
+      eventType: "invoice.created",
+      entityType: "student",
+      entityId: parsed.data.studentId,
+      payload: { trigger: "enrollment", enrollment: row },
+    };
+    await emitEvent(invoiceEvent);
+    // Fire-and-forget: Bub processes enrollment (creates invoice, sends confirmation)
+    const enrolledEvent = {
+      tenantId,
+      eventType: "student.enrolled",
+      entityType: "student",
+      entityId: parsed.data.studentId,
+      payload: { enrollment: row, teacherId: parsed.data.teacherId, studentId: parsed.data.studentId },
+    };
+    processAgentEvent(enrolledEvent).catch((e) =>
+      console.error("[enrollments] Agent event processing failed:", e)
+    );
     return created({ data: row });
   } catch (err) {
     return serverError(err);

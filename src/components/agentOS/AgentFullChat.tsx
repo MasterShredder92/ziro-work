@@ -70,50 +70,32 @@ export function AgentFullChat() {
       abortRef.current = controller;
 
       try {
-        const res = await fetch("/api/chat", {
+        // Build history from current messages (exclude the user msg we just added)
+        const history = messages.map((m) => ({
+          role: m.role === "user" ? "user" : "assistant",
+          content: m.text,
+        }));
+
+        const res = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ agentId, message: trimmed }),
+          body: JSON.stringify({
+            agentId,
+            message: trimmed,
+            context: {},
+            history,
+          }),
           signal: controller.signal,
         });
-        if (!res.ok || !res.body) {
+        if (!res.ok) {
           const body = await res.text().catch(() => "");
           throw new Error(`${res.status} ${body || "request failed"}`);
         }
         setState("speaking");
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          let idx: number;
-          while ((idx = buffer.indexOf("\n\n")) !== -1) {
-            const raw = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const line = raw.trim();
-            if (!line.startsWith("data:")) continue;
-            const payload = line.replace(/^data:\s*/, "");
-            if (!payload) continue;
-            try {
-              const ev = JSON.parse(payload) as { type?: string; text?: string };
-              if (ev.type === "text" && typeof ev.text === "string") {
-                appendAssistantDelta(ev.text);
-              } else if (ev.type === "error" && typeof ev.text === "string") {
-                setMessages((prev) => [
-                  ...prev,
-                  { id: cryptoId(), role: "system", text: `Error: ${ev.text}` },
-                ]);
-              }
-            } catch {
-              /* ignore malformed chunk */
-            }
-          }
-        }
+        const j = await res.json().catch(() => null);
+        const replyText = j?.reply ?? "Got it.";
+        appendAssistantDelta(replyText);
       } catch (err) {
         if ((err as { name?: string })?.name === "AbortError") {
           setMessages((prev) => [

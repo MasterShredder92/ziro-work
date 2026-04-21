@@ -15,6 +15,8 @@ import {
   resolveTenantId,
   serverError,
 } from "@/lib/http";
+import { emitEvent } from "@/lib/events/emitEvent";
+import { processAgentEvent } from "@/lib/agents/eventProcessor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,6 +85,19 @@ export async function POST(req: NextRequest) {
     const row = await createLead(
       tenantId,
       parsed.data as unknown as Omit<LeadInsert, "tenant_id">,
+    );
+    // Emit lead.created and dispatch to Star agent
+    const leadEvent = {
+      tenantId,
+      eventType: "lead.created",
+      entityType: "lead",
+      entityId: row.id,
+      payload: { lead: row },
+    };
+    await emitEvent(leadEvent);
+    // Fire-and-forget: Star processes the event (sends welcome email, updates stage)
+    processAgentEvent(leadEvent).catch((e) =>
+      console.error("[leads] Agent event processing failed:", e)
     );
     return created({ data: row });
   } catch (err) {

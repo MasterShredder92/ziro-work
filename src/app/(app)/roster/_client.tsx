@@ -182,7 +182,7 @@ function StudentInlineRow({ student, teacherName }: { student: StudentRow; teach
       style={{ background: "var(--z-bg)", borderColor: s.border, borderLeftWidth: "3px" }}
     >
       <div className="min-w-[140px] font-semibold">
-        <Link href={`/crm/students/${student.id}`} className="hover:underline" style={{ color: s.color }}>
+        <Link href={`/students/${student.id}`} className="hover:underline" style={{ color: s.color }}>
           {[student.first_name, student.last_name].filter(Boolean).join(" ") || "Unnamed"}
         </Link>
       </div>
@@ -269,7 +269,7 @@ function FamilyTableRow({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
             <Link
-              href={`/crm/families/${family.id}`}
+              href={`/crm?family=${family.id}`}
               className="truncate text-[13px] font-bold text-[var(--z-fg)] hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
@@ -378,7 +378,7 @@ function FamilyTableRow({
           )}
           <div className="flex gap-3 pt-1">
             <Link
-              href={`/crm/families/${family.id}`}
+              href={`/crm?family=${family.id}`}
               className="text-xs font-semibold hover:underline"
               style={{ color: "var(--z-accent)" }}
             >
@@ -455,7 +455,7 @@ export function RosterClient({ families, students, teacherNames, locationStats }
 
   return (
     <PageShell title="Roster">
-      <AgentPageBar agentId="ruby" chatPlaceholder="Ask Ruby about the roster or schedule…" pageContext={{ page: "roster" }} />
+      <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about any student on the roster…" pageContext={{ page: "roster" }} />
       <div className="space-y-6">
         {/* ── Summary bar ── */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

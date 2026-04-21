@@ -132,6 +132,7 @@ function BlockEditSheet({
   onSave,
   onCheckIn,
   onCallOut,
+  onCancelSession,
   onClose,
   saving,
   error,
@@ -144,6 +145,7 @@ function BlockEditSheet({
   onSave: (patch: Partial<ScheduleBlock>) => void;
   onCheckIn: () => void;
   onCallOut: () => void;
+  onCancelSession: (scope: "single" | "recurring", reason: string) => void;
   onClose: () => void;
   saving: boolean;
   error: string | null;
@@ -159,7 +161,9 @@ function BlockEditSheet({
   const [isVirtual, setIsVirtual] = React.useState(block.is_virtual ?? false);
   const [isRecurring, setIsRecurring] = React.useState(block.is_recurring ?? false);
   const [notes, setNotes] = React.useState(block.notes ?? "");
-  const [tab, setTab] = React.useState<"actions" | "edit">("actions");
+  const [tab, setTab] = React.useState<"actions" | "edit" | "cancel">("actions");
+  const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("single");
+  const [cancelReason, setCancelReason] = React.useState("");
 
   function handleSave() {
     const patch: Partial<ScheduleBlock> = {
@@ -257,6 +261,15 @@ function BlockEditSheet({
                   Mark Call Out
                 </button>
               )}
+              {block.student_id && (
+                <button
+                  onClick={() => setTab("cancel")}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-orange-400/60 bg-orange-500/10 py-3 text-sm font-semibold text-orange-300 disabled:opacity-50"
+                >
+                  ❌ Cancel Session
+                </button>
+              )}
               <button
                 onClick={() => setTab("edit")}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] py-3 text-sm font-semibold text-[var(--z-fg)]"
@@ -272,6 +285,49 @@ function BlockEditSheet({
             </div>
           )}
 
+          {tab === "cancel" && (
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--z-muted)]">Removes the student from this slot and marks it as open time.</p>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--z-muted)] uppercase tracking-wider">Scope</label>
+                <div className="flex gap-2">
+                  {(["single", "recurring"] as const).map(s => (
+                    <button key={s} onClick={() => setCancelScope(s)}
+                      className="flex-1 rounded-xl border py-2.5 text-xs font-semibold transition-colors"
+                      style={{
+                        borderColor: cancelScope === s ? "var(--z-accent)" : "var(--z-border)",
+                        background: cancelScope === s ? "rgba(99,102,241,0.15)" : "var(--z-surface)",
+                        color: cancelScope === s ? "var(--z-accent)" : "var(--z-muted)",
+                      }}>
+                      {s === "single" ? "This session only" : "All recurring"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--z-muted)] uppercase tracking-wider">Reason (optional)</label>
+                <textarea
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                  placeholder="e.g. Student sick, family vacation…"
+                  rows={2}
+                  className="w-full rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] resize-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setTab("actions")}
+                  className="flex-1 rounded-xl border border-[var(--z-border)] py-3 text-sm text-[var(--z-muted)]">
+                  Back
+                </button>
+                <button
+                  onClick={() => onCancelSession(cancelScope, cancelReason)}
+                  disabled={saving}
+                  className="flex-1 rounded-xl border border-orange-400/60 bg-orange-500/10 py-3 text-sm font-semibold text-orange-300 disabled:opacity-50">
+                  {saving ? "Cancelling…" : "Confirm Cancel"}
+                </button>
+              </div>
+            </div>
+          )}
           {tab === "edit" && (
             <div className="space-y-4">
               {/* Block Type */}
@@ -535,6 +591,46 @@ export function MobileScheduleView({
       is_family_callout: true,
       status: "available",
     });
+  }
+
+  async function cancelSession(block: ProjectedBlock, scope: "single" | "recurring", reason: string) {
+    const targetId = block.source_block_id || block.id;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/schedule-blocks/cancel-session", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-tenant-id": block.tenant_id },
+        body: JSON.stringify({
+          block_id: targetId,
+          block_date: block.block_date ?? selectedDate,
+          student_id: block.student_id,
+          scope,
+          reason: reason.trim() || "Cancelled via mobile",
+        }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || `Cancel failed (${res.status})`);
+      }
+      // Optimistically update local state
+      const openPatch = {
+        student_id: null,
+        block_type: "open_time" as ScheduleBlock["block_type"],
+        status: "available" as "available" | "booked",
+        checked_in: false,
+        teacher_tally: false,
+      };
+      const updated = blocks.map((b) =>
+        b.id === targetId ? { ...b, ...openPatch } : b,
+      );
+      onBlocksChange(updated);
+      setSelectedBlockId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to cancel session");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (isClosed) {
@@ -810,6 +906,7 @@ export function MobileScheduleView({
           onSave={(patch) => patchBlock(selectedBlock, patch)}
           onCheckIn={() => checkIn(selectedBlock)}
           onCallOut={() => callOut(selectedBlock)}
+          onCancelSession={(scope, reason) => cancelSession(selectedBlock, scope, reason)}
           onClose={() => { setSelectedBlockId(null); setError(null); }}
           saving={saving}
           error={error}
