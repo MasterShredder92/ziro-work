@@ -94,7 +94,20 @@ export function AgentFullChat() {
         setState("speaking");
 
         const j = await res.json().catch(() => null);
-        const replyText = j?.reply ?? "Got it.";
+        
+        // Extract text from Anthropic content blocks
+        let replyText = "";
+        if (j?.content && Array.isArray(j.content)) {
+          replyText = j.content
+            .filter((block: any) => block.type === "text")
+            .map((block: any) => block.text)
+            .join("\n");
+        } else if (j?.reply) {
+          replyText = j.reply;
+        } else {
+          replyText = "Championship-Level execution complete.";
+        }
+        
         appendAssistantDelta(replyText);
       } catch (err) {
         if ((err as { name?: string })?.name === "AbortError") {

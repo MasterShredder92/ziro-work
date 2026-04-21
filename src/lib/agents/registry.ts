@@ -48,6 +48,12 @@ const registry: Record<string, AgentRegistryEntry> = {
     role: "Retention & at-risk students",
     description: "Highlights families who might quit before you lose the tuition.",
   },
+  raven: {
+    id: "raven",
+    name: "Raven",
+    role: "Communications & PR",
+    description: "Manages all parent/teacher messaging and PR.",
+  },
 };
 
 export function getAgent(agentId: string): AgentRegistryEntry | null {

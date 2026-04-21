@@ -7,7 +7,7 @@
  * to perform the equivalent role.
  */
 
-export type AgentId = "ziro" | "star" | "bub" | "stewie" | "ruby" | "vader" | "sid";
+export type AgentId = "ziro" | "star" | "bub" | "stewie" | "ruby" | "vader" | "sid" | "raven";
 
 export interface AgentRateConfig {
   agentId: AgentId;
@@ -66,6 +66,13 @@ export const AGENT_RATE_CONFIG: Record<AgentId, AgentRateConfig> = {
     roleEquivalent: "Family / Parent Liaison",
     hourlyRateUsd: 25,
     rateSource: "ZipRecruiter $25.30 · Salary.com $27 — blended avg",
+  },
+  raven: {
+    agentId: "raven",
+    displayName: "Raven",
+    roleEquivalent: "Communications & PR Specialist",
+    hourlyRateUsd: 32,
+    rateSource: "ZipRecruiter $32.50 · Salary.com $31 · Glassdoor $35 — blended avg",
   },
 };
 

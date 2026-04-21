@@ -28,3 +28,4 @@ export * from "./updateStudent";
 export * from "./detectAtRiskStudents";
 export * from "./planRetentionSequence";
 
+export * from "./ravenCommunicationTools";

@@ -95,6 +95,14 @@ export function linesForAgent(
         { text: "Open messages when you need to answer without hunting in five apps." },
       ];
     }
+    case "raven": {
+      return [
+        {
+          text: "Raven manages communications, messaging, and keeps families connected.",
+        },
+        { text: "Open messages to coordinate with parents and teachers." },
+      ];
+    }
     case "ziro": {
       return [
         {
@@ -112,7 +120,7 @@ export function linesForAgent(
 export const DASHBOARD_LEADER_ID = "ziro" as const;
 
 /** Specialists shown under the leader (same data as before; new layout only). */
-export const DASHBOARD_TEAM_ORDER = ["star", "bub", "sid", "ruby", "stewie", "vader"] as const;
+export const DASHBOARD_TEAM_ORDER = ["star", "bub", "sid", "ruby", "stewie", "vader", "raven"] as const;
 
 /** Full roster order (e.g. exports); leader first, then team. */
 export const AGENT_CARD_ORDER = [
@@ -136,6 +144,8 @@ export function primaryLinkForAgent(id: string): AgentCardLink {
       return { label: "Enrollment queue", href: "/lifecycle/enrollment" };
     case "vader":
       return { label: "Open messages", href: "/messages" };
+    case "raven":
+      return { label: "Open messages", href: "/messages" };
     case "ziro":
       return { label: "Help & settings", href: "/settings" };
     default:
@@ -157,7 +167,9 @@ export function askActionForAgent(id: string): { label: string; action: string; 
     case "stewie":
       return { label: "Ask about follow-ups", action: "summon", payload: { focus: "followups" } };
     case "vader":
-      return { label: "Ask who to message", action: "summon", payload: { focus: "inbox" } };
+      return { label: "Ask about messages", action: "summon", payload: { focus: "messages" } };
+    case "raven":
+      return { label: "Ask about communications", action: "summon", payload: { focus: "communications" } };
     case "ziro":
       return { label: "Ask how this works", action: "summon", payload: { focus: "help" } };
     default:
