@@ -8,29 +8,20 @@ import { RAVEN_TOOLS, sendReportEmailToolDefinition } from "@/lib/agents/tools/r
 import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
 import { VADER_TOOLS } from "@/lib/agents/tools/vaderTools";
 import { STEWIE_TOOLS } from "@/lib/agents/tools/stewieTools";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 // --- CONFIGURATION ---
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// --- TOOL DEFINITIONS (CONVERTED TO OPENAI FORMAT) ---
-
-const convertToOpenAI = (tool: any) => ({
-  type: "function" as const,
-  function: {
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.input_schema || tool.parameters,
-  }
-});
+// --- TOOL DEFINITIONS (CONVERTED TO ANTHROPIC FORMAT) ---
 
 const SID_TOOLS = [
   {
     name: "get_student",
     description: "Fetch current student data. Autonomously finds student by ID.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: { student_id: { type: "string" } },
       required: ["student_id"],
     },
@@ -38,8 +29,8 @@ const SID_TOOLS = [
   {
     name: "update_student",
     description: "Update student record fields.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         student_id: { type: "string" },
         status: { type: "string", enum: ["active", "inactive", "trial", "prospect", "paused"] },
@@ -52,8 +43,8 @@ const SID_TOOLS = [
   {
     name: "search_students",
     description: "Search roster for students by name.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: { query: { type: "string" } },
       required: ["query"],
     },
@@ -61,7 +52,7 @@ const SID_TOOLS = [
   {
     name: "send_email",
     description: sendEmailToolDefinition.description,
-    parameters: sendEmailToolDefinition.input_schema,
+    input_schema: sendEmailToolDefinition.input_schema,
   },
 ];
 
@@ -69,8 +60,8 @@ const RUBY_TOOLS = [
   {
     name: "get_schedule",
     description: "Fetch schedule for a specific teacher or location on a given date.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         teacher_id: { type: "string", description: "Teacher UUID" },
         location_id: { type: "string", description: "Location UUID" },
@@ -81,8 +72,8 @@ const RUBY_TOOLS = [
   {
     name: "find_available_slots",
     description: "Find open lesson slots. Defaults to next 7 days.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         teacher_id: { type: "string" },
         instrument: { type: "string" },
@@ -94,8 +85,8 @@ const RUBY_TOOLS = [
   {
     name: "move_block",
     description: "Reschedule a lesson.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         block_id: { type: "string" },
         new_date: { type: "string" },
@@ -107,8 +98,8 @@ const RUBY_TOOLS = [
   {
     name: "book_student",
     description: "Book a student into a specific schedule block.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         block_id: { type: "string" },
         student_id: { type: "string" },
@@ -121,8 +112,8 @@ const RUBY_TOOLS = [
   {
     name: "cancel_session",
     description: "Cancel a student's lesson session.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         block_id: { type: "string" },
         block_date: { type: "string" },
@@ -136,8 +127,8 @@ const RUBY_TOOLS = [
   {
     name: "get_operator_context",
     description: "Get the current operator's UI state (active location, date, view, and focused block). Use this to see what the user is looking at.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         user_id: { type: "string", description: "Optional user ID to fetch context for." }
       }
@@ -149,8 +140,8 @@ const SHARED_TOOLS = [
   {
     name: "search_teachers",
     description: "Search roster for teachers by name.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: { query: { type: "string" } },
       required: ["query"],
     },
@@ -158,8 +149,8 @@ const SHARED_TOOLS = [
   {
     name: "search_students",
     description: "Search roster for students by name.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: { query: { type: "string" } },
       required: ["query"],
     },
@@ -167,8 +158,8 @@ const SHARED_TOOLS = [
   {
     name: "get_schedule",
     description: "Fetch schedule for a specific teacher or location on a given date.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         teacher_id: { type: "string", description: "Teacher UUID" },
         location_id: { type: "string", description: "Location UUID" },
@@ -179,8 +170,8 @@ const SHARED_TOOLS = [
   {
     name: "get_operator_context",
     description: "Get the current operator's UI state (active location, date, view, and focused block). Use this to see what the user is looking at.",
-    parameters: {
-      type: "object",
+    input_schema: {
+      type: "object" as const,
       properties: {
         user_id: { type: "string", description: "Optional user ID to fetch context for." }
       }
@@ -300,7 +291,7 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 // --- CHAT LOGIC HELPER ---
 
 async function handleAgentChat(
-  openai: OpenAI,
+  client: Anthropic,
   agentId: string,
   message: string,
   history: any[],
@@ -312,61 +303,82 @@ async function handleAgentChat(
     const now = new Date();
     const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- ALWAYS use 'get_operator_context' first if the user asks about 'this' location, 'today', or 'this block' to see what they are looking at.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
 
-    let rawTools: any[] = [];
-    if (agentId === "ruby") rawTools = RUBY_TOOLS.map(convertToOpenAI);
-    else if (agentId === "sid") rawTools = SID_TOOLS.map(convertToOpenAI);
-    else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
+    let rawTools: Anthropic.Tool[] = [];
+    if (agentId === "ruby") rawTools = RUBY_TOOLS;
+    else if (agentId === "sid") rawTools = SID_TOOLS;
+    else rawTools = ZIRO_TOOLS;
 
-    const sharedTools = SHARED_TOOLS.map(convertToOpenAI);
     const finalTools = [...rawTools];
-    sharedTools.forEach(st => {
-      if (!finalTools.find(ft => ft.function.name === st.function.name)) {
+    SHARED_TOOLS.forEach(st => {
+      if (!finalTools.find(ft => ft.name === st.name)) {
         finalTools.push(st);
       }
     });
 
-    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
+    let messages: Anthropic.MessageParam[] = history.map((m: any) => ({
       role: m.role,
       content: m.content
     }));
     messages.push({ role: "user", content: message });
 
     for (let round = 0; round < 5; round++) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: [{ role: "system", content: systemContent }, ...messages],
+      const response = await client.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        system: systemContent,
         tools: finalTools.length > 0 ? finalTools : undefined,
-        tool_choice: "auto",
+        messages: messages,
       });
 
-      const assistantMessage = response.choices[0].message;
-      messages.push(assistantMessage);
+      // Add assistant response to messages
+      messages.push({
+        role: "assistant",
+        content: response.content,
+      });
 
-      if (response.choices[0].finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
+      // Check if we're done
+      if (response.stop_reason === "end_turn") {
+        const textContent = response.content.find(c => c.type === "text");
         return NextResponse.json({
-          content: [{ type: "text", text: assistantMessage.content || "" }],
+          content: [{ type: "text", text: textContent && "text" in textContent ? textContent.text : "" }],
           stop_reason: "end_turn"
         });
       }
 
-      for (const toolCall of assistantMessage.tool_calls) {
-        if (toolCall.type !== "function") continue;
-        const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments), tenantId, userId);
+      // Process tool calls
+      if (response.stop_reason === "tool_use") {
+        const toolUseBlocks = response.content.filter(c => c.type === "tool_use");
+        const toolResults: Anthropic.ToolResultBlockParam[] = [];
+
+        for (const toolUse of toolUseBlocks) {
+          if (toolUse.type !== "tool_use") continue;
+          const result = await executeTool(toolUse.name, toolUse.input, tenantId, userId);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: result,
+          });
+        }
+
+        // Add tool results to messages
         messages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: result,
-        } as OpenAI.Chat.ChatCompletionToolMessageParam);
+          role: "user",
+          content: toolResults,
+        });
       }
     }
 
-    const finalResponse = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [{ role: "system", content: systemContent }, ...messages],
+    // Final response after max rounds
+    const finalResponse = await client.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1024,
+      system: systemContent,
+      messages: messages,
     });
 
+    const textContent = finalResponse.content.find(c => c.type === "text");
     return NextResponse.json({
-      content: [{ type: "text", text: finalResponse.choices[0].message.content || "" }],
+      content: [{ type: "text", text: textContent && "text" in textContent ? textContent.text : "" }],
       stop_reason: "end_turn"
     });
   } catch (err: any) {
@@ -389,16 +401,12 @@ export async function POST(req: NextRequest) {
     const tenantId = session?.tenantId || clientContext.tenantId || DEFAULT_TENANT_ID;
     const userId = session?.userId || clientContext.userId;
 
-    // Resolve API Key
-    const apiKey = process.env.OPENAI_API_KEY || process.env.ZIRO_OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      console.error("CRITICAL: OPENAI_API_KEY is not set in Vercel environment variables.");
-      return NextResponse.json({ error: "CRITICAL: Ruby's brain is offline. Please set OPENAI_API_KEY in your Vercel project's environment variables to enable her full capabilities." }, { status: 500 });
-    }
+    // Initialize Anthropic client
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
 
-    const openai = new OpenAI({ apiKey, baseURL: "https://api.openai.com/v1" });
-    return await handleAgentChat(openai, agentId, message, history, tenantId, userId);
+    return await handleAgentChat(client, agentId, message, history, tenantId, userId);
   } catch (error: any) {
     console.error("Agent Chat API Route Error:", error);
     return NextResponse.json({ 
