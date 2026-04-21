@@ -65,6 +65,18 @@ const SID_TOOLS = [
 
 const RUBY_TOOLS = [
   {
+    name: "get_schedule",
+    description: "Fetch schedule for a specific teacher or location on a given date.",
+    parameters: {
+      type: "object",
+      properties: {
+        teacher_id: { type: "string", description: "Teacher UUID" },
+        location_id: { type: "string", description: "Location UUID" },
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
+    },
+  },
+  {
     name: "find_available_slots",
     description: "Find open lesson slots. Defaults to next 7 days.",
     parameters: {
@@ -186,6 +198,27 @@ async function executeTool(name: string, input: any, tenantId: string) {
         if (error) return `Error: ${error.message}`;
         return data && data.length > 0 ? JSON.stringify(data) : "No teachers found.";
       }
+      case "get_schedule": {
+        const date = input.date || new Date().toISOString().split("T")[0];
+        let query = db.from("schedule_blocks").select(`
+          id,
+          block_date,
+          start_time,
+          end_time,
+          status,
+          teacher_id,
+          student_id,
+          teachers (first_name, last_name),
+          students (first_name, last_name)
+        `).eq("tenant_id", tenantId).eq("block_date", date);
+        
+        if (input.teacher_id) query = query.eq("teacher_id", input.teacher_id);
+        if (input.location_id) query = query.eq("location_id", input.location_id);
+        
+        const { data, error } = await query.order("start_time");
+        if (error) return `Error: ${error.message}`;
+        return data && data.length > 0 ? JSON.stringify(data) : `No schedule found for ${date}.`;
+      }
       case "update_teacher_profile": {
         const { data, error } = await db.from("teachers").update(input.updates).eq("tenant_id", tenantId).eq("id", input.teacher_id).select().single();
         if (error) return `Error: ${error.message}`;
@@ -261,8 +294,7 @@ async function executeTool(name: string, input: any, tenantId: string) {
           subject: input.subject,
           body: input.body,
           status: "queued",
-          metadata: { ...input.context, from_agent: input.from_agent, file_url: input.file_url },
-          created_at: new Date().toISOString()
+          metadata: { ...input.context, from_agent: input.from_agent }
         });
         return error ? `Error: ${error.message}` : "Message queued in communication hub.";
       }
@@ -337,6 +369,48 @@ export async function POST(req: NextRequest) {
     ];
     else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
 
+    // Add shared tools for all agents
+    const sharedTools = [
+      {
+        name: "get_schedule",
+        description: "Fetch schedule for a specific teacher or location on a given date.",
+        parameters: {
+          type: "object",
+          properties: {
+            teacher_id: { type: "string", description: "Teacher UUID" },
+            location_id: { type: "string", description: "Location UUID" },
+            date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+          },
+        },
+      },
+      {
+        name: "search_teachers",
+        description: "Search roster for teachers by name.",
+        parameters: {
+          type: "object",
+          properties: { query: { type: "string" } },
+          required: ["query"],
+        },
+      },
+      {
+        name: "search_students",
+        description: "Search roster for students by name.",
+        parameters: {
+          type: "object",
+          properties: { query: { type: "string" } },
+          required: ["query"],
+        },
+      }
+    ].map(convertToOpenAI);
+
+    // Merge tools ensuring no duplicates
+    const finalTools = [...rawTools];
+    sharedTools.forEach(st => {
+      if (!finalTools.find(ft => ft.function.name === st.function.name)) {
+        finalTools.push(st);
+      }
+    });
+
     const tenantId = context.tenantId || DEFAULT_TENANT_ID;
 
     // Convert history to OpenAI format
@@ -357,7 +431,7 @@ export async function POST(req: NextRequest) {
           { role: "system", content: systemContent },
           ...messages
         ],
-        tools: rawTools.length > 0 ? rawTools : undefined,
+        tools: finalTools.length > 0 ? finalTools : undefined,
       });
 
       const choice = response.choices[0];
