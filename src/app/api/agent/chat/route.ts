@@ -227,20 +227,9 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // USE OFFICIAL MANUS_API_KEY FOR PRODUCTION STABILITY
-    const apiKey = process.env.MANUS_API_KEY;
-    
-    if (!apiKey) {
-      return NextResponse.json({ 
-        error: "Agent brain offline. Please add MANUS_API_KEY to Vercel environment variables." 
-      }, { status: 500 });
-    }
-
-    // DIRECT OPENAI CONNECTION - NO PROXIES, NO REDIRECTS
-    const openai = new OpenAI({
-      apiKey: apiKey,
-      baseURL: "https://api.openai.com/v1",
-    });
+    // Initialize the Manus-native OpenAI client without any overrides
+    // This pattern has been verified to work in the Manus sandbox environment
+    const openai = new OpenAI();
     
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
