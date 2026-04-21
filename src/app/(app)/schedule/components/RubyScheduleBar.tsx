@@ -20,6 +20,7 @@ export type RubyEvent = {
     | "idle";
   message: string;
   detail?: string;
+  blockId?: string | null;
   timestamp?: number;
 };
 
