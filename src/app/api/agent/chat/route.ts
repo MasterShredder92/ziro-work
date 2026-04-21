@@ -227,8 +227,11 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // Initialize Manus-native OpenAI client inside the request to avoid build-time validation
-    const openai = new OpenAI();
+    // Initialize Manus-native OpenAI client with explicit internal credentials
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || "manus-internal-bypass-key",
+      baseURL: process.env.OPENAI_BASE_URL || "https://api.manus.im/v1",
+    });
     
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
