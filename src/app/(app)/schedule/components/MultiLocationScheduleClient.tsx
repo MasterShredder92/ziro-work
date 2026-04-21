@@ -199,6 +199,16 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     return { total: countable, booked, open, pct };
   }, [activeBlocks, activeSelectedDate]);
 
+  const handleBlocksChange = (newBlocks: ScheduleBlock[]) => {
+    setBlocksByLocationWindow((prev) => ({
+      ...prev,
+      [activeLocationId]: {
+        ...(prev[activeLocationId] ?? {}),
+        [windowKey]: newBlocks,
+      },
+    }));
+  };
+
   return (
     <div className="space-y-0">
       {/* ── Single compact top bar ── */}
@@ -386,15 +396,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             availability={activeData?.availability ?? []}
             rooms={activeData?.rooms ?? []}
             locationHours={activeData?.locationHours ?? {}}
-            onBlocksChange={(newBlocks) => {
-              setBlocksByLocationWindow((prev) => ({
-                ...prev,
-                [activeLocationId]: {
-                  ...(prev[activeLocationId] ?? {}),
-                  [windowKey]: newBlocks,
-                },
-              }));
-            }}
+            onBlocksChange={handleBlocksChange}
             onRubyEvent={fireRubyEvent}
           />
         ) : (
@@ -412,22 +414,33 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
       {activeModal === "sub" && (
         <SubModal
           locationId={activeLocationId}
+          selectedDate={activeSelectedDate}
+          teachers={activeData?.teachers ?? []}
+          blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
-          onSuccess={(e) => { setActiveModal(null); fireRubyEvent(e); }}
+          onBlocksChange={handleBlocksChange}
         />
       )}
       {activeModal === "callout" && (
         <CallOutModal
           locationId={activeLocationId}
+          selectedDate={activeSelectedDate}
+          teachers={activeData?.teachers ?? []}
+          students={activeData?.students ?? []}
+          blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
-          onSuccess={(e) => { setActiveModal(null); fireRubyEvent(e); }}
+          onBlocksChange={handleBlocksChange}
         />
       )}
       {activeModal === "virtual" && (
         <GoVirtualModal
           locationId={activeLocationId}
+          selectedDate={activeSelectedDate}
+          teachers={activeData?.teachers ?? []}
+          students={activeData?.students ?? []}
+          blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
-          onSuccess={(e) => { setActiveModal(null); fireRubyEvent(e); }}
+          onBlocksChange={handleBlocksChange}
         />
       )}
     </div>
