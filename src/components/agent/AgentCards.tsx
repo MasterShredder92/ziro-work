@@ -215,7 +215,10 @@ function AgentCircleExpanded({
   const fireAsk = () => {
     if (!ask) return;
     setAgentId(meta.id);
-    // If the agent has a specific summon action, run it; else just open chat
+    // Open full chat directly so the user can immediately talk to the agent
+    openFullChat();
+    
+    // Also trigger the summon action so the agent knows why they were called
     if (ask.action === "summon") {
       runQuickAction({
         id: `dashboard-ask-${meta.id}`,
@@ -223,8 +226,6 @@ function AgentCircleExpanded({
         intent: "summon",
         payload: ask.payload as Record<string, unknown>,
       });
-    } else {
-      openFullChat();
     }
   };
 

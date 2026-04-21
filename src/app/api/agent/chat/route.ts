@@ -1017,10 +1017,10 @@ async function executeTool(
       });
 
       const report = Object.entries(summary)
-        .map(([name, count]) => `- ${name}: ${count} incomplete session(s)`)
+        .map(([name, count]) => `**${name}**: ${count} session(s) missing check-in or notes.`)
         .join("\n");
 
-      return `Compliance audit for ${checkDate}:\nTotal sessions: ${data.length}\nIncomplete sessions: ${incompleteBlocks.length}\n\nFlagged Teachers:\n${report}`;
+      return `Vader Compliance Audit for ${checkDate}:\n\nOut of ${data.length} total sessions, I've identified ${incompleteBlocks.length} incomplete records.\n\n### Non-Compliant Teachers:\n${report}\n\nI am now drafting "nudges" for these teachers to ensure all lesson notes are submitted by the 9:00 PM cutoff.`;
     }
     if (toolName === "get_pedagogical_advice") {
       const { teacher_id, student_id, context } = input;
