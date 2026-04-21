@@ -176,19 +176,19 @@ const STAR_TOOLS = [
 const RUBY_TOOLS = [
   {
     name: "find_available_slots",
-    description: "Search for available lesson slots across teachers, locations, and dates.",
+    description: "Search for available lesson slots. Defaults to next 7 days if no dates provided.",
     input_schema: {
       type: "object" as const,
       properties: {
         teacher_id: { type: "string", description: "UUID of teacher (optional)" },
         instrument: { type: "string", description: "Instrument type (optional)" },
         location_id: { type: "string", description: "Location UUID (optional)" },
-        start_date: { type: "string", description: "Start date YYYY-MM-DD" },
-        end_date: { type: "string", description: "End date YYYY-MM-DD" },
-        duration: { type: "number", description: "Lesson duration in minutes (30 or 60)" },
+        start_date: { type: "string", description: "Start date YYYY-MM-DD (optional)" },
+        end_date: { type: "string", description: "End date YYYY-MM-DD (optional)" },
+        duration: { type: "number", description: "Lesson duration in minutes (30 or 60, default 30)" },
         preferred_times: { type: "array", items: { type: "string" }, description: "Preferred times like [09:00, 14:00]" },
       },
-      required: ["start_date", "end_date", "duration"],
+      required: [],
     },
   },
   {
@@ -244,15 +244,15 @@ const RUBY_TOOLS = [
   },
   {
     name: "get_teacher_availability",
-    description: "Check a teacher's schedule utilization and available capacity.",
+    description: "Check a teacher's schedule utilization and available capacity. Defaults to next 7 days.",
     input_schema: {
       type: "object" as const,
       properties: {
         teacher_id: { type: "string", description: "UUID of the teacher" },
-        start_date: { type: "string", description: "Start date YYYY-MM-DD" },
-        end_date: { type: "string", description: "End date YYYY-MM-DD" },
+        start_date: { type: "string", description: "Start date YYYY-MM-DD (optional)" },
+        end_date: { type: "string", description: "End date YYYY-MM-DD (optional)" },
       },
-      required: ["teacher_id", "start_date", "end_date"],
+      required: ["teacher_id"],
     },
   },
 ];
@@ -281,16 +281,16 @@ const BUB_TOOLS = [
   },
   {
     name: "calculate_payroll",
-    description: "Calculate payroll for teachers based on checked-in sessions for a specific date range.",
+    description: "Calculate teacher payroll based on checked-in sessions. Defaults to last 14 days if no dates provided.",
     input_schema: {
       type: "object" as const,
       properties: {
-        start_date: { type: "string", description: "Start date YYYY-MM-DD" },
-        end_date: { type: "string", description: "End date YYYY-MM-DD" },
-        teacher_id: { type: "string", description: "Optional UUID of a specific teacher" },
-        location_id: { type: "string", description: "Optional UUID of a specific location" },
+        start_date: { type: "string", description: "Start date YYYY-MM-DD (optional)" },
+        end_date: { type: "string", description: "End date YYYY-MM-DD (optional)" },
+        teacher_id: { type: "string", description: "UUID of specific teacher (optional)" },
+        location_id: { type: "string", description: "UUID of specific location (optional)" },
       },
-      required: ["start_date", "end_date"],
+      required: [],
     },
   },
   {
@@ -428,14 +428,14 @@ const VADER_TOOLS = [
   },
   {
     name: "check_teacher_compliance",
-    description: "Audit a teacher's session check-ins and note completion for a specific date.",
+    description: "Audit teacher check-ins and lesson notes. Defaults to today if no date provided.",
     input_schema: {
       type: "object" as const,
       properties: {
-        teacher_id: { type: "string", description: "UUID of the teacher" },
-        date: { type: "string", description: "Date to audit YYYY-MM-DD" },
+        teacher_id: { type: "string", description: "UUID of the teacher (optional for bulk audit)" },
+        date: { type: "string", description: "The date to audit YYYY-MM-DD (optional, defaults to today)" },
       },
-      required: ["teacher_id", "date"],
+      required: [],
     },
   },
   {
@@ -632,13 +632,20 @@ async function executeTool(
     }
     // ─── Ruby / Scheduling tools ────────────────────────────────────────────
     if (toolName === "find_available_slots") {
-      const startDate = input.start_date as string;
-      const endDate = input.end_date as string;
-      const duration = input.duration as number;
+      let startDate = input.start_date as string;
+      let endDate = input.end_date as string;
+      const duration = (input.duration as number) || 30;
       const teacherId = input.teacher_id as string | undefined;
       const instrument = input.instrument as string | undefined;
       const locationId = input.location_id as string | undefined;
       
+      if (!startDate || !endDate) {
+        const now = new Date();
+        startDate = now.toISOString().split("T")[0];
+        const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        endDate = end.toISOString().split("T")[0];
+      }
+
       let query = db
         .from("schedule_blocks")
         .select("id, teacher_id, block_date, start_time, end_time, location_id")
@@ -740,9 +747,16 @@ async function executeTool(
     }
     if (toolName === "get_teacher_availability") {
       const teacherId = input.teacher_id as string;
-      const startDate = input.start_date as string;
-      const endDate = input.end_date as string;
+      let startDate = input.start_date as string;
+      let endDate = input.end_date as string;
       
+      if (!startDate || !endDate) {
+        const now = new Date();
+        startDate = now.toISOString().split("T")[0];
+        const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        endDate = end.toISOString().split("T")[0];
+      }
+
       const { data, error } = await db
         .from("schedule_blocks")
         .select("id, block_date, start_time, end_time, block_type, student_id")
@@ -784,10 +798,19 @@ async function executeTool(
       return JSON.stringify(data);
     }
     if (toolName === "calculate_payroll") {
-      const startDate = input.start_date as string;
-      const endDate = input.end_date as string;
+      let startDate = input.start_date as string;
+      let endDate = input.end_date as string;
       const teacherId = input.teacher_id as string | undefined;
       const locationId = input.location_id as string | undefined;
+
+      // Default to last 2 weeks if no dates provided
+      if (!startDate || !endDate) {
+        const now = new Date();
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
+        startDate = start.toISOString().split("T")[0];
+        endDate = end.toISOString().split("T")[0];
+      }
 
       // 1. Fetch checked-in blocks
       let blocksQuery = db
@@ -962,16 +985,42 @@ async function executeTool(
     }
     if (toolName === "check_teacher_compliance") {
       const { teacher_id, date } = input;
-      const { data, error } = await db
+      const checkDate = date as string || new Date().toISOString().split("T")[0];
+      
+      let query = db
         .from("schedule_blocks")
-        .select("id, status, lesson_notes(id)")
+        .select("id, status, teacher_id, teachers(display_name, first_name, last_name), lesson_notes(id)")
         .eq("tenant_id", tenantId)
-        .eq("teacher_id", teacher_id as string)
-        .eq("block_date", date as string);
+        .eq("block_date", checkDate);
+
+      if (teacher_id) {
+        query = query.eq("teacher_id", teacher_id as string);
+      }
+
+      const { data, error } = await query;
 
       if (error) return `Error auditing compliance: ${error.message}`;
-      const incomplete = data.filter(b => b.status !== "checked_in" || !b.lesson_notes).length;
-      return `Compliance audit for ${date}: ${data.length} total sessions, ${incomplete} incomplete (missing check-in or notes).`;
+      if (!data || data.length === 0) return `No sessions found for ${checkDate}.`;
+
+      const incompleteBlocks = data.filter(b => b.status !== "checked_in" || !b.lesson_notes);
+      
+      if (incompleteBlocks.length === 0) {
+        return `Compliance audit for ${checkDate}: All ${data.length} sessions are fully checked-in with notes. 100% compliance.`;
+      }
+
+      // Group by teacher for a better report
+      const summary: Record<string, number> = {};
+      incompleteBlocks.forEach(b => {
+        const t = b.teachers as any;
+        const name = t?.display_name || `${t?.first_name} ${t?.last_name}` || "Unknown Teacher";
+        summary[name] = (summary[name] || 0) + 1;
+      });
+
+      const report = Object.entries(summary)
+        .map(([name, count]) => `- ${name}: ${count} incomplete session(s)`)
+        .join("\n");
+
+      return `Compliance audit for ${checkDate}:\nTotal sessions: ${data.length}\nIncomplete sessions: ${incompleteBlocks.length}\n\nFlagged Teachers:\n${report}`;
     }
     if (toolName === "get_pedagogical_advice") {
       const { teacher_id, student_id, context } = input;
@@ -1106,11 +1155,22 @@ export async function POST(req: NextRequest) {
 
     const agentDef = AGENT_DEFINITIONS[agentId] ?? AGENT_DEFINITIONS["ziro"];
     const basePrompt = systemPrompt ?? agentDef.systemPrompt;
+    const now = new Date();
+    const dateStr = now.toISOString().split("T")[0];
+    const timeStr = now.toLocaleTimeString("en-US", { hour12: false });
+    const dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
+
+    const timeContext = `\n\nCURRENT TIME CONTEXT:
+- Date: ${dateStr}
+- Time: ${timeStr}
+- Day: ${dayOfWeek}
+- Reference this for all scheduling, compliance, and billing queries. Never ask the user for today's date.`;
+
     const contextStr =
       Object.keys(context).length > 0
         ? `\n\nCurrent page context:\n${JSON.stringify(context, null, 2)}`
         : "";
-    const systemContent = basePrompt + contextStr;
+    const systemContent = basePrompt + timeContext + contextStr;
 
     const tools =
       agentId === "ziro" ? ZIRO_TOOLS :
