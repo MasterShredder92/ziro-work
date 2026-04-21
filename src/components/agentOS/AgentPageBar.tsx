@@ -91,6 +91,7 @@ export function AgentPageBar({
   const [idleLine] = React.useState(() => statusLine ?? randomIdle(agentId));
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const chatModalRef = React.useRef<HTMLDivElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -157,6 +158,42 @@ export function AgentPageBar({
       setMessages((prev) => [...prev, { role: "agent", text: "Can't reach the server right now." }]);
     } finally {
       setChatLoading(false);
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || chatLoading) return;
+    
+    const userMsg = `Processing bulk student data from file: ${file.name}`;
+    const newMessages: ChatMessage[] = [...messages, { role: "user", text: userMsg }];
+    setMessages(newMessages);
+    setChatLoading(true);
+    
+    try {
+      const fileContent = await file.text();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("content", fileContent);
+      formData.append("agentId", agentId);
+      formData.append("context", JSON.stringify(pageContext));
+      
+      const res = await fetch("/api/agent/upload-process", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const j = await res.json().catch(() => null);
+        setMessages((prev) => [...prev, { role: "agent", text: j?.reply ?? "File processed successfully." }]);
+      } else {
+        setMessages((prev) => [...prev, { role: "agent", text: "File upload failed. Please try again." }]);
+      }
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: "agent", text: "Error processing file. Please try again." }]);
+    } finally {
+      setChatLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -324,6 +361,27 @@ export function AgentPageBar({
                   style={{ fontSize: "16px" }}
                   autoFocus
                 />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".txt,.csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  aria-label="Upload file"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={chatLoading}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border disabled:opacity-40 transition-colors"
+                  style={{ borderColor: `${accent}40`, backgroundColor: `${accent}15`, color: accent }}
+                  title="Upload file for bulk processing"
+                  aria-label="Upload file"
+                >
+                  <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
+                    <path d="M8 2v8m-4-2l4 4 4-4M2 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
                 <button
                   type="submit"
                   disabled={!chatInput.trim() || chatLoading}
