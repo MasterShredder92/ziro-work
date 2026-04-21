@@ -1,0 +1,54 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import Link from "next/link";
+import { useState } from "react";
+import clsx from "clsx";
+export const BILLING_NAV = [
+    {
+        id: "overview",
+        label: "Overview",
+        href: "/billing",
+        description: "Revenue & collections",
+        scope: "billing.read",
+    },
+    {
+        id: "invoices",
+        label: "Invoices",
+        href: "/billing/invoices",
+        description: "Open & paid",
+        scope: "billing.read",
+    },
+    {
+        id: "payments",
+        label: "Payments",
+        href: "/billing/payments",
+        description: "Incoming revenue",
+        scope: "billing.read",
+    },
+    {
+        id: "subscriptions",
+        label: "Subscriptions",
+        href: "/billing/subscriptions",
+        description: "Recurring plans",
+        scope: "billing.read",
+    },
+    {
+        id: "settings",
+        label: "Settings",
+        href: "/billing/settings",
+        description: "Numbering, taxes, terms",
+        scope: "billing.write",
+    },
+];
+export function BillingSidebar({ tenantName = "Billing", allowedNavIds, }) {
+    const [active, setActive] = useState("overview");
+    const items = allowedNavIds
+        ? BILLING_NAV.filter((item) => allowedNavIds.includes(item.id))
+        : BILLING_NAV;
+    return (_jsxs("aside", { className: "md:sticky md:top-0 md:h-[calc(100vh-52px)] w-full md:w-[240px] shrink-0 border-b md:border-b-0 md:border-r border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface),black_10%)]", children: [_jsxs("div", { className: "px-5 py-4 border-b border-[var(--z-border)]", children: [_jsx("div", { className: "text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: "Billing OS" }), _jsx("div", { className: "mt-1 text-base font-semibold text-[var(--z-fg)] truncate", children: tenantName })] }), _jsx("nav", { className: "flex md:block overflow-x-auto md:overflow-visible px-2 py-3 gap-1 md:gap-0 md:space-y-0.5", children: items.map((item) => {
+                    const isActive = active === item.id;
+                    return (_jsxs(Link, { href: item.href, onClick: () => setActive(item.id), className: clsx("block shrink-0 md:shrink md:w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap md:whitespace-normal", isActive
+                            ? "bg-[#00ff88]/10 text-[#00ff88]"
+                            : "text-[var(--z-muted)] hover:text-[var(--z-fg)] hover:bg-white/5"), children: [_jsx("div", { children: item.label }), item.description ? (_jsx("div", { className: clsx("hidden md:block text-[11px] mt-0.5", isActive ? "text-[#00ff88]/70" : "text-[var(--z-muted)]"), children: item.description })) : null] }, item.id));
+                }) })] }));
+}

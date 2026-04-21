@@ -1,0 +1,55 @@
+import "server-only";
+import { getServiceClient } from "@/lib/supabase";
+import { logger } from "@/lib/observability/logger";
+import { incrementCounter } from "@/lib/observability/metrics";
+const g = globalThis;
+function isMissingTableError(err) {
+    if (!err || typeof err !== "object")
+        return false;
+    const e = err;
+    if (e.code === "42P01" || e.code === "PGRST205")
+        return true;
+    return typeof e.message === "string" && /does not exist/i.test(e.message);
+}
+/**
+ * Record a rate-limit hit. Best-effort only — never throws, never blocks
+ * the request path. If the table doesn't exist yet, cache that flag so we
+ * don't hammer Supabase with schema-missing errors.
+ */
+export async function recordRateLimitHit(hit) {
+    var _a;
+    incrementCounter("rate_limit_hits_total", {
+        policy: hit.policyId,
+        tenant: (_a = hit.tenantId) !== null && _a !== void 0 ? _a : "none",
+    });
+    logger.warn("ratelimit.hit", {
+        policy: hit.policyId,
+        tenantId: hit.tenantId,
+        ip: hit.ip,
+        route: hit.route,
+        limit: hit.limit,
+        windowMs: hit.windowMs,
+    });
+    if (g.__ziro_rate_limit_table_missing)
+        return;
+    try {
+        const supabase = getServiceClient();
+        const { error } = await supabase.from("rate_limit_hits").insert({
+            policy_id: hit.policyId,
+            tenant_id: hit.tenantId,
+            ip: hit.ip,
+            route: hit.route,
+            key: hit.key,
+            max_allowed: hit.limit,
+            window_ms: hit.windowMs,
+            created_at: new Date().toISOString(),
+        });
+        if (error && isMissingTableError(error)) {
+            g.__ziro_rate_limit_table_missing = true;
+        }
+    }
+    catch (err) {
+        if (isMissingTableError(err))
+            g.__ziro_rate_limit_table_missing = true;
+    }
+}

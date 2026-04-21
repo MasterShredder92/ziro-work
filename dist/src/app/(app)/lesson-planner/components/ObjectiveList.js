@@ -1,0 +1,7 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function ObjectiveList({ objectives, }) {
+    if (objectives.length === 0) {
+        return (_jsx("div", { className: "rounded-lg border border-dashed border-[var(--z-border)] p-4 text-sm text-[var(--z-muted)]", children: "No objectives yet. Objectives define what students will know or do by the end of the lesson." }));
+    }
+    return (_jsx("ol", { className: "space-y-2", children: objectives.map((obj, idx) => (_jsxs("li", { className: "flex items-start gap-3 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-4 py-3", children: [_jsx("div", { className: "mt-0.5 shrink-0 rounded-full border border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface),black_6%)] px-2 py-0.5 text-[10px] font-semibold text-[var(--z-muted)]", children: idx + 1 }), _jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("div", { className: "text-sm text-[var(--z-fg)]", children: obj.text }), _jsxs("div", { className: "mt-1 flex flex-wrap gap-2 text-[11px] text-[var(--z-muted)]", children: [obj.bloom_level ? (_jsx("span", { className: "rounded-full border border-[var(--z-border)] px-2 py-0.5 uppercase tracking-wider", children: obj.bloom_level })) : null, obj.standard_code ? (_jsx("span", { className: "rounded-full border border-[var(--z-border)] px-2 py-0.5", children: obj.standard_code })) : null, obj.is_met ? (_jsx("span", { className: "rounded-full border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-0.5 text-[#00ff88]", children: "Met" })) : null] })] })] }, obj.id))) }));
+}

@@ -10,6 +10,7 @@ export interface SendEmailInput {
   fromName?: string;
   fromEmail?: string;
   replyTo?: string;
+  attachments?: { path: string; filename: string; }[];
 }
 
 export interface SendEmailResult {
@@ -45,6 +46,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         reply_to: input.replyTo ?? undefined,
         subject: input.subject,
         text: input.body,
+        attachments: input.attachments?.map(a => ({ path: a.path, filename: a.filename })),
       }),
     });
 
@@ -88,6 +90,18 @@ export const sendEmailToolDefinition = {
       fromName: {
         type: "string",
         description: "Sender display name (optional, defaults to studio name)",
+      },
+      attachments: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "URL or path to the attachment file" },
+            filename: { type: "string", description: "Filename for the attachment" },
+          },
+          required: ["path", "filename"],
+        },
+        description: "Optional list of file attachments",
       },
     },
     required: ["to", "subject", "body"],

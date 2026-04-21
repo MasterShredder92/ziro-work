@@ -1,0 +1,30 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { mergePageMetadata, siteBaseUrl } from "@/lib/seo/metadata";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Section } from "@/components/ui/Section";
+import { Card } from "@/components/ui/Card";
+import { LogoShowcase } from "@/components/brand/LogoShowcase";
+import { ColorSwatch } from "@/components/brand/ColorSwatch";
+import { H1, H2, Body } from "@/components/premium/Typography";
+const desc = "Official ZiroWork press kit—logos, palette, typography, product stills, and founder bio for launch coverage.";
+export const metadata = mergePageMetadata({
+    title: "Press kit",
+    description: desc,
+    openGraph: {
+        title: "Press kit · ZiroWork",
+        description: desc,
+        url: `${siteBaseUrl()}/press-kit`,
+    },
+    twitter: { title: "Press kit · ZiroWork", description: desc },
+});
+const palette = [
+    { name: "Background", value: "var(--z-bg)" },
+    { name: "Foreground", value: "var(--z-fg)" },
+    { name: "Surface", value: "var(--z-surface)" },
+    { name: "Accent", value: "var(--z-accent)" },
+    { name: "Muted", value: "var(--z-muted)" },
+    { name: "Danger", value: "var(--z-danger)" },
+];
+export default function PressKitPage() {
+    return (_jsxs("div", { className: "space-y-[var(--z-space-12)]", children: [_jsx(PageHeader, { title: "Press kit", subtitle: "Charcoal console, neon signal\u2014assets and copy helpers for launch coverage." }), _jsx(Section, { title: "Logos", description: "Light, dark, and monochrome lockups (SVG placeholders).", accent: true, spacing: "loose", children: _jsxs("div", { className: "grid gap-[var(--z-space-4)] sm:grid-cols-3", children: [_jsxs(Card, { variant: "elevated", padding: "md", radius: "lg", className: "space-y-2", children: [_jsx("div", { className: "text-xs font-semibold text-[var(--z-muted)]", children: "Light" }), _jsx(LogoShowcase, { variant: "light" })] }), _jsxs(Card, { variant: "elevated", padding: "md", radius: "lg", className: "space-y-2", children: [_jsx("div", { className: "text-xs font-semibold text-[var(--z-muted)]", children: "Dark" }), _jsx(LogoShowcase, { variant: "dark" })] }), _jsxs(Card, { variant: "elevated", padding: "md", radius: "lg", className: "space-y-2", children: [_jsx("div", { className: "text-xs font-semibold text-[var(--z-muted)]", children: "Monochrome" }), _jsx(LogoShowcase, { variant: "mono" })] })] }) }), _jsx(Section, { title: "Color palette", description: "Core charcoal stack plus neon accent and semantic accents.", accent: true, children: _jsx("div", { className: "grid gap-[var(--z-space-4)] sm:grid-cols-2 lg:grid-cols-3", children: palette.map((c) => (_jsx(ColorSwatch, { name: c.name, value: c.value }, c.name))) }) }), _jsx(Section, { title: "Typography", description: "Marketing and product use the same Inter-forward scale.", accent: true, children: _jsxs(Card, { variant: "default", padding: "lg", radius: "lg", className: "space-y-[var(--z-space-6)]", children: [_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--z-accent)]", children: "Headings" }), _jsx(H1, { children: "Display heading (H1)" }), _jsx(H2, { children: "Section heading (H2)" })] }), _jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--z-accent)]", children: "Body" }), _jsx(Body, { children: "Body copy stays calm: high contrast on charcoal, muted secondary lines for supporting detail, and neon reserved for actions and wayfinding." })] }), _jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--z-accent)]", children: "Code" }), _jsx("pre", { className: "overflow-x-auto rounded-[var(--z-radius-md)] border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 font-mono text-xs text-[color-mix(in_oklab,var(--z-fg),transparent_8%)]", children: "npx zirowork doctor --tenant=demo" })] })] }) }), _jsx(Section, { title: "Product screenshots", description: "UI-only placeholders\u2014swap with real captures when ready.", accent: true, children: _jsx("div", { className: "grid gap-[var(--z-space-4)] md:grid-cols-2", children: ["Dashboard", "Studio Map", "Student profile", "Lifecycle board"].map((label) => (_jsxs(Card, { variant: "outline", padding: "none", radius: "lg", className: "overflow-hidden", children: [_jsx("div", { className: "flex aspect-video items-center justify-center border-b border-dashed border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_30%)]", children: _jsxs("span", { className: "text-xs font-semibold text-[var(--z-muted)]", children: [label, " still"] }) }), _jsx("div", { className: "px-4 py-3 text-sm font-semibold text-[var(--z-fg)]", children: label })] }, label))) }) }), _jsx(Section, { title: "Founder", description: "Short bio plus headshot placeholder for decks and articles.", accent: true, children: _jsxs(Card, { variant: "elevated", padding: "lg", radius: "lg", className: "flex flex-col gap-[var(--z-space-5)] sm:flex-row sm:items-start", children: [_jsx("div", { className: "mx-auto h-28 w-28 shrink-0 rounded-full border border-[color-mix(in_oklab,var(--z-accent),transparent_40%)] bg-[radial-gradient(circle_at_30%_22%,color-mix(in_oklab,var(--z-accent),transparent_55%),var(--z-surface-2)_62%)] shadow-[0_0_0_6px_color-mix(in_oklab,var(--z-accent),transparent_92%)] sm:mx-0", "aria-label": "Founder headshot placeholder" }), _jsxs("div", { className: "min-w-0 space-y-2 text-center sm:text-left", children: [_jsx("div", { className: "text-sm font-extrabold text-[var(--z-fg)]", children: "Alex Mercer \u00B7 Founder, ZiroWork" }), _jsx(Body, { tone: "muted", children: "Operator-first product lead focused on lifecycle clarity for multi-teacher studios. Previously scaled education programs where spreadsheets were the source of truth\u2014ZiroWork is the antidote." })] })] }) })] }));
+}

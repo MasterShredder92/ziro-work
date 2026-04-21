@@ -1,0 +1,17 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { AgentOSProvider } from "./AgentOSContext";
+import { AgentPointer } from "./AgentPointer";
+import { AgentFullChat } from "./AgentFullChat";
+import { AgentAutoCollapseOnScroll } from "./AgentAutoCollapseOnScroll";
+import { AgentUIBoundary } from "./AgentUIBoundary";
+import { AgentInlineSuggestions } from "./AgentInlineSuggestions";
+// AgentEventLogDrawer and AgentExperienceDock removed — floating dock was covering UI
+import { AgentDomainActionBridge } from "./AgentDomainActionBridge";
+/**
+ * Mount-once root for the AgentOS UI.
+ * Wraps children in the AgentOSProvider and renders the floating surfaces.
+ */
+export function AgentOSRoot({ children }) {
+    return (_jsxs(AgentOSProvider, { children: [children, _jsxs(AgentUIBoundary, { children: [_jsx(AgentPointer, {}), _jsx(AgentFullChat, {}), _jsx(AgentAutoCollapseOnScroll, {}), _jsx(AgentInlineSuggestions, {}), _jsx(AgentDomainActionBridge, {})] })] }));
+}

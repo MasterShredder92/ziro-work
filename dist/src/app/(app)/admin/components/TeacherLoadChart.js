@@ -1,0 +1,9 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function TeacherLoadChart({ entries, maxRows = 12, }) {
+    const visible = entries.slice(0, maxRows);
+    const maxHours = visible.reduce((m, e) => (e.hoursScheduled > m ? e.hoursScheduled : m), 0);
+    return (_jsxs("div", { className: "rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] p-5", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("div", { children: [_jsx("h3", { className: "text-sm font-semibold text-[var(--z-fg)]", children: "Teacher load" }), _jsx("p", { className: "text-xs text-[var(--z-muted)]", children: "Scheduled hours & students per teacher" })] }), _jsxs("div", { className: "text-xs text-[var(--z-muted)]", children: [entries.length, " teachers"] })] }), _jsx("div", { className: "mt-5 space-y-3", children: visible.length === 0 ? (_jsx("div", { className: "py-6 text-center text-sm text-[var(--z-muted)]", children: "No teachers configured." })) : (visible.map((e) => {
+                    const pct = maxHours > 0 ? (e.hoursScheduled / maxHours) * 100 : 0;
+                    return (_jsxs("div", { children: [_jsxs("div", { className: "mb-1 flex items-center justify-between text-xs", children: [_jsx("span", { className: "truncate font-medium text-[var(--z-fg)]", children: e.teacherName }), _jsxs("span", { className: "text-[var(--z-muted)]", children: [e.hoursScheduled.toFixed(1), "h \u00B7", " ", e.lessonCount, " lessons \u00B7 ", e.studentCount, " students"] })] }), _jsx("div", { className: "h-2 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--z-surface),white_4%)]", children: _jsx("div", { className: "h-full rounded-full bg-[var(--z-accent)] transition-all", style: { width: `${pct}%` } }) })] }, e.teacherId));
+                })) })] }));
+}

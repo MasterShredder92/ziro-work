@@ -64,10 +64,7 @@ const OverdueAlert = dynamic(
   { loading: () => null },
 );
 
-const AgentPipelineCanvas = dynamic(
-  () => import("@/components/studio-map/AgentPipelineCanvas").then((m) => ({ default: m.AgentPipelineCanvas })),
-  { loading: () => <div className="h-[500px] w-full animate-pulse bg-white/5 rounded-3xl" /> },
-);
+
 
 export function DashboardClient() {
   return (
@@ -94,18 +91,6 @@ export function DashboardClient() {
 
           {/* ── Revenue metrics bar ─────────────────────────────── */}
           <DashboardMetricsBar />
-
-          {/* ── Living Map: Agent Pipeline ───────────────────────── */}
-          <DashboardSection 
-            id="living-map" 
-            title="Living Map" 
-            description="Real-time visualization of your Senior Operator pipeline."
-            withSurface={false}
-          >
-            <div className="h-[400px] sm:h-[600px] w-full" data-tour="living-map">
-              <AgentPipelineCanvas />
-            </div>
-          </DashboardSection>
 
           {/* ── Overdue alert ───────────────────────────────────── */}
           <OverdueAlert />

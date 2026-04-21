@@ -130,7 +130,7 @@ export function AgentFullChat() {
       role="dialog"
       aria-modal="true"
       aria-label={`Chat with ${meta.displayName}`}
-      className="fixed inset-0 z-[80] flex flex-col bg-[var(--z-bg)]/95 backdrop-blur-md"
+      className="fixed inset-0 z-[9999] flex flex-col bg-[var(--z-bg)]/95 backdrop-blur-md"
       style={style}
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-[var(--z-border)] px-4 py-3 sm:px-6">

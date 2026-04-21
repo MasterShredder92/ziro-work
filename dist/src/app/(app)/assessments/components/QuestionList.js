@@ -1,0 +1,7 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function QuestionList({ questions }) {
+    if (questions.length === 0) {
+        return (_jsx("div", { className: "rounded-lg border border-dashed border-[var(--z-border)] p-4 text-sm text-[var(--z-muted)]", children: "No questions defined yet." }));
+    }
+    return (_jsx("ol", { className: "space-y-2", children: questions.map((q, idx) => (_jsxs("li", { className: "rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] p-4", children: [_jsxs("div", { className: "flex items-start justify-between gap-3", children: [_jsxs("div", { className: "min-w-0", children: [_jsxs("div", { className: "text-[10px] uppercase tracking-wider text-[var(--z-muted)] font-semibold", children: ["Q", idx + 1, " \u00B7 ", q.kind, " \u00B7 ", q.points, " pt", q.points !== 1 ? "s" : ""] }), _jsx("div", { className: "mt-1 text-sm text-[var(--z-fg)]", children: q.prompt })] }), q.difficulty ? (_jsx("span", { className: "shrink-0 rounded-full border border-[var(--z-border)] bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--z-muted)]", children: q.difficulty })) : null] }), q.options.length > 0 ? (_jsx("ul", { className: "mt-2 space-y-1 text-xs text-[var(--z-muted)]", children: q.options.map((opt) => (_jsxs("li", { className: opt.is_correct ? "text-[#00ff88]" : "", children: ["\u00B7 ", opt.label] }, opt.id))) })) : null] }, q.id))) }));
+}

@@ -3,6 +3,37 @@
  * Queue, batch, and send messages through the communication hub
  */
 
+export const sendReportEmailToolDefinition = {
+  name: "send_report_email",
+  description: "Send a Championship-Level Progress Report to a parent/family.",
+  input_schema: {
+    type: "object",
+    properties: {
+      recipient_email: {
+        type: "string",
+        description: "Email address of the recipient",
+      },
+      student_id: {
+        type: "string",
+        description: "UUID of the student the report is for",
+      },
+      report_id: {
+        type: "string",
+        description: "UUID of the championship report to send",
+      },
+      subject: {
+        type: "string",
+        description: "Email subject line",
+      },
+      body: {
+        type: "string",
+        description: "Email body",
+      },
+    },
+    required: ["recipient_email", "student_id", "report_id", "subject", "body"],
+  },
+};
+
 export const RAVEN_TOOLS = [
   {
     name: "queue_message",
@@ -49,6 +80,10 @@ export const RAVEN_TOOLS = [
           type: "object",
           description: "Event context (student name, lesson details, etc.) to help Raven compose the message",
         },
+        file_url: {
+          type: "string",
+          description: "Optional URL to a file attachment (e.g., a progress report PDF)",
+        },
         from_agent: {
           type: "string",
           enum: ["sid", "ruby", "star", "stewie", "vader", "bub"],
@@ -58,6 +93,7 @@ export const RAVEN_TOOLS = [
       required: ["recipient_id", "recipient_type", "message_type", "priority", "body", "from_agent"],
     },
   },
+
   {
     name: "get_communication_queue",
     description: "Retrieve all queued messages waiting to be sent, optionally filtered by status, priority, or recipient",

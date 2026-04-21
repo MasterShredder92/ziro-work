@@ -1,0 +1,19 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+function formatCurrency(value) {
+    if (value == null)
+        return "—";
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+    }).format(value);
+}
+function DetailRow({ label, value, }) {
+    return (_jsxs("div", { className: "flex items-start justify-between gap-3 py-1.5", children: [_jsx("div", { className: "text-xs uppercase tracking-wider text-[var(--z-muted)]", children: label }), _jsx("div", { className: "text-sm text-[var(--z-fg)] text-right max-w-[60%] break-words", children: value !== null && value !== void 0 ? value : "—" })] }));
+}
+export function InventoryDetail({ surface }) {
+    var _a;
+    const item = surface.item;
+    const dep = surface.depreciation;
+    return (_jsxs("div", { className: "rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)]", children: [_jsxs("header", { className: "flex flex-col gap-2 border-b border-[var(--z-border)] px-5 py-4 sm:flex-row sm:items-start sm:justify-between", children: [_jsxs("div", { className: "min-w-0", children: [_jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: item.category }), _jsx("h1", { className: "mt-1 text-xl font-semibold text-[var(--z-fg)]", children: item.name }), item.description ? (_jsx("p", { className: "mt-1 text-sm text-[var(--z-muted)]", children: item.description })) : null] }), _jsxs("div", { className: "flex flex-wrap gap-1.5", children: [_jsx("span", { className: "rounded-full border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: item.status }), _jsx("span", { className: "rounded-full border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: item.condition })] })] }), _jsxs("div", { className: "grid gap-6 px-5 py-4 md:grid-cols-2", children: [_jsxs("section", { className: "space-y-1", children: [_jsx("h2", { className: "text-xs font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: "Asset details" }), _jsx(DetailRow, { label: "Brand", value: item.brand }), _jsx(DetailRow, { label: "Model", value: item.model }), _jsx(DetailRow, { label: "Serial", value: item.serial_number }), _jsx(DetailRow, { label: "SKU", value: item.sku }), _jsx(DetailRow, { label: "Quantity", value: item.quantity }), _jsx(DetailRow, { label: "Location", value: (_a = item.location_id) !== null && _a !== void 0 ? _a : "—" }), item.tags.length > 0 ? (_jsx(DetailRow, { label: "Tags", value: _jsx("span", { className: "flex flex-wrap justify-end gap-1", children: item.tags.map((t) => (_jsx("span", { className: "rounded-full border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--z-muted)]", children: t }, t))) }) })) : null] }), _jsxs("section", { className: "space-y-1", children: [_jsx("h2", { className: "text-xs font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: "Value & depreciation" }), _jsx(DetailRow, { label: "Purchase price", value: formatCurrency(item.purchase_price) }), _jsx(DetailRow, { label: "Salvage value", value: formatCurrency(item.salvage_value) }), _jsx(DetailRow, { label: "Current value", value: formatCurrency(dep.currentValue) }), _jsx(DetailRow, { label: "Accumulated", value: formatCurrency(dep.accumulated) }), _jsx(DetailRow, { label: "% Remaining", value: `${dep.percentRemaining}%` }), _jsx(DetailRow, { label: "Method", value: dep.method }), _jsx(DetailRow, { label: "Useful life", value: `${dep.usefulLifeMonths} mo` })] })] }), item.notes ? (_jsx("footer", { className: "border-t border-[var(--z-border)] px-5 py-3 text-sm text-[var(--z-muted)]", children: item.notes })) : null] }));
+}

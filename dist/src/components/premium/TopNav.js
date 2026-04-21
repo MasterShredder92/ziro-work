@@ -1,0 +1,6 @@
+import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
+import Link from "next/link";
+import { cn } from "./utils/cn";
+export function TopNav({ brand, left, right, className }) {
+    return (_jsx("header", { className: cn("sticky top-0 z-40 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-bg),white_2%)] backdrop-blur", className), children: _jsxs("div", { className: "mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6", children: [_jsxs("div", { className: "flex min-w-0 items-center gap-3", children: [_jsx(Link, { href: "/", className: "inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold tracking-[-0.01em] text-[var(--z-fg)] hover:bg-[color-mix(in_oklab,var(--z-fg),transparent_92%)]", children: brand !== null && brand !== void 0 ? brand : (_jsxs(_Fragment, { children: [_jsx("span", { className: "h-2 w-2 rounded-full bg-[var(--z-accent)] shadow-[0_0_0_3px_color-mix(in_oklab,var(--z-accent),transparent_85%)]" }), _jsx("span", { className: "truncate", children: "Ziro" })] })) }), left ? _jsx("div", { className: "min-w-0", children: left }) : null] }), _jsx("div", { className: "flex-1" }), right ? _jsx("div", { className: "flex items-center gap-2", children: right }) : null] }) }));
+}

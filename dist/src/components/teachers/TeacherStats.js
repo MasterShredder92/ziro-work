@@ -1,0 +1,12 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/components/ui/utils/cn";
+function formatUsd(n) {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+export function TeacherStats({ teacher, capacity, payrollImpact, rosterCount, className }) {
+    var _a;
+    const minutes = (_a = teacher.weekly_capacity_minutes) !== null && _a !== void 0 ? _a : "—";
+    return (_jsxs("div", { className: cn("grid grid-cols-1 gap-[var(--z-space-4)] sm:grid-cols-2 lg:grid-cols-4", className), children: [_jsxs(Card, { variant: "elevated", padding: "md", radius: "md", shadow: "sm", children: [_jsx("div", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]", children: "Roster" }), _jsx("div", { className: "mt-2 text-2xl font-extrabold tracking-tight text-[var(--z-fg)]", children: rosterCount }), _jsx("div", { className: "mt-1 text-xs text-[var(--z-muted)]", children: "Active assignments" })] }), _jsxs(Card, { variant: "elevated", padding: "md", radius: "md", shadow: "sm", children: [_jsx("div", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]", children: "Capacity" }), _jsx("div", { className: "mt-2 text-2xl font-extrabold tracking-tight text-[var(--z-accent)]", children: capacity }), _jsx("div", { className: "mt-1 text-xs text-[var(--z-muted)]", children: "Seat ceiling" })] }), _jsxs(Card, { variant: "elevated", padding: "md", radius: "md", shadow: "sm", children: [_jsx("div", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]", children: "Weekly minutes" }), _jsx("div", { className: "mt-2 text-2xl font-extrabold tracking-tight text-[var(--z-fg)]", children: minutes }), _jsx("div", { className: "mt-1 text-xs text-[var(--z-muted)]", children: "Teaching bandwidth" })] }), _jsxs(Card, { variant: "elevated", padding: "md", radius: "md", shadow: "sm", children: [_jsx("div", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]", children: "Payroll impact" }), _jsx("div", { className: "mt-2 text-2xl font-extrabold tracking-tight text-[var(--z-warning)]", children: formatUsd(payrollImpact) }), _jsx("div", { className: "mt-1 text-xs text-[var(--z-muted)]", children: "Heuristic load" })] })] }));
+}

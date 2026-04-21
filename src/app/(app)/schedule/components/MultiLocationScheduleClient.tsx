@@ -207,7 +207,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   return (
     <div className="space-y-0">
       {/* ── Single compact top bar ── */}
-      <div className="sticky top-0 z-30 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
         {/* Row 1: location tabs | Ruby | week nav + tools */}
         <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
           {/* Location pills */}

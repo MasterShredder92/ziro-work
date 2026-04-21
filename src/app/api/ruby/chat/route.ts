@@ -24,15 +24,15 @@ LOCATION COLORS:
 - Omaha: red (#DC2626)
 
 BLOCK TYPE COLORS:
-- booked_session: orange/amber (the standard lesson color)
-- open: dark green (available slot)
+    - student_session: orange/amber (the standard lesson color)
+    - open_time: dark green (available slot)
 - call_out: gray (student called out)
 - makeup_session: blue
 - virtual: blue-purple
 - locked: dark gray (not bookable)
 
 When you take an action, respond with a JSON action block followed by your message:
-ACTION:{"type":"update_blocks","teacherName":"Angelica Gonzalez","blockType":"booked_session","scope":"all_teacher_blocks"}
+ACTION:{"type":"update_blocks","teacherName":"Angelica Gonzalez","blockType":"student_session","scope":"all_teacher_blocks"}
 ACTION:{"type":"move_student","studentName":"Riley Whitaker","toTeacher":"Noah Zywiec","toTime":"4:30 PM"}
 
 Always confirm what you did in plain language after the action.
@@ -81,7 +81,7 @@ async function executeAction(
       let query = db
         .from("schedule_blocks")
         .update({
-          block_type: action.blockType,
+          block_type: action.blockType === "open" ? "open_time" : action.blockType === "booked_session" ? "student_session" : action.blockType,
           is_family_callout: false,
           is_makeup_session: action.blockType === "makeup_session",
           is_virtual: action.blockType === "virtual",
@@ -96,7 +96,7 @@ async function executeAction(
         query = query.eq("block_date", action.date);
       }
 
-      if (action.blockType !== "open") {
+      if (action.blockType !== "open_time") {
         query = query.not("student_id", "is", null);
       }
 
@@ -183,7 +183,7 @@ async function executeAction(
       if (currentBlocks && currentBlocks.length > 0) {
         await db.from("schedule_blocks").update({
           student_id: null,
-          block_type: "open",
+          block_type: "open_time", // Changed from "open"
           updated_at: new Date().toISOString()
         }).eq("id", currentBlocks[0].id);
       }
@@ -191,7 +191,7 @@ async function executeAction(
       // Update new block
       const { error: moveError } = await db.from("schedule_blocks").update({
         student_id: student.id,
-        block_type: "booked_session",
+        block_type: "student_session", // Changed from "booked_session"
         updated_at: new Date().toISOString()
       }).eq("id", targetBlocks[0].id);
 
@@ -199,7 +199,7 @@ async function executeAction(
 
       return { 
         success: true, 
-        message: `Successfully moved ${student.first_name} ${student.last_name} to ${teacher.first_name}'s ${toTime} slot today.` 
+        message: `Successfully moved ${student.first_name} ${student.last_name} to ${teacher.first_name}\'s ${toTime} slot today.` 
       };
     }
 

@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
+import { formatInTimeZone } from "date-fns-tz";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,19 @@ export async function POST(_req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = getServiceClient() as any;
 
+    // Fetch tenant timezone setting
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("timezone")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    const timezone = tenant?.timezone ?? "America/Chicago";
+
     const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
-    // Current time as HH:MM:SS
-    const nowTime = now.toTimeString().slice(0, 8);
+    // Use tenant timezone for date/time calculations
+    const todayStr = formatInTimeZone(now, timezone, "yyyy-MM-dd");
+    const nowTime = formatInTimeZone(now, timezone, "HH:mm:ss");
 
     // ── 1. Fetch all booked blocks for today that haven't been checked in yet
     //       and whose start_time has passed
@@ -63,8 +73,9 @@ export async function POST(_req: NextRequest) {
     const familyIds = [...new Set([...studentFamilyMap.values()])];
 
     // ── 3. Check which families have a PAID Square invoice this month
-    const mtdStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-    const mtdEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+    // Calculate month boundaries in tenant timezone
+    const mtdStart = formatInTimeZone(now, timezone, "yyyy-MM-01");
+    const mtdEnd = formatInTimeZone(new Date(now.getFullYear(), now.getMonth() + 1, 0), timezone, "yyyy-MM-dd");
 
     // Families with paid invoices this month — use family_id on square_invoices_fact if available,
     // otherwise fall back to checking if any student in the family has a paid invoice

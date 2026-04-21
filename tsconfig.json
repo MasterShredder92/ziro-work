@@ -32,11 +32,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": [
-    "node_modules",
-    "src/lib/agents/**",
-    "src/lib/data/**",
-    "src/lib/tools/**",
-    "src/lib/types/**"
-  ]
+    "exclude": [
+      "node_modules",
+      "src/lib/agents/**",
+      "src/lib/data/**",
+      "src/lib/tools/**",
+      "src/lib/types/**",
+    ]
 }

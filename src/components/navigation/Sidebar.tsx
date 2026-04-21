@@ -17,6 +17,7 @@ function Icon({ children, size = 18 }: { children: React.ReactNode; size?: numbe
 const ICONS: Record<string, React.ReactNode> = {
   "/dashboard": <Icon><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/></Icon>,
   "/schedule": <Icon><rect x="2.5" y="3.5" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2.5 7.5h15M6.5 2v3M13.5 2v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="11.5" r="1" fill="currentColor"/><circle cx="10" cy="11.5" r="1" fill="currentColor"/><circle cx="13" cy="11.5" r="1" fill="currentColor"/></Icon>,
+  "/agent-map": <Icon><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2" fill="currentColor"/><circle cx="14" cy="7" r="1.5" fill="currentColor"/><circle cx="14" cy="13" r="1.5" fill="currentColor"/><circle cx="6" cy="7" r="1.5" fill="currentColor"/><circle cx="6" cy="13" r="1.5" fill="currentColor"/></Icon>,
   "/studio-map": <Icon><path d="M10 2L2 6v8l8 4 8-4V6L10 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M2 6l8 4m0 0l8-4m-8 4v8" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></Icon>,
   "/crm": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11l1.5 1.5L20 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></Icon>,
   "/teachers": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/></Icon>,
@@ -47,6 +48,7 @@ const GROUPS = [
     items: [
       { href: "/dashboard",  label: "Dashboard"  },
       { href: "/schedule",   label: "Schedule"   },
+      { href: "/agent-map",  label: "Agent Map"  },
       { href: "/studio-map", label: "Studio Map" },
     ],
   },
@@ -109,15 +111,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     if (isLifecyclePage) setLifecycleOpen(true);
   }, [isLifecyclePage]);
 
-  const isExpanded = !isSchedulePage || hovered;
+  // Auto-collapse on all pages, expand on hover
+  const isExpanded = hovered;
 
   function handleMouseEnter() {
-    if (!isSchedulePage) return;
     if (hoverOutTimer.current) clearTimeout(hoverOutTimer.current);
-    hoverInTimer.current = setTimeout(() => setHovered(true), 400);
+    hoverInTimer.current = setTimeout(() => setHovered(true), 200);
   }
   function handleMouseLeave() {
-    if (!isSchedulePage) return;
     if (hoverInTimer.current) clearTimeout(hoverInTimer.current);
     hoverOutTimer.current = setTimeout(() => setHovered(false), 200);
   }
@@ -135,7 +136,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       className={clsx(
         "fixed left-0 top-0 z-40 h-full border-r border-[#1c1c1e] bg-[#0a0a0c] flex flex-col",
         "transition-[width] duration-200 ease-out",
-        isSchedulePage ? (hovered ? "w-[260px] shadow-2xl" : "w-[64px]") : "w-[260px]",
+        hovered ? "w-[260px] shadow-2xl" : "w-[64px]",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
     >
@@ -212,7 +213,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                             onClick={onClose}
                             className={clsx(
                               "flex flex-1 items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
-                              active ? "bg-[#00ff88]/10 text-[#00ff88]" : "text-[#909098] hover:text-white hover:bg-white/5",
+                              active ? "bg-[#00ff88]/10 text-[#00ff88]" : "text-white hover:text-white hover:bg-white/5",
                             )}
                           >
                             <span className={clsx("shrink-0", active ? "text-[#00ff88]" : "text-[#505055]")}>

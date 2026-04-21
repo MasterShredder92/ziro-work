@@ -1,0 +1,16 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import * as React from "react";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
+import { Badge } from "@/components/ui/Badge";
+import { cn, focusRingClassName } from "@/components/ui/utils";
+export function EmailEditor({ template, onChange }) {
+    const [tab, setTab] = React.useState("edit");
+    return (_jsxs(Card, { padding: "none", radius: "md", variant: "elevated", className: "overflow-hidden border-[var(--z-border)]", children: [_jsxs("div", { className: "border-b border-[var(--z-border)] px-[var(--z-space-4)] pt-[var(--z-space-4)]", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 pb-[var(--z-space-3)]", children: [_jsx("span", { className: "text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--z-muted)]", children: "Editor" }), _jsx(Badge, { variant: "neutral", active: true, children: template.category })] }), _jsx(Tabs, { tabs: [
+                            { id: "edit", label: "Compose" },
+                            { id: "preview", label: "Preview" },
+                        ], activeTab: tab, onChange: (id) => setTab(id) })] }), _jsx("div", { className: "space-y-[var(--z-space-4)] p-[var(--z-space-5)]", children: tab === "edit" ? (_jsxs(_Fragment, { children: [_jsx(Input, { label: "Subject / title", value: template.title, onChange: (e) => onChange(Object.assign(Object.assign({}, template), { title: e.target.value })) }), _jsxs("div", { className: "flex flex-col gap-[var(--z-space-2)]", children: [_jsx("label", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]", children: "Body" }), _jsx("textarea", { value: template.body, onChange: (e) => onChange(Object.assign(Object.assign({}, template), { body: e.target.value })), rows: 12, className: cn("min-h-[220px] w-full resize-y rounded-[var(--z-radius-md)] border border-[var(--z-border)] bg-[var(--z-surface-2)] px-[var(--z-space-3)] py-[var(--z-space-3)] text-sm leading-relaxed text-[var(--z-fg)] placeholder:text-[color-mix(in_oklab,var(--z-fg),transparent_55%)]", "hover:border-[var(--z-border-2)]", focusRingClassName()), spellCheck: false })] }), _jsxs("div", { className: "flex flex-wrap gap-2", children: [_jsxs(Button, { type: "button", size: "sm", variant: "secondary", onClick: () => onChange(Object.assign(Object.assign({}, template), { body: `${template.body}{{studentName}}` })), children: ["Insert ", "{{studentName}}"] }), _jsxs("span", { className: "self-center text-[10px] text-[var(--z-muted)]", children: ["Also try ", "{{invoiceAmount}}", ", ", "{{teacherName}}"] })] })] })) : (_jsxs("div", { className: "space-y-[var(--z-space-3)] rounded-[var(--z-radius-md)] border border-[var(--z-border)] bg-[var(--z-bg)] p-[var(--z-space-4)]", children: [_jsx("p", { className: "text-sm font-semibold text-[var(--z-fg)]", children: template.title || "Untitled" }), _jsx("div", { className: "whitespace-pre-wrap text-sm leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_18%)]", children: template.body || "Nothing to preview yet." })] })) })] }));
+}

@@ -1,0 +1,6 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { cn } from "@/components/ui/utils";
+export function HeroOrb({ className }) {
+    return (_jsxs("div", { className: cn("relative mx-auto aspect-square w-[min(72vw,320px)] max-w-sm", className), children: [_jsx("div", { className: "marketing-hero-orb-halo pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(circle_at_50%_50%,color-mix(in_oklab,var(--z-accent),transparent_55%),transparent_68%)] opacity-80", "aria-hidden": "true" }), _jsx("div", { className: "marketing-hero-orb-core pointer-events-none absolute inset-[10%] rounded-full bg-[radial-gradient(circle_at_32%_28%,color-mix(in_oklab,var(--z-accent),white_18%),color-mix(in_oklab,var(--z-accent),transparent_35%)_42%,transparent_72%)] shadow-[0_0_60px_color-mix(in_oklab,var(--z-accent),transparent_55%),inset_0_0_40px_color-mix(in_oklab,var(--z-accent),transparent_75%)]", "aria-hidden": "true" }), _jsx("div", { className: "pointer-events-none absolute inset-[22%] rounded-full border border-[color-mix(in_oklab,var(--z-accent),transparent_40%)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_20%)] opacity-90", "aria-hidden": "true" })] }));
+}

@@ -5,12 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { StudentTimeline } from "@/components/students/StudentTimeline";
+import { ChampionshipReportCard } from "@/components/reports/ChampionshipReportCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { loadStudentSurface, type StudentSurfaceDTO } from "./actions";
 import { PageTransition } from "@/components/system/PageTransition";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-type Tab = "profile" | "edit" | "sessions" | "timeline";
+type Tab = "profile" | "edit" | "sessions" | "timeline" | "reports";
 
 type Invoice = {
   id: string;
@@ -19,6 +20,17 @@ type Invoice = {
   due_date?: string | null;
   paid_date?: string | null;
   description?: string | null;
+};
+
+type ChampionshipReport = {
+  id: string;
+  tenant_id: string;
+  student_id: string;
+  report_type: string;
+  content: any;
+  file_url: string | null;
+  delivered_at: string | null;
+  created_at: string;
 };
 
 type StudentRaw = {
@@ -51,6 +63,61 @@ function invoiceStatusBadge(s: string) {
   if (l === "overdue") return "bg-red-500/10 text-red-400";
   if (l === "pending") return "bg-amber-400/10 text-amber-400";
   return "bg-white/5 text-[#909098]";
+}
+
+function ReportsTab({ studentId, tenantId }: { studentId: string; tenantId: string }) {
+  const [reports, setReports] = useState<ChampionshipReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [studentName, setStudentName] = useState("Student");
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/students/${studentId}/reports`, {
+        headers: { "x-tenant-id": tenantId },
+      }).then((r) => r.json()),
+      fetch(`/api/students/${studentId}`, {
+        headers: { "x-tenant-id": tenantId },
+      }).then((r) => r.json()),
+    ])
+      .then(([reportsRes, studentRes]) => {
+        setReports(Array.isArray(reportsRes.data) ? reportsRes.data : []);
+        if (studentRes.data) {
+          const { first_name, last_name } = studentRes.data;
+          setStudentName([first_name, last_name].filter(Boolean).join(" ") || "Student");
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [studentId, tenantId]);
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />)}
+      </div>
+    );
+  }
+
+  if (reports.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-[#1c1c1e] bg-[#0a0a0c] p-6 text-center">
+        <p className="text-sm text-[#505055]">No Championship-Level reports found for this student.</p>
+        <p className="text-xs text-[#303035] mt-1">Reports will appear here as Stewie generates them.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {reports.map((report) => (
+        <ChampionshipReportCard
+          key={report.id}
+          report={report}
+          studentName={studentName}
+        />
+      ))}
+    </div>
+  );
 }
 
 function SessionsTab({ studentId }: { studentId: string }) {
@@ -437,6 +504,7 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
     { id: "edit", label: "Edit" },
     { id: "sessions", label: "Sessions" },
     { id: "timeline", label: "Timeline" },
+    { id: "reports", label: "Reports" },
   ];
 
   return (
@@ -493,6 +561,7 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
             )}
             {tab === "sessions" && <SessionsTab studentId={studentId} />}
             {tab === "timeline" && <StudentTimeline events={data.timeline} />}
+            {tab === "reports" && <ReportsTab studentId={studentId} tenantId={DEFAULT_TENANT_ID} />}
           </>
         )}
       </div>

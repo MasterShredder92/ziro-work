@@ -29,6 +29,8 @@ export async function findAvailableSlots(
 > {
   const supabase = getServiceClient();
 
+
+
   // Get all teachers matching the filter
   const { data: teachers } = await supabase
     .from("teachers")
@@ -42,6 +44,7 @@ export async function findAvailableSlots(
           .select("id, first_name, last_name, instruments")
           .eq("id", filters.teacherId)
           .eq("tenant_id", tenantId);
+
       }
       if (filters.instrument) {
         return supabase
@@ -75,6 +78,7 @@ export async function findAvailableSlots(
     .from("locations")
     .select("id, name")
     .eq("tenant_id", tenantId);
+
 
   const locationMap = Object.fromEntries((locations || []).map((l: any) => [l.id, l.name]));
 
@@ -145,6 +149,8 @@ export async function moveBlock(
 ): Promise<{ success: boolean; message: string; blockIds: string[] }> {
   const supabase = getServiceClient();
 
+
+
   // Get the current block
   const { data: currentBlock, error: fetchError } = await supabase
     .from("schedule_blocks")
@@ -152,6 +158,7 @@ export async function moveBlock(
     .eq("id", blockId)
     .eq("tenant_id", tenantId)
     .single();
+
 
   if (fetchError || !currentBlock) {
     return { success: false, message: "Block not found", blockIds: [] };
@@ -167,6 +174,7 @@ export async function moveBlock(
       .eq("tenant_id", tenantId)
       .eq("recurring_pattern", currentBlock.recurring_pattern)
       .gte("block_date", currentBlock.block_date);
+
 
     if (recurringBlocks) {
       movedBlockIds.push(...recurringBlocks.map((b: any) => b.id));
@@ -184,7 +192,9 @@ export async function moveBlock(
     .in("id", movedBlockIds)
     .eq("tenant_id", tenantId);
 
+
   if (updateError) {
+
     return { success: false, message: `Failed to move block: ${updateError.message}`, blockIds: [] };
   }
 
@@ -203,6 +213,8 @@ export async function swapTeacher(
 ): Promise<{ success: boolean; message: string; blockIds: string[] }> {
   const supabase = getServiceClient();
 
+
+
   // Get the current block
   const { data: currentBlock, error: fetchError } = await supabase
     .from("schedule_blocks")
@@ -210,6 +222,7 @@ export async function swapTeacher(
     .eq("id", blockId)
     .eq("tenant_id", tenantId)
     .single();
+
 
   if (fetchError || !currentBlock) {
     return { success: false, message: "Block not found", blockIds: [] };
@@ -222,6 +235,7 @@ export async function swapTeacher(
     .eq("id", newTeacherId)
     .eq("tenant_id", tenantId)
     .single();
+
 
   if (!newTeacher) {
     return { success: false, message: "New teacher not found", blockIds: [] };
@@ -237,6 +251,7 @@ export async function swapTeacher(
       .eq("recurring_pattern", currentBlock.recurring_pattern)
       .gte("block_date", currentBlock.block_date);
 
+
     if (recurringBlocks) {
       swappedBlockIds.push(...recurringBlocks.map((b: any) => b.id));
     }
@@ -251,6 +266,7 @@ export async function swapTeacher(
     })
     .in("id", swappedBlockIds)
     .eq("tenant_id", tenantId);
+
 
   if (updateError) {
     return {
@@ -274,6 +290,8 @@ export async function manageMakeupCredit(
 ): Promise<{ success: boolean; message: string; creditId?: string }> {
   const supabase = getServiceClient();
 
+
+
   // Create a makeup credit record
   const { data: credit, error: insertError } = await supabase
     .from("makeup_credits")
@@ -285,6 +303,7 @@ export async function manageMakeupCredit(
     })
     .select()
     .single();
+
 
   if (insertError) {
     return { success: false, message: `Failed to create makeup credit: ${insertError.message}` };
@@ -303,6 +322,8 @@ export async function getStudentSchedule(
   daysAhead: number = 30,
 ): Promise<ScheduleBlock[]> {
   const supabase = getServiceClient();
+
+
 
   const startDate = new Date().toISOString().split("T")[0];
   const endDate = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000)
@@ -333,6 +354,8 @@ export async function getTeacherAvailability(
   utilizationPercent: number;
 }> {
   const supabase = getServiceClient();
+
+
 
   // Get all blocks for this teacher in the date range
   const { data: blocks } = await supabase

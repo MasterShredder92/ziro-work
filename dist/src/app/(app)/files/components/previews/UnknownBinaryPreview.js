@@ -1,0 +1,7 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { FileQuestion } from "lucide-react";
+export function UnknownBinaryPreview({ url, mimeType, name, }) {
+    const mt = (mimeType === null || mimeType === void 0 ? void 0 : mimeType.trim()) || "Unknown type";
+    return (_jsxs("div", { className: "flex flex-col items-center justify-center gap-4 rounded-md border border-[var(--z-border)] bg-[var(--z-surface)] px-6 py-10 text-center", children: [_jsx(FileQuestion, { className: "h-10 w-10 text-[var(--z-muted)]", "aria-hidden": true }), _jsxs("div", { children: [_jsx("div", { className: "text-sm font-medium text-[var(--z-fg)]", children: "No inline preview" }), _jsxs("p", { className: "mt-1 max-w-sm text-xs text-[var(--z-muted)]", children: ["This format (", mt, ") cannot be previewed in the browser. You can still download or open it externally."] }), name ? (_jsx("p", { className: "mt-2 truncate text-xs text-[var(--z-muted)]", title: name, children: name })) : null] }), _jsxs("div", { className: "flex flex-wrap justify-center gap-2", children: [_jsx("a", { href: url, target: "_blank", rel: "noreferrer", className: "rounded-md bg-[var(--z-accent)] px-3 py-1.5 text-xs font-semibold text-black hover:opacity-90", children: "Open" }), _jsx("a", { href: url, download: name !== null && name !== void 0 ? name : undefined, className: "rounded-md border border-[var(--z-border)] px-3 py-1.5 text-xs text-[var(--z-fg)] hover:bg-white/[0.04]", children: "Download" })] })] }));
+}

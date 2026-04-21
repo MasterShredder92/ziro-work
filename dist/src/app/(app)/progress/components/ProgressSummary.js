@@ -1,0 +1,7 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+function Stat({ label, value, hint, }) {
+    return (_jsxs("div", { className: "rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] p-4", children: [_jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: label }), _jsx("div", { className: "mt-1 text-2xl font-semibold text-[var(--z-fg)]", children: value }), hint ? (_jsx("div", { className: "mt-0.5 text-xs text-[var(--z-muted)]", children: hint })) : null] }));
+}
+export function ProgressSummary({ kpis, title = "Progress snapshot", }) {
+    return (_jsxs("section", { className: "space-y-3", children: [_jsx("header", { className: "flex items-baseline justify-between", children: _jsx("h2", { className: "text-sm font-semibold uppercase tracking-wider text-[var(--z-muted)]", children: title }) }), _jsxs("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4", children: [_jsx(Stat, { label: "Goals", value: `${kpis.goalsCompleted}/${kpis.totalGoals}`, hint: "completed" }), _jsx(Stat, { label: "Skills", value: `${kpis.skillsMastered}/${kpis.totalSkills}`, hint: "mastered" }), _jsx(Stat, { label: "Checkpoints", value: `${kpis.checkpointsPassed}/${kpis.totalCheckpoints}`, hint: "passed" }), _jsx(Stat, { label: "Evidence", value: String(kpis.evidenceCount), hint: "items uploaded" }), _jsx(Stat, { label: "Feedback density", value: `${kpis.teacherFeedbackDensity}%`, hint: "teacher responses" })] })] }));
+}

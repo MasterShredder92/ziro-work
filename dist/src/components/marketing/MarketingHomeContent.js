@@ -1,0 +1,30 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import Link from "next/link";
+import { GitBranch, Map, LayoutDashboard, Sparkles, Quote } from "lucide-react";
+import { HeroOrb } from "@/components/marketing/HeroOrb";
+import { FeatureCard } from "@/components/marketing/FeatureCard";
+import { Card } from "@/components/ui/Card";
+import { cn, focusRingClassName } from "@/components/ui/utils";
+const primaryCta = cn("inline-flex h-12 items-center justify-center gap-2 rounded-[var(--z-radius-md)] px-6 text-sm font-extrabold transition-colors", "bg-[var(--z-accent)] text-black hover:bg-[color-mix(in_oklab,var(--z-accent),white_10%)]", focusRingClassName());
+const secondaryCta = cn("inline-flex h-12 items-center justify-center gap-2 rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-6 text-sm font-extrabold transition-colors", "bg-[var(--z-surface)] text-[var(--z-fg)] hover:border-[var(--z-border-2)] hover:bg-[color-mix(in_oklab,var(--z-surface),white_4%)]", focusRingClassName());
+const testimonials = [
+    {
+        quote: "We finally have one spine from intake to win-back. The neon console is addictive.",
+        name: "Jordan A.",
+        role: "Studio director, Midwest",
+    },
+    {
+        quote: "Studio map + risk surfaced in the same session our team actually uses.",
+        name: "Sam R.",
+        role: "Ops lead, coastal group",
+    },
+    {
+        quote: "Agents feel accountable because every action has a receipt in the feed.",
+        name: "Riley M.",
+        role: "Founder, hybrid campuses",
+    },
+];
+export function MarketingHomeContent() {
+    return (_jsxs("div", { className: "space-y-[var(--z-space-20)] pb-[var(--z-space-8)]", children: [_jsxs("section", { className: "grid items-center gap-[var(--z-space-12)] lg:grid-cols-[1.05fr_0.95fr]", children: [_jsxs("div", { children: [_jsx("p", { className: "animate-[slideUp_0.45s_ease-out_both] text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--z-accent)]", children: "Public launch" }), _jsx("h1", { className: "animate-[slideUp_0.55s_ease-out_both] text-4xl font-extrabold tracking-tight text-[var(--z-fg)] sm:text-5xl lg:text-6xl", children: "The launch-ready console for elite music studios." }), _jsx("p", { className: "mt-[var(--z-space-4)] max-w-xl animate-[slideUp_0.65s_ease-out_both] text-lg text-[color-mix(in_oklab,var(--z-fg),transparent_35%)]", style: { animationDelay: "90ms" }, children: "Charcoal calm, neon signal \u2014 lifecycle, billing, map, and automations in one motion system." }), _jsxs("div", { className: "mt-[var(--z-space-6)] flex animate-[slideUp_0.7s_ease-out_both] flex-wrap gap-3", style: { animationDelay: "140ms" }, children: [_jsx(Link, { href: "/signup", className: primaryCta, children: "Start Free Trial" }), _jsx(Link, { href: "/demo", className: secondaryCta, children: "Try Demo" }), _jsx(Link, { href: "/pricing", className: "inline-flex h-12 items-center justify-center px-4 text-sm font-semibold text-[var(--z-accent)] underline decoration-transparent underline-offset-4 hover:decoration-[var(--z-accent)]", children: "See pricing" })] })] }), _jsxs("div", { className: "relative flex justify-center lg:justify-end", children: [_jsx("div", { className: "absolute inset-0 -z-10 blur-3xl [background:radial-gradient(circle_at_50%_50%,color-mix(in_oklab,var(--z-accent),transparent_82%),transparent_65%)]" }), _jsx(HeroOrb, {})] })] }), _jsxs("section", { className: "space-y-[var(--z-space-6)]", children: [_jsx("h2", { className: "text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--z-muted)]", children: "Platform" }), _jsxs("div", { className: "grid gap-[var(--z-space-4)] md:grid-cols-2", children: [_jsx(FeatureCard, { icon: _jsx(GitBranch, { className: "h-5 w-5", "aria-hidden": true }), title: "Lifecycle engine", description: "One spine from intake to win-back \u2014 every stage emits receipts your team can trust." }), _jsx(FeatureCard, { icon: _jsx(Map, { className: "h-5 w-5", "aria-hidden": true }), title: "Studio map", description: "Teachers, load, and roster heat in a single surface built for stand-ups." }), _jsx(FeatureCard, { icon: _jsx(LayoutDashboard, { className: "h-5 w-5", "aria-hidden": true }), title: "Dashboard", description: "KPIs, quick actions, and the live feed keep revenue and risk in the same glance." }), _jsx(FeatureCard, { icon: _jsx(Sparkles, { className: "h-5 w-5", "aria-hidden": true }), title: "Automations", description: "Agents with guardrails \u2014 human-readable steps, never black-box ops." })] })] }), _jsxs("section", { className: "space-y-[var(--z-space-6)]", children: [_jsx("h2", { className: "text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--z-muted)]", children: "Operators say" }), _jsx("div", { className: "grid gap-[var(--z-space-4)] md:grid-cols-3", children: testimonials.map((t) => (_jsxs(Card, { variant: "outline", padding: "md", radius: "lg", className: "flex flex-col", children: [_jsx(Quote, { className: "h-4 w-4 text-[var(--z-accent)]", "aria-hidden": true }), _jsx("p", { className: "mt-3 text-sm text-[color-mix(in_oklab,var(--z-fg),transparent_22%)]", children: t.quote }), _jsx("div", { className: "mt-4 text-xs font-semibold text-[var(--z-fg)]", children: t.name }), _jsx("div", { className: "text-[11px] text-[var(--z-muted)]", children: t.role })] }, t.name))) })] }), _jsxs("section", { className: "rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] p-[var(--z-space-8)] text-center", children: [_jsx("h2", { className: "text-2xl font-extrabold text-[var(--z-fg)]", children: "Ready when your roster is." }), _jsx("p", { className: "mx-auto mt-2 max-w-2xl text-sm text-[var(--z-muted)]", children: "Start a free trial, or launch the interactive demo with seeded teachers, students, and invoices." }), _jsxs("div", { className: "mt-6 flex flex-wrap justify-center gap-3", children: [_jsx(Link, { href: "/signup", className: primaryCta, children: "Start Free Trial" }), _jsx(Link, { href: "/demo", className: secondaryCta, children: "Try Demo" })] })] })] }));
+}

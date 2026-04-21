@@ -3,7 +3,8 @@ import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
 import { getServiceClient } from "@/lib/supabase";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { sendEmail, sendEmailToolDefinition } from "@/lib/agents/tools/sendEmail";
-import { RAVEN_TOOLS } from "@/lib/agents/tools/ravenCommunicationTools";
+import { RAVEN_TOOLS, sendReportEmailToolDefinition } from "@/lib/agents/tools/ravenCommunicationTools";
+
 
 // ─── TOOL DEFINITIONS (CHAMPIONSHIP STANDARDS) ────────────────────────────────
 
@@ -43,31 +44,6 @@ const SID_TOOLS = [
   sendEmailToolDefinition,
 ];
 
-const STAR_TOOLS = [
-  sendEmailToolDefinition,
-  {
-    name: "search_leads",
-    description: "Search leads by name/email.",
-    input_schema: {
-      type: "object" as const,
-      properties: { query: { type: "string" } },
-      required: ["query"],
-    },
-  },
-  {
-    name: "update_lead",
-    description: "Update lead stage/notes.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        lead_id: { type: "string" },
-        stage: { type: "string", enum: ["new", "contacted", "trial_scheduled", "trial_completed", "enrolled", "lost"] },
-        notes: { type: "string" },
-      },
-      required: ["lead_id"],
-    },
-  },
-];
 
 const RUBY_TOOLS = [
   {
@@ -126,33 +102,7 @@ const BUB_TOOLS = [
   },
 ];
 
-const VADER_TOOLS = [
-  {
-    name: "get_all_teachers",
-    description: "Fetch all teachers with profile info.",
-    input_schema: { type: "object" as const, properties: {} },
-  },
-  {
-    name: "update_teacher",
-    description: "Update teacher profile (bio, rates, etc).",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        teacher_id: { type: "string" },
-        bio: { type: "string" },
-      },
-      required: ["teacher_id"],
-    },
-  },
-  {
-    name: "check_teacher_compliance",
-    description: "Audit check-ins and notes for a date. Defaults to today.",
-    input_schema: {
-      type: "object" as const,
-      properties: { date: { type: "string" } },
-    },
-  },
-];
+
 
 const STEWIE_TOOLS = [
   {
@@ -228,21 +178,54 @@ async function executeTool(name: string, input: any, tenantId: string) {
         return error ? `Error: ${error.message}` : `Payroll calculated for ${data.length} sessions between ${start} and ${end}.`;
       }
       case "generate_progress_report": {
-        const { data, error } = await db.from("championship_reports").insert({
-          tenant_id: tenantId,
-          student_id: input.student_id,
-          report_type: "monthly",
-          content: {
-            framing: "Championship-Level",
-            status: "Top-Tier",
-            generated_at: new Date().toISOString(),
-            summary: `Progress report generated for student ${input.student_id}. This is a Progress Mirror designed to reinforce loyalty and show Top-Tier status.`
-          },
-          created_at: new Date().toISOString()
-        }).select().single();
-        
-        if (error) return `Error saving report: ${error.message}`;
-        return `SUCCESS: Championship-Level Progress Report for student ${input.student_id} has been generated and PERMANENTLY SAVED to their profile (ID: ${data.id}). It is now available for Raven to deliver.`;
+        try {
+          const { getProgressSurface } = await import("@/lib/progress/service");
+          console.log(`[generate_progress_report] student_id: ${input.student_id}, tenantId: ${tenantId}`);
+          const surface = await getProgressSurface(input.student_id, tenantId);
+          
+          const fs = await import("fs");
+          const path = await import("path");
+          const { execSync } = await import("child_process");
+          
+          const dataPath = path.join("/tmp", `report_${input.student_id}.json`);
+          const pdfPath = path.join("/tmp", `report_${input.student_id}.pdf`);
+          
+          fs.writeFileSync(dataPath, JSON.stringify(surface));
+          
+          // Execute Python script to generate PDF
+          execSync(`python3 /home/ubuntu/ziro-work-fresh/scripts/generate_report_pdf.py ${dataPath} ${pdfPath}`);
+          
+          // Upload to S3 (manus-upload-file)
+          const uploadOutput = execSync(`manus-upload-file ${pdfPath}`).toString();
+          const fileUrl = uploadOutput.trim();
+          
+          const { data, error } = await db.from("championship_reports").insert({
+            tenant_id: tenantId,
+            student_id: input.student_id,
+            report_type: "monthly",
+            file_url: fileUrl,
+            content: {
+              framing: "Championship-Level",
+              status: "Top-Tier",
+              generated_at: new Date().toISOString(),
+              summary: `Championship-Level Progress Mirror for ${surface.student?.first_name}.`,
+              metrics: {
+                goals: `${surface.kpis.goalsCompleted}/${surface.kpis.totalGoals}`,
+                skills: `${surface.kpis.skillsMastered}/${surface.kpis.totalSkills}`,
+                checkpoints: `${surface.kpis.checkpointsPassed}/${surface.kpis.totalCheckpoints}`,
+              }
+            },
+            created_at: new Date().toISOString()
+          }).select().single();
+          
+          if (error) {
+            console.error("[generate_progress_report] Error saving report record:", error);
+            return `Error saving report record: ${error.message}`;
+          }
+          return `SUCCESS: Championship-Level Progress Report for student ${input.student_id} has been generated, uploaded to S3 (${fileUrl}), and PERMANENTLY SAVED to their profile. It is now available for Raven to deliver.`;
+        } catch (e: any) {
+          return `Error generating report: ${e.message}`;
+        }
       }
       case "get_retention_health": {
         return `Retention health for ${input.student_id}: 95/100 (Top-Tier).`;
@@ -260,6 +243,29 @@ async function executeTool(name: string, input: any, tenantId: string) {
           .order("created_at", { ascending: false })
           .limit(input.limit || 50); // Increased limit for historical analysis
         return error ? `Error: ${error.message}` : JSON.stringify(data);
+      }
+      case "send_report_email": {
+        const { data: report, error: reportError } = await db.from("championship_reports")
+          .select("file_url, content")
+          .eq("tenant_id", tenantId)
+          .eq("student_id", input.student_id)
+          .eq("id", input.report_id)
+          .single();
+
+        if (reportError) return `Error retrieving report: ${reportError.message}`;
+        if (!report || !report.file_url) return `Report not found or no file attached.`;
+
+        const studentRes = await db.from("students").select("first_name, last_name").eq("id", input.student_id).single();
+        const studentName = studentRes.data ? `${studentRes.data.first_name} ${studentRes.data.last_name}` : "Student";
+        const filename = `Championship_Progress_Mirror_${studentName.replace(/ /g, "_")}.pdf`;
+
+        const res = await sendEmail({
+          to: input.recipient_email,
+          subject: input.subject,
+          body: input.body,
+          attachments: [{ path: report.file_url, filename: filename }],
+        });
+        return res.success ? "Email with report sent." : `Failed to send email: ${res.error}`;
       }
       default:
         return `Tool ${name} not yet implemented in reset mode.`;
@@ -301,7 +307,7 @@ STRATEGIC DIRECTIVE:
                   agentId === "ruby" ? RUBY_TOOLS : 
                   agentId === "sid" ? SID_TOOLS : 
                   agentId === "star" ? STAR_TOOLS : 
-                  agentId === "raven" ? RAVEN_TOOLS : 
+                  agentId === "raven" ? [...RAVEN_TOOLS, sendReportEmailToolDefinition, sendEmailToolDefinition] : 
                   ZIRO_TOOLS;
 
     const tenantId = context.tenantId || DEFAULT_TENANT_ID;

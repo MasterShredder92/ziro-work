@@ -1,0 +1,7 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function MaterialLinkList({ materials, }) {
+    if (materials.length === 0) {
+        return (_jsx("div", { className: "rounded-lg border border-dashed border-[var(--z-border)] p-4 text-sm text-[var(--z-muted)]", children: "No materials linked yet. Link slides, PDFs, or videos so students and teachers can access everything from the plan." }));
+    }
+    return (_jsx("ul", { className: "grid gap-2 md:grid-cols-2", children: materials.map((m) => (_jsxs("li", { className: "rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-4 py-3", children: [_jsxs("div", { className: "flex items-start justify-between gap-2", children: [_jsxs("div", { className: "min-w-0", children: [_jsx("div", { className: "text-sm font-semibold text-[var(--z-fg)] truncate", children: m.title }), _jsxs("div", { className: "mt-0.5 text-[11px] uppercase tracking-wider text-[var(--z-muted)]", children: [m.kind, m.is_required ? " · Required" : ""] })] }), m.url ? (_jsx("a", { href: m.url, target: "_blank", rel: "noopener noreferrer", className: "shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-[11px] font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40 hover:text-[#00ff88]", children: "Open" })) : null] }), m.notes ? (_jsx("p", { className: "mt-2 text-xs text-[var(--z-muted)]", children: m.notes })) : null] }, m.id))) }));
+}
