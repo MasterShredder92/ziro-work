@@ -57,9 +57,14 @@ export async function POST(req: NextRequest) {
     const parsePrompt = `You are Sid, a student profile AI. You have received bulk student data (from a text file or voice transcription).
 
 Your job:
-1. Parse the data to identify which students are mentioned and what updates they need
-2. For each student, generate a "spruced up" version of their bio and goals
-3. Return a JSON array with the updates
+1. Parse the data to identify which students are mentioned
+2. CATEGORIZE the information into the correct profile fields:
+   - Bio: Personality, musicianship style, dedication, character traits, how they approach learning
+   - Goals: Aspirational learning objectives, performance dreams, repertoire expansion, confidence-building
+   - Prior Experience: Years of playing, previous instruments, formal training, background
+   - Notes: Practical observations, teacher feedback, behavioral notes
+3. For each field with content, generate a "spruced up" professional version
+4. Return a JSON array with the categorized and polished updates
 
 The file content is:
 ${content}
@@ -72,12 +77,14 @@ Return ONLY a valid JSON array like this (no markdown, no code blocks):
   {
     "studentId": "uuid-here",
     "studentName": "First Last",
-    "bio": "Spruced up bio text here",
-    "goals": "Spruced up goals text here"
+    "bio": "Spruced up bio text here or null if no bio info",
+    "goals": "Spruced up goals text here or null if no goals info",
+    "prior_experience": "Spruced up prior experience text or null if no experience info",
+    "notes": "Practical notes or null if no notes"
   }
 ]
 
-If you can't parse or match a student, skip them. Only return students you can confidently match.`;
+If you can't parse or match a student, skip them. Only return students you can confidently match. Use null for fields with no relevant information.`;
 
     const parseResponse = await client.messages.create({
       model: "claude-3-5-sonnet-20241022",
@@ -92,8 +99,10 @@ If you can't parse or match a student, skip them. Only return students you can c
     let updates: Array<{
       studentId: string;
       studentName: string;
-      bio: string;
-      goals: string;
+      bio: string | null;
+      goals: string | null;
+      prior_experience: string | null;
+      notes: string | null;
     }> = [];
     try {
       updates = JSON.parse(parseText);
@@ -109,13 +118,17 @@ If you can't parse or match a student, skip them. Only return students you can c
     const results = [];
     for (const update of updates) {
       try {
+        const updatePayload: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+        };
+        if (update.bio) updatePayload.bio = update.bio;
+        if (update.goals) updatePayload.goals = update.goals;
+        if (update.prior_experience) updatePayload.prior_experience = update.prior_experience;
+        if (update.notes) updatePayload.notes = update.notes;
+
         const { error: updateError } = await supabase
           .from("students")
-          .update({
-            bio: update.bio,
-            goals: update.goals,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq("id", update.studentId)
           .eq("tenant_id", tenantId);
 
