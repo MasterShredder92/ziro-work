@@ -38,16 +38,16 @@ const IDLE_LINES_BY_AGENT: Record<string, string[]> = {
     "Ready to prioritize.",
   ],
   stewie: [
+    "Watching retention signals.",
     "I know who needs a follow-up.",
-    "Watching your contacts.",
-    "Ready when you are.",
+    "Ready to flag churn risks.",
     "No one slips through.",
   ],
   vader: [
-    "Ready to send a message.",
-    "Watching your inbox.",
-    "I'll handle the outreach.",
-    "Who do you need to reach?",
+    "Ready to manage teachers.",
+    "Watching your staff.",
+    "I'll handle the profiles.",
+    "Who do you need to find?",
   ],
   ziro: [
     "How can I help?",
@@ -56,9 +56,9 @@ const IDLE_LINES_BY_AGENT: Record<string, string[]> = {
     "Ready.",
   ],
   sid: [
-    "I see who might be at risk.",
-    "Watching retention signals.",
-    "Ready to flag concerns.",
+    "I know your families.",
+    "Ready to update student profiles.",
+    "Watching the roster.",
     "Ask me about any student.",
   ],
 };
