@@ -15,6 +15,7 @@ import { MobileScheduleView } from "./MobileScheduleView";
 import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
 import { type RubyEvent } from "./RubyScheduleBar";
 import { ScheduleRoomsPanel } from "./ScheduleRoomsPanel";
+import { useOperatorSession } from "../hooks/useOperatorSession";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 export const LOCATION_CONFIG: Record<string, {
@@ -122,6 +123,16 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const [activeModal, setActiveModal] = React.useState<ToolModal>(null);
   const [rubyEvent, setRubyEvent] = React.useState<RubyEvent | null>(null);
   const [activeView, setActiveView] = React.useState<"schedule" | "rooms">("schedule");
+  const [focusedBlockId, setFocusedBlockId] = React.useState<string | null>(null);
+
+  // Sync state to Supabase for Ruby's vision
+  useOperatorSession({
+    activeLocationId,
+    activeDate: selectedDates[activeLocationId] ?? null,
+    activeView,
+    activeModal: activeModal ?? "none",
+    focusedBlockId,
+  });
 
   // Auto-clear ruby event after 6 seconds
   React.useEffect(() => {
@@ -132,6 +143,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
 
   function fireRubyEvent(e: RubyEvent) {
     setRubyEvent({ ...e, timestamp: Date.now() });
+    if (e.blockId) setFocusedBlockId(e.blockId);
   }
 
   const weekDays = React.useMemo(
