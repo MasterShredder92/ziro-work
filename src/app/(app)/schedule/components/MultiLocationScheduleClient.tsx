@@ -15,6 +15,7 @@ import { MobileScheduleView } from "./MobileScheduleView";
 import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
 import { type RubyEvent } from "./RubyScheduleBar";
 import { ScheduleRoomsPanel } from "./ScheduleRoomsPanel";
+import { RubySidebar } from "./RubySidebar";
 import { useOperatorSession } from "../hooks/useOperatorSession";
 
 // ─── Location config ──────────────────────────────────────────────────────────
@@ -124,6 +125,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const [rubyEvent, setRubyEvent] = React.useState<RubyEvent | null>(null);
   const [activeView, setActiveView] = React.useState<"schedule" | "rooms">("schedule");
   const [focusedBlockId, setFocusedBlockId] = React.useState<string | null>(null);
+  const [isRubySidebarOpen, setIsRubySidebarOpen] = React.useState(false);
 
   // Sync state to Supabase for Ruby's vision
   useOperatorSession({
@@ -225,7 +227,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     <div className="space-y-0">
       {/* ── Single compact top bar ── */}
       <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Row 1: location tabs | Ruby (Removed) | week nav + tools */}
+        {/* Row 1: location tabs | Ruby Toggle | week nav + tools */}
         <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
           {/* Location pills */}
           {locations.map((loc) => {
@@ -251,6 +253,15 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               </button>
             );
           })}
+
+          {/* Ruby Sidebar Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsRubySidebarOpen(!isRubySidebarOpen)}
+            className="ml-auto shrink-0 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
+          >
+            Ruby
+          </button>
 
           {/* Schedule / Rooms view toggle */}
           <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5 ml-1">
@@ -455,6 +466,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           onBlocksChange={handleBlocksChange}
         />
       )}
+      <RubySidebar isOpen={isRubySidebarOpen} onClose={() => setIsRubySidebarOpen(false)} />
     </div>
   );
 }
