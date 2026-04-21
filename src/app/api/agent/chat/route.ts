@@ -393,19 +393,8 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY || process.env.ZIRO_OPENAI_API_KEY;
     
     if (!apiKey) {
-      // Internal Project Fallback to Manus Proxy
-      const proxyKey = "manus-internal-bypass";
-      const proxyURL = "https://api.manus.im/api/llm-proxy/v1";
-      const openai = new OpenAI({ 
-        apiKey: proxyKey, 
-        baseURL: proxyURL,
-        defaultHeaders: {
-          "User-Agent": "ZiroWork-Agent-System/1.0",
-          "X-Manus-Project-ID": "MpHTFbpebL2KJDPbzjVjAv",
-          "X-Manus-Client": "Manus-Autonomous-Agent"
-        }
-      });
-      return await handleAgentChat(openai, agentId, message, history, tenantId, userId);
+      console.error("CRITICAL: OPENAI_API_KEY is not set in Vercel environment variables.");
+      return NextResponse.json({ error: "CRITICAL: Ruby's brain is offline. Please set OPENAI_API_KEY in your Vercel project's environment variables to enable her full capabilities." }, { status: 500 });
     }
 
     const openai = new OpenAI({ apiKey, baseURL: "https://api.openai.com/v1" });
