@@ -18,11 +18,14 @@ const GAP = 12;
 
 function desktopAnchor(corner: AgentCorner): React.CSSProperties {
   const offset = CORNER_MARGIN + AVATAR_SIZE_DESKTOP + GAP;
+  // Header is roughly 65px, we need to ensure the bubble is below it when using top anchoring
+  const headerBuffer = 80; 
+  
   switch (corner) {
     case "tl":
-      return { top: offset, left: CORNER_MARGIN };
+      return { top: offset + headerBuffer, left: CORNER_MARGIN };
     case "tr":
-      return { top: offset, right: CORNER_MARGIN };
+      return { top: offset + headerBuffer, right: CORNER_MARGIN };
     case "bl":
       return { bottom: offset, left: CORNER_MARGIN };
     case "br":
@@ -267,7 +270,7 @@ export function AgentBubble() {
                     }}
                     className={cn(
                       "rounded-[var(--z-radius-md)] border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-[11px] font-medium text-[var(--z-fg)] transition-colors",
-                      "hover:border-[color-mix(in_oklab,var(--z-agent-accent),transparent_35%)] hover:bg-[color-mix(in_oklab,var(--z-agent-accent),transparent_92%)]",
+                      "hover:border-[color-mix(in oklab, var(--z-agent-accent), transparent 35%)] hover:bg-[color-mix(in oklab, var(--z-agent-accent), transparent 92%)]",
                       focusRingClassName(),
                     )}
                   >
