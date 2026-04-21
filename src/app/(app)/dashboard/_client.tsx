@@ -102,7 +102,7 @@ export function DashboardClient() {
             description="Real-time visualization of your Senior Operator pipeline."
             withSurface={false}
           >
-            <div className="h-[600px] w-full" data-tour="living-map">
+            <div className="h-[400px] sm:h-[600px] w-full" data-tour="living-map">
               <AgentPipelineCanvas />
             </div>
           </DashboardSection>
