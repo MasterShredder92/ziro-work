@@ -3,30 +3,35 @@ import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
 import { getServiceClient } from "@/lib/supabase";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { getSession } from "@/lib/auth/session";
-import { sendEmail, sendEmailToolDefinition } from "@/lib/agents/tools/sendEmail";
-import { RAVEN_TOOLS } from "@/lib/agents/tools/ravenCommunicationTools";
-import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
 import { VADER_TOOLS } from "@/lib/agents/tools/vaderTools";
 import { STEWIE_TOOLS } from "@/lib/agents/tools/stewieTools";
-import Anthropic from "@anthropic-ai/sdk";
+import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
+import { RAVEN_TOOLS } from "@/lib/agents/tools/ravenCommunicationTools";
+import OpenAI from "openai";
 
 // --- CONFIGURATION ---
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// --- TOOL DEFINITIONS (ANTHROPIC FORMAT) ---
+// Initialize Manus-native OpenAI client (pre-configured with base_url and api_key)
+const openai = new OpenAI();
 
-const convertToAnthropic = (tool: any) => ({
-  name: tool.name,
-  description: tool.description,
-  input_schema: tool.input_schema || tool.parameters || { type: "object", properties: {} },
+// --- TOOL DEFINITIONS (OPENAI FORMAT) ---
+
+const convertToOpenAI = (tool: any) => ({
+  type: "function" as const,
+  function: {
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema || tool.parameters || { type: "object", properties: {} },
+  }
 });
 
 const SID_TOOLS = [
   {
     name: "get_student",
     description: "Fetch current student data. Autonomously finds student by ID.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { student_id: { type: "string" } },
       required: ["student_id"],
@@ -35,7 +40,7 @@ const SID_TOOLS = [
   {
     name: "update_student",
     description: "Update student record fields (bio, status, notes).",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         student_id: { type: "string" },
@@ -46,13 +51,22 @@ const SID_TOOLS = [
       required: ["student_id"],
     },
   },
+  {
+    name: "search_students",
+    description: "Search roster for students by name.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+    },
+  },
 ];
 
 const RUBY_TOOLS = [
   {
     name: "get_schedule",
     description: "Fetch schedule for a specific teacher or location on a given date.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         teacher_id: { type: "string", description: "Teacher UUID" },
@@ -64,7 +78,7 @@ const RUBY_TOOLS = [
   {
     name: "move_block",
     description: "Reschedule a lesson.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         block_id: { type: "string" },
@@ -77,7 +91,7 @@ const RUBY_TOOLS = [
   {
     name: "book_student",
     description: "Book a student into a specific schedule block.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         block_id: { type: "string" },
@@ -90,7 +104,7 @@ const RUBY_TOOLS = [
   {
     name: "cancel_session",
     description: "Cancel a student's lesson session.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         block_id: { type: "string" },
@@ -108,7 +122,7 @@ const SHARED_TOOLS = [
   {
     name: "get_operator_context",
     description: "Get the current operator's UI state (active location, date, view, and focused block).",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { user_id: { type: "string" } }
     }
@@ -116,16 +130,7 @@ const SHARED_TOOLS = [
   {
     name: "search_teachers",
     description: "Search roster for teachers by name.",
-    input_schema: {
-      type: "object",
-      properties: { query: { type: "string" } },
-      required: ["query"],
-    },
-  },
-  {
-    name: "search_students",
-    description: "Search roster for students by name.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { query: { type: "string" } },
       required: ["query"],
@@ -133,7 +138,7 @@ const SHARED_TOOLS = [
   }
 ];
 
-// Deduplicate tools by name to avoid Anthropic's "Tool names must be unique" error
+// Deduplicate tools by name
 const ALL_TOOLS_COMBINED = [
   ...SID_TOOLS,
   ...RUBY_TOOLS,
@@ -151,7 +156,7 @@ const ALL_TOOLS = ALL_TOOLS_COMBINED
     toolNameSet.add(tool.name);
     return true;
   })
-  .map(convertToAnthropic);
+  .map(convertToOpenAI);
 
 // --- TOOL EXECUTION ENGINE ---
 
@@ -231,48 +236,57 @@ export async function POST(req: NextRequest) {
     const tenantId = session?.tenantId || clientContext.tenantId || DEFAULT_TENANT_ID;
     const userId = session?.userId || clientContext.userId;
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "Agent brain offline. ANTHROPIC_API_KEY missing." }, { status: 500 });
-
-    const client = new Anthropic({ apiKey });
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${new Date().toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nDIRECTIVE: You are a Senior Operator. Execute tools immediately to find information or perform actions. Never ask for info you can retrieve yourself. Use 'get_operator_context' to see the user's current view.`;
 
-    let messages: Anthropic.MessageParam[] = history.map((m: any) => ({ role: m.role, content: m.content }));
-    messages.push({ role: "user", content: message });
+    let messages: any[] = [
+      { role: "system", content: systemContent },
+      ...history.map((m: any) => ({ role: m.role, content: m.content })),
+      { role: "user", content: message }
+    ];
 
     for (let round = 0; round < 5; round++) {
-      const response = await client.messages.create({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1024,
-        system: systemContent,
-        tools: ALL_TOOLS,
+      const response = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
         messages: messages,
+        tools: ALL_TOOLS,
+        tool_choice: "auto",
       });
 
-      messages.push({ role: "assistant", content: response.content });
+      const assistantMessage = response.choices[0].message;
+      messages.push(assistantMessage);
 
-      if (response.stop_reason === "end_turn") {
-        const text = response.content.find(c => c.type === "text");
-        return NextResponse.json({ content: [{ type: "text", text: text && "text" in text ? text.text : "" }], stop_reason: "end_turn" });
+      if (!assistantMessage.tool_calls) {
+        return NextResponse.json({ 
+          content: [{ type: "text", text: assistantMessage.content || "" }], 
+          stop_reason: "end_turn" 
+        });
       }
 
-      if (response.stop_reason === "tool_use") {
-        const toolResults: Anthropic.ToolResultBlockParam[] = [];
-        for (const toolUse of response.content.filter(c => c.type === "tool_use")) {
-          if (toolUse.type !== "tool_use") continue;
-          const result = await executeTool(toolUse.name, toolUse.input, tenantId, userId);
-          toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result });
-        }
-        messages.push({ role: "user", content: toolResults });
+      // Handle tool calls
+      for (const toolCall of assistantMessage.tool_calls) {
+        const result = await executeTool(
+          toolCall.function.name, 
+          JSON.parse(toolCall.function.arguments), 
+          tenantId, 
+          userId
+        );
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: result
+        });
       }
     }
 
-    const final = await client.messages.create({ model: "claude-3-5-sonnet-20241022", max_tokens: 1024, system: systemContent, messages });
-    const text = final.content.find(c => c.type === "text");
-    return NextResponse.json({ content: [{ type: "text", text: text && "text" in text ? text.text : "" }], stop_reason: "end_turn" });
+    // Final fallback if max rounds hit
+    return NextResponse.json({ 
+      content: [{ type: "text", text: "I've performed several actions. Please let me know if you need anything else." }], 
+      stop_reason: "end_turn" 
+    });
 
   } catch (error: any) {
+    console.error("Agent Error:", error);
     return NextResponse.json({ error: `Agent Error: ${error.message}` }, { status: 500 });
   }
 }
