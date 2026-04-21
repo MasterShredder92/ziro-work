@@ -8,6 +8,9 @@ import { useTenantUi } from "@/components/tenant/TenantUiContext";
 import { getRouteByHref } from "@/lib/routes";
 import Link from "next/link";
 import { ClientPageTitle } from "@/components/navigation/ClientPageTitle";
+import { RubySidebar } from "@/app/(app)/schedule/components/RubySidebar";
+import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
+import { cn } from "@/components/ui/utils";
 
 function titleForPath(pathname: string): string {
   const hit = getRouteByHref(pathname);
@@ -38,7 +41,10 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
   const pathname = usePathname();
   const { tenantId } = useTenantUi();
   const [commandOpen, setCommandOpen] = React.useState(false);
+  const [rubyOpen, setRubyOpen] = React.useState(false);
   const pageTitle = titleForPath(pathname);
+  const isSchedulePage = pathname === "/schedule";
+  const rubyDef = AGENT_DEFINITIONS.ruby;
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -78,8 +84,34 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
               <path d="M12.5 12.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 flex items-center gap-4">
             <ClientPageTitle title={pageTitle} />
+            
+            {isSchedulePage && (
+              <button
+                type="button"
+                onClick={() => setRubyOpen(true)}
+                className="group relative flex items-center gap-3 rounded-xl border border-[#fb923c]/30 bg-[#fb923c]/5 px-3 py-1.5 transition-all hover:bg-[#fb923c]/15 hover:border-[#fb923c]/60"
+              >
+                <div className="relative shrink-0">
+                  <div className="h-7 w-7 rounded-full border border-[#fb923c]/40 overflow-hidden bg-[var(--z-surface-2)]">
+                    <img 
+                      src="/static/agents/ruby.png" 
+                      alt="Ruby" 
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=Ruby&background=fb923c&color=fff";
+                      }}
+                    />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#00ff88] border border-[#0f0f12]" />
+                </div>
+                <div className="text-left hidden sm:block">
+                  <div className="text-[9px] font-black text-[#fb923c] uppercase tracking-widest leading-none">RUBY</div>
+                  <div className="text-[8px] font-bold text-white/40 uppercase tracking-tighter leading-none mt-0.5 group-hover:text-white transition-colors">OPERATOR</div>
+                </div>
+              </button>
+            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-[var(--z-space-2)] sm:gap-[var(--z-space-3)]">
@@ -94,9 +126,12 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           >
             ⌘K
           </span>
-          <NotificationBell />
-        </div>
-      </header>
+        <NotificationBell />
+      </div>
+    </header>
+
+    <RubySidebar isOpen={rubyOpen} onClose={() => setRubyOpen(false)} />
+
       <CommandPalette
         open={commandOpen}
         onClose={() => setCommandOpen(false)}
