@@ -216,7 +216,7 @@ export function EnrollmentsListClient({
 
   return (
     <>
-      <AgentPageBar agentId="stewie" chatPlaceholder="Ask Stewie about enrollments…" pageContext={{ page: "enrollments", count: localRows.length }} />
+      <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about enrollments…" pageContext={{ page: "enrollments", count: localRows.length }} />
       {inlineEdit.toast ? (
         <div className="mb-2 flex justify-end">
           <button
