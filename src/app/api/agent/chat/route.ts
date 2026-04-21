@@ -6,7 +6,7 @@ import { sendEmail, sendEmailToolDefinition } from "@/lib/agents/tools/sendEmail
 import { RAVEN_TOOLS, sendReportEmailToolDefinition } from "@/lib/agents/tools/ravenCommunicationTools";
 import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
 import { VADER_TOOLS } from "@/lib/agents/tools/vaderTools";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 // --- TOOL DEFINITIONS (CHAMPIONSHIP STANDARDS) ---
 
@@ -14,7 +14,7 @@ const SID_TOOLS = [
   {
     name: "get_student",
     description: "Fetch current student data. Autonomously finds student by ID.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { student_id: { type: "string" } },
       required: ["student_id"],
@@ -23,7 +23,7 @@ const SID_TOOLS = [
   {
     name: "update_student",
     description: "Update student record fields.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         student_id: { type: "string" },
@@ -37,21 +37,25 @@ const SID_TOOLS = [
   {
     name: "search_students",
     description: "Search roster by name/email.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { query: { type: "string" } },
       required: ["query"],
     },
   },
-  sendEmailToolDefinition,
+  {
+    name: "send_email",
+    description: sendEmailToolDefinition.description,
+    parameters: sendEmailToolDefinition.input_schema,
+  },
 ];
 
 const RUBY_TOOLS = [
   {
     name: "find_available_slots",
     description: "Find open lesson slots. Defaults to next 7 days.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         teacher_id: { type: "string" },
         instrument: { type: "string" },
@@ -63,8 +67,8 @@ const RUBY_TOOLS = [
   {
     name: "move_block",
     description: "Reschedule a lesson.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         block_id: { type: "string" },
         new_date: { type: "string" },
@@ -80,8 +84,8 @@ const STEWIE_TOOLS = [
   {
     name: "generate_progress_report",
     description: "Generate a branded progress report for a student. Accept either student_id or student_name.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         student_id: { type: "string", description: "The student's unique ID (optional if student_name provided)" },
         student_name: { type: "string", description: "The student's name (optional if student_id provided)" },
@@ -92,8 +96,8 @@ const STEWIE_TOOLS = [
   {
     name: "get_retention_health",
     description: "Calculate student churn risk.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: { student_id: { type: "string" } },
       required: ["student_id"],
     },
@@ -101,8 +105,8 @@ const STEWIE_TOOLS = [
   {
     name: "get_championship_reports",
     description: "Fetch existing progress reports for a student.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         student_id: { type: "string" },
         limit: { type: "number" },
@@ -116,8 +120,8 @@ const STAR_TOOLS = [
   {
     name: "generate_insights",
     description: "Generate business insights from data.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: { data_type: { type: "string" } },
       required: ["data_type"],
     },
@@ -128,8 +132,8 @@ const ZIRO_TOOLS = [
   {
     name: "assign_agent_task",
     description: "Assign task to specialized agent.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         agent_id: { type: "string" },
         task_description: { type: "string" },
@@ -138,6 +142,24 @@ const ZIRO_TOOLS = [
     },
   },
 ];
+
+const CONVERTED_RAVEN_TOOLS = RAVEN_TOOLS.map(t => ({
+  name: t.name,
+  description: t.description,
+  parameters: t.input_schema,
+}));
+
+const CONVERTED_VADER_TOOLS = VADER_TOOLS.map(t => ({
+  name: t.name,
+  description: t.description,
+  parameters: t.input_schema,
+}));
+
+const CONVERTED_BUB_TOOLS = BUB_TOOLS.map(t => ({
+  name: t.name,
+  description: t.description,
+  parameters: t.input_schema,
+}));
 
 // --- TOOL EXECUTOR (CHAMPIONSHIP EXECUTION) ---
 
@@ -254,11 +276,9 @@ async function executeTool(name: string, input: any, tenantId: string) {
         return error ? `Error: ${error.message}` : JSON.stringify(data);
       }
       case "batch_and_send": {
-        // Mocking the batch and send logic
         const { data: messages, error } = await db.from("agent_messages").select("*").eq("tenant_id", tenantId).eq("recipient_id", input.recipient_id).eq("status", "queued");
         if (error) return `Error: ${error.message}`;
         if (!messages || messages.length === 0) return "No queued messages found for this recipient.";
-        // Mark as sent
         await db.from("agent_messages").update({ status: "sent", sent_at: new Date().toISOString() }).eq("tenant_id", tenantId).eq("recipient_id", input.recipient_id).eq("status", "queued");
         return `Successfully batched and sent ${messages.length} messages to recipient ${input.recipient_id} via ${input.message_type}.`;
       }
@@ -289,69 +309,85 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const { message, agentId = "ziro", context = {}, history = [] } = await req.json();
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const openai = new OpenAI();
 
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const now = new Date();
     const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${context.tenantId || DEFAULT_TENANT_ID}.\n\nRULES:\n- Use tools for actions.\n- Concise, championship-level tone.\n- No 'elite', use 'Championship-Level' or 'Top-Tier'.`;
 
-    const tools = (agentId === "vader" ? VADER_TOOLS :
-                  agentId === "bub" ? BUB_TOOLS :
+    const tools = (agentId === "vader" ? CONVERTED_VADER_TOOLS :
+                  agentId === "bub" ? CONVERTED_BUB_TOOLS :
                   agentId === "stewie" ? STEWIE_TOOLS :
                   agentId === "ruby" ? RUBY_TOOLS :
                   agentId === "sid" ? SID_TOOLS :
-                  agentId === "raven" ? [...RAVEN_TOOLS, sendReportEmailToolDefinition, sendEmailToolDefinition] :
-                  ZIRO_TOOLS) as Anthropic.Tool[];
+                  agentId === "raven" ? [...CONVERTED_RAVEN_TOOLS, { name: "send_report_email", description: sendReportEmailToolDefinition.description, parameters: sendReportEmailToolDefinition.input_schema }, { name: "send_email", description: sendEmailToolDefinition.description, parameters: sendEmailToolDefinition.input_schema }] :
+                  ZIRO_TOOLS).map(t => ({
+                    type: "function" as const,
+                    function: {
+                      name: t.name,
+                      description: t.description,
+                      parameters: t.parameters,
+                    }
+                  }));
 
     const tenantId = context.tenantId || DEFAULT_TENANT_ID;
 
-    let messages: Anthropic.MessageParam[] = history.map((m: any) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content
+    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content)
     }));
     
     messages.push({ role: "user", content: message });
 
     for (let round = 0; round < 5; round++) {
-      const response = await anthropic.messages.create({
+      const response = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
-        max_tokens: 4096,
-        messages: messages,
-        system: systemContent,
-        tools: tools,
+        messages: [
+          { role: "system", content: systemContent },
+          ...messages
+        ],
+        tools: tools.length > 0 ? tools : undefined,
       });
 
-      if (response.stop_reason !== "tool_use") {
-        return NextResponse.json(response);
+      const choice = response.choices[0];
+      const assistantMessage = choice.message;
+      messages.push(assistantMessage);
+
+      if (choice.finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
+        // Map OpenAI response back to Anthropic-like structure for the frontend if needed
+        // But for simplicity, we just return a standard response object
+        return NextResponse.json({
+          content: [{ type: "text", text: assistantMessage.content || "" }],
+          stop_reason: "end_turn"
+        });
       }
 
-      // Handle tool use
-      messages.push({ role: "assistant", content: response.content });
-
-      const toolResults: Anthropic.ToolResultBlockParam[] = [];
-      for (const content of response.content) {
-        if (content.type === "tool_use") {
-          const result = await executeTool(content.name, content.input, tenantId);
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: content.id,
-            content: result,
-          });
-        }
+      for (const toolCall of assistantMessage.tool_calls) {
+        const result = await executeTool(
+          toolCall.function.name,
+          JSON.parse(toolCall.function.arguments),
+          tenantId
+        );
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: result,
+        });
       }
-
-      messages.push({ role: "user", content: toolResults });
     }
 
-    // If we hit the round limit, return the last response
-    const finalResponse = await anthropic.messages.create({
+    const finalResponse = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
-      max_tokens: 4096,
-      messages: messages,
-      system: systemContent,
+      messages: [
+        { role: "system", content: systemContent },
+        ...messages
+      ],
     });
-    
-    return NextResponse.json(finalResponse);
+
+    return NextResponse.json({
+      content: [{ type: "text", text: finalResponse.choices[0].message.content || "" }],
+      stop_reason: "end_turn"
+    });
 
   } catch (e: any) {
     console.error("[Agent Chat Error]", e);
