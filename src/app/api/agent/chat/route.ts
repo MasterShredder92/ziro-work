@@ -1242,14 +1242,14 @@ export async function POST(req: NextRequest) {
 
     let reply = "";
     let iterations = 0;
-    const MAX_ITER = 10; // Increased for deeper multi-step reasoning
+    const MAX_ITER = 15; // Further increased for very deep bulk tasks
 
     while (iterations < MAX_ITER) {
       iterations++;
       const response = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022", // Upgraded to Sonnet for better reasoning
-        max_tokens: 2048,
-        system: systemContent,
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 4096, // Increased token limit for larger responses
+        system: systemContent + "\n\nSTRATEGIC DIRECTIVE: For bulk tasks (like updating all teacher bios), process them in batches of 3-5 to prevent timeouts. If you reach 10 iterations, provide a status update on what's done and what's left, then continue until complete.",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tools: tools.length > 0 ? (tools as any) : undefined,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
