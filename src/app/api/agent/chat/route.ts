@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
 
     const openai = new OpenAI({
       apiKey: apiKey,
-      baseURL: "https://api.manus.im/v1",
+      baseURL: "https://api.openai.com/v1",
     });
     
     const body = await req.json();
