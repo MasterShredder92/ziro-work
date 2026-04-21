@@ -293,7 +293,7 @@ export function LocationScheduleGrid({
       const updated = await res.json() as { data: ScheduleBlock };
       onBlocksChange(blocks.map(b => b.id === blockId ? { ...b, ...updated.data } : b));
       if (closePanel) setSelectedBlockId(null);
-      onRubyEvent?.({ type: "save", message: "Block updated successfully" });
+      onRubyEvent?.({ type: "idle", message: "Block updated successfully" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
     } finally {
