@@ -401,6 +401,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           <ScheduleRoomsPanel
             locationId={activeLocationId}
             locationName={activeLocConfig?.name ?? "Studio"}
+            locationColor={activeLocConfig?.color ?? "#7C3AED"}
             rooms={activeData?.rooms ?? []}
             onRubyEvent={fireRubyEvent}
           />
