@@ -307,79 +307,89 @@ async function handleAgentChat(
   tenantId: string,
   userId?: string
 ) {
-  const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
-  const now = new Date();
-  const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- ALWAYS use 'get_operator_context' first if the user asks about 'this' location, 'today', or 'this block' to see what they are looking at.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
+  try {
+    const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
+    const now = new Date();
+    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- ALWAYS use 'get_operator_context' first if the user asks about 'this' location, 'today', or 'this block' to see what they are looking at.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
 
-  let rawTools: any[] = [];
-  if (agentId === "ruby") rawTools = RUBY_TOOLS.map(convertToOpenAI);
-  else if (agentId === "sid") rawTools = SID_TOOLS.map(convertToOpenAI);
-  else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
+    let rawTools: any[] = [];
+    if (agentId === "ruby") rawTools = RUBY_TOOLS.map(convertToOpenAI);
+    else if (agentId === "sid") rawTools = SID_TOOLS.map(convertToOpenAI);
+    else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
 
-  const sharedTools = SHARED_TOOLS.map(convertToOpenAI);
-  const finalTools = [...rawTools];
-  sharedTools.forEach(st => {
-    if (!finalTools.find(ft => ft.function.name === st.function.name)) {
-      finalTools.push(st);
-    }
-  });
-
-  let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
-    role: m.role,
-    content: m.content
-  }));
-  messages.push({ role: "user", content: message });
-
-  for (let round = 0; round < 5; round++) {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [{ role: "system", content: systemContent }, ...messages],
-      tools: finalTools.length > 0 ? finalTools : undefined,
-      tool_choice: "auto",
+    const sharedTools = SHARED_TOOLS.map(convertToOpenAI);
+    const finalTools = [...rawTools];
+    sharedTools.forEach(st => {
+      if (!finalTools.find(ft => ft.function.name === st.function.name)) {
+        finalTools.push(st);
+      }
     });
 
-    const assistantMessage = response.choices[0].message;
-    messages.push(assistantMessage);
+    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
+      role: m.role,
+      content: m.content
+    }));
+    messages.push({ role: "user", content: message });
 
-    if (response.choices[0].finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
-      return NextResponse.json({
-        content: [{ type: "text", text: assistantMessage.content || "" }],
-        stop_reason: "end_turn"
+    for (let round = 0; round < 5; round++) {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [{ role: "system", content: systemContent }, ...messages],
+        tools: finalTools.length > 0 ? finalTools : undefined,
+        tool_choice: "auto",
       });
+
+      const assistantMessage = response.choices[0].message;
+      messages.push(assistantMessage);
+
+      if (response.choices[0].finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
+        return NextResponse.json({
+          content: [{ type: "text", text: assistantMessage.content || "" }],
+          stop_reason: "end_turn"
+        });
+      }
+
+      for (const toolCall of assistantMessage.tool_calls) {
+        if (toolCall.type !== "function") continue;
+        const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments), tenantId, userId);
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: result,
+        } as OpenAI.Chat.ChatCompletionToolMessageParam);
+      }
     }
 
-    for (const toolCall of assistantMessage.tool_calls) {
-      if (toolCall.type !== "function") continue;
-      const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments), tenantId, userId);
-      messages.push({
-        role: "tool",
-        tool_call_id: toolCall.id,
-        content: result,
-      } as OpenAI.Chat.ChatCompletionToolMessageParam);
-    }
+    const finalResponse = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [{ role: "system", content: systemContent }, ...messages],
+    });
+
+    return NextResponse.json({
+      content: [{ type: "text", text: finalResponse.choices[0].message.content || "" }],
+      stop_reason: "end_turn"
+    });
+  } catch (err: any) {
+    console.error("Agent Loop Error:", err);
+    return NextResponse.json({ 
+      error: `Agent Error: ${err.message || "Failed to generate response"}`,
+      details: err.stack 
+    }, { status: 500 });
   }
-
-  const finalResponse = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: [{ role: "system", content: systemContent }, ...messages],
-  });
-
-  return NextResponse.json({
-    content: [{ type: "text", text: finalResponse.choices[0].message.content || "" }],
-    stop_reason: "end_turn"
-  });
 }
 
 // --- ROUTE HANDLER ---
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, agentId = "ziro", context: clientContext = {}, history = [] } = await req.json();
+    const body = await req.json();
+    const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
+    
     const session = await getSession();
     const tenantId = session?.tenantId || clientContext.tenantId || DEFAULT_TENANT_ID;
     const userId = session?.userId || clientContext.userId;
 
-    // Resolve API Key with hard-coded internal fallback
+    // Resolve API Key
     const apiKey = process.env.OPENAI_API_KEY || process.env.ZIRO_OPENAI_API_KEY;
     
     if (!apiKey) {
@@ -395,13 +405,16 @@ export async function POST(req: NextRequest) {
           "X-Manus-Client": "Manus-Autonomous-Agent"
         }
       });
-      return handleAgentChat(openai, agentId, message, history, tenantId, userId);
+      return await handleAgentChat(openai, agentId, message, history, tenantId, userId);
     }
 
     const openai = new OpenAI({ apiKey, baseURL: "https://api.openai.com/v1" });
-    return handleAgentChat(openai, agentId, message, history, tenantId, userId);
+    return await handleAgentChat(openai, agentId, message, history, tenantId, userId);
   } catch (error: any) {
-    console.error("Agent Chat Error:", error);
-    return NextResponse.json({ error: error.message || "An unexpected error occurred." }, { status: 500 });
+    console.error("Agent Chat API Route Error:", error);
+    return NextResponse.json({ 
+      error: `API Route Error: ${error.message || "An unexpected error occurred."}`,
+      stack: error.stack 
+    }, { status: 500 });
   }
 }
