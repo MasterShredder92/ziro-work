@@ -8,7 +8,20 @@ import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
 import { VADER_TOOLS } from "@/lib/agents/tools/vaderTools";
 import OpenAI from "openai";
 
-// --- TOOL DEFINITIONS (CHAMPIONSHIP STANDARDS) ---
+// --- CONFIGURATION ---
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// --- TOOL DEFINITIONS (CONVERTED TO OPENAI FORMAT) ---
+
+const convertToOpenAI = (tool: any) => ({
+  type: "function" as const,
+  function: {
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema || tool.parameters,
+  }
+});
 
 const SID_TOOLS = [
   {
@@ -143,25 +156,11 @@ const ZIRO_TOOLS = [
   },
 ];
 
-const CONVERTED_RAVEN_TOOLS = RAVEN_TOOLS.map(t => ({
-  name: t.name,
-  description: t.description,
-  parameters: t.input_schema,
-}));
+const RAVEN_OPENAI_TOOLS = RAVEN_TOOLS.map(convertToOpenAI);
+const VADER_OPENAI_TOOLS = VADER_TOOLS.map(convertToOpenAI);
+const BUB_OPENAI_TOOLS = BUB_TOOLS.map(convertToOpenAI);
 
-const CONVERTED_VADER_TOOLS = VADER_TOOLS.map(t => ({
-  name: t.name,
-  description: t.description,
-  parameters: t.input_schema,
-}));
-
-const CONVERTED_BUB_TOOLS = BUB_TOOLS.map(t => ({
-  name: t.name,
-  description: t.description,
-  parameters: t.input_schema,
-}));
-
-// --- TOOL EXECUTOR (CHAMPIONSHIP EXECUTION) ---
+// --- TOOL EXECUTOR ---
 
 async function executeTool(name: string, input: any, tenantId: string) {
   const db = getServiceClient();
@@ -301,44 +300,56 @@ async function executeTool(name: string, input: any, tenantId: string) {
   }
 }
 
-// --- ROUTE HANDLER (STABLE & AUTONOMOUS) ---
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// --- ROUTE HANDLER ---
 
 export async function POST(req: NextRequest) {
   try {
     const { message, agentId = "ziro", context = {}, history = [] } = await req.json();
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    // Explicitly pull from env and check. If missing, throw early with a clear error.
+    const apiKey = process.env.OPENAI_API_KEY;
+    const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_API_BASE || "https://api.manus.im/api/llm-proxy/v1";
+    
+    if (!apiKey) {
+      return NextResponse.json({ error: "CRITICAL: OPENAI_API_KEY is not set in the environment." }, { status: 500 });
+    }
+
+    const openai = new OpenAI({ 
+      apiKey: apiKey,
+      baseURL: baseURL
+    });
 
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const now = new Date();
     const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${context.tenantId || DEFAULT_TENANT_ID}.\n\nRULES:\n- Use tools for actions.\n- Concise, championship-level tone.\n- No 'elite', use 'Championship-Level' or 'Top-Tier'.`;
 
-    const tools = (agentId === "vader" ? CONVERTED_VADER_TOOLS :
-                  agentId === "bub" ? CONVERTED_BUB_TOOLS :
-                  agentId === "stewie" ? STEWIE_TOOLS :
-                  agentId === "ruby" ? RUBY_TOOLS :
-                  agentId === "sid" ? SID_TOOLS :
-                  agentId === "raven" ? [...CONVERTED_RAVEN_TOOLS, { name: "send_report_email", description: sendReportEmailToolDefinition.description, parameters: sendReportEmailToolDefinition.input_schema }, { name: "send_email", description: sendEmailToolDefinition.description, parameters: sendEmailToolDefinition.input_schema }] :
-                  ZIRO_TOOLS).map(t => ({
-                    type: "function" as const,
-                    function: {
-                      name: t.name,
-                      description: t.description,
-                      parameters: t.parameters,
-                    }
-                  }));
+    // Map tools based on agent
+    let rawTools: any[] = [];
+    if (agentId === "vader") rawTools = VADER_TOOLS.map(convertToOpenAI);
+    else if (agentId === "bub") rawTools = BUB_TOOLS.map(convertToOpenAI);
+    else if (agentId === "stewie") rawTools = STEWIE_TOOLS.map(convertToOpenAI);
+    else if (agentId === "ruby") rawTools = RUBY_TOOLS.map(convertToOpenAI);
+    else if (agentId === "sid") rawTools = SID_TOOLS.map(convertToOpenAI);
+    else if (agentId === "raven") rawTools = [
+      ...RAVEN_TOOLS.map(convertToOpenAI), 
+      convertToOpenAI({ name: "send_report_email", description: sendReportEmailToolDefinition.description, parameters: sendReportEmailToolDefinition.input_schema }), 
+      convertToOpenAI({ name: "send_email", description: sendEmailToolDefinition.description, parameters: sendEmailToolDefinition.input_schema })
+    ];
+    else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
 
     const tenantId = context.tenantId || DEFAULT_TENANT_ID;
 
-    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content)
-    }));
+    // Convert history to OpenAI format
+    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => {
+      if (m.role === "assistant") {
+        return { role: "assistant", content: m.content } as OpenAI.Chat.ChatCompletionAssistantMessageParam;
+      }
+      return { role: "user", content: m.content } as OpenAI.Chat.ChatCompletionUserMessageParam;
+    });
     
     messages.push({ role: "user", content: message });
 
+    // Execution loop (max 5 rounds)
     for (let round = 0; round < 5; round++) {
       const response = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
@@ -346,29 +357,32 @@ export async function POST(req: NextRequest) {
           { role: "system", content: systemContent },
           ...messages
         ],
-        tools: tools.length > 0 ? tools : undefined,
+        tools: rawTools.length > 0 ? rawTools : undefined,
       });
 
       const choice = response.choices[0];
       const assistantMessage = choice.message;
+      
+      // Store assistant message for next turn
       messages.push(assistantMessage);
 
       if (choice.finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
-        // Map OpenAI response back to Anthropic-like structure for the frontend if needed
-        // But for simplicity, we just return a standard response object
+        // We are done, return the text
         return NextResponse.json({
           content: [{ type: "text", text: assistantMessage.content || "" }],
           stop_reason: "end_turn"
         });
       }
 
+      // Handle each tool call
       for (const toolCall of assistantMessage.tool_calls) {
         if (toolCall.type !== "function") continue;
-        const result = await executeTool(
-          toolCall.function.name,
-          JSON.parse(toolCall.function.arguments),
-          tenantId
-        );
+        
+        const toolName = toolCall.function.name;
+        const toolInput = JSON.parse(toolCall.function.arguments);
+        
+        const result = await executeTool(toolName, toolInput, tenantId);
+        
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,
@@ -377,6 +391,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Final fallback if we hit round limit
     const finalResponse = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
@@ -392,6 +407,6 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     console.error("[Agent Chat Error]", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: `Agent System Error: ${e.message}` }, { status: 500 });
   }
 }
