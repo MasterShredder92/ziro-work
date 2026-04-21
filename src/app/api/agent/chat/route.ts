@@ -439,6 +439,17 @@ const VADER_TOOLS = [
     },
   },
   {
+    name: "search_teachers",
+    description: "Search for teachers by name.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Teacher name to search for" },
+      },
+      required: ["query"],
+    },
+  },
+  {
     name: "get_pedagogical_advice",
     description: "Analyze student notes, parent feedback, and lesson history to provide the teacher with specific coaching and teaching strategies.",
     input_schema: {
@@ -947,6 +958,18 @@ async function executeTool(
       if (!data) return "Teacher not found.";
       return JSON.stringify(data);
     }
+    if (toolName === "search_teachers") {
+      const q = (input.query as string).trim();
+      const { data, error } = await db
+        .from("teachers")
+        .select("id, first_name, last_name, display_name")
+        .eq("tenant_id", tenantId)
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,display_name.ilike.%${q}%`)
+        .limit(10);
+      if (error) return `Error searching teachers: ${error.message}`;
+      if (!data || data.length === 0) return `No teachers found matching "${q}".`;
+      return JSON.stringify(data);
+    }
     if (toolName === "update_teacher") {
       const { teacher_id, ...fields } = input;
       const patch: Record<string, unknown> = { ...fields, updated_at: new Date().toISOString() };
@@ -989,7 +1012,7 @@ async function executeTool(
       
       let query = db
         .from("schedule_blocks")
-        .select("id, status, teacher_id, teachers(display_name, first_name, last_name), lesson_notes(id)")
+        .select("id, status, teacher_id, teachers(display_name, first_name, last_name), lesson_notes:student_notes(id)")
         .eq("tenant_id", tenantId)
         .eq("block_date", checkDate);
 
@@ -1002,7 +1025,7 @@ async function executeTool(
       if (error) return `Error auditing compliance: ${error.message}`;
       if (!data || data.length === 0) return `No sessions found for ${checkDate}.`;
 
-      const incompleteBlocks = data.filter(b => b.status !== "checked_in" || !b.lesson_notes);
+      const incompleteBlocks = data.filter(b => b.status !== "checked_in" || !b.lesson_notes || (Array.isArray(b.lesson_notes) && b.lesson_notes.length === 0));
       
       if (incompleteBlocks.length === 0) {
         return `Compliance audit for ${checkDate}: All ${data.length} sessions are fully checked-in with notes. 100% compliance.`;
@@ -1164,7 +1187,8 @@ export async function POST(req: NextRequest) {
 - Date: ${dateStr}
 - Time: ${timeStr}
 - Day: ${dayOfWeek}
-- Reference this for all scheduling, compliance, and billing queries. Never ask the user for today's date.`;
+- Reference this for all scheduling, compliance, and billing queries. Never ask the user for today's date.
+- You have MASTER access to all database tables. If a tool fails or returns no data, DO NOT ask the user for info. Instead, try a broader search or check related tables (e.g., if a student note is missing, check the schedule for that day to see who was teaching).`;
 
     const contextStr =
       Object.keys(context).length > 0
@@ -1198,13 +1222,13 @@ export async function POST(req: NextRequest) {
 
     let reply = "";
     let iterations = 0;
-    const MAX_ITER = 5;
+    const MAX_ITER = 10; // Increased for deeper multi-step reasoning
 
     while (iterations < MAX_ITER) {
       iterations++;
       const response = await anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 1024,
+        model: "claude-3-5-sonnet-20241022", // Upgraded to Sonnet for better reasoning
+        max_tokens: 2048,
         system: systemContent,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tools: tools.length > 0 ? (tools as any) : undefined,
