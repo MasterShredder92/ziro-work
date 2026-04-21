@@ -6,6 +6,7 @@ import { sendEmail, sendEmailToolDefinition } from "@/lib/agents/tools/sendEmail
 import { RAVEN_TOOLS, sendReportEmailToolDefinition } from "@/lib/agents/tools/ravenCommunicationTools";
 import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
 import { VADER_TOOLS } from "@/lib/agents/tools/vaderTools";
+import { STEWIE_TOOLS } from "@/lib/agents/tools/stewieTools";
 import OpenAI from "openai";
 
 // --- CONFIGURATION ---
@@ -98,156 +99,58 @@ const RUBY_TOOLS = [
         block_id: { type: "string" },
         new_date: { type: "string" },
         new_time: { type: "string" },
-        scope: { type: "string", enum: ["this_only", "all_recurring"] },
       },
-      required: ["block_id", "new_date", "new_time", "scope"],
-    },
-  },
-];
-
-const STEWIE_TOOLS = [
-  {
-    name: "generate_progress_report",
-    description: "Generate a branded progress report for a student. Accept either student_id or student_name.",
-    parameters: {
-      type: "object",
-      properties: {
-        student_id: { type: "string", description: "The student's unique ID (optional if student_name provided)" },
-        student_name: { type: "string", description: "The student's name (optional if student_id provided)" },
-      },
-      required: [],
-    },
-  },
-  {
-    name: "get_retention_health",
-    description: "Calculate student churn risk.",
-    parameters: {
-      type: "object",
-      properties: { student_id: { type: "string" } },
-      required: ["student_id"],
-    },
-  },
-  {
-    name: "get_championship_reports",
-    description: "Fetch existing progress reports for a student.",
-    parameters: {
-      type: "object",
-      properties: {
-        student_id: { type: "string" },
-        limit: { type: "number" },
-      },
-      required: ["student_id"],
-    },
-  },
-];
-
-const STAR_TOOLS = [
-  {
-    name: "generate_insights",
-    description: "Generate business insights from data.",
-    parameters: {
-      type: "object",
-      properties: { data_type: { type: "string" } },
-      required: ["data_type"],
+      required: ["block_id", "new_date", "new_time"],
     },
   },
 ];
 
 const ZIRO_TOOLS = [
-  {
-    name: "assign_agent_task",
-    description: "Assign task to specialized agent.",
-    parameters: {
-      type: "object",
-      properties: {
-        agent_id: { type: "string" },
-        task_description: { type: "string" },
-      },
-      required: ["agent_id", "task_description"],
-    },
-  },
+  ...SID_TOOLS,
+  ...RUBY_TOOLS,
+  ...VADER_TOOLS,
+  ...STEWIE_TOOLS,
+  ...BUB_TOOLS,
+  ...RAVEN_TOOLS,
 ];
 
-const RAVEN_OPENAI_TOOLS = RAVEN_TOOLS.map(convertToOpenAI);
-const VADER_OPENAI_TOOLS = VADER_TOOLS.map(convertToOpenAI);
-const BUB_OPENAI_TOOLS = BUB_TOOLS.map(convertToOpenAI);
-
-// --- TOOL EXECUTOR ---
+// --- TOOL EXECUTION ENGINE ---
 
 async function executeTool(name: string, input: any, tenantId: string) {
   const db = getServiceClient();
-  console.log(`[Agent Tool] Executing: ${name}`, input);
-
   try {
     switch (name) {
+      case "search_teachers": {
+        const { data, error } = await db.from("teachers").select("id, first_name, last_name, instrument").eq("tenant_id", tenantId).or(`first_name.ilike.%${input.query}%,last_name.ilike.%${input.query}%`);
+        return error ? `Error: ${error.message}` : JSON.stringify(data);
+      }
       case "search_students": {
-        const { data, error } = await db.from("students").select("id, first_name, last_name, email").eq("tenant_id", tenantId).or(`first_name.ilike.%${input.query}%,last_name.ilike.%${input.query}%`).limit(5);
+        const { data, error } = await db.from("students").select("id, first_name, last_name").eq("tenant_id", tenantId).or(`first_name.ilike.%${input.query}%,last_name.ilike.%${input.query}%`);
+        return error ? `Error: ${error.message}` : JSON.stringify(data);
+      }
+      case "get_schedule": {
+        let query = db.from("schedule_blocks").select("*").eq("tenant_id", tenantId);
+        if (input.teacher_id) query = query.eq("teacher_id", input.teacher_id);
+        if (input.location_id) query = query.eq("location_id", input.location_id);
+        const targetDate = input.date || new Date().toISOString().split("T")[0];
+        query = query.eq("block_date", targetDate);
+        const { data, error } = await query.order("start_time");
         return error ? `Error: ${error.message}` : JSON.stringify(data);
       }
       case "get_student": {
         const { data, error } = await db.from("students").select("*").eq("tenant_id", tenantId).eq("id", input.student_id).single();
         return error ? `Error: ${error.message}` : JSON.stringify(data);
       }
-      case "get_teacher_profile": {
-        const { data, error } = await db.from("teachers").select("*").eq("tenant_id", tenantId).eq("id", input.teacher_id).single();
-        if (error) return `Error: ${error.message}`;
-        return data ? JSON.stringify(data) : "Teacher not found.";
-      }
-      case "search_teachers": {
-        const { data, error } = await db.from("teachers").select("id, first_name, last_name, email, specialty").eq("tenant_id", tenantId).or(`first_name.ilike.%${input.query}%,last_name.ilike.%${input.query}%,specialty.ilike.%${input.query}%`);
-        if (error) return `Error: ${error.message}`;
-        return data && data.length > 0 ? JSON.stringify(data) : "No teachers found.";
-      }
-      case "get_schedule": {
-        const date = input.date || new Date().toISOString().split("T")[0];
-        let query = db.from("schedule_blocks").select(`
-          id,
-          block_date,
-          start_time,
-          end_time,
-          status,
-          teacher_id,
-          student_id,
-          teachers (first_name, last_name),
-          students (first_name, last_name)
-        `).eq("tenant_id", tenantId).eq("block_date", date);
-        
-        if (input.teacher_id) query = query.eq("teacher_id", input.teacher_id);
-        if (input.location_id) query = query.eq("location_id", input.location_id);
-        
-        const { data, error } = await query.order("start_time");
-        if (error) return `Error: ${error.message}`;
-        return data && data.length > 0 ? JSON.stringify(data) : `No schedule found for ${date}.`;
-      }
-      case "update_teacher_profile": {
-        const { data, error } = await db.from("teachers").update(input.updates).eq("tenant_id", tenantId).eq("id", input.teacher_id).select().single();
-        if (error) return `Error: ${error.message}`;
-        return data ? `Teacher profile updated for ${data.first_name} ${data.last_name}.` : "Teacher not found.";
-      }
-      case "check_teacher_compliance": {
-        const date = input.date || new Date().toISOString().split("T")[0];
-        const { data, error } = await db.from("schedule_blocks").select("status, teacher_id, teachers(display_name), student_notes(id)").eq("tenant_id", tenantId).eq("block_date", date);
-        if (error) return `Error: ${error.message}`;
-        const missing = data.filter(b => b.status !== "checked_in" || !b.student_notes || (Array.isArray(b.student_notes) && b.student_notes.length === 0));
-        return missing.length === 0 ? `100% compliance for ${date}.` : `Missing notes for ${missing.length} sessions on ${date}.`;
-      }
-      case "calculate_teacher_payroll": {
-        const start = input.start_date || new Date(Date.now() - 14 * 86400000).toISOString().split("T")[0];
-        const end = input.end_date || new Date().toISOString().split("T")[0];
-        const { data, error } = await db.from("schedule_blocks").select("teacher_id, teachers(first_name, last_name, rate_per_block)").eq("tenant_id", tenantId).eq("status", "checked_in").gte("block_date", start).lte("block_date", end);
-        return error ? `Error: ${error.message}` : `Payroll calculated for ${data.length} sessions between ${start} and ${end}.`;
+      case "update_student": {
+        const { error } = await db.from("students").update(input).eq("tenant_id", tenantId).eq("id", input.student_id);
+        return error ? `Error: ${error.message}` : "Student updated successfully.";
       }
       case "generate_progress_report": {
         try {
-          let studentId = input.student_id;
-          if (!studentId && input.student_name) {
-            const { data: students, error: searchError } = await db.from("students").select("id").eq("tenant_id", tenantId).ilike("first_name", `%${input.student_name.split(" ")[0]}%`).limit(1);
-            if (searchError || !students || students.length === 0) return `Error: Could not find student named "${input.student_name}".`;
-            studentId = students[0].id;
-          }
-          if (!studentId) return "Error: Please provide student_id or student_name.";
-          const { getProgressSurface } = await import("@/lib/progress/service");
-          const surface = await getProgressSurface(studentId, tenantId);
+          const studentId = input.student_id;
+          const { data: student } = await db.from("students").select("*").eq("id", studentId).single();
+          if (!student) return "Error: Student not found.";
+          const surface = { student_name: `${student.first_name} ${student.last_name}`, date: new Date().toISOString() };
           const fs = await import("fs");
           const path = await import("path");
           const { execSync } = await import("child_process");
@@ -338,24 +241,18 @@ export async function POST(req: NextRequest) {
   try {
     const { message, agentId = "ziro", context = {}, history = [] } = await req.json();
     
-    // Explicitly pull from env and check. If missing, throw early with a clear error.
     const apiKey = process.env.OPENAI_API_KEY;
     const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_API_BASE || "https://api.manus.im/api/llm-proxy/v1";
     
     if (!apiKey) {
-      return NextResponse.json({ error: "CRITICAL: OPENAI_API_KEY is not set in the environment." }, { status: 500 });
+      return NextResponse.json({ error: "CRITICAL: OPENAI_API_KEY is not set." }, { status: 500 });
     }
 
-    const openai = new OpenAI({ 
-      apiKey: apiKey,
-      baseURL: baseURL
-    });
-
+    const openai = new OpenAI({ apiKey, baseURL });
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const now = new Date();
-    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${context.tenantId || DEFAULT_TENANT_ID}.\n\nRULES:\n- Use tools for actions.\n- Concise, championship-level tone.\n- No 'elite', use 'Championship-Level' or 'Top-Tier'.`;
+    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${context.tenantId || DEFAULT_TENANT_ID}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
 
-    // Map tools based on agent
     let rawTools: any[] = [];
     if (agentId === "vader") rawTools = VADER_TOOLS.map(convertToOpenAI);
     else if (agentId === "bub") rawTools = BUB_TOOLS.map(convertToOpenAI);
@@ -369,7 +266,6 @@ export async function POST(req: NextRequest) {
     ];
     else rawTools = ZIRO_TOOLS.map(convertToOpenAI);
 
-    // Add shared tools for all agents
     const sharedTools = [
       {
         name: "get_schedule",
@@ -403,7 +299,6 @@ export async function POST(req: NextRequest) {
       }
     ].map(convertToOpenAI);
 
-    // Merge tools ensuring no duplicates
     const finalTools = [...rawTools];
     sharedTools.forEach(st => {
       if (!finalTools.find(ft => ft.function.name === st.function.name)) {
@@ -412,51 +307,32 @@ export async function POST(req: NextRequest) {
     });
 
     const tenantId = context.tenantId || DEFAULT_TENANT_ID;
-
-    // Convert history to OpenAI format
-    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => {
-      if (m.role === "assistant") {
-        return { role: "assistant", content: m.content } as OpenAI.Chat.ChatCompletionAssistantMessageParam;
-      }
-      return { role: "user", content: m.content } as OpenAI.Chat.ChatCompletionUserMessageParam;
-    });
-    
+    let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
+      role: m.role,
+      content: m.content
+    }));
     messages.push({ role: "user", content: message });
 
-    // Execution loop (max 5 rounds)
     for (let round = 0; round < 5; round++) {
       const response = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
-        messages: [
-          { role: "system", content: systemContent },
-          ...messages
-        ],
+        messages: [{ role: "system", content: systemContent }, ...messages],
         tools: finalTools.length > 0 ? finalTools : undefined,
       });
 
-      const choice = response.choices[0];
-      const assistantMessage = choice.message;
-      
-      // Store assistant message for next turn
+      const assistantMessage = response.choices[0].message;
       messages.push(assistantMessage);
 
-      if (choice.finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
-        // We are done, return the text
+      if (response.choices[0].finish_reason !== "tool_calls" || !assistantMessage.tool_calls) {
         return NextResponse.json({
           content: [{ type: "text", text: assistantMessage.content || "" }],
           stop_reason: "end_turn"
         });
       }
 
-      // Handle each tool call
       for (const toolCall of assistantMessage.tool_calls) {
         if (toolCall.type !== "function") continue;
-        
-        const toolName = toolCall.function.name;
-        const toolInput = JSON.parse(toolCall.function.arguments);
-        
-        const result = await executeTool(toolName, toolInput, tenantId);
-        
+        const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments), tenantId);
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,
@@ -465,13 +341,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Final fallback if we hit round limit
     const finalResponse = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: systemContent },
-        ...messages
-      ],
+      messages: [{ role: "system", content: systemContent }, ...messages],
     });
 
     return NextResponse.json({
@@ -480,7 +352,6 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (e: any) {
-    console.error("[Agent Chat Error]", e);
     return NextResponse.json({ error: `Agent System Error: ${e.message}` }, { status: 500 });
   }
 }
