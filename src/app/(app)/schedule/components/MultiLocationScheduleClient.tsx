@@ -383,7 +383,18 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             teachers={activeData?.teachers ?? []}
             students={activeData?.students ?? []}
             families={activeData?.families ?? []}
+            availability={activeData?.availability ?? []}
             rooms={activeData?.rooms ?? []}
+            locationHours={activeData?.locationHours ?? {}}
+            onBlocksChange={(newBlocks) => {
+              setBlocksByLocationWindow((prev) => ({
+                ...prev,
+                [activeLocationId]: {
+                  ...(prev[activeLocationId] ?? {}),
+                  [windowKey]: newBlocks,
+                },
+              }));
+            }}
             onRubyEvent={fireRubyEvent}
           />
         ) : (
