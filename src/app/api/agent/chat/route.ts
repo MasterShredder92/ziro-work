@@ -105,6 +105,35 @@ const RUBY_TOOLS = [
     },
   },
   {
+    name: "book_student",
+    description: "Book a student into a specific schedule block.",
+    parameters: {
+      type: "object",
+      properties: {
+        block_id: { type: "string" },
+        student_id: { type: "string" },
+        recurring: { type: "boolean", default: true },
+        is_first_day: { type: "boolean", default: false },
+      },
+      required: ["block_id", "student_id"],
+    },
+  },
+  {
+    name: "cancel_session",
+    description: "Cancel a student's lesson session.",
+    parameters: {
+      type: "object",
+      properties: {
+        block_id: { type: "string" },
+        block_date: { type: "string" },
+        student_id: { type: "string" },
+        reason: { type: "string" },
+        scope: { type: "string", enum: ["single", "recurring"], default: "recurring" },
+      },
+      required: ["block_id", "student_id", "reason"],
+    },
+  },
+  {
     name: "get_operator_context",
     description: "Get the current operator's UI state (active location, date, view, and focused block). Use this to see what the user is looking at.",
     parameters: {
@@ -222,6 +251,45 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
         const { error } = await db.from("students").update(input).eq("tenant_id", tenantId).eq("id", input.student_id);
         return error ? `Error: ${error.message}` : "Student updated successfully.";
       }
+      case "book_student": {
+        // This tool replicates the logic from the /api/schedule-blocks/book-student route
+        const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zirowork.com'}/api/schedule-blocks/book-student`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            block_id: input.block_id,
+            student_id: input.student_id,
+            recurring: input.recurring ?? true,
+            is_first_day: input.is_first_day ?? false,
+            tenant_id: tenantId
+          })
+        });
+        const data = await res.json();
+        return res.ok ? "Student booked successfully." : `Error: ${data.error || 'Booking failed'}`;
+      }
+      case "cancel_session": {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.zirowork.com'}/api/schedule-blocks/cancel-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            block_id: input.block_id,
+            block_date: input.block_date,
+            student_id: input.student_id,
+            reason: input.reason,
+            scope: input.scope ?? "recurring",
+            tenant_id: tenantId
+          })
+        });
+        const data = await res.json();
+        return res.ok ? "Session cancelled successfully." : `Error: ${data.error || 'Cancellation failed'}`;
+      }
+      case "move_block": {
+        const { error } = await db.from("schedule_blocks").update({
+          block_date: input.new_date,
+          start_time: input.new_time
+        }).eq("tenant_id", tenantId).eq("id", input.block_id);
+        return error ? `Error: ${error.message}` : "Block moved successfully.";
+      }
       case "generate_progress_report": {
         try {
           const studentId = input.student_id;
@@ -280,24 +348,6 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
       }
       case "get_communication_queue": {
         let query = db.from("agent_messages").select("*").eq("tenant_id", tenantId);
-        if (input.status) query = query.eq("status", input.status);
-        if (input.priority) query = query.eq("priority", input.priority);
-        if (input.recipient_id) query = query.eq("recipient_id", input.recipient_id);
-        const { data, error } = await query.order("created_at", { ascending: false }).limit(input.limit || 50);
-        return error ? `Error: ${error.message}` : JSON.stringify(data);
-      }
-      case "batch_and_send": {
-        const { data: messages, error } = await db.from("agent_messages").select("*").eq("tenant_id", tenantId).eq("recipient_id", input.recipient_id).eq("status", "queued");
-        if (error) return `Error: ${error.message}`;
-        if (!messages || messages.length === 0) return "No queued messages found for this recipient.";
-        await db.from("agent_messages").update({ status: "sent", sent_at: new Date().toISOString() }).eq("tenant_id", tenantId).eq("recipient_id", input.recipient_id).eq("status", "queued");
-        return `Successfully batched and sent ${messages.length} messages to recipient ${input.recipient_id} via ${input.message_type}.`;
-      }
-      case "get_communication_log": {
-        let query = db.from("agent_messages").select("*").eq("tenant_id", tenantId).eq("status", "sent");
-        if (input.recipient_id) query = query.eq("recipient_id", input.recipient_id);
-        if (input.start_date) query = query.gte("created_at", input.start_date);
-        if (input.end_date) query = query.lte("created_at", input.end_date);
         const { data, error } = await query.order("sent_at", { ascending: false }).limit(input.limit || 50);
         return error ? `Error: ${error.message}` : JSON.stringify(data);
       }
