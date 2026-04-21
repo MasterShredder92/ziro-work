@@ -26,18 +26,20 @@ export function CleanLayout({ children }: { children: ReactNode }) {
       <Sidebar isMobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300 lg:pl-[64px]">
         <AnnouncementsProvider />
-        <Suspense
-          fallback={
-            <div className="h-[52px] shrink-0 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)]" />
-          }
-        >
-          <TopBar onMenuToggle={() => setMobileNavOpen((open) => !open)} />
-        </Suspense>
-        <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-hidden">
-          <ErrorBoundary>
-            <RouteLoadingBoundary>{children}</RouteLoadingBoundary>
-          </ErrorBoundary>
-        </main>
+        <div className="flex flex-1 flex-col min-h-0 relative">
+          <Suspense
+            fallback={
+              <div className="h-[65px] shrink-0 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)]" />
+            }
+          >
+            <TopBar onMenuToggle={() => setMobileNavOpen((open) => !open)} />
+          </Suspense>
+          <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto relative">
+            <ErrorBoundary>
+              <RouteLoadingBoundary>{children}</RouteLoadingBoundary>
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
       {mobileNavOpen ? (
         <button
@@ -50,4 +52,3 @@ export function CleanLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
