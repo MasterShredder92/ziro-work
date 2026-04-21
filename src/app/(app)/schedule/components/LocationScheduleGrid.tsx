@@ -261,7 +261,7 @@ export function LocationScheduleGrid({
   }, [projectedBlocks]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  const dayHours = getHoursForDate(selectedDate, locationHours);
+  const dayHours = getHoursForDate(locationHours, selectedDate);
   if (dayHours.isClosed) {
     return (
       <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[var(--z-muted)]">
