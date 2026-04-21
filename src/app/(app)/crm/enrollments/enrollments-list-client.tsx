@@ -37,22 +37,33 @@ const HEADERS = [
 
 const SORTABLE_COLUMN_KEYS = ["status", "start", "end", "updated"] as const;
 
+/**
+ * Safe metadata handling for Enrollments.
+ * Supabase types metadata as 'Json', which causes spread errors in Turbopack/TypeScript.
+ */
+interface EnrollmentMetadata {
+  notes?: string | null;
+  [key: string]: unknown;
+}
+
+function parseMetadata(raw: unknown): EnrollmentMetadata {
+  if (typeof raw === "object" && raw !== null) {
+    return raw as EnrollmentMetadata;
+  }
+  return {};
+}
+
 function getEnrollmentNotes(row: Enrollment): string {
-  const metadata = (row as Enrollment & { metadata?: { notes?: string | null } }).metadata;
-  return metadata?.notes ?? "";
+  const metadata = parseMetadata(row.metadata);
+  return metadata.notes ?? "";
 }
 
 function withEnrollmentNotes(row: Enrollment, notes: string): Enrollment {
-  const currentMetadata = (row as any).metadata || {};
-  const metadataObj =
-    typeof currentMetadata === "object" && currentMetadata !== null
-      ? currentMetadata
-      : {};
-
+  const metadata = parseMetadata(row.metadata);
   return {
     ...row,
     metadata: {
-      ...metadataObj,
+      ...metadata,
       notes: notes || null,
     },
   } as Enrollment;
@@ -114,10 +125,13 @@ export function EnrollmentsListClient({
 }) {
   const [localRows, setLocalRows] = useState(rows);
   const [notesPopoverRowId, setNotesPopoverRowId] = useState<string | null>(null);
+
   useEffect(() => {
     setLocalRows(rows);
   }, [rows]);
+
   const { sortKey, sortDir, toggleSort } = useCrmSort("list-enrollments");
+
   const teacherLabelById = useMemo(
     () =>
       Object.fromEntries(
@@ -125,8 +139,10 @@ export function EnrollmentsListClient({
       ) as Record<string, string>,
     [teacherOptions],
   );
+
   const { emitLocalPatch } = useCrmLocalPatch("enrollments", (rowId, patch) => {
-    const metadataNotes = (patch.metadata as { notes?: unknown } | undefined)?.notes;
+    const patchMetadata = parseMetadata(patch.metadata);
+    const metadataNotes = patchMetadata.notes;
     if (typeof metadataNotes !== "string" && metadataNotes !== null) return;
     setLocalRows((prev) =>
       prev.map((row) =>
@@ -134,6 +150,7 @@ export function EnrollmentsListClient({
       ),
     );
   });
+
   const inlineEdit = useInlineCrmEdit({
     resource: "enrollments",
     toPatch: ({ rowId, columnKey, value }) => {
@@ -141,9 +158,7 @@ export function EnrollmentsListClient({
       if (columnKey === "teacher") return { teacher_id: value };
       if (columnKey === "notes") {
         const row = localRows.find((it) => it.id === rowId);
-        const metadata =
-          (row as Enrollment & { metadata?: Record<string, unknown> } | undefined)
-            ?.metadata ?? {};
+        const metadata = parseMetadata(row?.metadata);
         return { metadata: { ...metadata, notes: value || null } };
       }
       throw new Error(`Unsupported editable enrollments column: ${columnKey}`);
@@ -177,6 +192,7 @@ export function EnrollmentsListClient({
       }
     },
   });
+
   const bulk = useMemo(
     () => ({
       rowIds: localRows.map((r) => r.id),
