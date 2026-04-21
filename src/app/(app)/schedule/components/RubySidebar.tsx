@@ -9,7 +9,7 @@ type Props = {
 export function RubySidebar({ isOpen, onClose }: Props) {
   return (
     <div
-      className={`fixed right-0 top-0 h-full w-80 bg-gray-800 text-white shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      className={`fixed right-0 top-0 h-full w-80 bg-gray-800 text-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? "translate-x-0" : "translate-x-full pointer-events-none"}`}
     >
       <div className="flex justify-between items-center p-4 border-b border-gray-700">
         <h2 className="text-lg font-semibold">Ruby Chat</h2>
