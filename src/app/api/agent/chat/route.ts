@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
 import { getServiceClient } from "@/lib/supabase";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
+import { getSession } from "@/lib/auth/session";
 import { sendEmail, sendEmailToolDefinition } from "@/lib/agents/tools/sendEmail";
 import { RAVEN_TOOLS, sendReportEmailToolDefinition } from "@/lib/agents/tools/ravenCommunicationTools";
 import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
@@ -103,6 +104,16 @@ const RUBY_TOOLS = [
       required: ["block_id", "new_date", "new_time"],
     },
   },
+  {
+    name: "get_operator_context",
+    description: "Get the current operator's UI state (active location, date, view, and focused block). Use this to see what the user is looking at.",
+    parameters: {
+      type: "object",
+      properties: {
+        user_id: { type: "string", description: "Optional user ID to fetch context for." }
+      }
+    }
+  }
 ];
 
 const SHARED_TOOLS = [
@@ -136,6 +147,16 @@ const SHARED_TOOLS = [
       },
     },
   },
+  {
+    name: "get_operator_context",
+    description: "Get the current operator's UI state (active location, date, view, and focused block). Use this to see what the user is looking at.",
+    parameters: {
+      type: "object",
+      properties: {
+        user_id: { type: "string", description: "Optional user ID to fetch context for." }
+      }
+    }
+  }
 ];
 
 const ZIRO_TOOLS = [
@@ -149,10 +170,33 @@ const ZIRO_TOOLS = [
 
 // --- TOOL EXECUTION ENGINE ---
 
-async function executeTool(name: string, input: any, tenantId: string) {
+async function executeTool(name: string, input: any, tenantId: string, userId?: string) {
   const db = getServiceClient();
   try {
     switch (name) {
+      case "get_operator_context": {
+        const targetUserId = input.user_id || userId;
+        if (!targetUserId) return "Error: No user ID available for context lookup.";
+        
+        const { data, error } = await db
+          .from("operator_sessions")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .eq("user_id", targetUserId)
+          .single();
+          
+        if (error) return `Error fetching operator context: ${error.message}`;
+        if (!data) return "No active operator session found. User might not be on the schedule page.";
+        
+        return JSON.stringify({
+          active_location_id: data.active_location_id,
+          active_date: data.active_date,
+          active_view: data.active_view,
+          active_modal: data.active_modal,
+          focused_block_id: data.focused_block_id,
+          last_updated: data.updated_at
+        });
+      }
       case "search_teachers": {
         const { data, error } = await db.from("teachers").select("id, first_name, last_name, instrument").eq("tenant_id", tenantId).or(`first_name.ilike.%${input.query}%,last_name.ilike.%${input.query}%`);
         return error ? `Error: ${error.message}` : JSON.stringify(data);
@@ -272,8 +316,13 @@ async function executeTool(name: string, input: any, tenantId: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, agentId = "ziro", context = {}, history = [] } = await req.json();
+    const { message, agentId = "ziro", context: clientContext = {}, history = [] } = await req.json();
     
+    // Resolve server-side session for secure tenant/user context
+    const session = await getSession();
+    const tenantId = session?.tenantId || clientContext.tenantId || DEFAULT_TENANT_ID;
+    const userId = session?.userId || clientContext.userId;
+
     const apiKey = process.env.OPENAI_API_KEY;
     const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_API_BASE || "https://api.manus.im/api/llm-proxy/v1";
     
@@ -284,7 +333,7 @@ export async function POST(req: NextRequest) {
     const openai = new OpenAI({ apiKey, baseURL });
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
     const now = new Date();
-    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${context.tenantId || DEFAULT_TENANT_ID}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
+    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${now.toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nRULES:\n- You are a Senior Operator. You NEVER ask for information that you can find yourself in the database.\n- ALWAYS use 'get_operator_context' first if the user asks about 'this' location, 'today', or 'this block' to see what they are looking at.\n- If a user asks about a person, schedule, or record, USE SEARCH AND GET TOOLS IMMEDIATELY.\n- Do not ask clarifying questions like "is this a teacher or student?" — search both rosters to find out.\n- Concise, championship-level tone. No filler.`;
 
     let rawTools: any[] = [];
     if (agentId === "vader") rawTools = VADER_TOOLS.map(convertToOpenAI);
@@ -308,7 +357,6 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    const tenantId = context.tenantId || DEFAULT_TENANT_ID;
     let messages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m: any) => ({
       role: m.role,
       content: m.content
@@ -335,7 +383,7 @@ export async function POST(req: NextRequest) {
 
       for (const toolCall of assistantMessage.tool_calls) {
         if (toolCall.type !== "function") continue;
-        const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments), tenantId);
+        const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments), tenantId, userId);
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,

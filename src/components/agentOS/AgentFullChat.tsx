@@ -76,13 +76,20 @@ export function AgentFullChat() {
           content: m.text,
         }));
 
+        // Get tenant and user context from the environment/providers if available
+        // We'll try to get them from the window or a global store since we don't have direct access to hooks here
+        // But for now, we'll pass the base context which the API can supplement with service-side lookups
         const res = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             agentId,
             message: trimmed,
-            context: {},
+            context: {
+              // The API will use DEFAULT_TENANT_ID if not provided, 
+              // but we should try to pass the real one from the UI if possible.
+              // For now, we'll let the API handle the lookup via the session.
+            },
             history,
           }),
           signal: controller.signal,
