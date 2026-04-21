@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
-import type { RubyEvent } from "./RubyScheduleBar";
+import { type RubyEvent } from "@/app/(app)/schedule/components/RubyScheduleBar";
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";

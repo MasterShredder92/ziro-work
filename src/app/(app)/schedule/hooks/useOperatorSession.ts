@@ -12,10 +12,11 @@ export type OperatorSessionState = {
   focusedBlockId: string | null;
 };
 
-export function useOperatorSession(initialState: OperatorSessionState) {
+export function useOperatorSession(state: OperatorSessionState) {
   const { tenantId } = useTenantUi();
   const supabase = getBrowserSupabaseClient();
   const [userId, setUserId] = React.useState<string | null>(null);
+  const lastSyncRef = React.useRef<string>("");
 
   // Get current user ID
   React.useEffect(() => {
@@ -27,28 +28,27 @@ export function useOperatorSession(initialState: OperatorSessionState) {
   }, [supabase]);
 
   // Sync state to Supabase
-  const syncState = React.useCallback(async (state: Partial<OperatorSessionState>) => {
+  const syncState = React.useCallback(async (currentState: OperatorSessionState) => {
     if (!userId || !tenantId) return;
 
     const payload = {
       tenant_id: tenantId,
       user_id: userId,
-      active_location_id: state.activeLocationId,
-      active_date: state.activeDate,
-      active_view: state.activeView,
-      active_modal: state.activeModal,
-      focused_block_id: state.focusedBlockId,
-      updated_at: new Date().toISOString(),
+      active_location_id: currentState.activeLocationId,
+      active_date: currentState.activeDate,
+      active_view: currentState.activeView,
+      active_modal: currentState.activeModal,
+      focused_block_id: currentState.focusedBlockId,
     };
 
-    // Filter out undefined values to avoid overwriting with null unless intended
-    const cleanPayload = Object.fromEntries(
-      Object.entries(payload).filter(([_, v]) => v !== undefined)
-    );
+    // Prevent redundant syncs by comparing stringified payload
+    const syncKey = JSON.stringify(payload);
+    if (syncKey === lastSyncRef.current) return;
+    lastSyncRef.current = syncKey;
 
     const { error } = await supabase
       .from("operator_sessions")
-      .upsert(cleanPayload, { onConflict: "tenant_id,user_id" });
+      .upsert({ ...payload, updated_at: new Date().toISOString() }, { onConflict: "tenant_id,user_id" });
 
     if (error) {
       console.error("[OperatorSession] Sync failed:", error);
@@ -58,9 +58,9 @@ export function useOperatorSession(initialState: OperatorSessionState) {
   // Effect to sync on state changes
   React.useEffect(() => {
     if (userId && tenantId) {
-      void syncState(initialState);
+      void syncState(state);
     }
-  }, [initialState, syncState, tenantId, userId]);
+  }, [state, syncState, tenantId, userId]);
 
   return { syncState };
 }
