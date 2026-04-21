@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { listAgentMetadata, type AgentMetadata } from "@/lib/agents/agentMetadata";
 import { getAgent } from "@/lib/agents/registry";
-import { queueAgentAction } from "@/lib/agents/agentActionAPI";
+import { useAgentOS } from "@/components/agentOS/AgentOSContext";
 import { Button } from "@/components/ui/Button";
 import { cn, focusRingClassName } from "@/components/ui/utils";
 import { useDashboardMetrics } from "@/components/dashboard/useDashboardMetrics";
@@ -210,16 +210,21 @@ function AgentCircleExpanded({
   const link = primaryLinkForAgent(meta.id);
   const ask = askActionForAgent(meta.id);
   const rateConfig = AGENT_RATE_CONFIG[meta.id as keyof typeof AGENT_RATE_CONFIG];
+  const { setAgentId, openFullChat, runQuickAction } = useAgentOS();
 
   const fireAsk = () => {
     if (!ask) return;
-    try {
-      queueAgentAction(meta.id, ask.action, {
-        source: "dashboard",
-        ...(typeof ask.payload === "object" && ask.payload ? ask.payload : {}),
+    setAgentId(meta.id);
+    // If the agent has a specific summon action, run it; else just open chat
+    if (ask.action === "summon") {
+      runQuickAction({
+        id: `dashboard-ask-${meta.id}`,
+        label: ask.label,
+        intent: "summon",
+        payload: ask.payload,
       });
-    } catch {
-      /* runtime not initialized; ignore */
+    } else {
+      openFullChat();
     }
   };
 

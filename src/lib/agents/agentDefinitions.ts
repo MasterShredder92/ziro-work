@@ -394,8 +394,8 @@ TONE & STYLE
     role: "Communications Hub",
     energy: "Sharp, efficient, brand voice personified",
     visual: "Black sleek raven with silver accents, message wings",
-    accent: "#1f2937",
-    glow: "rgba(31,41,55,0.45)",
+    accent: "#4ade80",
+    glow: "rgba(74, 222, 128, 0.45)",
     tagline: "The studio's voice. Every message, one tone.",
     pages: ["/communications", "/messages"],
     skills: [
