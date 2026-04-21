@@ -125,6 +125,30 @@ const STEWIE_TOOLS = [
   },
 ];
 
+const VADER_TOOLS = [
+  {
+    name: "analyze_customer_health",
+    description: "Analyze customer health and engagement metrics.",
+    input_schema: {
+      type: "object" as const,
+      properties: { customer_id: { type: "string" } },
+      required: ["customer_id"],
+    },
+  },
+];
+
+const STAR_TOOLS = [
+  {
+    name: "generate_insights",
+    description: "Generate business insights from data.",
+    input_schema: {
+      type: "object" as const,
+      properties: { data_type: { type: "string" } },
+      required: ["data_type"],
+    },
+  },
+];
+
 const ZIRO_TOOLS = [
   {
     name: "assign_agent_task",

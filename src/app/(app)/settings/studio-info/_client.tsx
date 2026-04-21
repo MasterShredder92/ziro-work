@@ -83,15 +83,12 @@ export function StudioInfoSettingsClient() {
     setSaveStatus("idle");
     setSaveError(null);
     try {
-      const res = await fetch("/api/admin/settings", {
+      const res = await fetch("/api/admin/tenant", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schedule: {
-            studio_display_name: studioName,
-            timezone,
-            default_billing_cycle: billingCycle,
-          },
+          name: studioName,
+          timezone,
         }),
       });
       if (!res.ok) {
