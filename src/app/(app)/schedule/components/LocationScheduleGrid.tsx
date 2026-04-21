@@ -270,8 +270,8 @@ export function LocationScheduleGrid({
     );
   }
 
-  const startMin = dayHours.openMinute;
-  const endMin = dayHours.closeMinute;
+  const startMin = toMinute(dayHours.openTime);
+  const endMin = toMinute(dayHours.closeTime);
   const totalMinutes = endMin - startMin;
   const timeLabels = [];
   for (let m = startMin; m < endMin; m += 30) {
@@ -293,7 +293,7 @@ export function LocationScheduleGrid({
       const updated = await res.json() as { data: ScheduleBlock };
       onBlocksChange(blocks.map(b => b.id === blockId ? { ...b, ...updated.data } : b));
       if (closePanel) setSelectedBlockId(null);
-      onRubyEvent?.({ type: "idle", message: "Block updated successfully" });
+      onRubyEvent?.({ type: "save", message: "Block updated successfully" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
     } finally {
@@ -341,7 +341,7 @@ export function LocationScheduleGrid({
       // For now, let's assume the API returns the updated base block or new block
       onBlocksChange(blocks.map(b => b.id === updated.data.id ? updated.data : b));
       setSelectedBlockId(null);
-      onRubyEvent?.({ type: "book_student", message: `Booked ${studentName(studentsById.get(bookingStudentId)!)}` });
+      onRubyEvent?.({ type: "book", message: `Booked ${studentName(studentsById.get(bookingStudentId)!)}` });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Booking failed");
     } finally {
