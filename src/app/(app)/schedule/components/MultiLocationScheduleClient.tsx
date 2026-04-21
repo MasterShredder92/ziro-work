@@ -457,3 +457,6 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           onBlocksChange={handleBlocksChange}
         />
       )}
+    </div>
+  );
+}
