@@ -254,13 +254,22 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             );
           })}
 
-          {/* Ruby Sidebar Toggle */}
+          {/* Ruby Profile Card Toggle */}
           <button
             type="button"
-            onClick={() => setIsRubySidebarOpen(!isRubySidebarOpen)}
-            className="ml-auto shrink-0 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
+            onClick={() => setIsRubySidebarOpen(true)}
+            className="ml-auto group flex items-center gap-3 rounded-xl border border-[#fb923c]/30 bg-[#fb923c]/10 px-4 py-2 transition-all hover:bg-[#fb923c]/20 hover:border-[#fb923c]/50"
           >
-            Ruby
+            <div className="relative">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#fb923c] to-[#ea580c] flex items-center justify-center text-lg shadow-[0_0_10px_rgba(251,146,60,0.3)]">
+                🗓️
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#00ff88] border-2 border-[#0f0f12]" />
+            </div>
+            <div className="text-left">
+              <div className="text-[10px] font-black text-white leading-none uppercase tracking-tighter">RUBY</div>
+              <div className="text-[9px] font-bold text-[#fb923c] leading-none uppercase tracking-widest mt-0.5">ONLINE</div>
+            </div>
           </button>
 
           {/* Schedule / Rooms view toggle */}
