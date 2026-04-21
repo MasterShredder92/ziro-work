@@ -168,7 +168,7 @@ export async function promoteLeadToStudent(
   }
 
   const studentInput: Omit<StudentInsert, "tenant_id"> = {
-    first_name: lead.first_name,
+    first_name: lead.first_name || "Unknown",
     last_name: lead.last_name ?? "",
     email: lead.email ?? null,
     phone: lead.phone ?? null,

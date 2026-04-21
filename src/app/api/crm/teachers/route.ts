@@ -35,11 +35,11 @@ export async function GET(req: NextRequest) {
 
 const CreateTeacherSchema = z
   .object({
-    first_name: z.string().nullable().optional(),
-    last_name: z.string().nullable().optional(),
-    display_name: z.string().nullable().optional(),
-    email: z.string().email().nullable().optional(),
-    phone: z.string().nullable().optional(),
+    first_name: z.string(),
+    last_name: z.string(),
+    display_name: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
     instruments: z.array(z.string()).optional(),
     status: z.string().optional(),
     is_active: z.boolean().optional(),
@@ -58,10 +58,16 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return badRequest("Invalid teacher payload", parsed.error.flatten());
     }
+
+    const { first_name, last_name, ...rest } = parsed.data;
+
     const row = await createTeacher(resolved.context.tenantId, {
-      instruments: parsed.data.instruments ?? [],
-      ...parsed.data,
-    });
+      first_name,
+      last_name,
+      instruments: rest.instruments ?? [],
+      ...rest,
+    } as any);
+    
     return created({ data: row });
   } catch (err) {
     return serverError(err);
