@@ -341,7 +341,7 @@ export function LocationScheduleGrid({
       // For now, let's assume the API returns the updated base block or new block
       onBlocksChange(blocks.map(b => b.id === updated.data.id ? updated.data : b));
       setSelectedBlockId(null);
-      onRubyEvent?.({ type: "book", message: `Booked ${studentName(studentsById.get(bookingStudentId)!)}` });
+      onRubyEvent?.({ type: "book_student", message: `Booked ${studentName(studentsById.get(bookingStudentId)!)}` });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Booking failed");
     } finally {
