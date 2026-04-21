@@ -227,7 +227,7 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // Use official MANUS_API_KEY for production stability
+    // USE OFFICIAL MANUS_API_KEY FOR PRODUCTION STABILITY
     const apiKey = process.env.MANUS_API_KEY;
     
     if (!apiKey) {
@@ -236,6 +236,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
+    // DIRECT OPENAI CONNECTION - NO PROXIES, NO REDIRECTS
     const openai = new OpenAI({
       apiKey: apiKey,
       baseURL: "https://api.openai.com/v1",
@@ -248,6 +249,8 @@ export async function POST(req: NextRequest) {
     const userId = session?.userId || clientContext.userId;
 
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
+    
+    // PAPERCLIP AI METHODOLOGY: SNAP TO STATE IMMEDIATELY
     const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${new Date().toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nDIRECTIVE: You are a Senior Operator. Execute tools immediately to find information or perform actions. Never ask for info you can retrieve yourself. Use 'get_operator_context' to see the user's current view.`;
 
     let messages: any[] = [
