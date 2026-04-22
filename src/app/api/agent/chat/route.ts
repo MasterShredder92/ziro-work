@@ -5,62 +5,45 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message, agentId = "ziro" } = body;
+    const { message } = body;
 
+    // Use the latest key provided by the user: sk-s-3zKuff...
     const apiKey = process.env.MANUS_API_KEY || "";
     
-    // We'll try the most likely working endpoint first: 
-    // The OpenAI-compatible proxy for Manus.
-    const proxyEndpoint = "https://api.manus.im/api/llm-proxy/v1/chat/completions";
+    // The specific OpenAI-compatible proxy endpoint for Manus
+    const endpoint = "https://api.manus.im/api/llm-proxy/v1/chat/completions";
     
-    console.log(`[Manus API] Trying OpenAI-compatible proxy for agent ${agentId}`);
+    console.log(`[Manus API] Direct relay request for message: ${message.substring(0, 20)}...`);
 
-    const proxyResponse = await fetch(proxyEndpoint, {
+    // Pure fetch request to bypass any library-level overhead or 403 blocks
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "ZiroWork/1.0 (Server-side; Vercel)"
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini", // Standard Manus model
-        messages: [{ role: "user", content: message }]
+        model: "gpt-4.1-mini",
+        messages: [{ role: "user", content: message }],
+        temperature: 0.7,
+        max_tokens: 1000
       })
     });
 
-    if (proxyResponse.ok) {
-      const data = await proxyResponse.json();
-      const reply = data.choices?.[0]?.message?.content || "Ruby is thinking...";
-      return NextResponse.json({ reply });
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(`[Manus API] Error: ${response.status}`, data);
+      return NextResponse.json(
+        { error: `Agent Error: ${data.error?.message || "Authentication or Proxy Error"}` },
+        { status: response.status }
+      );
     }
 
-    // If proxy fails, try the official Manus task API as a fallback
-    console.log(`[Manus API] Proxy failed with ${proxyResponse.status}. Trying native Task API...`);
-    
-    const taskEndpoint = "https://api.manus.ai/v2/task.create";
-    const taskResponse = await fetch(taskEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-manus-api-key": apiKey
-      },
-      body: JSON.stringify({
-        message: { content: message }
-      })
-    });
+    const reply = data.choices?.[0]?.message?.content || "Ruby is processing your request.";
 
-    if (taskResponse.ok) {
-      const data = await taskResponse.json();
-      const reply = data.task?.latest_message?.content || "Task created successfully.";
-      return NextResponse.json({ reply });
-    }
-
-    // Both failed
-    const errorData = await taskResponse.json().catch(() => ({}));
-    return NextResponse.json(
-      { error: `Agent Error: ${errorData.error?.message || "All endpoints failed"}` },
-      { status: taskResponse.status }
-    );
+    return NextResponse.json({ reply });
 
   } catch (error: any) {
     console.error("[Manus API Error]:", error);
