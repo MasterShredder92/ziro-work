@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const {
       message,
       agentId = "ziro",
-      messages = [],
+      history = [],
     } = body;
 
     const agentDef = getAgentDefinition(agentId);
@@ -28,8 +28,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Agent "${agentId}" not found` }, { status: 404 });
     }
 
+    // Map history to the format expected by AI SDK generateText
     const messageHistory: any[] = [
-      ...messages,
+      ...history.map((m: any) => ({
+        role: m.role,
+        content: m.content || m.text || "",
+      })),
       { role: "user", content: message },
     ];
 
@@ -116,9 +120,9 @@ export async function POST(req: NextRequest) {
       maxSteps: 5,
     });
 
-    // Return a clean JSON object that the frontend can parse with JSON.parse()
+    // Return the EXACT structure the Ruby UI expects: { content: [{ text: "..." }] }
     return NextResponse.json({
-      text,
+      content: [{ text }],
       toolResults,
       agentId,
       timestamp: new Date().toISOString()
