@@ -1,11 +1,5 @@
 /**
- * ZiroWork Agent Definitions
- * 
- * Each agent has:
- * - A role (CEO, Worker, Specialist)
- * - A set of tools they can use
- * - Instructions for how to behave
- * - Approval requirements for sensitive actions
+ * ZiroWork Agent Definitions — ORCHESTRATOR MODE
  */
 
 export interface AgentDefinition {
@@ -15,9 +9,9 @@ export interface AgentDefinition {
   description: string;
   systemPrompt: string;
   tools: string[];
-  approvalRequired: string[]; // Tools that need human approval
+  approvalRequired: string[]; 
   canSpawnSubAgents: boolean;
-  heartbeatInterval?: number; // Minutes between proactive checks
+  heartbeatInterval?: number; 
 }
 
 /**
@@ -34,46 +28,33 @@ export const RUBY: AgentDefinition = {
 
 You have access to:
 - read_schedule: View the current schedule for a studio
-- check_conflicts: Detect scheduling conflicts
-- suggest_slot: Recommend available time slots
 - move_student: Reschedule a student by moving them to a new available block
-- move_lesson: Change the date/time of an existing block (requires approval)
+- handle_teacher_callout: Draft alternative slots for all students of a teacher who called out sick
+- find_booking_gaps: Proactively scan for "Swiss cheese" gaps (single open 30-min slots) to optimize revenue
 
-When a user asks about the schedule, first read the current state, then provide recommendations. If they ask you to move a student, identify the current block and the target block, then execute the move.
+When a teacher calls out, use handle_teacher_callout to identify the impact and propose solutions. When asked to optimize, use find_booking_gaps to identify revenue-draining holes.
 
 Always be proactive: If you detect conflicts or suboptimal placements, alert the user immediately.`,
   tools: [
     "read_schedule",
-    "check_conflicts",
-    "suggest_slot",
     "move_student",
-    "move_lesson",
+    "handle_teacher_callout",
+    "find_booking_gaps",
   ],
-  approvalRequired: ["move_student", "move_lesson"],
+  approvalRequired: ["move_student", "handle_teacher_callout"],
   canSpawnSubAgents: false,
-  heartbeatInterval: 30, // Check for conflicts every 30 minutes
+  heartbeatInterval: 30, 
 };
 
 /**
  * SID - Student & Instructor Data Agent
- * Role: Worker
- * Responsibilities: Manage student profiles, instructor info, lesson history
  */
 export const SID: AgentDefinition = {
   id: "sid",
   name: "Sid",
   role: "worker",
   description: "Student & Instructor Data Manager",
-  systemPrompt: `You are Sid, the ZiroWork Data Agent. Your job is to maintain accurate student and instructor information.
-
-You have access to:
-- read_student: Get student profile and history
-- update_student_bio: Edit student information (requires approval)
-- read_instructor: Get instructor profile
-- update_instructor_info: Edit instructor information (requires approval)
-- get_lesson_history: Retrieve past lessons and progress
-
-When asked about a student or instructor, retrieve their data and provide insights. If updates are needed, request approval first.`,
+  systemPrompt: `You are Sid, the ZiroWork Data Agent. Your job is to maintain accurate student and instructor information.`,
   tools: [
     "read_student",
     "update_student_bio",
@@ -87,24 +68,13 @@ When asked about a student or instructor, retrieve their data and provide insigh
 
 /**
  * VADER - Financial & Billing Agent
- * Role: Specialist
- * Responsibilities: Invoicing, payments, financial reporting
  */
 export const VADER: AgentDefinition = {
   id: "vader",
   name: "Vader",
   role: "specialist",
   description: "Financial & Billing Specialist",
-  systemPrompt: `You are Vader, the ZiroWork Financial Agent. Your job is to handle invoicing, payments, and financial reporting.
-
-You have access to:
-- read_invoices: View invoice history
-- create_invoice: Generate a new invoice (requires approval)
-- process_payment: Record a payment (requires approval)
-- generate_report: Create financial reports
-- check_balance: View account balance
-
-Always double-check amounts before processing payments. Request approval for any financial transactions.`,
+  systemPrompt: `You are Vader, the ZiroWork Financial Agent. Your job is to handle invoicing, payments, and financial reporting.`,
   tools: [
     "read_invoices",
     "create_invoice",
@@ -118,24 +88,13 @@ Always double-check amounts before processing payments. Request approval for any
 
 /**
  * STEWIE - Recruitment & HR Agent
- * Role: Specialist
- * Responsibilities: Hiring, onboarding, performance reviews
  */
 export const STEWIE: AgentDefinition = {
   id: "stewie",
   name: "Stewie",
   role: "specialist",
   description: "Recruitment & HR Specialist",
-  systemPrompt: `You are Stewie, the ZiroWork HR Agent. Your job is to manage recruitment, onboarding, and performance.
-
-You have access to:
-- post_job: Create a job posting (requires approval)
-- review_applications: Analyze applicants
-- onboard_instructor: Process new hire (requires approval)
-- schedule_review: Set up performance review
-- track_performance: Monitor instructor metrics
-
-Help find and onboard the best talent for ZiroWork.`,
+  systemPrompt: `You are Stewie, the ZiroWork HR Agent. Your job is to manage recruitment, onboarding, and performance.`,
   tools: [
     "post_job",
     "review_applications",
@@ -149,24 +108,13 @@ Help find and onboard the best talent for ZiroWork.`,
 
 /**
  * BUB - Operations & Logistics Agent
- * Role: Worker
- * Responsibilities: Room management, equipment, facility operations
  */
 export const BUB: AgentDefinition = {
   id: "bub",
   name: "Bub",
   role: "worker",
   description: "Operations & Logistics Manager",
-  systemPrompt: `You are Bub, the ZiroWork Operations Agent. Your job is to manage rooms, equipment, and facility logistics.
-
-You have access to:
-- list_rooms: View available rooms
-- reserve_room: Book a room for a lesson (requires approval)
-- check_equipment: Verify equipment availability
-- report_issue: Log maintenance issues
-- optimize_layout: Suggest room assignments
-
-Keep the studio running smoothly and ensure all resources are optimized.`,
+  systemPrompt: `You are Bub, the ZiroWork Operations Agent. Your job is to manage rooms, equipment, and facility logistics.`,
   tools: [
     "list_rooms",
     "reserve_room",
@@ -180,24 +128,13 @@ Keep the studio running smoothly and ensure all resources are optimized.`,
 
 /**
  * RAVEN - Analytics & Insights Agent
- * Role: Specialist
- * Responsibilities: Data analysis, reporting, trend detection
  */
 export const RAVEN: AgentDefinition = {
   id: "raven",
   name: "Raven",
   role: "specialist",
   description: "Analytics & Insights Specialist",
-  systemPrompt: `You are Raven, the ZiroWork Analytics Agent. Your job is to analyze data and provide insights.
-
-You have access to:
-- analyze_trends: Identify patterns in student progress
-- generate_insights: Create actionable recommendations
-- create_dashboard: Build custom reports
-- predict_churn: Identify at-risk students
-- benchmark_performance: Compare against industry standards
-
-Use data to drive better decisions for ZiroWork.`,
+  systemPrompt: `You are Raven, the ZiroWork Analytics Agent. Your job is to analyze data and provide insights.`,
   tools: [
     "analyze_trends",
     "generate_insights",
@@ -211,23 +148,13 @@ Use data to drive better decisions for ZiroWork.`,
 
 /**
  * ZIRO - CEO Agent
- * Role: CEO
- * Responsibilities: Strategic planning, agent coordination, high-level decisions
  */
 export const ZIRO: AgentDefinition = {
   id: "ziro",
   name: "Ziro",
   role: "ceo",
   description: "CEO & Strategic Orchestrator",
-  systemPrompt: `You are Ziro, the ZiroWork CEO Agent. Your job is to coordinate all other agents and make strategic decisions.
-
-You can:
-- Spawn worker agents (Ruby, Sid, Bub) for specific tasks
-- Coordinate between specialists (Vader, Stewie, Raven)
-- Make high-level strategic decisions
-- Escalate issues that need human approval
-
-When a complex goal comes in, break it down into tasks for the appropriate agents. Always keep the human (Zach) informed of major decisions.`,
+  systemPrompt: `You are Ziro, the ZiroWork CEO Agent. Your job is to coordinate all other agents and make strategic decisions.`,
   tools: [
     "spawn_agent",
     "coordinate_agents",
@@ -236,13 +163,9 @@ When a complex goal comes in, break it down into tasks for the appropriate agent
   ],
   approvalRequired: ["make_decision"],
   canSpawnSubAgents: true,
-  heartbeatInterval: 60, // Check in every hour
+  heartbeatInterval: 60, 
 };
 
-/**
- * Agent Registry
- * Map agent IDs to their definitions
- */
 export const AGENT_REGISTRY: Record<string, AgentDefinition> = {
   ruby: RUBY,
   sid: SID,
@@ -253,23 +176,14 @@ export const AGENT_REGISTRY: Record<string, AgentDefinition> = {
   ziro: ZIRO,
 };
 
-/**
- * Get agent definition by ID
- */
 export function getAgentDefinition(agentId: string): AgentDefinition | null {
   return AGENT_REGISTRY[agentId] || null;
 }
 
-/**
- * Get all agents
- */
 export function getAllAgents(): AgentDefinition[] {
   return Object.values(AGENT_REGISTRY);
 }
 
-/**
- * Get agents by role
- */
 export function getAgentsByRole(role: AgentDefinition["role"]): AgentDefinition[] {
   return Object.values(AGENT_REGISTRY).filter((agent) => agent.role === role);
 }

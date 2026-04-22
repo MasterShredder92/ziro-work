@@ -1,10 +1,7 @@
 /**
- * ZiroWork Unified Tool Registry
+ * ZiroWork Unified Tool Registry — ORCHESTRATOR MODE
  * 
  * Maps tool names to their implementations.
- * All agents pull their tools from this registry.
- * 
- * This is the "Hands" of the ZiroWork Agentic System.
  */
 
 import { RUBY_TOOLS } from "./ruby-tools";
@@ -13,12 +10,11 @@ import { VADER_TOOLS } from "./vader-tools";
 import { RAVEN_TOOLS } from "./raven-tools";
 
 export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
-  // Ruby — Scheduling
+  // Ruby — Scheduling & Orchestration
   read_schedule: RUBY_TOOLS.read_schedule,
-  check_conflicts: RUBY_TOOLS.check_conflicts,
-  suggest_slot: RUBY_TOOLS.suggest_slot,
-  move_lesson: RUBY_TOOLS.move_lesson,
   move_student: (RUBY_TOOLS as any).move_student,
+  handle_teacher_callout: (RUBY_TOOLS as any).handle_teacher_callout,
+  find_booking_gaps: (RUBY_TOOLS as any).find_booking_gaps,
 
   // Sid — Student & Instructor Data
   read_student: SID_TOOLS.read_student,
@@ -39,10 +35,6 @@ export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
   generate_insights: RAVEN_TOOLS.generate_insights,
 };
 
-/**
- * Execute a tool by name with the given input
- * This is called by the orchestrator when an agent wants to use a tool
- */
 export async function executeTool(
   toolName: string,
   input: Record<string, any>
