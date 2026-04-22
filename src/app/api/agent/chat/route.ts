@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateText, tool } from "ai";
+import { NextRequest } from "next/server";
+import { streamText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -9,10 +9,12 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — LEGACY UI COMPATIBILITY MODE
+ * ZiroWork Agentic Chat Route — MODERN AGENTIC MODE
  * 
- * Returns a Standard JSON Response instead of a Data Stream to fix:
- * "Unexpected token 'd', 'data: {'ty'... is not valid JSON"
+ * Uses streamText and toDataStreamResponse to support:
+ * 1. Multi-step tool calling (maxSteps: 5)
+ * 2. Real-time tool invocation visibility in the UI
+ * 3. Standard AI SDK v6 protocol
  */
 export async function POST(req: NextRequest) {
   try {
@@ -25,10 +27,10 @@ export async function POST(req: NextRequest) {
 
     const agentDef = getAgentDefinition(agentId);
     if (!agentDef) {
-      return NextResponse.json({ error: `Agent "${agentId}" not found` }, { status: 404 });
+      throw new Error(\`Agent "\${agentId}" not found\`);
     }
 
-    // Map history to the format expected by AI SDK generateText
+    // Map history to the format expected by AI SDK
     const messageHistory: any[] = [
       ...history.map((m: any) => ({
         role: m.role,
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const agentTools: any = {};
 
-    // Use the tool() helper explicitly to ensure correct schema mapping in AI SDK v6
+    // Define tools using the tool() helper with explicit inputSchema
     // 1. get_global_state (Ziro Only)
     if (agentDef.tools.includes("get_global_state")) {
       agentTools.get_global_state = tool({
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
         }),
-        execute: async (args: any) => await executeTool("get_global_state", args),
+        execute: async (args) => await executeTool("get_global_state", args),
       });
     }
 
@@ -61,7 +63,7 @@ export async function POST(req: NextRequest) {
           parameters: z.record(z.string(), z.any()).describe("The input data for the tool"),
           reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
         }),
-        execute: async (args: any) => await executeTool("delegate_to_agent", args),
+        execute: async (args) => await executeTool("delegate_to_agent", args),
       });
     }
 
@@ -73,7 +75,7 @@ export async function POST(req: NextRequest) {
           locationName: z.string().describe("Bellevue, Elkhorn, Gretna, Omaha"),
           date: z.string().describe("YYYY-MM-DD"),
         }),
-        execute: async (args: any) => await executeTool("read_schedule", args),
+        execute: async (args) => await executeTool("read_schedule", args),
       });
     }
 
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
           targetBlockId: z.string(),
           reason: z.string(),
         }),
-        execute: async (args: any) => await executeTool("move_student", args),
+        execute: async (args) => await executeTool("move_student", args),
       });
     }
 
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest) {
           date: z.string(),
           locationName: z.string(),
         }),
-        execute: async (args: any) => await executeTool("handle_teacher_callout", args),
+        execute: async (args) => await executeTool("handle_teacher_callout", args),
       });
     }
 
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest) {
           locationName: z.string(),
           date: z.string(),
         }),
-        execute: async (args: any) => await executeTool("find_booking_gaps", args),
+        execute: async (args) => await executeTool("find_booking_gaps", args),
       });
     }
 
@@ -116,24 +118,21 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const { text, toolResults } = await generateText({
+    const result = await streamText({
       model: openai("gpt-4.1-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      maxSteps: 5,
+      maxSteps: 5, // Allow multi-step tool reasoning
     });
 
-    // Return the EXACT structure the Ruby UI expects: { content: [{ text: "..." }] }
-    return NextResponse.json({
-      content: [{ text }],
-      toolResults,
-      agentId,
-      timestamp: new Date().toISOString()
-    });
+    return result.toDataStreamResponse();
 
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
