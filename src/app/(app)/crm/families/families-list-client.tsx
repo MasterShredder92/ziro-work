@@ -1,356 +1,306 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Family as FamilyRow } from "@/lib/types/entities";
-import { CRMListTableSection } from "../ColumnVisibilityMenu";
-import { BulkSelectCell } from "../crm-list-selection";
-import { downloadCsv, rowsToCsv } from "../exportCsv";
-import { useCrmLocalPatch } from "../_components/hooks/useCrmLocalPatch";
-import { useInlineCrmEdit } from "../_components/hooks/useInlineCrmEdit";
-import { EditableCell } from "../table-shell";
-import { useCrmSort } from "../useCrmSort";
 
-const COLUMN_KEYS = [
-  "family",
-  "primary_contact",
-  "students",
-  "studio",
-  "military",
-  "rate_tier",
-  "lifetime_paid",
-  "balance",
-  "email",
-  "phone",
-  "notes",
-] as const;
+const INSTRUMENT_COLORS: Record<string, string> = {
+  Piano: "#6366f1", Guitar: "#f59e0b", Vocals: "#ec4899", Drums: "#ef4444",
+  Bass: "#8b5cf6", Violin: "#10b981", Ukulele: "#06b6d4", Saxophone: "#f97316",
+  Trumpet: "#eab308", Flute: "#14b8a6",
+};
+function instrColor(i: string) { return INSTRUMENT_COLORS[i] ?? "#6366f1"; }
 
-const HEADERS = [
-  "Family",
-  "Primary contact",
-  "Students",
-  "Studio",
-  "Military",
-  "Rate tier",
-  "Lifetime paid",
-  "Balance",
-  "Email",
-  "Phone",
-  "Notes",
-] as const;
-
-const SORTABLE_COLUMN_KEYS = [
-  "family",
-  "primary_contact",
-  "balance",
-  "email",
-  "phone",
-  "studio",
-  "lifetime_paid",
-] as const;
-
-function getFamilyNotes(row: FamilyRow): string {
-  const metadata = (row as FamilyRow & { metadata?: { notes?: string | null } }).metadata;
-  return metadata?.notes ?? "";
+function pcName(f: FamilyRow): string {
+    const parts = [f.parent_first_name, f.parent_last_name].filter(Boolean).join(" ").trim();
+    return f.primary_contact_name ?? f.parent_name ?? (parts || "—");
+}
+function fmtBalance(cents: number): string {
+  const d = Math.abs(cents) / 100;
+  return `${cents < 0 ? "-" : ""}$${d.toFixed(2)}`;
+}
+function fmtLifetime(cents: number | null | undefined): string {
+  if (!cents) return "$0";
+  return "$" + (cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+function initials(name: string) {
+  return name.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("");
+}
+function billingStatus(f: FamilyRow): { label: string; color: string; bg: string } {
+  const overdue = (f.overdue_balance_cents ?? 0) > 0 || (f.balance ?? 0) > 0;
+  if (overdue) return { label: "Overdue", color: "#ef4444", bg: "rgba(239,68,68,0.12)" };
+  if (f.billing_status === "current") return { label: "Current", color: "#10b981", bg: "rgba(16,185,129,0.12)" };
+  return { label: "No Invoice", color: "#6b7280", bg: "rgba(107,114,128,0.12)" };
 }
 
-function withFamilyNotes(row: FamilyRow, notes: string): FamilyRow {
-  const metadata =
-    (row as FamilyRow & { metadata?: Record<string, unknown> }).metadata ?? {};
-  return {
-    ...row,
-    metadata: {
-      ...metadata,
-      notes: notes || null,
-    },
-  } as FamilyRow;
-}
-
-function primaryContactName(f: FamilyRow): string {
-  const fromParts =
-    [f.parent_first_name, f.parent_last_name].filter(Boolean).join(" ").trim() ||
-    "—";
-  return f.primary_contact_name ?? f.parent_name ?? fromParts;
-}
-
-function formatLifetimePaidCents(row: FamilyRow): string {
-  const cents = row.lifetime_paid_cents;
-  if (typeof cents !== "number" || Number.isNaN(cents)) return "";
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function exportFamiliesCsv(
-  rows: FamilyRow[],
-  counts: Record<string, number>,
-  visibility: Record<string, boolean>,
-  locationNameById: Record<string, string>,
-): void {
-  const idxs = COLUMN_KEYS.map((_, i) => i).filter(
-    (i) => visibility[COLUMN_KEYS[i]!] !== false,
-  );
-  const hdrs = idxs.map((i) => HEADERS[i]!);
-  const dataRows = rows.map((r) =>
-    idxs.map((i) => {
-      const k = COLUMN_KEYS[i]!;
-      switch (k) {
-        case "family":
-          return r.name ?? "";
-        case "primary_contact":
-          return primaryContactName(r);
-        case "students":
-          return String(counts[r.id] ?? 0);
-        case "studio":
-          return r.primary_location_id
-            ? locationNameById[r.primary_location_id] ?? r.primary_location_id
-            : "";
-        case "military":
-          return r.is_military ? "Yes" : "No";
-        case "rate_tier":
-          return typeof r.rate_tier === "number" && !Number.isNaN(r.rate_tier)
-            ? String(r.rate_tier)
-            : "";
-        case "lifetime_paid":
-          return formatLifetimePaidCents(r);
-        case "balance":
-          return typeof r.balance === "number" ? r.balance.toFixed(2) : "";
-        case "email":
-          return r.primary_email ?? "";
-        case "phone":
-          return r.primary_phone ?? "";
-        case "notes":
-          return getFamilyNotes(r);
-        default:
-          return "";
-      }
-    }),
-  );
-  downloadCsv("families.csv", rowsToCsv(hdrs, dataRows));
-}
+type StudentSummary = { id: string; name: string; instrument?: string | null; status?: string | null };
 
 export function FamiliesListClient({
   rows,
   counts,
   locationNameById,
+  studentsByFamily = {},
 }: {
   rows: FamilyRow[];
   counts: Record<string, number>;
   locationNameById: Record<string, string>;
+  studentsByFamily?: Record<string, StudentSummary[]>;
 }) {
-  const [localRows, setLocalRows] = useState(rows);
-  const [notesPopoverRowId, setNotesPopoverRowId] = useState<string | null>(null);
-  useEffect(() => {
-    setLocalRows(rows);
-  }, [rows]);
-  const { sortKey, sortDir, toggleSort } = useCrmSort("list-families");
-  const { emitLocalPatch } = useCrmLocalPatch("families", (rowId, patch) => {
-    const metadataNotes = (patch.metadata as { notes?: unknown } | undefined)?.notes;
-    if (typeof metadataNotes !== "string" && metadataNotes !== null) return;
-    setLocalRows((prev) =>
-      prev.map((row) =>
-        row.id === rowId ? withFamilyNotes(row, metadataNotes ?? "") : row,
-      ),
-    );
-  });
-  const inlineEdit = useInlineCrmEdit({
-    resource: "families",
-    toPatch: ({ rowId, columnKey, value }) => {
-      if (columnKey === "primary_contact") return { primary_contact_name: value || null };
-      if (columnKey === "email") return { primary_email: value || null };
-      if (columnKey === "phone") return { primary_phone: value || null };
-      if (columnKey === "notes") {
-        const row = localRows.find((it) => it.id === rowId);
-        const metadata =
-          (row as FamilyRow & { metadata?: Record<string, unknown> } | undefined)
-            ?.metadata ?? {};
-        return { metadata: { ...metadata, notes: value || null } };
+  const [search, setSearch] = useState("");
+  const [locFilter, setLocFilter] = useState("all");
+  const [billFilter, setBillFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"name" | "balance" | "students" | "lifetime">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const locationOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { id: string; name: string }[] = [{ id: "all", name: "All Locations" }];
+    for (const f of rows) {
+      if (f.primary_location_id && !seen.has(f.primary_location_id)) {
+        seen.add(f.primary_location_id);
+        opts.push({ id: f.primary_location_id, name: locationNameById[f.primary_location_id] ?? f.primary_location_id });
       }
-      throw new Error(`Unsupported editable families column: ${columnKey}`);
-    },
-    onOptimisticUpdate: ({ rowId, columnKey, value }) => {
-      setLocalRows((prev) =>
-        prev.map((row) => {
-          if (row.id !== rowId) return row;
-          if (columnKey === "primary_contact") {
-            return { ...row, primary_contact_name: value || null };
-          }
-          if (columnKey === "email") return { ...row, primary_email: value || null };
-          if (columnKey === "phone") return { ...row, primary_phone: value || null };
-          if (columnKey === "notes") return withFamilyNotes(row, value);
-          return row;
-        }),
+    }
+    return opts;
+  }, [rows, locationNameById]);
+
+  const filtered = useMemo(() => {
+    let r = [...rows];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      r = r.filter(f =>
+        (f.name ?? "").toLowerCase().includes(q) ||
+        pcName(f).toLowerCase().includes(q) ||
+        (f.primary_email ?? "").toLowerCase().includes(q) ||
+        (f.primary_phone ?? "").includes(q)
       );
-      if (columnKey === "notes") {
-        emitLocalPatch(rowId, { metadata: { notes: value || null } });
-      }
-    },
-    onRevert: ({ rowId, columnKey, value }) => {
-      setLocalRows((prev) =>
-        prev.map((row) => {
-          if (row.id !== rowId) return row;
-          if (columnKey === "primary_contact") {
-            return { ...row, primary_contact_name: value || null };
-          }
-          if (columnKey === "email") return { ...row, primary_email: value || null };
-          if (columnKey === "phone") return { ...row, primary_phone: value || null };
-          if (columnKey === "notes") return withFamilyNotes(row, value);
-          return row;
-        }),
-      );
-      if (columnKey === "notes") {
-        emitLocalPatch(rowId, { metadata: { notes: value || null } });
-      }
-    },
-  });
-  const bulk = useMemo(
-    () => ({
-      rowIds: localRows.map((r) => r.id),
-      rowLabelsById: Object.fromEntries(
-        localRows.map((r) => [r.id, r.name ?? r.id]),
-      ) as Record<string, string>,
-      resource: "families" as const,
-      buildExport: (visibility: Record<string, boolean>) =>
-        exportFamiliesCsv(localRows, counts, visibility, locationNameById),
-    }),
-    [localRows, counts, locationNameById],
-  );
+    }
+    if (locFilter !== "all") r = r.filter(f => f.primary_location_id === locFilter);
+    if (billFilter !== "all") r = r.filter(f => billingStatus(f).label.toLowerCase() === billFilter);
+
+    r.sort((a, b) => {
+      let va: string | number = "", vb: string | number = "";
+      if (sortBy === "name") { va = (a.name ?? "").toLowerCase(); vb = (b.name ?? "").toLowerCase(); }
+      else if (sortBy === "balance") { va = a.balance ?? 0; vb = b.balance ?? 0; }
+      else if (sortBy === "students") { va = counts[a.id] ?? 0; vb = counts[b.id] ?? 0; }
+      else if (sortBy === "lifetime") { va = a.lifetime_paid_cents ?? 0; vb = b.lifetime_paid_cents ?? 0; }
+      return sortDir === "asc" ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+    });
+
+    // Overdue always first
+    r.sort((a, b) => {
+      const ao = ((a.overdue_balance_cents ?? 0) > 0 || (a.balance ?? 0) > 0) ? 0 : 1;
+      const bo = ((b.overdue_balance_cents ?? 0) > 0 || (b.balance ?? 0) > 0) ? 0 : 1;
+      return ao - bo;
+    });
+    return r;
+  }, [rows, search, locFilter, billFilter, sortBy, sortDir, counts]);
+
+  function toggleSort(col: typeof sortBy) {
+    if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortBy(col); setSortDir("asc"); }
+  }
+
+  const SI = ({ col }: { col: typeof sortBy }) =>
+    sortBy === col
+      ? <span className="ml-0.5 text-[10px]">{sortDir === "asc" ? "↑" : "↓"}</span>
+      : <span className="ml-0.5 text-[10px] opacity-25">↕</span>;
+
+  const overdueCnt = rows.filter(f => (f.overdue_balance_cents ?? 0) > 0 || (f.balance ?? 0) > 0).length;
 
   return (
-    <>
-      {inlineEdit.toast ? (
-        <div className="mb-2 flex justify-end">
-          <button
-            type="button"
-            onClick={inlineEdit.clearToast}
-            className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-200"
-          >
-            {inlineEdit.toast.message}
-          </button>
+    <div className="flex flex-col h-full">
+      {/* ── Header ── */}
+      <div className="px-6 py-4 border-b flex flex-col gap-3" style={{ borderColor: "var(--z-border)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold" style={{ color: "var(--z-fg)" }}>Families</h1>
+            <p className="text-xs mt-0.5" style={{ color: "var(--z-muted)" }}>
+              {rows.length} total
+              {overdueCnt > 0 && (
+                <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>
+                  {overdueCnt} overdue
+                </span>
+              )}
+            </p>
+          </div>
+          <Link href="/crm/families/new"
+            className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
+            style={{ background: "var(--z-accent)", color: "#000" }}>
+            <span className="text-base leading-none">+</span> New Family
+          </Link>
         </div>
-      ) : null}
-      <CRMListTableSection
-        tableId="list-families"
-        columnKeys={[...COLUMN_KEYS]}
-        headers={[...HEADERS]}
-        bulk={bulk}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        sortableColumnKeys={SORTABLE_COLUMN_KEYS}
-        onSortColumn={toggleSort}
-      >
-        {localRows.map((r) => {
-          const familyName = r.name ?? r.id;
-          return (
-            <tr
-              key={r.id}
-              className="border-b border-[var(--z-border,#1c1c1e)] last:border-0 hover:bg-white/5"
-            >
-              <BulkSelectCell rowId={r.id} />
-              <td className="px-4 py-2 font-semibold text-[var(--z-fg,#f0f0f0)]">
-                <Link
-                  href={`/crm/families/${r.id}`}
-                  className="hover:text-[var(--z-accent,#00ff88)]"
-                >
-                  {r.name}
-                </Link>
-              </td>
-              <EditableCell
-                rowId={r.id}
-                columnKey="primary_contact"
-                label={`primary contact name for ${familyName}`}
-                value={primaryContactName(r)}
-                className="px-4 py-2 text-[var(--z-muted,#909098)]"
-                isEditing={inlineEdit.isEditingCell(r.id, "primary_contact")}
-                isSaving={inlineEdit.isSaving}
-                startEditing={inlineEdit.startEditing}
-                bindInputProps={inlineEdit.bindInputProps}
-              >
-                {primaryContactName(r)}
-              </EditableCell>
-              <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
-                {counts[r.id] ?? 0}
-              </td>
-              <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
-                {r.primary_location_id
-                  ? locationNameById[r.primary_location_id] ??
-                    r.primary_location_id
-                  : "—"}
-              </td>
-              <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
-                {r.is_military ? "Yes" : "No"}
-              </td>
-              <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
-                {typeof r.rate_tier === "number" && !Number.isNaN(r.rate_tier)
-                  ? r.rate_tier
-                  : "—"}
-              </td>
-              <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
-                {formatLifetimePaidCents(r) || "—"}
-              </td>
-              <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
-                {typeof r.balance === "number"
-                  ? `$${r.balance.toFixed(2)}`
-                  : "—"}
-              </td>
-              <EditableCell
-                rowId={r.id}
-                columnKey="email"
-                label={`email for ${familyName}`}
-                value={r.primary_email ?? ""}
-                className="px-4 py-2 text-[var(--z-muted,#909098)]"
-                isEditing={inlineEdit.isEditingCell(r.id, "email")}
-                isSaving={inlineEdit.isSaving}
-                startEditing={inlineEdit.startEditing}
-                bindInputProps={inlineEdit.bindInputProps}
-              >
-                {r.primary_email ?? "—"}
-              </EditableCell>
-              <EditableCell
-                rowId={r.id}
-                columnKey="phone"
-                label={`phone for ${familyName}`}
-                value={r.primary_phone ?? ""}
-                className="px-4 py-2 text-[var(--z-muted,#909098)]"
-                isEditing={inlineEdit.isEditingCell(r.id, "phone")}
-                isSaving={inlineEdit.isSaving}
-                startEditing={inlineEdit.startEditing}
-                bindInputProps={inlineEdit.bindInputProps}
-              >
-                {r.primary_phone ?? "—"}
-              </EditableCell>
-              <EditableCell
-                rowId={r.id}
-                columnKey="notes"
-                label={`notes for ${familyName}`}
-                value={getFamilyNotes(r)}
-                className="px-4 py-2 text-[var(--z-muted,#909098)]"
-                isEditing={inlineEdit.isEditingCell(r.id, "notes")}
-                isSaving={inlineEdit.isSaving}
-                startEditing={inlineEdit.startEditing}
-                bindInputProps={inlineEdit.bindInputProps}
-                notesPopover={{
-                  isOpen: notesPopoverRowId === r.id,
-                  value: inlineEdit.draftValue,
-                  onOpen: () => {
-                    const initial = getFamilyNotes(r);
-                    inlineEdit.startEditing(r.id, "notes", initial);
-                    inlineEdit.setDraftValue(initial);
-                    setNotesPopoverRowId(r.id);
-                  },
-                  onChange: (next) => inlineEdit.setDraftValue(next),
-                  onSave: () => {
-                    void inlineEdit.commitEditing();
-                    setNotesPopoverRowId(null);
-                  },
-                  onCancel: () => {
-                    inlineEdit.cancelEditing();
-                    setNotesPopoverRowId(null);
-                  },
-                }}
-              />
+
+        <div className="flex flex-wrap gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              className="w-full rounded-lg pl-8 pr-3 py-2 text-sm outline-none"
+              style={{ background: "var(--z-surface)", color: "var(--z-fg)", border: "1px solid var(--z-border)" }}
+              placeholder="Search families, contacts, email, phone…"
+              value={search} onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <select className="rounded-lg px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--z-surface)", color: "var(--z-fg)", border: "1px solid var(--z-border)" }}
+            value={locFilter} onChange={e => setLocFilter(e.target.value)}>
+            {locationOptions.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+          <select className="rounded-lg px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--z-surface)", color: "var(--z-fg)", border: "1px solid var(--z-border)" }}
+            value={billFilter} onChange={e => setBillFilter(e.target.value)}>
+            <option value="all">All Billing</option>
+            <option value="overdue">Overdue</option>
+            <option value="current">Current</option>
+            <option value="no invoice">No Invoice</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ── Table ── */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr style={{ background: "var(--z-surface)", borderBottom: "2px solid var(--z-border)" }}>
+              {[
+                { label: "Family", col: "name" as const, align: "left" },
+                { label: "Contact", col: null, align: "left" },
+                { label: "Students", col: "students" as const, align: "left" },
+                { label: "Location", col: null, align: "left" },
+                { label: "Billing", col: null, align: "left" },
+                { label: "Balance", col: "balance" as const, align: "right" },
+                { label: "Lifetime", col: "lifetime" as const, align: "right" },
+                { label: "", col: null, align: "right" },
+              ].map(({ label, col, align }, i) => (
+                <th key={i}
+                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${col ? "cursor-pointer select-none" : ""} text-${align}`}
+                  style={{ color: "var(--z-muted)" }}
+                  onClick={col ? () => toggleSort(col) : undefined}>
+                  {label}{col && <SI col={col} />}
+                </th>
+              ))}
             </tr>
-          );
-        })}
-      </CRMListTableSection>
-    </>
+          </thead>
+          <tbody>
+            {filtered.length === 0 && (
+              <tr><td colSpan={8} className="px-4 py-16 text-center text-sm" style={{ color: "var(--z-muted)" }}>
+                No families found.
+              </td></tr>
+            )}
+            {filtered.map(f => {
+              const bs = billingStatus(f);
+              const students = studentsByFamily[f.id] ?? [];
+              const cnt = counts[f.id] ?? students.length;
+              const locName = f.primary_location_id ? (locationNameById[f.primary_location_id] ?? f.primary_location_id) : null;
+              const isOverdue = (f.overdue_balance_cents ?? 0) > 0 || (f.balance ?? 0) > 0;
+              const balCents = (f.balance ?? 0) * 100;
+
+              return (
+                <tr key={f.id} className="group transition-colors"
+                  style={{ borderBottom: "1px solid var(--z-border)", background: isOverdue ? "rgba(239,68,68,0.025)" : "transparent" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--z-surface)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = isOverdue ? "rgba(239,68,68,0.025)" : "transparent")}>
+
+                  {/* Family */}
+                  <td className="px-4 py-3">
+                    <Link href={`/crm/families/${f.id}`} className="flex items-center gap-3 hover:opacity-80">
+                      <div className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: "var(--z-accent-muted, rgba(0,255,136,0.12))", color: "var(--z-accent)" }}>
+                        {initials(f.name ?? "?")}
+                      </div>
+                      <div>
+                        <div className="font-semibold" style={{ color: "var(--z-fg)" }}>{f.name ?? "Unnamed"}</div>
+                        {f.is_military && <span className="text-[10px]" style={{ color: "#6366f1" }}>🎖 Military</span>}
+                      </div>
+                    </Link>
+                  </td>
+
+                  {/* Contact */}
+                  <td className="px-4 py-3">
+                    <div className="text-sm" style={{ color: "var(--z-fg)" }}>{pcName(f)}</div>
+                    {f.primary_phone && <div className="text-xs mt-0.5" style={{ color: "var(--z-muted)" }}>{f.primary_phone}</div>}
+                  </td>
+
+                  {/* Students */}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1 items-center">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                        style={{ background: "var(--z-accent-muted, rgba(0,255,136,0.12))", color: "var(--z-accent)" }}>
+                        {cnt}
+                      </span>
+                      {students.slice(0, 3).map(s => (
+                        <span key={s.id} className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          style={{ background: `${instrColor(s.instrument ?? "")}18`, color: instrColor(s.instrument ?? "") }}>
+                          {s.instrument ?? "—"}
+                        </span>
+                      ))}
+                      {students.length > 3 && <span className="text-[10px]" style={{ color: "var(--z-muted)" }}>+{students.length - 3}</span>}
+                    </div>
+                  </td>
+
+                  {/* Location */}
+                  <td className="px-4 py-3">
+                    {locName
+                      ? <span className="rounded-full px-2.5 py-1 text-xs font-medium"
+                          style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1" }}>{locName}</span>
+                      : <span style={{ color: "var(--z-muted)" }}>—</span>}
+                  </td>
+
+                  {/* Billing */}
+                  <td className="px-4 py-3">
+                    <span className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                      style={{ background: bs.bg, color: bs.color }}>{bs.label}</span>
+                    {f.autopay_enabled && <div className="text-[10px] mt-0.5" style={{ color: "#10b981" }}>Autopay ✓</div>}
+                  </td>
+
+                  {/* Balance */}
+                  <td className="px-4 py-3 text-right">
+                    <span className="font-semibold text-sm"
+                      style={{ color: balCents > 0 ? "#ef4444" : "var(--z-fg)" }}>
+                      {fmtBalance(balCents)}
+                    </span>
+                  </td>
+
+                  {/* Lifetime */}
+                  <td className="px-4 py-3 text-right">
+                    <span className="text-sm" style={{ color: "var(--z-muted)" }}>
+                      {fmtLifetime(f.lifetime_paid_cents)}
+                    </span>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Link href={`/crm/families/${f.id}`}
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+                        style={{ background: "var(--z-surface-2, var(--z-surface))", color: "var(--z-fg)", border: "1px solid var(--z-border)" }}>
+                        View
+                      </Link>
+                      <Link href={`/invoices?family_id=${f.id}&return=family`}
+                        className="rounded-lg px-2.5 py-1 text-xs font-semibold hover:opacity-80 transition-opacity"
+                        style={{ background: "var(--z-accent)", color: "#000" }}>
+                        Invoice
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="flex items-center gap-6 px-6 py-3 text-xs border-t"
+        style={{ borderColor: "var(--z-border)", color: "var(--z-muted)" }}>
+        <span>{filtered.length} of {rows.length} families</span>
+        <span>Total lifetime: <strong style={{ color: "var(--z-fg)" }}>
+          {fmtLifetime(rows.reduce((s, f) => s + (f.lifetime_paid_cents ?? 0), 0))}
+        </strong></span>
+        {overdueCnt > 0 && <span style={{ color: "#ef4444" }}>{overdueCnt} overdue</span>}
+      </div>
+    </div>
   );
 }
