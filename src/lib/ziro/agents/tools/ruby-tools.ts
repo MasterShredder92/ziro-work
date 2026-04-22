@@ -44,7 +44,7 @@ export async function read_schedule({
   const locationId = resolveLocationId(locationName);
 
   if (!locationId) {
-    return { success: false, error: `Unknown location: "${locationName}"` };
+    return { success: false, error: \`Unknown location: "\${locationName}"\` };
   }
 
   const { data: blocks, error } = await supabase
@@ -57,13 +57,15 @@ export async function read_schedule({
 
   if (error) return { success: false, error: error.message };
 
+  const safeBlocks = blocks || [];
+
   return {
     success: true,
     location: locationName,
     date,
-    blocks: blocks || [],
-    openSlots: (blocks || []).filter((b: any) => b.status === "available"),
-    bookedSlots: (blocks || []).filter((b: any) => b.status === "booked"),
+    blocks: safeBlocks,
+    openSlots: safeBlocks.filter((b: any) => b.status === "available"),
+    bookedSlots: safeBlocks.filter((b: any) => b.status === "booked"),
   };
 }
 
@@ -101,10 +103,10 @@ export async function move_student({
 
   await supabase
     .from("schedule_blocks")
-    .update({ student_id: null, status: "available", notes: `Moved to ${targetBlockId}` })
+    .update({ student_id: null, status: "available", notes: \`Moved to \${targetBlockId}\` })
     .eq("id", sourceBlockId);
 
-  return { success: true, message: `Moved student to block ${targetBlockId}`, studentId: sourceBlock.student_id };
+  return { success: true, message: \`Moved student to block \${targetBlockId}\`, studentId: sourceBlock.student_id };
 }
 
 /**
@@ -125,11 +127,11 @@ export async function handle_teacher_callout({
   const { data: teacher } = await supabase
     .from("teachers")
     .select("id")
-    .ilike("first_name", `%${teacherName}%`)
+    .ilike("first_name", \`%\${teacherName}%\`)
     .limit(1)
     .single();
 
-  if (!teacher) return { success: false, error: `Teacher "${teacherName}" not found` };
+  if (!teacher) return { success: false, error: \`Teacher "\${teacherName}" not found\` };
 
   const { data: lessons } = await supabase
     .from("schedule_blocks")
@@ -138,8 +140,10 @@ export async function handle_teacher_callout({
     .eq("block_date", date)
     .eq("status", "booked");
 
-  if (!lessons || lessons.length === 0) {
-    return { success: true, message: `No lessons found for ${teacherName} on ${date}`, proposals: [] };
+  const safeLessons = lessons || [];
+
+  if (safeLessons.length === 0) {
+    return { success: true, message: \`No lessons found for \${teacherName} on \${date}\`, proposals: [] };
   }
 
   const { data: openSlots } = await supabase
@@ -149,8 +153,10 @@ export async function handle_teacher_callout({
     .eq("block_date", date)
     .eq("status", "available");
 
-  const proposals = lessons.map((lesson: any) => {
-    const match = (openSlots || []).find((slot: any) => slot.start_time === lesson.start_time);
+  const safeOpenSlots = openSlots || [];
+
+  const proposals = safeLessons.map((lesson: any) => {
+    const match = safeOpenSlots.find((slot: any) => slot.start_time === lesson.start_time);
     return {
       studentBlockId: lesson.id,
       originalTime: lesson.start_time,
@@ -164,7 +170,7 @@ export async function handle_teacher_callout({
     success: true,
     teacherName,
     date,
-    impactedCount: lessons.length,
+    impactedCount: safeLessons.length,
     proposals,
   };
 }
@@ -182,7 +188,9 @@ export async function find_booking_gaps({
   const result = await read_schedule({ locationName, date });
   if (!result.success || !result.blocks) return { success: false, error: result.error || "No blocks found" };
 
-  const blocks = result.blocks;
+  const blocks = result.blocks || [];
+  if (blocks.length < 3) return { success: true, gaps: [], gapCount: 0 };
+
   const gaps = [];
   for (let i = 1; i < blocks.length - 1; i++) {
     const prev = blocks[i - 1];
@@ -193,7 +201,7 @@ export async function find_booking_gaps({
       gaps.push({
         gapBlockId: curr.id,
         time: curr.start_time,
-        context: `Gap between ${prev.start_time} and ${next.start_time}`,
+        context: \`Gap between \${prev.start_time} and \${next.start_time}\`,
         recommendation: "Move a student here to free up a larger block elsewhere.",
       });
     }

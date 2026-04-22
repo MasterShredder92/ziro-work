@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { streamText, tool } from "ai";
+import { NextRequest, NextResponse } from "next/server";
+import { generateText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — MODERN AGENTIC MODE
+ * ZiroWork Agentic Chat Route — SOLID PRODUCTION MODE
  * 
- * Uses streamText and toDataStreamResponse to support:
- * 1. Multi-step tool calling (maxSteps: 5)
- * 2. Real-time tool invocation visibility in the UI
- * 3. Standard AI SDK v6 protocol
+ * 1. Resolves "type: None" via explicit tool() helper and Zod object schemas.
+ * 2. Fixes "parameters" naming collision in delegation tool.
+ * 3. Maintains "Legacy UI Compatibility" by returning a static JSON response.
+ * 4. Enables "Agentic Reasoning" via maxSteps: 5.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     const agentDef = getAgentDefinition(agentId);
     if (!agentDef) {
-      throw new Error(\`Agent "\${agentId}" not found\`);
+      return NextResponse.json({ error: \`Agent "\${agentId}" not found\` }, { status: 404 });
     }
 
     // Map history to the format expected by AI SDK
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
 
     const agentTools: any = {};
 
-    // Define tools using the tool() helper with explicit inputSchema
     // 1. get_global_state (Ziro Only)
     if (agentDef.tools.includes("get_global_state")) {
       agentTools.get_global_state = tool({
@@ -53,21 +52,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. delegate_to_agent (Ziro Only)
+    // 2. delegate_to_agent (Ziro Only) - FIX: Rename 'parameters' to 'toolArgs' to avoid collision
     if (agentDef.tools.includes("delegate_to_agent")) {
       agentTools.delegate_to_agent = tool({
         description: "Command a specialist agent (Ruby, Raven, Bub, Sid, Stewie, Star) to perform a task.",
         parameters: z.object({
           agentId: z.string().describe("The ID of the target agent"),
           toolName: z.string().describe("The name of the tool to execute"),
-          parameters: z.record(z.string(), z.any()).describe("The input data for the tool"),
+          toolArgs: z.record(z.string(), z.any()).describe("The input data for the tool"),
           reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
         }),
-        execute: async (args) => await executeTool("delegate_to_agent", args),
+        execute: async (args) => {
+          // Map toolArgs back to parameters for the underlying execution if needed
+          const { toolArgs, ...rest } = args;
+          return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs });
+        },
       });
     }
 
-    // 3. Specialist Tools (Ruby's Scheduling)
+    // 3. read_schedule (Ruby)
     if (agentDef.tools.includes("read_schedule")) {
       agentTools.read_schedule = tool({
         description: "Read lesson schedule for a location.",
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 4. move_student (Ruby)
     if (agentDef.tools.includes("move_student")) {
       agentTools.move_student = tool({
         description: "Move a student between schedule blocks. Requires a reason.",
@@ -91,6 +95,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 5. handle_teacher_callout (Ruby)
     if (agentDef.tools.includes("handle_teacher_callout")) {
       agentTools.handle_teacher_callout = tool({
         description: "Resolve conflicts when a teacher calls out sick.",
@@ -103,6 +108,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 6. find_booking_gaps (Ruby)
     if (agentDef.tools.includes("find_booking_gaps")) {
       agentTools.find_booking_gaps = tool({
         description: "Scan for 'Swiss cheese' gaps to optimize revenue.",
@@ -118,21 +124,25 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const result = await streamText({
+    // Use generateText to avoid "Data Stream" parsing errors in the current UI
+    const { text, toolResults } = await generateText({
       model: openai("gpt-4.1-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      maxSteps: 5, // Allow multi-step tool reasoning
+      maxSteps: 5,
     });
 
-    return result.toDataStreamResponse();
+    // Return exact structure expected by the Ruby UI
+    return NextResponse.json({
+      content: [{ text }],
+      toolResults,
+      agentId,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
-    return new Response(JSON.stringify({ error: error.message }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
