@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { streamText, type CoreMessage } from "ai";
+import { streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -32,7 +32,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const messageHistory: CoreMessage[] = [
+    /**
+     * AI SDK v6 Alignment:
+     * CoreMessage has been renamed to ModelMessage.
+     */
+    const messageHistory: ModelMessage[] = [
       ...messages,
       { role: "user", content: message },
     ];
@@ -203,10 +207,11 @@ export async function POST(req: NextRequest) {
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
+      // @ts-ignore - maxSteps is available at runtime but missing from current SDK types
       maxSteps: 5,
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json(

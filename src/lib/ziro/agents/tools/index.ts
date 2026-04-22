@@ -18,7 +18,6 @@ export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
   check_conflicts: RUBY_TOOLS.check_conflicts,
   suggest_slot: RUBY_TOOLS.suggest_slot,
   move_lesson: RUBY_TOOLS.move_lesson,
-  add_lesson: RUBY_TOOLS.add_lesson,
 
   // Sid — Student & Instructor Data
   read_student: SID_TOOLS.read_student,
