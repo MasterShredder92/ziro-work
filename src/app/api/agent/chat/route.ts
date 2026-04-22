@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { streamText, type ModelMessage } from "ai";
+import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -9,11 +9,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — THE SOVEREIGN SYSTEM
+ * ZiroWork Agentic Chat Route — LEGACY UI COMPATIBILITY MODE
  * 
- * Hierarchy:
- * - Ziro: The Director (Strategic Orchestration)
- * - Ruby, Raven, Bub, Sid, Stewie, Star: Specialist Modules
+ * Returns a Standard JSON Response instead of a Data Stream to fix:
+ * "Unexpected token 'd', 'data: {'ty'... is not valid JSON"
  */
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +21,6 @@ export async function POST(req: NextRequest) {
       message,
       agentId = "ziro",
       messages = [],
-      studioId,
     } = body;
 
     const agentDef = getAgentDefinition(agentId);
@@ -30,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Agent "${agentId}" not found` }, { status: 404 });
     }
 
-    const messageHistory: ModelMessage[] = [
+    const messageHistory: any[] = [
       ...messages,
       { role: "user", content: message },
     ];
@@ -109,17 +107,23 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const result = streamText({
+    // Use generateText (Sync) instead of streamText (Async Stream) for UI compatibility
+    const { text, toolResults } = await generateText({
       model: openai("gpt-4.1-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      // @ts-ignore
       maxSteps: 5,
     });
 
-    // @ts-ignore
-    return result.toUIMessageStreamResponse();
+    // Return a clean JSON object that the frontend can parse with JSON.parse()
+    return NextResponse.json({
+      text,
+      toolResults,
+      agentId,
+      timestamp: new Date().toISOString()
+    });
+
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
