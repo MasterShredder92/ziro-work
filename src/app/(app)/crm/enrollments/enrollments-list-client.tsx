@@ -215,6 +215,19 @@ export function EnrollmentsListClient({
 
   return (
     <>
+      <CRMListTableSection
+        tableId="enrollments"
+        columnKeys={[...COLUMN_KEYS]}
+        headers={[...HEADERS]}
+        bulk={bulk}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        sortableColumnKeys={[...SORTABLE_COLUMN_KEYS]}
+        onSort={toggleSort}
+      >
+        {localRows.map((r) => (
+          <tr key={r.id} className="border-b border-[var(--z-border)] hover:bg-[var(--z-surface-2)]">
+            <BulkSelectCell rowId={r.id} />
             <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
               <Link
                 href={`/crm/students/${r.student_id}`}

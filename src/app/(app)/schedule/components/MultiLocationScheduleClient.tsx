@@ -132,14 +132,6 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     focusedBlockId,
   });
 
-  // Auto-clear ruby event after 6 seconds
-  React.useEffect(() => {
-    if (!rubyEvent || rubyEvent.type === "idle") return;
-    return () => clearTimeout(t);
-  }, [rubyEvent]);
-
-    if (e.blockId) setFocusedBlockId(e.blockId);
-  }
 
   const weekDays = React.useMemo(
     () => eachDayInclusive(window.start, window.end),
