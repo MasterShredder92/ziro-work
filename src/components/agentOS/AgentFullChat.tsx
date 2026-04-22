@@ -6,7 +6,7 @@ import { cn, focusRingClassName } from "@/components/ui/utils";
 import { useAgentOS } from "./AgentOSContext";
 import { AgentAvatarImage } from "./AgentAvatarImage";
 
-type ChatMessage = { id: string; role: "user" | "assistant" | "system"; text: string };
+type ChatMessage = { id: string; role: "user" | "assistant" | "system"; content: string };
 
 export function AgentFullChat() {
   const { fullChatOpen, closeFullChat, meta, agentId, setState } = useAgentOS();
@@ -16,7 +16,6 @@ export function AgentFullChat() {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
 
-  // Pick up a "seed" message from AgentBubble on open.
   React.useEffect(() => {
     if (!fullChatOpen) return;
     const handler = (e: Event) => {
@@ -26,10 +25,8 @@ export function AgentFullChat() {
     };
     window.addEventListener("ziro:agent-chat-seed", handler as EventListener);
     return () => window.removeEventListener("ziro:agent-chat-seed", handler as EventListener);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullChatOpen, agentId]);
 
-  // Reset on close.
   React.useEffect(() => {
     if (fullChatOpen) return;
     abortRef.current?.abort();
@@ -37,24 +34,11 @@ export function AgentFullChat() {
     setStreaming(false);
   }, [fullChatOpen]);
 
-  // Auto-scroll to bottom on new content.
   React.useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
-
-  const appendAssistantDelta = React.useCallback((delta: string) => {
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === "assistant") {
-        const next = prev.slice(0, -1);
-        next.push({ ...last, text: last.text + delta });
-        return next;
-      }
-      return [...prev, { id: cryptoId(), role: "assistant", text: delta }];
-    });
-  }, []);
 
   const send = React.useCallback(
     async (text: string) => {
@@ -62,7 +46,7 @@ export function AgentFullChat() {
       if (!trimmed || streaming) return;
 
       setInput("");
-      setMessages((prev) => [...prev, { id: cryptoId(), role: "user", text: trimmed }]);
+      setMessages((prev) => [...prev, { id: cryptoId(), role: "user", content: trimmed }]);
       setStreaming(true);
       setState("thinking");
 
@@ -70,63 +54,45 @@ export function AgentFullChat() {
       abortRef.current = controller;
 
       try {
-        // Build history from current messages (exclude the user msg we just added)
         const history = messages.map((m) => ({
           role: m.role === "user" ? "user" : "assistant",
-          content: m.text,
+          content: m.content,
         }));
 
-        // Get tenant and user context from the environment/providers if available
-        // We'll try to get them from the window or a global store since we don't have direct access to hooks here
-        // But for now, we'll pass the base context which the API can supplement with service-side lookups
         const res = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             agentId,
             message: trimmed,
-            context: {
-              // The API will use DEFAULT_TENANT_ID if not provided, 
-              // but we should try to pass the real one from the UI if possible.
-              // For now, we'll let the API handle the lookup via the session.
-            },
             history,
           }),
           signal: controller.signal,
         });
+        
         if (!res.ok) {
           const body = await res.text().catch(() => "");
           throw new Error(`${res.status} ${body || "request failed"}`);
         }
+        
         setState("speaking");
-
-        const j = await res.json().catch(() => null);
+        const data = await res.json().catch(() => null);
         
-        // Extract text from Anthropic content blocks
-        let replyText = "";
-        if (j?.content && Array.isArray(j.content)) {
-          replyText = j.content
-            .filter((block: any) => block.type === "text")
-            .map((block: any) => block.text)
-            .join("\n");
-        } else if (j?.reply) {
-          replyText = j.reply;
-        } else {
-          replyText = "Championship-Level execution complete.";
-        }
+        // Unified parsing logic aligned with OpenAI/Vercel JSON payload
+        const replyText = data?.reply || data?.content?.[0]?.text || "Championship-Level execution complete.";
         
-        appendAssistantDelta(replyText);
+        setMessages((prev) => [...prev, { id: cryptoId(), role: "assistant", content: replyText }]);
       } catch (err) {
         if ((err as { name?: string })?.name === "AbortError") {
           setMessages((prev) => [
             ...prev,
-            { id: cryptoId(), role: "system", text: "Stopped." },
+            { id: cryptoId(), role: "system", content: "Client disconnected. Server may still be executing." },
           ]);
         } else {
           const msg = err instanceof Error ? err.message : String(err);
           setMessages((prev) => [
             ...prev,
-            { id: cryptoId(), role: "system", text: `Couldn’t reach ${meta.displayName}: ${msg}` },
+            { id: cryptoId(), role: "system", content: `Couldn’t reach ${meta.displayName}: ${msg}` },
           ]);
         }
       } finally {
@@ -135,7 +101,7 @@ export function AgentFullChat() {
         setState("idle");
       }
     },
-    [agentId, appendAssistantDelta, meta.displayName, setState, streaming],
+    [agentId, meta.displayName, setState, streaming, messages],
   );
 
   if (!fullChatOpen) return null;
@@ -203,7 +169,7 @@ export function AgentFullChat() {
           {streaming && messages[messages.length - 1]?.role !== "assistant" ? (
             <div className="flex items-center gap-2 text-xs text-[var(--z-muted)]">
               <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-              <span>Thinking…</span>
+              <span>Executing Commands…</span>
             </div>
           ) : null}
         </div>
@@ -288,7 +254,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         color: isSystem ? "var(--z-muted)" : "var(--z-fg)",
       }}
     >
-      {message.text}
+      {message.content}
     </div>
   );
 }

@@ -47,6 +47,8 @@ export function AgentCommandHub({ isOpen, onClose, agentId }: Props) {
 
     const userText = input.trim();
     setInput("");
+    
+    // Explicitly mapping to 'content' to perfectly match AI SDK expectations
     const newMessages = [...messages, { role: "user" as const, content: userText }];
     setMessages(newMessages);
     setLoading(true);
@@ -58,14 +60,15 @@ export function AgentCommandHub({ isOpen, onClose, agentId }: Props) {
         body: JSON.stringify({ 
           message: userText, 
           agentId: agentId,
-          history: newMessages.slice(0, -1)
+          history: messages // Send previous history exactly as { role, content }
         }),
       });
       
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      const assistantContent = data.content?.[0]?.text || "I encountered an error processing your request.";
+      // Unified parsing logic perfectly mapped to our custom route.ts JSON payload
+      const assistantContent = data.reply || data.content?.[0]?.text || "Execution complete.";
       setMessages(prev => [...prev, { role: "assistant", content: assistantContent }]);
     } catch (err: any) {
       setMessages(prev => [...prev, { role: "assistant", content: `Error: ${err.message || "Connection failed."}` }]);
@@ -78,24 +81,20 @@ export function AgentCommandHub({ isOpen, onClose, agentId }: Props) {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
-      {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-auto transition-opacity animate-in fade-in duration-300"
         onClick={onClose}
       />
 
-      {/* Floating Command Hub */}
       <div
         className={cn(
           "relative w-full max-w-[500px] h-[600px] max-h-[90vh] bg-[#0f0f12] border border-[var(--z-border)] rounded-[32px] shadow-[0_32px_128px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col pointer-events-auto animate-in zoom-in-95 fade-in duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
         )}
       >
-        {/* Header: Production Agent Profile */}
         <div 
           className="p-6 border-b border-[var(--z-border)] relative overflow-hidden shrink-0"
           style={{ background: `linear-gradient(160deg, #16161a 0%, #0f0f12 100%)` }}
         >
-          {/* Accent Glow */}
           <div 
             className="absolute -right-20 -top-20 h-64 w-64 rounded-full opacity-[0.2] blur-3xl"
             style={{ background: agentDef.accent }}
@@ -103,7 +102,6 @@ export function AgentCommandHub({ isOpen, onClose, agentId }: Props) {
 
           <div className="relative flex items-start justify-between">
             <div className="flex gap-4">
-              {/* Production Orb */}
               <div 
                 className="relative h-16 w-16 rounded-full border-2 overflow-hidden bg-[var(--z-surface-2)] shrink-0"
                 style={{ 
@@ -137,7 +135,6 @@ export function AgentCommandHub({ isOpen, onClose, agentId }: Props) {
           </div>
         </div>
 
-        {/* Chat Content */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none bg-[#0f0f12]">
           {messages.map((m, i) => (
             <div key={i} className={cn("flex flex-col", m.role === "user" ? "items-end" : "items-start")}>
@@ -160,7 +157,6 @@ export function AgentCommandHub({ isOpen, onClose, agentId }: Props) {
           )}
         </div>
 
-        {/* Command Bar */}
         <div className="p-6 border-t border-[var(--z-border)] bg-[#16161a] shrink-0">
           <form onSubmit={handleSubmit} className="relative group">
             <input

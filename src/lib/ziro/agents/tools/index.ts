@@ -41,10 +41,10 @@ export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
   send_email: (RAVEN_TOOLS as any)?.send_email,
 };
 
-// FIX: Relaxed input from Record<string, any> to any
+// ENFORCED COMPLIANCE: 'input' must be 'any' to bypass strict Zod clashes in the AI SDK wrapper.
 export async function executeTool(
   toolName: string,
-  input: any 
+  input: any
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   const tool = TOOL_REGISTRY[toolName];
 
