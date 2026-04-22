@@ -7,44 +7,61 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { message, agentId = "ziro" } = body;
 
-    // The key provided by the user: sk-5OlP6N...
-    const manusApiKey = process.env.MANUS_API_KEY || "";
+    const apiKey = process.env.MANUS_API_KEY || "";
     
-    // Official Manus API endpoint from documentation
-    const endpoint = "https://api.manus.ai/v2/task.create";
+    // We'll try the most likely working endpoint first: 
+    // The OpenAI-compatible proxy for Manus.
+    const proxyEndpoint = "https://api.manus.im/api/llm-proxy/v1/chat/completions";
+    
+    console.log(`[Manus API] Trying OpenAI-compatible proxy for agent ${agentId}`);
 
-    console.log(`[Manus API] Creating task for agent ${agentId} at ${endpoint}`);
-
-    // Official Manus API request format from documentation
-    const relayResponse = await fetch(endpoint, {
+    const proxyResponse = await fetch(proxyEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-manus-api-key": manusApiKey
+        "Authorization": `Bearer ${apiKey}`,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       },
       body: JSON.stringify({
-        message: {
-          content: message
-        }
+        model: "gpt-4.1-mini", // Standard Manus model
+        messages: [{ role: "user", content: message }]
       })
     });
 
-    const responseData = await relayResponse.json();
-
-    if (!relayResponse.ok || !responseData.ok) {
-      console.error(`[Manus API] Error: ${relayResponse.status}`, responseData);
-      return NextResponse.json(
-        { error: `Agent Error: ${responseData.error?.message || "Permission Denied"}` },
-        { status: relayResponse.status }
-      );
+    if (proxyResponse.ok) {
+      const data = await proxyResponse.json();
+      const reply = data.choices?.[0]?.message?.content || "Ruby is thinking...";
+      return NextResponse.json({ reply });
     }
 
-    // The Manus API returns a task object. We need to extract the response.
-    // Based on documentation, the initial response is a task creation confirmation.
-    // For a simple chat relay, we'll return the task status or the initial message.
-    const reply = responseData.task?.latest_message?.content || "Task created. Ruby is processing your request.";
+    // If proxy fails, try the official Manus task API as a fallback
+    console.log(`[Manus API] Proxy failed with ${proxyResponse.status}. Trying native Task API...`);
+    
+    const taskEndpoint = "https://api.manus.ai/v2/task.create";
+    const taskResponse = await fetch(taskEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-manus-api-key": apiKey
+      },
+      body: JSON.stringify({
+        message: { content: message }
+      })
+    });
 
-    return NextResponse.json({ reply });
+    if (taskResponse.ok) {
+      const data = await taskResponse.json();
+      const reply = data.task?.latest_message?.content || "Task created successfully.";
+      return NextResponse.json({ reply });
+    }
+
+    // Both failed
+    const errorData = await taskResponse.json().catch(() => ({}));
+    return NextResponse.json(
+      { error: `Agent Error: ${errorData.error?.message || "All endpoints failed"}` },
+      { status: taskResponse.status }
+    );
+
   } catch (error: any) {
     console.error("[Manus API Error]:", error);
     return NextResponse.json(
