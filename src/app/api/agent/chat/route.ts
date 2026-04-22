@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           agentId: z.string().describe("The ID of the target agent"),
           toolName: z.string().describe("The name of the tool to execute"),
-          parameters: z.record(z.any()).describe("The input data for the tool"),
+          parameters: z.record(z.string(), z.any()).describe("The input data for the tool"),
           reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
         }),
         execute: async (args: any) => await executeTool("delegate_to_agent", args),
