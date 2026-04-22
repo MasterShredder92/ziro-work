@@ -227,11 +227,13 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
+    // Use MANUS_API_KEY from Vercel environment, or fall back to local pre-configured client
+    const apiKey = process.env.MANUS_API_KEY || process.env.OPENAI_API_KEY;
+    
     // Initialize OpenAI client with hardcoded Manus endpoint
-    // This works on both local (pre-configured) and Vercel (explicit config) environments
     const openai = new OpenAI({
       baseURL: "https://api.manus.im/api/llm-proxy/v1",
-      apiKey: process.env.OPENAI_API_KEY || "sk-placeholder"
+      apiKey: apiKey || undefined
     });
     
     const body = await req.json();
