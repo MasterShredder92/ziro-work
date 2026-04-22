@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { generateText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — CUSTOM UI MODE
- * * 1. Uses generateText to complete the loop server-side.
- * * 2. Returns standard JSON so the custom frontend doesn't crash.
- * * 3. Bypasses the strict AI SDK generic inference using 'as any'.
+ * ZiroWork Agentic Chat Route — THE FINAL BRIDGE
+ * * 1. Uses the tool() wrapper to ensure OpenAI gets a valid JSON Schema.
+ * * 2. Uses @ts-ignore to force Turbopack to bypass the strict Zod 4 type mismatches.
+ * * 3. Uses generateText & NextResponse to ensure the custom UI receives standard JSON.
  */
 export async function POST(req: Request) {
   try {
@@ -39,17 +39,18 @@ export async function POST(req: Request) {
     const agentTools: any = {};
 
     if (agentDef.tools.includes("get_global_state")) {
-      agentTools.get_global_state = {
+      agentTools.get_global_state = tool({
         description: "Scan the business for gaps, callouts, and unpaid invoices.",
         parameters: z.object({
           scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
         }),
-        execute: async (args: any) => await executeTool("get_global_state", args),
-      };
+        // @ts-ignore - Bypass AI SDK overload bug
+        execute: async (args) => await executeTool("get_global_state", args),
+      });
     }
 
     if (agentDef.tools.includes("delegate_to_agent")) {
-      agentTools.delegate_to_agent = {
+      agentTools.delegate_to_agent = tool({
         description: "Command a specialist agent (Ruby, Raven, Bub, Sid, Stewie, Star) to perform a task.",
         parameters: z.object({
           agentId: z.string().describe("The ID of the target agent"),
@@ -57,73 +58,76 @@ export async function POST(req: Request) {
           toolArgs: z.record(z.string(), z.any()).describe("The input data for the tool"),
           reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
         }),
-        execute: async (args: any) => {
+        // @ts-ignore - Bypass AI SDK overload bug
+        execute: async (args) => {
           const { toolArgs, ...rest } = args;
           return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs });
         },
-      };
+      });
     }
 
     if (agentDef.tools.includes("read_schedule")) {
-      agentTools.read_schedule = {
+      agentTools.read_schedule = tool({
         description: "Read lesson schedule for a location.",
         parameters: z.object({
           locationName: z.string().describe("Bellevue, Elkhorn, Gretna, Omaha"),
           date: z.string().describe("YYYY-MM-DD"),
         }),
-        execute: async (args: any) => await executeTool("read_schedule", args),
-      };
+        // @ts-ignore - Bypass AI SDK overload bug
+        execute: async (args) => await executeTool("read_schedule", args),
+      });
     }
 
     if (agentDef.tools.includes("move_student")) {
-      agentTools.move_student = {
+      agentTools.move_student = tool({
         description: "Move a student between schedule blocks. Requires a reason.",
         parameters: z.object({
           sourceBlockId: z.string(),
           targetBlockId: z.string(),
           reason: z.string(),
         }),
-        execute: async (args: any) => await executeTool("move_student", args),
-      };
+        // @ts-ignore - Bypass AI SDK overload bug
+        execute: async (args) => await executeTool("move_student", args),
+      });
     }
 
     if (agentDef.tools.includes("handle_teacher_callout")) {
-      agentTools.handle_teacher_callout = {
+      agentTools.handle_teacher_callout = tool({
         description: "Resolve conflicts when a teacher calls out sick.",
         parameters: z.object({
           teacherName: z.string(),
           date: z.string(),
           locationName: z.string(),
         }),
-        execute: async (args: any) => await executeTool("handle_teacher_callout", args),
-      };
+        // @ts-ignore - Bypass AI SDK overload bug
+        execute: async (args) => await executeTool("handle_teacher_callout", args),
+      });
     }
 
     if (agentDef.tools.includes("find_booking_gaps")) {
-      agentTools.find_booking_gaps = {
+      agentTools.find_booking_gaps = tool({
         description: "Scan for 'Swiss cheese' gaps to optimize revenue.",
         parameters: z.object({
           locationName: z.string(),
           date: z.string(),
         }),
-        execute: async (args: any) => await executeTool("find_booking_gaps", args),
-      };
+        // @ts-ignore - Bypass AI SDK overload bug
+        execute: async (args) => await executeTool("find_booking_gaps", args),
+      });
     }
 
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // We use generateText and cast as 'any' to bypass Turbopack's strict CallSettings typing
     const result = await generateText({
       model: openai("gpt-4o-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
       maxSteps: 5,
-    } as any);
+    });
 
-    // Return the exact structure the custom UI requires to parse successfully
     return NextResponse.json({
       content: [{ text: result.text }],
       toolResults: result.toolResults,
@@ -135,4 +139,4 @@ export async function POST(req: Request) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}// Final Deployment Trigger: Wed Apr 22 08:42:34 EDT 2026
+}
