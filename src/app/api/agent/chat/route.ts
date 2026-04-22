@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — LINTER-SAFE HYBRID
- * * 1. Uses tool() wrapper to ensure OpenAI gets a valid JSON Schema.
- * * 2. Uses 'as any' on the tool config object to silently bypass Turbopack's strict Zod overload bug.
- * * 3. Uses generateText & NextResponse to ensure the custom UI receives standard JSON.
+ * ZiroWork Agentic Chat Route — STRICT TYPING MODE
+ * * 1. Uses explicit TS interfaces in execute() to satisfy Turbopack natively.
+ * * 2. Retains the Zod tool() wrapper so OpenAI receives the exact 'type: "object"' schema.
+ * * 3. Uses generateText to fulfill the custom frontend JSON requirement.
  */
 export async function POST(req: Request) {
   try {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       { role: "user", content: message },
     ];
 
-    const agentTools: any = {};
+    const agentTools: Record<string, any> = {};
 
     if (agentDef.tools.includes("get_global_state")) {
       agentTools.get_global_state = tool({
@@ -44,8 +44,9 @@ export async function POST(req: Request) {
         parameters: z.object({
           scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
         }),
-        execute: async (args: any) => await executeTool("get_global_state", args),
-      } as any); // <-- Linter-safe bypass
+        execute: async (args: { scope?: "all" | "schedule" | "financials" | "leads" }) => 
+          await executeTool("get_global_state", args),
+      });
     }
 
     if (agentDef.tools.includes("delegate_to_agent")) {
@@ -55,13 +56,13 @@ export async function POST(req: Request) {
           agentId: z.string().describe("The ID of the target agent"),
           toolName: z.string().describe("The name of the tool to execute"),
           toolArgs: z.record(z.string(), z.any()).describe("The input data for the tool"),
-          reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
+          reason: z.string().describe("Why this move is happening"),
         }),
-        execute: async (args: any) => {
+        execute: async (args: { agentId: string; toolName: string; toolArgs: Record<string, any>; reason: string }) => {
           const { toolArgs, ...rest } = args;
           return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs });
         },
-      } as any); // <-- Linter-safe bypass
+      });
     }
 
     if (agentDef.tools.includes("read_schedule")) {
@@ -71,8 +72,9 @@ export async function POST(req: Request) {
           locationName: z.string().describe("Bellevue, Elkhorn, Gretna, Omaha"),
           date: z.string().describe("YYYY-MM-DD"),
         }),
-        execute: async (args: any) => await executeTool("read_schedule", args),
-      } as any); // <-- Linter-safe bypass
+        execute: async (args: { locationName: string; date: string }) => 
+          await executeTool("read_schedule", args),
+      });
     }
 
     if (agentDef.tools.includes("move_student")) {
@@ -83,8 +85,9 @@ export async function POST(req: Request) {
           targetBlockId: z.string(),
           reason: z.string(),
         }),
-        execute: async (args: any) => await executeTool("move_student", args),
-      } as any); // <-- Linter-safe bypass
+        execute: async (args: { sourceBlockId: string; targetBlockId: string; reason: string }) => 
+          await executeTool("move_student", args),
+      });
     }
 
     if (agentDef.tools.includes("handle_teacher_callout")) {
@@ -95,8 +98,9 @@ export async function POST(req: Request) {
           date: z.string(),
           locationName: z.string(),
         }),
-        execute: async (args: any) => await executeTool("handle_teacher_callout", args),
-      } as any); // <-- Linter-safe bypass
+        execute: async (args: { teacherName: string; date: string; locationName: string }) => 
+          await executeTool("handle_teacher_callout", args),
+      });
     }
 
     if (agentDef.tools.includes("find_booking_gaps")) {
@@ -106,8 +110,9 @@ export async function POST(req: Request) {
           locationName: z.string(),
           date: z.string(),
         }),
-        execute: async (args: any) => await executeTool("find_booking_gaps", args),
-      } as any); // <-- Linter-safe bypass
+        execute: async (args: { locationName: string; date: string }) => 
+          await executeTool("find_booking_gaps", args),
+      });
     }
 
     const openai = createOpenAI({
@@ -120,7 +125,7 @@ export async function POST(req: Request) {
       messages: messageHistory,
       tools: agentTools,
       maxSteps: 5,
-    } as any);
+    });
 
     return NextResponse.json({
       content: [{ type: "text", text: result.text }],
@@ -134,4 +139,4 @@ export async function POST(req: Request) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}// Deployment Trigger: Wed Apr 22 09:18:29 EDT 2026
+}
