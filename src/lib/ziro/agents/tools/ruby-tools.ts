@@ -1,10 +1,9 @@
 /**
- * Ruby Tool Definitions — ORCHESTRATOR MODE
+ * Ruby Tool Definitions — SCHEDULER & ORCHESTRATOR MODE
  * 
- * Missions Implemented:
- * 1. Conflict Arbiter (handle_teacher_callout)
- * 2. Revenue Optimizer (find_booking_gaps)
- * 3. Communication Loop (send_notification)
+ * Focus:
+ * 1. Conflict Arbiter (Teacher Callout & Batch Rescheduling)
+ * 2. Revenue Optimizer (Gap Detection & Proactive Rescheduling)
  */
 import { createClient } from "@supabase/supabase-js";
 
@@ -208,65 +207,9 @@ export async function find_booking_gaps({
   };
 }
 
-/**
- * MISSION 3: send_notification
- * Sends an SMS/Email notification to a parent about a schedule change.
- */
-export async function send_notification({
-  studentId,
-  message,
-  type = "sms",
-}: {
-  studentId: string;
-  message: string;
-  type?: "sms" | "email";
-}) {
-  const supabase = getSupabase();
-
-  // 1. Find student/parent contact info
-  const { data: student, error: studentError } = await supabase
-    .from("students")
-    .select("id, first_name, last_name, parent_id")
-    .eq("id", studentId)
-    .single();
-
-  if (studentError || !student) {
-    return { success: false, error: "Student not found" };
-  }
-
-  // 2. Log the notification in the activity_log (The "Ruby Activity Feed")
-  const { error: logError } = await supabase
-    .from("activity_log")
-    .insert({
-      tenant_id: TENANT_ID,
-      entity_type: "student",
-      entity_id: studentId,
-      action: `notification_sent_${type}`,
-      description: message,
-      metadata: { student_name: `${student.first_name} ${student.last_name}`, type },
-      created_at: new Date().toISOString(),
-    });
-
-  if (logError) {
-    console.warn("[Notification Log Error]:", logError.message);
-  }
-
-  // 3. Simulate the actual SMS/Email send (Integration point for Twilio/SendGrid)
-  console.log(`[COMMUNICATION LOOP] Sending ${type} to Student ${studentId}: ${message}`);
-
-  return {
-    success: true,
-    studentId,
-    type,
-    message,
-    sentAt: new Date().toISOString(),
-  };
-}
-
 export const RUBY_TOOLS = {
   read_schedule,
   move_student,
   handle_teacher_callout,
   find_booking_gaps,
-  send_notification,
 };

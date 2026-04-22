@@ -1,5 +1,5 @@
 /**
- * ZiroWork Unified Tool Registry — ORCHESTRATOR MODE
+ * ZiroWork Unified Tool Registry — SCHEDULER & ORCHESTRATOR MODE
  * 
  * Maps tool names to their implementations.
  */

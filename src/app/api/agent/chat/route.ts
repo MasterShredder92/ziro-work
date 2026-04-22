@@ -9,12 +9,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — ORCHESTRATOR MODE
+ * ZiroWork Agentic Chat Route — SCHEDULER & ORCHESTRATOR MODE
  * 
- * Missions:
- * 1. Conflict Arbiter (handle_teacher_callout)
- * 2. Revenue Optimizer (find_booking_gaps)
- * 3. Communication Loop (send_notification)
+ * Ruby's Tools:
+ * 1. read_schedule
+ * 2. move_student
+ * 3. handle_teacher_callout
+ * 4. find_booking_gaps
  */
 export async function POST(req: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // 3. handle_teacher_callout (MISSION 1)
+    // 3. handle_teacher_callout
     if (agentDef.tools.includes("handle_teacher_callout")) {
       agentTools.handle_teacher_callout = {
         description: "Find alternative slots for all students of a teacher who called out sick.",
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // 4. find_booking_gaps (MISSION 2)
+    // 4. find_booking_gaps
     if (agentDef.tools.includes("find_booking_gaps")) {
       agentTools.find_booking_gaps = {
         description: "Scan for 'Swiss cheese' gaps (single open 30-min slots) to optimize revenue.",
@@ -85,19 +86,6 @@ export async function POST(req: NextRequest) {
           date: z.string().describe("Date (YYYY-MM-DD)"),
         }),
         execute: async (args: any) => await executeTool("find_booking_gaps", args),
-      };
-    }
-
-    // 5. send_notification (MISSION 3)
-    if (agentDef.tools.includes("send_notification")) {
-      agentTools.send_notification = {
-        description: "Sends an SMS or Email notification to a student or parent about a schedule change.",
-        parameters: z.object({
-          studentId: z.string().describe("The ID of the student to notify"),
-          message: z.string().describe("The message content (e.g., 'Hi! Ruby here...')"),
-          type: z.enum(["sms", "email"]).optional().describe("Notification type (default: sms)"),
-        }),
-        execute: async (args: any) => await executeTool("send_notification", args),
       };
     }
 
