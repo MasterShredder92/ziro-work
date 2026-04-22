@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
+import { generateText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -39,20 +39,21 @@ export async function POST(req: NextRequest) {
 
     const agentTools: any = {};
 
+    // Use the tool() helper explicitly to ensure correct schema mapping in AI SDK v6
     // 1. get_global_state (Ziro Only)
     if (agentDef.tools.includes("get_global_state")) {
-      agentTools.get_global_state = {
+      agentTools.get_global_state = tool({
         description: "Scan the business for gaps, callouts, and unpaid invoices.",
         parameters: z.object({
           scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
         }),
         execute: async (args: any) => await executeTool("get_global_state", args),
-      };
+      });
     }
 
     // 2. delegate_to_agent (Ziro Only)
     if (agentDef.tools.includes("delegate_to_agent")) {
-      agentTools.delegate_to_agent = {
+      agentTools.delegate_to_agent = tool({
         description: "Command a specialist agent (Ruby, Raven, Bub, Sid, Stewie, Star) to perform a task.",
         parameters: z.object({
           agentId: z.string().describe("The ID of the target agent"),
@@ -61,23 +62,23 @@ export async function POST(req: NextRequest) {
           reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
         }),
         execute: async (args: any) => await executeTool("delegate_to_agent", args),
-      };
+      });
     }
 
     // 3. Specialist Tools (Ruby's Scheduling)
     if (agentDef.tools.includes("read_schedule")) {
-      agentTools.read_schedule = {
+      agentTools.read_schedule = tool({
         description: "Read lesson schedule for a location.",
         parameters: z.object({
           locationName: z.string().describe("Bellevue, Elkhorn, Gretna, Omaha"),
           date: z.string().describe("YYYY-MM-DD"),
         }),
         execute: async (args: any) => await executeTool("read_schedule", args),
-      };
+      });
     }
 
     if (agentDef.tools.includes("move_student")) {
-      agentTools.move_student = {
+      agentTools.move_student = tool({
         description: "Move a student between schedule blocks. Requires a reason.",
         parameters: z.object({
           sourceBlockId: z.string(),
@@ -85,11 +86,11 @@ export async function POST(req: NextRequest) {
           reason: z.string(),
         }),
         execute: async (args: any) => await executeTool("move_student", args),
-      };
+      });
     }
 
     if (agentDef.tools.includes("handle_teacher_callout")) {
-      agentTools.handle_teacher_callout = {
+      agentTools.handle_teacher_callout = tool({
         description: "Resolve conflicts when a teacher calls out sick.",
         parameters: z.object({
           teacherName: z.string(),
@@ -97,27 +98,25 @@ export async function POST(req: NextRequest) {
           locationName: z.string(),
         }),
         execute: async (args: any) => await executeTool("handle_teacher_callout", args),
-      };
+      });
     }
 
     if (agentDef.tools.includes("find_booking_gaps")) {
-      agentTools.find_booking_gaps = {
+      agentTools.find_booking_gaps = tool({
         description: "Scan for 'Swiss cheese' gaps to optimize revenue.",
         parameters: z.object({
           locationName: z.string(),
           date: z.string(),
         }),
         execute: async (args: any) => await executeTool("find_booking_gaps", args),
-      };
+      });
     }
 
-    // Use generateText (Sync) instead of streamText (Async Stream) for UI compatibility
-    // Using 'as any' to bypass strict type inference issues in this specific environment
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const { text, toolResults } = await (generateText as any)({
+    const { text, toolResults } = await generateText({
       model: openai("gpt-4.1-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
