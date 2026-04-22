@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Increase timeout for agentic tasks (max for Pro, Hobby is 10s)
+export const maxDuration = 60; // Increase timeout for agentic tasks
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
     // Use the latest key provided by the user: sk-s-...
     const apiKey = process.env.MANUS_API_KEY || "";
     
-    // Official Manus V1 Proxy Endpoint as per latest checklist
-    const endpoint = "https://api.manus.im/v1/chat/completions";
+    // The specific OpenAI-compatible proxy endpoint for Manus that supports sk-s- keys
+    const endpoint = "https://api.manus.im/api/llm-proxy/v1/chat/completions";
     
     console.log(`[Manus API] Definitive Relay: Handshaking with ${endpoint}`);
 
