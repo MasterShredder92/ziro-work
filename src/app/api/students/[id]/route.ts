@@ -24,9 +24,9 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id } = await ctx.params;
     const tenantId = resolveTenantId(req);
-    const row = await getStudentById(id, tenantId);
-    if (!row) return notFound();
-    return ok({ data: row });
+    const data = await getStudentById(id, tenantId);
+    if (!data) return notFound();
+    return ok({ data });
   } catch (err) {
     return serverError(err);
   }
@@ -43,8 +43,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (!parsed.success) {
       return badRequest("Invalid update payload", parsed.error.flatten());
     }
-    const row = await updateStudent(id, tenantId, parsed.data);
-    return ok({ data: row });
+    const data = await updateStudent(id, tenantId, parsed.data);
+    return ok({ data });
   } catch (err) {
     return serverError(err);
   }

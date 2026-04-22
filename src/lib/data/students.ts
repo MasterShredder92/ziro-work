@@ -312,3 +312,34 @@ export async function isStudentsTableAvailable(client: DbClient): Promise<boolea
     return false;
   }
 }
+
+export async function deleteStudent(
+  client: DbClient,
+  tenantId: string,
+  id: string
+): Promise<FacadeResult<null>> {
+  try {
+    const { error } = await client
+      .from("students")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("id", id);
+    if (error) return { data: null, error: toErrorInfo(error) };
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: toErrorInfo(err) };
+  }
+}
+
+export async function deactivateStudent(
+  client: DbClient,
+  tenantId: string,
+  id: string,
+  deactivatedBy?: string,
+  reason?: string,
+  category?: string
+): Promise<FacadeResult<Student>> {
+  return updateStudent(client, tenantId, id, {
+    status: "inactive",
+  } as StudentUpdate);
+}

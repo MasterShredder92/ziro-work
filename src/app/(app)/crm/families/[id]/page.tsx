@@ -109,6 +109,10 @@ export default function FamilyDetailPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [timeline, setTimeline] = useState<AuditEvent[]>([]);
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [studentSaving, setStudentSaving] = useState(false);
+  const [studentSaveStatus, setStudentSaveStatus] = useState<"idle"|"success"|"error">("idle");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -705,6 +709,149 @@ function EditFamilyForm({ family, tenantId, onSaved }: {
       >
         {saving ? "Saving…" : "Save Family Profile"}
       </button>
+    </div>
+  );
+}
+
+
+/* ─── StudentInlineEdit ──────────────────────────────────── */
+const CORE_INSTRUMENTS = ["Piano", "Guitar", "Vocals", "Drums"];
+const OTHER_INSTRUMENTS = ["Bass Guitar", "Ukulele", "Violin", "Cello", "Flute", "Clarinet", "Saxophone", "Trumpet", "Trombone", "Percussion"];
+
+type StudentInlineEditProps = {
+  student: Student;
+  teachers: Teacher[];
+  tenantId: string;
+  saving: boolean;
+  saveStatus: "idle" | "success" | "error";
+  onCancel: () => void;
+  onSaved: (updated: Student) => void;
+  setSaving: (v: boolean) => void;
+  setSaveStatus: (v: "idle" | "success" | "error") => void;
+};
+
+function StudentInlineEdit({
+  student, teachers, tenantId, saving, saveStatus,
+  onCancel, onSaved, setSaving, setSaveStatus,
+}: StudentInlineEditProps) {
+  const [firstName, setFirstName] = useState(student.first_name ?? "");
+  const [lastName, setLastName] = useState(student.last_name ?? "");
+  const [instrument, setInstrument] = useState(student.instrument ?? "");
+  const [stuStatus, setStuStatus] = useState(student.status ?? "active");
+  const [teacherId, setTeacherId] = useState(student.teacher_id ?? "");
+  const [email, setEmail] = useState(student.email ?? "");
+  const [phone, setPhone] = useState(student.phone ?? "");
+  const [dob, setDob] = useState(student.date_of_birth ?? "");
+  const [experience, setExperience] = useState(student.experience ?? "");
+  const [learningStyle, setLearningStyle] = useState(student.learning_style ?? "");
+  const [goals, setGoals] = useState(student.goals ?? "");
+  const [notes, setNotes] = useState(student.notes ?? "");
+  const [teacherNotes, setTeacherNotes] = useState(student.teacher_notes ?? "");
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const iCls = "w-full rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[var(--z-accent)]/40 focus:outline-none";
+  const lCls = "block text-xs font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1";
+
+  async function handleSave(e: React.MouseEvent) {
+    e.stopPropagation();
+    setSaving(true);
+    setSaveStatus("idle");
+    setErrMsg(null);
+    try {
+      const res = await fetch(`/api/crm/students/${student.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        body: JSON.stringify({
+          first_name: firstName, last_name: lastName,
+          instrument: instrument || null, status: stuStatus,
+          teacher_id: teacherId || null,
+          email: email || null, phone: phone || null,
+          date_of_birth: dob || null,
+          experience: experience || null,
+          learning_style: learningStyle || null,
+          goals: goals || null,
+          notes: notes || null,
+          teacher_notes: teacherNotes || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setErrMsg(json?.error ?? "Save failed"); setSaveStatus("error"); return; }
+      onSaved(json.data ?? { ...student, first_name: firstName, last_name: lastName });
+    } catch {
+      setErrMsg("Network error"); setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-[var(--z-border)] p-4 bg-[var(--z-surface)] space-y-4" onClick={e => e.stopPropagation()}>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className={lCls}>First Name</label><input className={iCls} value={firstName} onChange={e => setFirstName(e.target.value)} /></div>
+        <div><label className={lCls}>Last Name</label><input className={iCls} value={lastName} onChange={e => setLastName(e.target.value)} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={lCls}>Instrument</label>
+          <select className={iCls} value={instrument} onChange={e => setInstrument(e.target.value)}>
+            <option value="">— Select —</option>
+            <optgroup label="Core 4">
+              {CORE_INSTRUMENTS.map(i => <option key={i} value={i}>{i}</option>)}
+            </optgroup>
+            <optgroup label="Other">
+              {OTHER_INSTRUMENTS.map(i => <option key={i} value={i}>{i}</option>)}
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label className={lCls}>Status</label>
+          <select className={iCls} value={stuStatus} onChange={e => setStuStatus(e.target.value)}>
+            <option value="active">Active</option>
+            <option value="trial">Trial</option>
+            <option value="paused">Paused</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className={lCls}>Teacher</label>
+        <select className={iCls} value={teacherId} onChange={e => setTeacherId(e.target.value)}>
+          <option value="">— Unassigned —</option>
+          {teachers.map(t => (
+            <option key={t.id} value={t.id}>
+              {t.display_name ?? [t.first_name, t.last_name].filter(Boolean).join(" ")}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className={lCls}>Email</label><input className={iCls} type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+        <div><label className={lCls}>Phone</label><input className={iCls} type="tel" value={phone} onChange={e => setPhone(e.target.value)} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className={lCls}>Date of Birth</label><input className={iCls} type="date" value={dob} onChange={e => setDob(e.target.value)} /></div>
+        <div><label className={lCls}>Experience</label><input className={iCls} value={experience} onChange={e => setExperience(e.target.value)} placeholder="e.g. 2 years" /></div>
+      </div>
+      <div><label className={lCls}>Learning Style</label><input className={iCls} value={learningStyle} onChange={e => setLearningStyle(e.target.value)} placeholder="e.g. Visual, Hands-on" /></div>
+      <div><label className={lCls}>Goals</label><textarea className={iCls} rows={2} value={goals} onChange={e => setGoals(e.target.value)} /></div>
+      <div><label className={lCls}>Notes</label><textarea className={iCls} rows={2} value={notes} onChange={e => setNotes(e.target.value)} /></div>
+      <div><label className={lCls}>Teacher Notes</label><textarea className={iCls} rows={2} value={teacherNotes} onChange={e => setTeacherNotes(e.target.value)} /></div>
+      {saveStatus === "error" && <p className="text-xs text-red-400">{errMsg ?? "Save failed"}</p>}
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-xl bg-[var(--z-accent)] px-4 py-2 text-xs font-bold text-black disabled:opacity-50 hover:opacity-90 transition-opacity"
+        >
+          {saving ? "Saving…" : "Save Student"}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onCancel(); }}
+          className="rounded-xl border border-[var(--z-border)] px-4 py-2 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
