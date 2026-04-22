@@ -50,6 +50,7 @@ type Props = {
 
 type RoomWithInventory = ScheduleRoom & { _editing?: boolean; _newItem?: string };
 
+export default function ScheduleRoomsPanel({ locationId, locationName, locationColor, rooms: initialRooms }: Props) {
   const expectedCount = LOCATION_ROOM_COUNTS[locationId] ?? 0;
   const [rooms, setRooms] = React.useState<RoomWithInventory[]>(() =>
     initialRooms.filter((r) => r.locationId === locationId || !r.locationId)
