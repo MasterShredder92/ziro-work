@@ -11,8 +11,8 @@ import type { AIConversation, AIMessage, Json } from "@/lib/types/entities";
 import { resolveAgent, touchAgentUsage } from "./agentRegistry";
 import { resolvePageBindings } from "./pageIntelligence";
 import { touchSkillUsage } from "./skillRegistry";
-import { getToolsForAgent } from "./tools/definitions";
-import { executeTool } from "./tools/executor";
+import { AGENT_REGISTRY } from "./agents/definitions";
+import { executeTool } from "./agents/tools/index";
 
 export type ConversationTurnInput = {
   tenantId: string;
@@ -245,9 +245,10 @@ export async function runTurn(
     `You have access to tools that let you take real actions in ZiroWork. When a user asks you to update a student, reschedule a lesson, or look up information — USE THE TOOLS. Do not ask the user to do it themselves. Do not say you "can't" do something if you have a tool for it. Execute the action, confirm what you did, and show the result.`,
   ]);
 
-  // Get tools for this agent
-  const agentName = effectiveAgent?.name ?? null;
-  const tools = getToolsForAgent(agentName);
+  // Get tools for this agent via Sovereign AGENT_REGISTRY
+  const agentId = effectiveAgent?.id ?? null;
+  const agentDef = agentId ? AGENT_REGISTRY[agentId] : null;
+  const tools = (agentDef?.tools ?? []) as any[];
 
   const messages: Anthropic.MessageParam[] = [
     ...priorTurns,
