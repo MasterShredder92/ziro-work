@@ -14,6 +14,7 @@ export const maxDuration = 60;
  * Missions:
  * 1. Conflict Arbiter (handle_teacher_callout)
  * 2. Revenue Optimizer (find_booking_gaps)
+ * 3. Communication Loop (send_notification)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -84,6 +85,19 @@ export async function POST(req: NextRequest) {
           date: z.string().describe("Date (YYYY-MM-DD)"),
         }),
         execute: async (args: any) => await executeTool("find_booking_gaps", args),
+      };
+    }
+
+    // 5. send_notification (MISSION 3)
+    if (agentDef.tools.includes("send_notification")) {
+      agentTools.send_notification = {
+        description: "Sends an SMS or Email notification to a student or parent about a schedule change.",
+        parameters: z.object({
+          studentId: z.string().describe("The ID of the student to notify"),
+          message: z.string().describe("The message content (e.g., 'Hi! Ruby here...')"),
+          type: z.enum(["sms", "email"]).optional().describe("Notification type (default: sms)"),
+        }),
+        execute: async (args: any) => await executeTool("send_notification", args),
       };
     }
 

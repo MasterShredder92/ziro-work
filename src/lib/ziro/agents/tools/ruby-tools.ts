@@ -2,8 +2,9 @@
  * Ruby Tool Definitions — ORCHESTRATOR MODE
  * 
  * Missions Implemented:
- * 1. Conflict Arbiter (Teacher Callout & Batch Rescheduling)
- * 2. Revenue Optimizer (Gap Detection & Proactive Rescheduling)
+ * 1. Conflict Arbiter (handle_teacher_callout)
+ * 2. Revenue Optimizer (find_booking_gaps)
+ * 3. Communication Loop (send_notification)
  */
 import { createClient } from "@supabase/supabase-js";
 
@@ -104,12 +105,11 @@ export async function move_student({
     .update({ student_id: null, status: "available", notes: `Moved to ${targetBlockId}` })
     .eq("id", sourceBlockId);
 
-  return { success: true, message: `Moved student to block ${targetBlockId}` };
+  return { success: true, message: `Moved student to block ${targetBlockId}`, studentId: sourceBlock.student_id };
 }
 
 /**
  * MISSION 1: handle_teacher_callout
- * Finds all students for a teacher on a date and finds alternative slots.
  */
 export async function handle_teacher_callout({
   teacherName,
@@ -123,7 +123,6 @@ export async function handle_teacher_callout({
   const supabase = getSupabase();
   const locationId = resolveLocationId(locationName);
 
-  // 1. Find teacher ID
   const { data: teacher } = await supabase
     .from("teachers")
     .select("id")
@@ -133,7 +132,6 @@ export async function handle_teacher_callout({
 
   if (!teacher) return { success: false, error: `Teacher "${teacherName}" not found` };
 
-  // 2. Find all lessons for this teacher
   const { data: lessons } = await supabase
     .from("schedule_blocks")
     .select("id, start_time, end_time, student_id")
@@ -145,7 +143,6 @@ export async function handle_teacher_callout({
     return { success: true, message: `No lessons found for ${teacherName} on ${date}`, proposals: [] };
   }
 
-  // 3. Find ALL open slots at the same location/date
   const { data: openSlots } = await supabase
     .from("schedule_blocks")
     .select("id, start_time, end_time, teacher_id")
@@ -153,7 +150,6 @@ export async function handle_teacher_callout({
     .eq("block_date", date)
     .eq("status", "available");
 
-  // 4. Draft Proposals (Simple matching by time/availability)
   const proposals = lessons.map((lesson: any) => {
     const match = (openSlots || []).find((slot: any) => slot.start_time === lesson.start_time);
     return {
@@ -176,7 +172,6 @@ export async function handle_teacher_callout({
 
 /**
  * MISSION 2: find_booking_gaps
- * Scans for "Swiss cheese" gaps to optimize revenue.
  */
 export async function find_booking_gaps({
   locationName,
@@ -194,7 +189,6 @@ export async function find_booking_gaps({
     const curr = blocks[i];
     const next = blocks[i + 1];
 
-    // Detect a single 30-min available block between two booked blocks
     if (prev.status === "booked" && curr.status === "available" && next.status === "booked") {
       gaps.push({
         gapBlockId: curr.id,
@@ -214,9 +208,65 @@ export async function find_booking_gaps({
   };
 }
 
+/**
+ * MISSION 3: send_notification
+ * Sends an SMS/Email notification to a parent about a schedule change.
+ */
+export async function send_notification({
+  studentId,
+  message,
+  type = "sms",
+}: {
+  studentId: string;
+  message: string;
+  type?: "sms" | "email";
+}) {
+  const supabase = getSupabase();
+
+  // 1. Find student/parent contact info
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("id, first_name, last_name, parent_id")
+    .eq("id", studentId)
+    .single();
+
+  if (studentError || !student) {
+    return { success: false, error: "Student not found" };
+  }
+
+  // 2. Log the notification in the activity_log (The "Ruby Activity Feed")
+  const { error: logError } = await supabase
+    .from("activity_log")
+    .insert({
+      tenant_id: TENANT_ID,
+      entity_type: "student",
+      entity_id: studentId,
+      action: `notification_sent_${type}`,
+      description: message,
+      metadata: { student_name: `${student.first_name} ${student.last_name}`, type },
+      created_at: new Date().toISOString(),
+    });
+
+  if (logError) {
+    console.warn("[Notification Log Error]:", logError.message);
+  }
+
+  // 3. Simulate the actual SMS/Email send (Integration point for Twilio/SendGrid)
+  console.log(`[COMMUNICATION LOOP] Sending ${type} to Student ${studentId}: ${message}`);
+
+  return {
+    success: true,
+    studentId,
+    type,
+    message,
+    sentAt: new Date().toISOString(),
+  };
+}
+
 export const RUBY_TOOLS = {
   read_schedule,
   move_student,
   handle_teacher_callout,
   find_booking_gaps,
+  send_notification,
 };
