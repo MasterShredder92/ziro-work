@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
       maxSteps: 5,
     });
 
-    return result.toTextStreamResponse();
+    return result.toDataStreamResponse();
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json(
