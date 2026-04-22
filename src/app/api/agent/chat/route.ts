@@ -134,4 +134,4 @@ export async function POST(req: Request) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}// Deployment Trigger: Wed Apr 22 09:18:29 EDT 2026
