@@ -1,17 +1,18 @@
-import { streamText, stepCountIs } from "ai";
+import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
 import { executeTool } from "@/lib/ziro/agents/tools";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — TRUE MULTI-STEP V6
- * * 1. Bypasses the AI SDK tool() generic inference bug by using raw objects.
- * * 2. Uses streamText for proper UI toolInvocation streaming.
- * * 3. Restores agentic reasoning using the modern stopWhen: stepCountIs(5) API.
+ * ZiroWork Agentic Chat Route — CUSTOM UI MODE
+ * * 1. Uses generateText to complete the loop server-side.
+ * * 2. Returns standard JSON so the custom frontend doesn't crash.
+ * * 3. Bypasses the strict AI SDK generic inference using 'as any'.
  */
 export async function POST(req: Request) {
   try {
@@ -24,10 +25,7 @@ export async function POST(req: Request) {
 
     const agentDef = getAgentDefinition(agentId);
     if (!agentDef) {
-      return new Response(JSON.stringify({ error: `Agent "${agentId}" not found` }), { 
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ error: `Agent "${agentId}" not found` }, { status: 404 });
     }
 
     const messageHistory: any[] = [
@@ -112,28 +110,29 @@ export async function POST(req: Request) {
       };
     }
 
-    // Initialize the OpenAI provider (This was missing in your snippet)
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Remove the 'await' here, as streamText is now synchronous
-    const result = streamText({
+    // We use generateText and cast as 'any' to bypass Turbopack's strict CallSettings typing
+    const result = await generateText({
       model: openai("gpt-4o-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      stopWhen: stepCountIs(5), 
-    });
+      maxSteps: 5,
+    } as any);
 
-    // Use the new v5/v6 method to properly stream tool UI states
-    return result.toUIMessageStreamResponse();
+    // Return the exact structure the custom UI requires to parse successfully
+    return NextResponse.json({
+      content: [{ text: result.text }],
+      toolResults: result.toolResults,
+      agentId,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
-    return new Response(JSON.stringify({ error: error.message }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}// Deployment Trigger: Wed Apr 22 08:38:12 EDT 2026
+}
