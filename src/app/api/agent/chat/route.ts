@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
 import { executeTool } from "@/lib/ziro/agents/tools";
@@ -113,6 +113,10 @@ export async function POST(req: NextRequest) {
 
     // Use generateText (Sync) instead of streamText (Async Stream) for UI compatibility
     // Using 'as any' to bypass strict type inference issues in this specific environment
+    const openai = createOpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const { text, toolResults } = await (generateText as any)({
       model: openai("gpt-4.1-mini"),
       system: agentDef.systemPrompt,
