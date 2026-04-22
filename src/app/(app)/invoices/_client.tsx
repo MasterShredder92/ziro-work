@@ -163,6 +163,8 @@ export function InvoicesClient({
   const [locationId, setLocationId] = useState(initialLocationId);
   const [monthOffset, setMonthOffset] = useState(initialMonthOffset);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [invoiceType, setInvoiceType] = useState<"recurring" | "one-time" | null>(null);
+  const returnFamilyId = searchParams.get("family_id") ?? null;
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -267,7 +269,7 @@ export function InvoicesClient({
             )}
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => { setInvoiceType(null); setShowCreateModal(true); }}
             className="rounded-lg bg-[var(--z-accent)] px-4 py-1.5 text-sm font-semibold text-[var(--z-on-accent)] hover:opacity-90 transition-opacity"
           >
             + Create Invoice
@@ -526,9 +528,50 @@ export function InvoicesClient({
         )}
       </div>
 
+      {/* ── Invoice Type Picker ── */}
+      {showCreateModal && invoiceType === null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border shadow-2xl p-8 space-y-6"
+            style={{ background: "var(--z-surface)", borderColor: "var(--z-border)" }}>
+            <div>
+              <div className="text-base font-bold text-[var(--z-fg)]">What type of invoice?</div>
+              <div className="text-xs text-[var(--z-muted)] mt-1">Choose before building</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setInvoiceType("recurring")}
+                className="flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all hover:border-[var(--z-accent)]"
+                style={{ borderColor: "var(--z-border)", background: "var(--z-bg)" }}
+              >
+                <span className="text-2xl">🔁</span>
+                <span className="text-sm font-bold text-[var(--z-fg)]">Recurring</span>
+                <span className="text-[10px] text-[var(--z-muted)] text-center leading-relaxed">Sends 1st of each month<br/>forever</span>
+              </button>
+              <button
+                onClick={() => setInvoiceType("one-time")}
+                className="flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all hover:border-[var(--z-accent)]"
+                style={{ borderColor: "var(--z-border)", background: "var(--z-bg)" }}
+              >
+                <span className="text-2xl">1×</span>
+                <span className="text-sm font-bold text-[var(--z-fg)]">One-Time</span>
+                <span className="text-[10px] text-[var(--z-muted)] text-center leading-relaxed">Single invoice,<br/>no recurrence</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="w-full text-xs text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+            >Cancel</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Create Invoice Modal ── */}
-      {showCreateModal && (
-        <CreateInvoiceModal onClose={() => setShowCreateModal(false)} />
+      {showCreateModal && invoiceType !== null && (
+        <CreateInvoiceModal
+          isRecurringDefault={invoiceType === "recurring"}
+          returnFamilyId={returnFamilyId}
+          onClose={() => { setShowCreateModal(false); setInvoiceType(null); }}
+        />
       )}
     </PageShell>
   );
@@ -538,22 +581,62 @@ export function InvoicesClient({
 // Full-featured invoice builder: line items, theme toggle, location logo,
 // Google Review toggle, student/family linking, live total calculation.
 
+
+// ─── Line item type ───────────────────────────────────────────────────────────
 type LineItem = {
   id: string;
+  service_id: string | null;
   description: string;
   quantity: string;
   unit_price: string;
   is_makeup: boolean;
+  is_fifth_week: boolean;
+};
+
+type ServiceOption = {
+  id: string;
+  name: string;
+  sub_category: string | null;
+  unit_price: number;
+  unit_label: string;
+  is_core: boolean;
 };
 
 function newLineItem(): LineItem {
-  return { id: Math.random().toString(36).slice(2), description: "", quantity: "1", unit_price: "", is_makeup: false };
+  return {
+    id: Math.random().toString(36).slice(2),
+    service_id: null,
+    description: "",
+    quantity: "1",
+    unit_price: "",
+    is_makeup: false,
+    is_fifth_week: false,
+  };
 }
 
-function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
-  // ── Family / Student search ──
+function CreateInvoiceModal({
+  onClose,
+  isRecurringDefault = true,
+  returnFamilyId = null,
+}: {
+  onClose: () => void;
+  isRecurringDefault?: boolean;
+  returnFamilyId?: string | null;
+}) {
+  const router = useRouter();
+
+  // ── Services catalog ──
+  const [services, setServices] = React.useState<ServiceOption[]>([]);
+  React.useEffect(() => {
+    fetch("/api/settings/services")
+      .then(r => r.json())
+      .then(j => setServices(j.data ?? []))
+      .catch(() => {});
+  }, []);
+
+  // ── Family search ──
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [searchResults, setSearchResults] = React.useState<{ id: string; name: string; primary_email: string | null }[]>([]);
+  const [searchResults, setSearchResults] = React.useState<{ id: string; name: string; primary_email: string | null; primary_contact_name: string | null }[]>([]);
   const [selectedFamilyId, setSelectedFamilyId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searching, setSearching] = React.useState(false);
@@ -562,20 +645,23 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
   const [customerName, setCustomerName] = React.useState("");
   const [customerEmail, setCustomerEmail] = React.useState("");
   const [locationId, setLocationId] = React.useState("");
+  // Default due date = 1st of next month
   const [dueDate, setDueDate] = React.useState(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
   });
   const [note, setNote] = React.useState("");
   const [lineItems, setLineItems] = React.useState<LineItem[]>([newLineItem()]);
   const [themePreference, setThemePreference] = React.useState<"dark" | "light">("dark");
   const [googleReview, setGoogleReview] = React.useState(false);
+  // Recurring: set by type picker, not editable inside the builder
+  const isRecurring = isRecurringDefault;
 
   // ── UI state ──
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
-  const [createdToken, setCreatedToken] = React.useState<string | null>(null);
 
   // ── Computed total ──
   const subtotal = lineItems.reduce((sum, item) => {
@@ -584,26 +670,25 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
     return sum + qty * price;
   }, 0);
 
-  // ── Location logo ──
   const locationInfo = LOCATIONS.find(l => l.id === locationId);
 
-  // ── Debounced family search ──
+  // ── Debounced family search — uses dedicated /api/families/search ──
   React.useEffect(() => {
-    if (searchQuery.length < 2) { setSearchResults([]); setShowDropdown(false); return; }
+    if (searchQuery.length < 1) { setSearchResults([]); setShowDropdown(false); return; }
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`/api/families?search=${encodeURIComponent(searchQuery)}&limit=8`);
+        const res = await fetch(`/api/families/search?q=${encodeURIComponent(searchQuery)}`);
         const j = await res.json();
         setSearchResults(j.data ?? []);
         setShowDropdown(true);
       } catch { /* noop */ }
       setSearching(false);
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  function selectFamily(f: { id: string; name: string; primary_email: string | null }) {
+  function selectFamily(f: { id: string; name: string; primary_email: string | null; primary_contact_name: string | null }) {
     setSelectedFamilyId(f.id);
     setCustomerName(f.name);
     setCustomerEmail(f.primary_email ?? "");
@@ -612,100 +697,137 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
   }
 
   // ── Line item helpers ──
-  function updateItem(id: string, field: keyof LineItem, value: string | boolean) {
+  function updateItem(id: string, field: keyof LineItem, value: string | boolean | null) {
     setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   }
+
+  function selectService(itemId: string, svc: ServiceOption) {
+    setLineItems(prev => prev.map(item =>
+      item.id === itemId
+        ? {
+            ...item,
+            service_id: svc.id,
+            description: svc.sub_category ? `${svc.name} — ${svc.sub_category}` : svc.name,
+            unit_price: svc.unit_price > 0 ? String(svc.unit_price) : item.unit_price,
+          }
+        : item
+    ));
+  }
+
   function addItem() { setLineItems(prev => [...prev, newLineItem()]); }
   function removeItem(id: string) { setLineItems(prev => prev.filter(i => i.id !== id)); }
 
   // ── Submit ──
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!customerName.trim()) { setError("Customer name is required."); return; }
-    if (subtotal <= 0) { setError("Add at least one line item with a price."); return; }
+    if (!selectedFamilyId && !customerName.trim()) {
+      setError("Select a family or enter a customer name.");
+      return;
+    }
+    const validItems = lineItems.filter(i => i.description.trim() && parseFloat(i.unit_price) > 0);
+    if (validItems.length === 0) {
+      setError("Add at least one line item with a price.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
+      const totalCents = Math.round(subtotal * 100);
       const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-      const payload = {
-        family_id: selectedFamilyId,
-        customer_name: customerName.trim(),
-        customer_email: customerEmail.trim() || null,
-        location_id: locationId || null,
-        due_date: dueDate,
-        notes: note.trim() || null,
-        amount_cents: Math.round(subtotal * 100),
-        subtotal_cents: Math.round(subtotal * 100),
-        total_cents: Math.round(subtotal * 100),
-        status: "draft",
-        theme_preference: themePreference,
-        google_review_enabled: googleReview,
-        live_url_token: token,
-        line_items: lineItems.filter(i => i.description.trim()).map(i => ({
-          description: i.description.trim(),
-          quantity: parseFloat(i.quantity) || 1,
-          unit_price: parseFloat(i.unit_price) || 0,
-          is_makeup_session: i.is_makeup,
-        })),
-      };
       const res = await fetch("/api/invoices/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          customer_name: customerName,
+          customer_email: customerEmail || null,
+          family_id: selectedFamilyId,
+          location_id: locationId || null,
+          amount_cents: totalCents,
+          subtotal_cents: totalCents,
+          total_cents: totalCents,
+          due_date: dueDate,
+          notes: note || null,
+          theme_preference: themePreference,
+          google_review_enabled: googleReview,
+          live_url_token: token,
+          is_recurring: isRecurring,
+          recurring_day: 1,
+          line_items: validItems.map(item => ({
+            description: item.description,
+            quantity: parseFloat(item.quantity) || 1,
+            unit_price: parseFloat(item.unit_price) || 0,
+            is_makeup_session: item.is_makeup,
+            is_fifth_week: item.is_fifth_week,
+            session_date: null,
+          })),
+        }),
       });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? "Failed to create invoice");
-      setCreatedToken(token);
+      if (!res.ok) { setError(j.error ?? "Failed to create invoice"); return; }
       setSuccess(true);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Server error");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
-  // ── Success screen ──
+  // ── Core 4 first in service dropdown ──
+  const coreServices = services.filter(s => s.is_core);
+  const otherServices = services.filter(s => !s.is_core);
+
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div className="w-full max-w-md rounded-2xl border border-[var(--z-border)] bg-[var(--z-bg)] p-8 text-center space-y-4">
-          <div className="text-5xl">✅</div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div
+          className="w-full max-w-sm rounded-2xl border shadow-2xl p-8 text-center space-y-4"
+          style={{ background: "var(--z-surface)", borderColor: "var(--z-border)" }}
+        >
+          <div className="text-4xl">✅</div>
           <div className="text-lg font-bold text-[var(--z-fg)]">Invoice Created</div>
           <div className="text-sm text-[var(--z-muted)]">
-            Draft saved. Share the live link with the family when ready.
+            Saved to the family record. {isRecurring && "Recurring billing is active — next invoice generates on the 1st."}
           </div>
-          {createdToken && (
-            <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-xs font-mono text-[var(--z-fg)] break-all">
-              /invoice/{createdToken}
-            </div>
-          )}
           <button
-            onClick={onClose}
-            className="w-full rounded-xl bg-[var(--z-accent)] py-2.5 text-sm font-semibold text-[var(--z-on-accent)] hover:opacity-90 transition-opacity"
+            onClick={() => {
+              if (returnFamilyId) {
+                router.push(`/crm/families/${returnFamilyId}`);
+              } else {
+                onClose();
+                router.refresh();
+              }
+            }}
+            className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
+            style={{ background: "var(--z-accent)", color: "var(--z-on-accent)" }}
           >
-            Done
+            {returnFamilyId ? "Back to Family" : "Done"}
           </button>
         </div>
       </div>
     );
   }
 
-  // ── Builder UI ──
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--z-border)] bg-[var(--z-bg)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div
+        className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border shadow-2xl"
+        style={{ background: "var(--z-surface)", borderColor: "var(--z-border)" }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--z-border)] px-6 py-4">
+        <div
+          className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b"
+          style={{ background: "var(--z-surface)", borderColor: "var(--z-border)" }}
+        >
           <div>
-            <div className="text-base font-bold text-[var(--z-fg)]">Invoice Builder</div>
-            <div className="text-xs text-[var(--z-muted)]">Draft saves automatically — send when ready</div>
+            <div className="text-sm font-bold text-[var(--z-fg)]">New Invoice</div>
+            <div className="text-xs text-[var(--z-muted)]">Auto-saves to family record — no manual sharing needed</div>
           </div>
-          <button onClick={onClose} className="text-[var(--z-muted)] hover:text-[var(--z-fg)] text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-[var(--z-muted)] hover:text-[var(--z-fg)] text-xl leading-none">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* ── Row 1: Theme + Location ── */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Row 1: Theme + Location */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Theme toggle */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Invoice Theme</label>
               <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
@@ -716,7 +838,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
                     onClick={() => setThemePreference(t)}
                     className="flex-1 py-2 capitalize transition-colors"
                     style={{
-                      background: themePreference === t ? "var(--z-accent)" : "var(--z-surface)",
+                      background: themePreference === t ? "var(--z-accent)" : "var(--z-bg)",
                       color: themePreference === t ? "var(--z-on-accent)" : "var(--z-muted)",
                       fontWeight: themePreference === t ? 700 : 400,
                     }}
@@ -726,13 +848,12 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
             </div>
-            {/* Location */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Location</label>
               <select
                 value={locationId}
                 onChange={e => setLocationId(e.target.value)}
-                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               >
                 <option value="">All Locations</option>
                 {LOCATIONS.map(l => (
@@ -742,58 +863,68 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
               {locationInfo && (
                 <div className="flex items-center gap-1.5 text-xs" style={{ color: locationInfo.color }}>
                   <span className="inline-block w-2 h-2 rounded-full" style={{ background: locationInfo.color }} />
-                  {locationInfo.name} logo will appear on invoice
+                  {locationInfo.name}
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Row 2: Family search ── */}
+          {/* Family search */}
           <div className="space-y-1.5 relative">
             <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-              Family / Customer <span className="text-[var(--z-accent)]">*</span>
+              Family <span style={{ color: "var(--z-accent)" }}>*</span>
             </label>
             <input
               type="text"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search family name…"
-              className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+              onChange={e => { setSearchQuery(e.target.value); if (!e.target.value) { setSelectedFamilyId(null); } }}
+              placeholder="Search by family name, email, or phone…"
+              className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
             />
             {searching && <div className="absolute right-3 top-8 text-xs text-[var(--z-muted)]">Searching…</div>}
             {showDropdown && searchResults.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] shadow-xl overflow-hidden">
+              <div className="absolute z-20 w-full mt-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] shadow-xl overflow-hidden">
                 {searchResults.map(f => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => selectFamily(f)}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-[var(--z-surface-hover)] transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--z-surface)] text-left transition-colors"
                   >
-                    <span className="font-medium text-[var(--z-fg)]">{f.name}</span>
-                    {f.primary_email && <span className="ml-2 text-[var(--z-muted)] text-xs">{f.primary_email}</span>}
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={{ background: "var(--z-accent)", color: "var(--z-on-accent)" }}>
+                      {f.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--z-fg)]">{f.name}</div>
+                      {f.primary_email && <div className="text-xs text-[var(--z-muted)]">{f.primary_email}</div>}
+                    </div>
                   </button>
                 ))}
               </div>
             )}
+            {showDropdown && searchResults.length === 0 && searchQuery.length >= 1 && !searching && (
+              <div className="absolute z-20 w-full mt-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] px-4 py-3 text-sm text-[var(--z-muted)] shadow-xl">
+                No families found — try a different name or email
+              </div>
+            )}
             {selectedFamilyId && (
-              <p className="text-[10px] text-[var(--z-accent)]">✓ Family linked — name and email pre-filled</p>
+              <div className="text-xs mt-1" style={{ color: "var(--z-accent)" }}>
+                ✓ Linked to family record — invoice will auto-save here
+              </div>
             )}
           </div>
 
-          {/* ── Row 3: Name + Email ── */}
+          {/* Customer name + email (auto-filled from family) */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-                Customer Name <span className="text-[var(--z-accent)]">*</span>
-              </label>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Customer Name</label>
               <input
                 type="text"
-                required
                 value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
                 placeholder="Auto-filled from family"
-                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               />
             </div>
             <div className="space-y-1.5">
@@ -803,141 +934,210 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
                 value={customerEmail}
                 onChange={e => setCustomerEmail(e.target.value)}
                 placeholder="Auto-filled from family"
-                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               />
             </div>
           </div>
 
-          {/* ── Row 4: Due Date + Note ── */}
+          {/* Due date + recurring */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-                Due Date <span className="text-[var(--z-accent)]">*</span>
-              </label>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Due Date</label>
               <input
                 type="date"
-                required
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Note</label>
-              <input
-                type="text"
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                placeholder="Optional note"
-                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
-              />
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Billing Cadence</label>
+              <div
+                className="flex items-center gap-2 rounded-lg border border-[var(--z-border)] px-4 py-2.5 text-sm font-semibold"
+                style={{ background: "var(--z-bg)", color: "var(--z-accent)" }}
+              >
+                <span>{isRecurring ? "🔁" : "1×"}</span>
+                <span>{isRecurring ? "Recurring — sends 1st of each month" : "One-Time"}</span>
+              </div>
+              {isRecurring && (
+                <div className="text-[10px] text-[var(--z-muted)]">Sends 1st of each month in perpetuity</div>
+              )}
             </div>
           </div>
 
-          {/* ── Line Items ── */}
+          {/* Line items */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Line Items</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Line Items</label>
               <button
                 type="button"
                 onClick={addItem}
-                className="text-xs font-semibold text-[var(--z-accent)] hover:opacity-80 transition-opacity"
+                className="text-xs font-semibold hover:opacity-80 transition-opacity"
+                style={{ color: "var(--z-accent)" }}
               >
-                + Add Item
+                + Add Line
               </button>
             </div>
-            {/* Column headers */}
-            <div className="grid grid-cols-[1fr_80px_90px_32px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] px-1">
-              <span>Description</span>
-              <span>Qty</span>
-              <span>Unit Price</span>
-              <span />
-            </div>
-            {lineItems.map(item => (
-              <div key={item.id} className="grid grid-cols-[1fr_80px_90px_32px] gap-2 items-center">
-                <div className="space-y-1">
+
+            {lineItems.map((item, idx) => (
+              <div
+                key={item.id}
+                className="rounded-xl border p-3 space-y-2"
+                style={{ borderColor: "var(--z-border)", background: "var(--z-bg)" }}
+              >
+                {/* Service selector */}
+                {services.length > 0 && (
+                  <select
+                    value={item.service_id ?? ""}
+                    onChange={e => {
+                      const svc = services.find(s => s.id === e.target.value);
+                      if (svc) selectService(item.id, svc);
+                      else updateItem(item.id, "service_id", null);
+                    }}
+                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-xs text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                  >
+                    <option value="">— Select service —</option>
+                    {coreServices.length > 0 && (
+                      <optgroup label="Core 4">
+                        {coreServices.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.sub_category ? `${s.name} — ${s.sub_category}` : s.name}
+                            {s.unit_price > 0 ? ` ($${s.unit_price})` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {otherServices.length > 0 && (
+                      <optgroup label="Other Services">
+                        {otherServices.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.sub_category ? `${s.name} — ${s.sub_category}` : s.name}
+                            {s.unit_price > 0 ? ` ($${s.unit_price})` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                )}
+
+                <div className="grid grid-cols-12 gap-2">
+                  {/* Description */}
                   <input
                     type="text"
                     value={item.description}
                     onChange={e => updateItem(item.id, "description", e.target.value)}
-                    placeholder="e.g. Guitar lesson – June"
-                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2.5 py-1.5 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                    placeholder="Description"
+                    className="col-span-6 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-xs text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
                   />
-                  <label className="flex items-center gap-1.5 text-[10px] text-[var(--z-muted)] cursor-pointer">
+                  {/* Qty */}
+                  <input
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={item.quantity}
+                    onChange={e => updateItem(item.id, "quantity", e.target.value)}
+                    placeholder="Qty"
+                    className="col-span-2 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2 py-1.5 text-xs text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                  />
+                  {/* Unit price */}
+                  <div className="col-span-3 relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--z-muted)]">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unit_price}
+                      onChange={e => updateItem(item.id, "unit_price", e.target.value)}
+                      placeholder="0.00"
+                      className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] pl-5 pr-2 py-1.5 text-xs text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                    />
+                  </div>
+                  {/* Remove */}
+                  {lineItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="col-span-1 text-[var(--z-muted)] hover:text-red-400 transition-colors text-sm"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* Flags */}
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-1.5 text-xs text-[var(--z-muted)] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={item.is_makeup}
                       onChange={e => updateItem(item.id, "is_makeup", e.target.checked)}
-                      className="rounded"
+                      className="accent-[var(--z-accent)]"
                     />
-                    5th-week makeup
+                    Makeup session
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-[var(--z-muted)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.is_fifth_week}
+                      onChange={e => updateItem(item.id, "is_fifth_week", e.target.checked)}
+                      className="accent-[var(--z-accent)]"
+                    />
+                    5th-week (pre-paid, no charge)
                   </label>
                 </div>
-                <input
-                  type="number"
-                  min="0.5"
-                  step="0.5"
-                  value={item.quantity}
-                  onChange={e => updateItem(item.id, "quantity", e.target.value)}
-                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2.5 py-1.5 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.unit_price}
-                  onChange={e => updateItem(item.id, "unit_price", e.target.value)}
-                  placeholder="0.00"
-                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2.5 py-1.5 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeItem(item.id)}
-                  disabled={lineItems.length === 1}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--z-muted)] hover:text-red-400 disabled:opacity-30 transition-colors"
-                >
-                  ✕
-                </button>
               </div>
             ))}
+
             {/* Total */}
-            <div className="flex justify-end pt-2 border-t border-[var(--z-border)]">
-              <div className="text-sm font-bold text-[var(--z-fg)]">
-                Total: <span className="text-[var(--z-accent)]">${subtotal.toFixed(2)}</span>
+            <div className="flex justify-end pt-1">
+              <div className="text-sm font-bold" style={{ color: "var(--z-accent)" }}>
+                Total: ${subtotal.toFixed(2)}
               </div>
             </div>
           </div>
 
-          {/* ── Toggles ── */}
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm text-[var(--z-muted)] cursor-pointer select-none">
-              <div
-                onClick={() => setGoogleReview(v => !v)}
-                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${googleReview ? "bg-[var(--z-accent)]" : "bg-[var(--z-surface-2)]"}`}
-              >
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${googleReview ? "translate-x-4" : ""}`} />
-              </div>
-              Google Review button on invoice
-            </label>
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Notes (optional)</label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={2}
+              placeholder="Any additional notes for this invoice…"
+              className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] resize-none"
+            />
           </div>
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {/* Google review toggle */}
+          <label className="flex items-center gap-2 text-sm text-[var(--z-fg)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={googleReview}
+              onChange={e => setGoogleReview(e.target.checked)}
+              className="accent-[var(--z-accent)]"
+            />
+            Include Google Review button on invoice
+          </label>
 
-          {/* ── Actions ── */}
-          <div className="flex gap-3 pt-1">
+          {error && (
+            <div className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{error}</div>
+          )}
+
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2.5 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-[var(--z-border)] text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={saving || !customerName.trim() || subtotal <= 0}
-              className="flex-1 rounded-xl border border-[var(--z-accent)]/40 bg-[var(--z-accent)]/15 px-3 py-2.5 text-sm font-semibold text-[var(--z-accent)] disabled:opacity-40 hover:bg-[var(--z-accent)]/25 transition-colors"
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ background: "var(--z-accent)", color: "var(--z-on-accent)" }}
             >
-              {saving ? "Creating…" : "Create Invoice"}
+              {saving ? "Creating…" : isRecurring ? "Create Recurring Invoice" : "Create Invoice"}
             </button>
           </div>
         </form>

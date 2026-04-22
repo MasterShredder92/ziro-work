@@ -2,9 +2,10 @@
  * /api/invoices/create
  *
  * Full Invoice Builder endpoint.
- * Writes to the invoices table + invoice_items table.
- * Supports: line items, theme preference, location, Google Review toggle, live URL token.
- * Falls back to square_invoices if new columns not yet migrated.
+ * - Writes to invoices + invoice_items tables
+ * - Supports recurring billing (is_recurring = true, sends 1st of each month)
+ * - Auto-saves to family record via family_id
+ * - No manual link sharing — invoice is accessible via /invoice/[token] and on family page
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -36,8 +37,17 @@ const Schema = z.object({
   theme_preference: z.enum(["dark", "light"]).optional().default("dark"),
   google_review_enabled: z.boolean().optional().default(false),
   live_url_token: z.string().min(8),
+  is_recurring: z.boolean().optional().default(true),
+  recurring_day: z.number().int().min(1).max(28).optional().default(1),
   line_items: z.array(LineItemSchema).min(1),
 });
+
+/** Compute next invoice date: 1st of the month after due_date */
+function nextInvoiceDate(dueDate: string, recurringDay: number): string {
+  const d = new Date(dueDate);
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, recurringDay);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,6 +73,8 @@ export async function POST(req: NextRequest) {
       theme_preference,
       google_review_enabled,
       live_url_token,
+      is_recurring,
+      recurring_day,
       line_items,
     } = parsed.data;
 
@@ -73,7 +85,12 @@ export async function POST(req: NextRequest) {
 
     const db = getServiceClient();
 
-    // ── 1. Try writing to invoices table (new schema) ──────────
+    // ── Compute invoice_month and next_invoice_date ────────────
+    const dueDateObj = new Date(due_date);
+    const invoiceMonth = `${dueDateObj.getFullYear()}-${String(dueDateObj.getMonth() + 1).padStart(2, "0")}`;
+    const nextDate = is_recurring ? nextInvoiceDate(due_date, recurring_day) : null;
+
+    // ── 1. Insert into invoices table ──────────────────────────
     const { data: invoice, error: invoiceError } = await db
       .from("invoices")
       .insert({
@@ -92,9 +109,13 @@ export async function POST(req: NextRequest) {
         theme_preference,
         google_review_enabled,
         live_url_token,
+        is_recurring,
+        recurring_day,
+        next_invoice_date: nextDate,
+        invoice_month: invoiceMonth,
         metadata: { customer_name, customer_email: customer_email ?? null },
       })
-      .select("id, status, total_cents, due_date, live_url_token")
+      .select("id, status, total_cents, due_date, live_url_token, is_recurring, next_invoice_date")
       .single();
 
     if (invoiceError) {

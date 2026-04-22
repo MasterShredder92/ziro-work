@@ -28,6 +28,16 @@ type Student = {
   status: string | null;
 };
 
+type Invoice = {
+  id: string;
+  total_cents: number;
+  status: string;
+  due_date: string;
+  is_recurring: boolean | null;
+  live_url_token: string | null;
+  invoice_month: string | null;
+};
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -45,6 +55,15 @@ function statusBadge(status: string | null) {
   return "bg-white/5 text-[#909098]";
 }
 
+function invoiceStatusBadge(status: string) {
+  const s = status.toLowerCase();
+  if (s === "paid") return "bg-[#00ff88]/10 text-[#00ff88]";
+  if (s === "overdue") return "bg-red-400/10 text-red-400";
+  if (s === "draft") return "bg-white/5 text-[#909098]";
+  if (s === "sent") return "bg-blue-400/10 text-blue-400";
+  return "bg-white/5 text-[#909098]";
+}
+
 export default function FamilyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -52,6 +71,7 @@ export default function FamilyDetailPage() {
 
   const [family, setFamily] = useState<Family | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,11 +85,17 @@ export default function FamilyDetailPage() {
       fetch(`/api/students?family_id=${id}&page_size=50`, {
         headers: { "x-tenant-id": tenantId },
       }).then((r) => r.json()),
+      fetch(`/api/billing/invoices?family_id=${id}&page_size=20`, {
+        headers: { "x-tenant-id": tenantId },
+      }).then((r) => r.json()).catch(() => ({ data: [] })),
     ])
-      .then(([familyRes, studentsRes]) => {
+      .then(([familyRes, studentsRes, invoicesRes]) => {
         if (familyRes?.data) setFamily(familyRes.data);
         else setError("Family not found.");
         if (studentsRes?.data?.items) setStudents(studentsRes.data.items);
+        const invData = invoicesRes?.data;
+        if (Array.isArray(invData)) setInvoices(invData);
+        else if (Array.isArray(invData?.items)) setInvoices(invData.items);
       })
       .catch(() => setError("Failed to load family."))
       .finally(() => setLoading(false));
@@ -182,6 +208,63 @@ export default function FamilyDetailPage() {
             <p className="text-sm text-[#505055]">No notes.</p>
           )}
         </div>
+      </div>
+
+      {/* Invoices */}
+      <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-[#505055]">
+            Invoices ({invoices.length})
+          </h2>
+          <Link
+            href={`/invoices?family_id=${family.id}`}
+            className="text-xs font-semibold text-[#00ff88] hover:opacity-80 transition-opacity"
+          >
+            + New Invoice
+          </Link>
+        </div>
+        {invoices.length === 0 ? (
+          <p className="text-sm text-[#505055]">No invoices yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {invoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center justify-between rounded-lg border border-[#1c1c1e] px-4 py-3"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[var(--z-fg,#f0f0f0)]">
+                      ${(inv.total_cents / 100).toFixed(2)}
+                    </span>
+                    {inv.is_recurring && (
+                      <span className="text-[10px] text-[#505055]">🔁 Recurring</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-[#505055]">
+                    Due {new Date(inv.due_date).toLocaleDateString()}
+                    {inv.invoice_month && ` · ${inv.invoice_month}`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${invoiceStatusBadge(inv.status)}`}>
+                    {inv.status}
+                  </span>
+                  {inv.live_url_token && (
+                    <a
+                      href={`/invoice/${inv.live_url_token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[#909098] hover:text-[#00ff88] transition-colors"
+                    >
+                      View →
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Students */}

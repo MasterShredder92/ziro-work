@@ -7,14 +7,12 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/utils/cn";
 
 const categories: { href: string; label: string; description: string }[] = [
-  { href: "/settings/studio-info", label: "Studio Info", description: "Identity, timezone, and billing cadence." },
-  { href: "/billing", label: "Subscription & usage", description: "Plan, metering, Stripe portal, and invoice history." },
-  { href: "/settings/billing", label: "Billing defaults", description: "Defaults for invoices, payouts, and penalties." },
-  { href: "/settings/teachers", label: "Teachers", description: "Capacity defaults and onboarding scaffolding." },
-  { href: "/settings/automations", label: "Automations", description: "Lifecycle intelligence toggles." },
+  { href: "/settings/studio-info", label: "Studio Info", description: "Identity, timezone, and branding." },
+  { href: "/settings/services", label: "Services & Items", description: "Music Session types, instruments, and pricing catalog." },
+  { href: "/settings/teachers", label: "Teachers", description: "Capacity defaults and max students per teacher." },
   { href: "/settings/theme", label: "Theme", description: "Neon intensity, accent, and density." },
   { href: "/settings/permissions", label: "Permissions", description: "Roles and surface-level access maps." },
-  { href: "/settings/integrations", label: "Integrations", description: "QUO, Gmail, Twilio, Stripe — connect external services." },
+  { href: "/settings/integrations", label: "Integrations", description: "Square, Gmail, Twilio, Stripe — connect external services." },
 ];
 
 export function SettingsClient() {
