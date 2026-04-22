@@ -71,230 +71,238 @@ function pickNameParts(user: AuthUserLike): { firstName: string; lastName: strin
 }
 
 export async function POST(_req: Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return Response.json({ ok: false, error: "SUPABASE_ENV_MISSING" }, { status: 500 });
-  }
-
-  const cookieStore = await cookies();
-  const client = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll().map((cookie) => ({
-          name: cookie.name,
-          value: cookie.value,
-        }));
-      },
-      setAll(cookiesToSet) {
-        for (const { name, value, options } of cookiesToSet) {
-          try {
-            cookieStore.set(name, value, options);
-          } catch {
-            continue;
-          }
-        }
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error: authError,
-  } = await client.auth.getUser();
-
-  if (authError || !user) {
-    return Response.json({ ok: false, error: "UNAUTHENTICATED" }, { status: 401 });
-  }
-
-  const authUser = user as AuthUserLike;
-  const userId = normalizeString(authUser.id);
-  const userEmail = normalizeString(authUser.email);
-  if (!userId) {
-    return Response.json({ ok: false, error: "UNAUTHENTICATED" }, { status: 401 });
-  }
-
-  const metadataTenantId = pickTenantId(authUser);
-
-  const { data: existingProfile, error: existingProfileError } = await (client as any)
-    .from("profiles")
-    .select("id,email,tenant_id,role")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (existingProfileError) {
-    return Response.json(
-      { ok: false, error: existingProfileError.message || "PROFILE_LOOKUP_FAILED" },
-      { status: 500 },
-    );
-  }
-
-  let existingByEmail: ProfileRow | null = null;
-  if (!existingProfile && userEmail) {
-    const { data: byEmail, error: byEmailError } = await (client as any)
-      .from("profiles")
-      .select("id,email,tenant_id,role")
-      .eq("email", userEmail)
-      .maybeSingle();
-    if (byEmailError) {
-      return Response.json(
-        { ok: false, error: byEmailError.message || "PROFILE_LOOKUP_FAILED" },
-        { status: 500 },
-      );
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return Response.json({ ok: false, error: "SUPABASE_ENV_MISSING" }, { status: 500 });
     }
-    existingByEmail = (byEmail as ProfileRow | null) ?? null;
-  }
 
-  const resolvedTenantId =
-    normalizeString(existingProfile?.tenant_id) ||
-    normalizeString(existingByEmail?.tenant_id) ||
-    metadataTenantId ||
-    DEFAULT_TENANT_ID;
-  const resolvedRole =
-    normalizeRole(existingProfile?.role) ||
-    normalizeRole(existingByEmail?.role) ||
-    normalizeRole(authUser.app_metadata?.role ?? authUser.user_metadata?.role) ||
-    "admin";
-  const names = pickNameParts(authUser);
-
-  const upsertProfileRow = {
-    id: userId,
-    email: userEmail || null,
-    tenant_id: resolvedTenantId,
-    role: resolvedRole,
-    first_name: names.firstName,
-    last_name: names.lastName,
-    is_active: true,
-  };
-
-  let profile: ProfileRow | null = null;
-  const { data: profileWithEmail, error: profileWithEmailError } = await (client as any)
-    .from("profiles")
-    .upsert(upsertProfileRow, { onConflict: "id" })
-    .select("id,email,tenant_id,role")
-    .maybeSingle();
-
-  if (!profileWithEmailError && profileWithEmail) {
-    profile = profileWithEmail as ProfileRow;
-  } else {
-    const { data: profileWithoutEmail, error: profileWithoutEmailError } = await (client as any)
-      .from("profiles")
-      .upsert({ ...upsertProfileRow, email: null }, { onConflict: "id" })
-      .select("id,email,tenant_id,role")
-      .maybeSingle();
-    if (profileWithoutEmailError || !profileWithoutEmail) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            profileWithoutEmailError?.message ||
-            profileWithEmailError?.message ||
-            "PROFILE_UPSERT_FAILED",
+    const cookieStore = await cookies();
+    const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll().map((cookie) => ({
+            name: cookie.name,
+            value: cookie.value,
+          }));
         },
+        setAll(cookiesToSet) {
+          for (const { name, value, options } of cookiesToSet) {
+            try {
+              cookieStore.set(name, value, options);
+            } catch {
+              continue;
+            }
+          }
+        },
+      },
+    });
+
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser();
+
+    if (authError || !user) {
+      return Response.json({ ok: false, error: "UNAUTHENTICATED" }, { status: 401 });
+    }
+
+    const authUser = user as AuthUserLike;
+    const userId = normalizeString(authUser.id);
+    const userEmail = normalizeString(authUser.email);
+    if (!userId) {
+      return Response.json({ ok: false, error: "UNAUTHENTICATED" }, { status: 401 });
+    }
+
+    const metadataTenantId = pickTenantId(authUser);
+
+    const { data: existingProfile, error: existingProfileError } = await (client as any)
+      .from("profiles")
+      .select("id,email,tenant_id,role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (existingProfileError) {
+      return Response.json(
+        { ok: false, error: existingProfileError.message || "PROFILE_LOOKUP_FAILED" },
         { status: 500 },
       );
     }
-    profile = profileWithoutEmail as ProfileRow;
-  }
 
-  const profileTenantId = normalizeString(profile.tenant_id) || resolvedTenantId;
-
-  let firstActiveLocation:
-    | {
-        id: string;
+    let existingByEmail: ProfileRow | null = null;
+    if (!existingProfile && userEmail) {
+      const { data: byEmail, error: byEmailError } = await (client as any)
+        .from("profiles")
+        .select("id,email,tenant_id,role")
+        .eq("email", userEmail)
+        .maybeSingle();
+      if (byEmailError) {
+        return Response.json(
+          { ok: false, error: byEmailError.message || "PROFILE_LOOKUP_FAILED" },
+          { status: 500 },
+        );
       }
-    | null = null;
+      existingByEmail = (byEmail as ProfileRow | null) ?? null;
+    }
 
-  const { data: byActive, error: locationActiveError } = await (client as any)
-    .from("locations")
-    .select("id")
-    .eq("tenant_id", profileTenantId)
-    .eq("active", true)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    const resolvedTenantId =
+      normalizeString(existingProfile?.tenant_id) ||
+      normalizeString(existingByEmail?.tenant_id) ||
+      metadataTenantId ||
+      DEFAULT_TENANT_ID;
+    const resolvedRole =
+      normalizeRole(existingProfile?.role) ||
+      normalizeRole(existingByEmail?.role) ||
+      normalizeRole(authUser.app_metadata?.role ?? authUser.user_metadata?.role) ||
+      "admin";
+    const names = pickNameParts(authUser);
 
-  if (!locationActiveError && byActive?.id) {
-    firstActiveLocation = byActive;
-  }
+    const upsertProfileRow = {
+      id: userId,
+      email: userEmail || null,
+      tenant_id: resolvedTenantId,
+      role: resolvedRole,
+      first_name: names.firstName,
+      last_name: names.lastName,
+      is_active: true,
+    };
 
-  if (!firstActiveLocation) {
-    const { data: byIsActive, error: locationIsActiveError } = await (client as any)
+    let profile: ProfileRow | null = null;
+    const { data: profileWithEmail, error: profileWithEmailError } = await (client as any)
+      .from("profiles")
+      .upsert(upsertProfileRow, { onConflict: "id" })
+      .select("id,email,tenant_id,role")
+      .maybeSingle();
+
+    if (!profileWithEmailError && profileWithEmail) {
+      profile = profileWithEmail as ProfileRow;
+    } else {
+      const { data: profileWithoutEmail, error: profileWithoutEmailError } = await (client as any)
+        .from("profiles")
+        .upsert({ ...upsertProfileRow, email: null }, { onConflict: "id" })
+        .select("id,email,tenant_id,role")
+        .maybeSingle();
+      if (profileWithoutEmailError || !profileWithoutEmail) {
+        return Response.json(
+          {
+            ok: false,
+            error:
+              profileWithoutEmailError?.message ||
+              profileWithEmailError?.message ||
+              "PROFILE_UPSERT_FAILED",
+          },
+          { status: 500 },
+        );
+      }
+      profile = profileWithoutEmail as ProfileRow;
+    }
+
+    const profileTenantId = normalizeString(profile.tenant_id) || resolvedTenantId;
+
+    let firstActiveLocation:
+      | {
+          id: string;
+        }
+      | null = null;
+
+    const { data: byActive, error: locationActiveError } = await (client as any)
       .from("locations")
       .select("id")
       .eq("tenant_id", profileTenantId)
-      .eq("is_active", true)
+      .eq("active", true)
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    if (locationIsActiveError) {
-      return Response.json(
-        { ok: false, error: locationIsActiveError.message || "LOCATION_LOOKUP_FAILED" },
-        { status: 500 },
-      );
+    if (!locationActiveError && byActive?.id) {
+      firstActiveLocation = byActive;
     }
 
-    firstActiveLocation = byIsActive ?? null;
-  }
+    if (!firstActiveLocation) {
+      const { data: byIsActive, error: locationIsActiveError } = await (client as any)
+        .from("locations")
+        .select("id")
+        .eq("tenant_id", profileTenantId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
-  if (!firstActiveLocation?.id) {
-    const { data: fallbackLocation, error: fallbackLocationError } = await (client as any)
-      .from("locations")
-      .select("id,tenant_id")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      if (locationIsActiveError) {
+        return Response.json(
+          { ok: false, error: locationIsActiveError.message || "LOCATION_LOOKUP_FAILED" },
+          { status: 500 },
+        );
+      }
 
-    if (fallbackLocationError) {
-      return Response.json(
-        { ok: false, error: fallbackLocationError.message || "LOCATION_LOOKUP_FAILED" },
-        { status: 500 },
-      );
+      firstActiveLocation = byIsActive ?? null;
     }
 
-    if (fallbackLocation?.id && fallbackLocation?.tenant_id) {
-      firstActiveLocation = { id: normalizeString(fallbackLocation.id) };
-      await (client as any)
-        .from("profiles")
-        .update({ tenant_id: normalizeString(fallbackLocation.tenant_id) })
-        .eq("id", userId);
-    } else {
+    if (!firstActiveLocation?.id) {
+      const { data: fallbackLocation, error: fallbackLocationError } = await (client as any)
+        .from("locations")
+        .select("id,tenant_id")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (fallbackLocationError) {
+        return Response.json(
+          { ok: false, error: fallbackLocationError.message || "LOCATION_LOOKUP_FAILED" },
+          { status: 500 },
+        );
+      }
+
+      if (fallbackLocation?.id && fallbackLocation?.tenant_id) {
+        firstActiveLocation = { id: normalizeString(fallbackLocation.id) };
+        await (client as any)
+          .from("profiles")
+          .update({ tenant_id: normalizeString(fallbackLocation.tenant_id) })
+          .eq("id", userId);
+      } else {
+        return Response.json({ ok: false, error: "NO_LOCATIONS_FOR_TENANT" }, { status: 400 });
+      }
+    }
+
+    const locationId = normalizeString(firstActiveLocation.id);
+    if (!locationId) {
       return Response.json({ ok: false, error: "NO_LOCATIONS_FOR_TENANT" }, { status: 400 });
     }
-  }
 
-  const locationId = normalizeString(firstActiveLocation.id);
-  if (!locationId) {
-    return Response.json({ ok: false, error: "NO_LOCATIONS_FOR_TENANT" }, { status: 400 });
-  }
+    const { error: profileLocationUpsertError } = await (client as any)
+      .from("profile_locations")
+      .upsert([{ profile_id: userId, location_id: locationId }], {
+        onConflict: "profile_id,location_id",
+      });
 
-  const { error: profileLocationUpsertError } = await (client as any)
-    .from("profile_locations")
-    .upsert([{ profile_id: userId, location_id: locationId }], {
-      onConflict: "profile_id,location_id",
-    });
+    if (profileLocationUpsertError) {
+      return Response.json(
+        { ok: false, error: profileLocationUpsertError.message || "PROFILE_LOCATION_UPSERT_FAILED" },
+        { status: 500 },
+      );
+    }
 
-  if (profileLocationUpsertError) {
+    const { data: finalProfile, error: finalProfileError } = await (client as any)
+      .from("profiles")
+      .select("id,email,tenant_id,role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (finalProfileError || !finalProfile) {
+      return Response.json(
+        { ok: false, error: finalProfileError?.message || "PROFILE_FETCH_FAILED" },
+        { status: 500 },
+      );
+    }
+
+    return Response.json({ ok: true, profile: finalProfile, locationId }, { status: 200 });
+  } catch (err: any) {
+    console.error("[Profiles Repair Error]:", err);
     return Response.json(
-      { ok: false, error: profileLocationUpsertError.message || "PROFILE_LOCATION_UPSERT_FAILED" },
-      { status: 500 },
+      { ok: false, error: err.message || "INTERNAL_SERVER_ERROR", stack: err.stack },
+      { status: 500 }
     );
   }
-
-  const { data: finalProfile, error: finalProfileError } = await (client as any)
-    .from("profiles")
-    .select("id,email,tenant_id,role")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (finalProfileError || !finalProfile) {
-    return Response.json(
-      { ok: false, error: finalProfileError?.message || "PROFILE_FETCH_FAILED" },
-      { status: 500 },
-    );
-  }
-
-  return Response.json({ ok: true, profile: finalProfile, locationId }, { status: 200 });
 }
