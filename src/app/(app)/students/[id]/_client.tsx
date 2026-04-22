@@ -215,8 +215,6 @@ function StudentProfileView({ studentId }: { studentId: string }) {
     { label: "Phone", value: student.phone },
     { label: "Date of Birth", value: student.date_of_birth },
     { label: "Start Date", value: student.start_date },
-    { label: "Rate / Session", value: student.rate_per_session != null ? `$${student.rate_per_session}` : null },
-    { label: "Blocks / Week", value: student.blocks_per_week != null ? String(student.blocks_per_week) : null },
   ];
 
   return (
@@ -240,6 +238,17 @@ function StudentProfileView({ studentId }: { studentId: string }) {
           {student.learning_style && <div><div className="text-xs text-[#505055] mb-0.5">Learning Style</div><div className="text-sm text-[var(--z-fg)]">{student.learning_style}</div></div>}
           {student.experience && <div><div className="text-xs text-[#505055] mb-0.5">Prior Experience</div><div className="text-sm text-[var(--z-fg)]">{student.experience}</div></div>}
         </div>
+      )}
+
+      {/* View Family Invoice button */}
+      {student.family_id && (
+        <a
+          href={`/crm/families/${student.family_id}`}
+          className="flex items-center justify-center gap-2 w-full rounded-xl border py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
+          style={{ borderColor: "var(--z-border)", background: "var(--z-surface)", color: "var(--z-accent)" }}
+        >
+          View Family Invoices →
+        </a>
       )}
 
       {/* Notes */}
@@ -271,8 +280,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
   const [phone, setPhone] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [ratePerSession, setRatePerSession] = useState("");
-  const [blocksPerWeek, setBlocksPerWeek] = useState("");
+
   const [bio, setBio] = useState("");
   const [goals, setGoals] = useState("");
   const [learningStyle, setLearningStyle] = useState("");
@@ -296,8 +304,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
         setPhone(s.phone ?? "");
         setDateOfBirth(s.date_of_birth ?? "");
         setStartDate(s.start_date ?? "");
-        setRatePerSession(s.rate_per_session != null ? String(s.rate_per_session) : "");
-        setBlocksPerWeek(s.blocks_per_week != null ? String(s.blocks_per_week) : "");
+
         setBio(s.bio ?? "");
         setGoals(s.goals ?? "");
         setLearningStyle(s.learning_style ?? "");
@@ -323,8 +330,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
         phone: phone || null,
         date_of_birth: dateOfBirth || null,
         start_date: startDate || null,
-        rate_per_session: ratePerSession ? parseFloat(ratePerSession) : undefined,
-        blocks_per_week: blocksPerWeek ? parseInt(blocksPerWeek, 10) : undefined,
+
         bio: bio || null,
         goals: goals || null,
         learning_style: learningStyle || null,
@@ -412,16 +418,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
             <input className={inputCls} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Rate / Session ($)</label>
-            <input className={inputCls} type="number" min="0" step="0.01" value={ratePerSession} onChange={e => setRatePerSession(e.target.value)} placeholder="0.00" />
-          </div>
-          <div>
-            <label className={labelCls}>Blocks / Week</label>
-            <input className={inputCls} type="number" min="0" step="1" value={blocksPerWeek} onChange={e => setBlocksPerWeek(e.target.value)} placeholder="1" />
-          </div>
-        </div>
+
       </div>
 
       {/* Learning Profile */}
