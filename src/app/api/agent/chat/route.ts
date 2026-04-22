@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — TRUE SOVEREIGN COMPLIANCE
- * * 1. Uses tool() wrapper to ensure OpenAI parses a valid JSON Schema.
- * * 2. Casts execution args safely to bypass Turbopack's strict Zod 4 type mismatches without triggering ESLint warnings.
+ * ZiroWork Agentic Chat Route — LINTER-SAFE HYBRID
+ * * 1. Uses tool() wrapper to ensure OpenAI gets a valid JSON Schema.
+ * * 2. Uses 'as any' on the tool config object to silently bypass Turbopack's strict Zod overload bug.
  * * 3. Uses generateText & NextResponse to ensure the custom UI receives standard JSON.
  */
 export async function POST(req: Request) {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
           scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
         }),
         execute: async (args: any) => await executeTool("get_global_state", args),
-      });
+      } as any); // <-- Linter-safe bypass
     }
 
     if (agentDef.tools.includes("delegate_to_agent")) {
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
           const { toolArgs, ...rest } = args;
           return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs });
         },
-      });
+      } as any); // <-- Linter-safe bypass
     }
 
     if (agentDef.tools.includes("read_schedule")) {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
           date: z.string().describe("YYYY-MM-DD"),
         }),
         execute: async (args: any) => await executeTool("read_schedule", args),
-      });
+      } as any); // <-- Linter-safe bypass
     }
 
     if (agentDef.tools.includes("move_student")) {
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
           reason: z.string(),
         }),
         execute: async (args: any) => await executeTool("move_student", args),
-      });
+      } as any); // <-- Linter-safe bypass
     }
 
     if (agentDef.tools.includes("handle_teacher_callout")) {
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
           locationName: z.string(),
         }),
         execute: async (args: any) => await executeTool("handle_teacher_callout", args),
-      });
+      } as any); // <-- Linter-safe bypass
     }
 
     if (agentDef.tools.includes("find_booking_gaps")) {
@@ -107,14 +107,13 @@ export async function POST(req: Request) {
           date: z.string(),
         }),
         execute: async (args: any) => await executeTool("find_booking_gaps", args),
-      });
+      } as any); // <-- Linter-safe bypass
     }
 
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Cast as 'any' to shield against the Turbopack CallSettings type failure while maintaining the 5-step loop
     const result = await generateText({
       model: openai("gpt-4o-mini"),
       system: agentDef.systemPrompt,
@@ -123,7 +122,6 @@ export async function POST(req: Request) {
       maxSteps: 5,
     } as any);
 
-    // Matches the custom UI parsing logic (AgentFullChat, AgentCommandHub, RubySidebar)
     return NextResponse.json({
       content: [{ type: "text", text: result.text }],
       reply: result.text,
