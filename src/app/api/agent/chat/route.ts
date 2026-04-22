@@ -60,6 +60,20 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    if (agentDef.tools.includes("move_student")) {
+      agentTools.move_student = {
+        description: "Move a student from one schedule block to another. This reschedules the student.",
+        parameters: z.object({
+          sourceBlockId: z.string().describe("The ID of the block the student is currently in"),
+          targetBlockId: z.string().describe("The ID of the available block to move the student into"),
+          reason: z.string().optional().describe("Reason for moving the student"),
+        }),
+        execute: async (args: any) => {
+          return await executeTool("move_student", args);
+        },
+      };
+    }
+
     if (agentDef.tools.includes("check_conflicts")) {
       agentTools.check_conflicts = {
         description: "Check for teacher scheduling conflicts.",

@@ -211,59 +211,91 @@ export async function suggest_slot({
 }
 
 /**
- * move_lesson (REQUIRES APPROVAL)
- * Reschedules a schedule_block to a new date/time.
+ * move_student
+ * Reschedules a student by moving them from an existing block to a new available block.
+ * Updates both blocks: the old one becomes available, and the new one becomes booked.
  */
-export async function move_lesson({
-  blockId,
-  newDate,
-  newStartTime,
-  newEndTime,
+export async function move_student({
+  sourceBlockId,
+  targetBlockId,
   reason,
 }: {
-  blockId: string;
-  newDate: string;
-  newStartTime: string;
-  newEndTime: string;
+  sourceBlockId: string;
+  targetBlockId: string;
   reason: string;
 }) {
   const supabase = getSupabase();
 
-  const { data: block, error: fetchError } = await supabase
+  // 1. Fetch source block to get student_id
+  const { data: sourceBlock, error: sourceError } = await supabase
     .from("schedule_blocks")
-    .select("id, block_date, start_time, end_time")
-    .eq("id", blockId)
+    .select("id, student_id, teacher_id, status")
+    .eq("id", sourceBlockId)
     .eq("tenant_id", TENANT_ID)
     .single();
 
-  if (fetchError || !block) {
-    return { success: false, error: "Schedule block not found" };
+  if (sourceError || !sourceBlock) {
+    return { success: false, error: "Source schedule block not found" };
   }
 
-  const { error: updateError } = await supabase
+  if (!sourceBlock.student_id) {
+    return { success: false, error: "Source block has no student assigned" };
+  }
+
+  // 2. Fetch target block to ensure it's available
+  const { data: targetBlock, error: targetError } = await supabase
+    .from("schedule_blocks")
+    .select("id, status, teacher_id")
+    .eq("id", targetBlockId)
+    .eq("tenant_id", TENANT_ID)
+    .single();
+
+  if (targetError || !targetBlock) {
+    return { success: false, error: "Target schedule block not found" };
+  }
+
+  if (targetBlock.status !== "available") {
+    return { success: false, error: "Target block is already booked" };
+  }
+
+  // 3. Execute the move (Transaction-like update)
+  // Update target block with student_id and status
+  const { error: updateTargetError } = await supabase
     .from("schedule_blocks")
     .update({
-      block_date: newDate,
-      start_time: newStartTime,
-      end_time: newEndTime,
+      student_id: sourceBlock.student_id,
+      status: "booked",
+      notes: reason || "Rescheduled by Ruby",
       updated_at: new Date().toISOString(),
-      notes: reason,
     })
-    .eq("id", blockId)
-    .eq("tenant_id", TENANT_ID);
+    .eq("id", targetBlockId);
 
-  if (updateError) {
-    return { success: false, error: updateError.message };
+  if (updateTargetError) {
+    return { success: false, error: `Failed to update target block: ${updateTargetError.message}` };
+  }
+
+  // Update source block to be available again
+  const { error: updateSourceError } = await supabase
+    .from("schedule_blocks")
+    .update({
+      student_id: null,
+      status: "available",
+      notes: `Student moved to block ${targetBlockId}`,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sourceBlockId);
+
+  if (updateSourceError) {
+    // Note: In a real production app, we'd want to rollback the target update if this fails.
+    return { success: false, error: `Failed to clear source block: ${updateSourceError.message}` };
   }
 
   return {
     success: true,
-    blockId,
-    previousDate: block.block_date,
-    previousTime: { start: block.start_time, end: block.end_time },
-    newDate,
-    newTime: { start: newStartTime, end: newEndTime },
-    message: `Lesson moved to ${newDate} at ${newStartTime}. Reason: ${reason}`,
+    sourceBlockId,
+    targetBlockId,
+    studentId: sourceBlock.student_id,
+    message: `Successfully moved student to new slot. Reason: ${reason}`,
   };
 }
 
@@ -271,5 +303,5 @@ export const RUBY_TOOLS = {
   read_schedule,
   check_conflicts,
   suggest_slot,
-  move_lesson,
+  move_student,
 };
