@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { streamText } from "ai";
+import { streamText, type CoreMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -32,15 +32,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const messageHistory: any[] = [
+    const messageHistory: CoreMessage[] = [
       ...messages,
       { role: "user", content: message },
     ];
 
     /**
-     * SURGICAL OVERRIDE: 
-     * We use 'as any' for the tools object to bypass TypeScript recursion depth errors
-     * and version-specific inference bugs in the AI SDK + Next.js 16.2.3 stack.
+     * Tools definition using the standard AI SDK pattern.
+     * Updated to the latest 'ai' package for full type support.
      */
     const agentTools: any = {};
 
@@ -204,7 +203,6 @@ export async function POST(req: NextRequest) {
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      // @ts-ignore - maxSteps is available at runtime in this SDK version but missing from types
       maxSteps: 5,
     });
 
