@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
+import { AGENT_DEFINITIONS } from "@/lib/ziro/agents/definitions";
 import { getAgentMetadata } from "@/lib/agents/agentMetadata";
 import { cn } from "@/components/ui/utils";
 
