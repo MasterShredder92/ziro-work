@@ -200,6 +200,123 @@
   background: #a4a4ac;
 }
 
+/* ── Additional surface dark variants ──────────────────────── */
+[data-theme="light"] [class*="bg-[#111113]"],
+[data-theme="light"] [class*="bg-[#0f0f12]"],
+[data-theme="light"] [class*="bg-[#0d0d10]"],
+[data-theme="light"] [class*="bg-[#0a0a0f]"],
+[data-theme="light"] [class*="bg-[#1a1a1f]"],
+.light-theme [class*="bg-[#111113]"],
+.light-theme [class*="bg-[#0f0f12]"],
+.light-theme [class*="bg-[#0d0d10]"],
+.light-theme [class*="bg-[#0a0a0f]"],
+.light-theme [class*="bg-[#1a1a1f]"] {
+  background-color: #f0f0f3 !important;
+}
+
+/* Avatar / initials circles */
+[data-theme="light"] [class*="bg-[#1c1c1e]"],
+.light-theme [class*="bg-[#1c1c1e]"] {
+  background-color: #e0e0e6 !important;
+}
+
+/* Input fields — all dark input variants */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select,
+.light-theme input,
+.light-theme textarea,
+.light-theme select {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
+  border-color: #d4d4da !important;
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder,
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #aaaaB4 !important;
+}
+
+/* Inline search box and dropdown panels */
+[data-theme="light"] [class*="bg-[#0f0f12]"],
+.light-theme [class*="bg-[#0f0f12]"] {
+  background-color: #ffffff !important;
+}
+
+/* Popup / modal panels */
+[data-theme="light"] [class*="bg-[#111113]"],
+.light-theme [class*="bg-[#111113]"] {
+  background-color: #ffffff !important;
+}
+
+/* Dropdown list items hover */
+[data-theme="light"] [class*="hover:bg-[#1a1a1e]"]:hover,
+.light-theme [class*="hover:bg-[#1a1a1e]"]:hover {
+  background-color: #e8e8ec !important;
+}
+
+/* Text: white body text → dark on light */
+[data-theme="light"] [class*="text-white"]:not([class*="text-white/"]):not(a):not(button),
+.light-theme [class*="text-white"]:not([class*="text-white/"]):not(a):not(button) {
+  color: #1a1a1a !important;
+}
+
+/* text-[#d4d4d4] and text-[#f0f0f0] — near-white body text */
+[data-theme="light"] [class*="text-[#d4d4d4]"],
+[data-theme="light"] [class*="text-[#f0f0f0]"],
+[data-theme="light"] [class*="text-[#e0e0e6]"],
+.light-theme [class*="text-[#d4d4d4]"],
+.light-theme [class*="text-[#f0f0f0]"],
+.light-theme [class*="text-[#e0e0e6]"] {
+  color: #1a1a1a !important;
+}
+
+/* text-[#606068], text-[#707078], text-[#80808a] — mid-muted */
+[data-theme="light"] [class*="text-[#606068]"],
+[data-theme="light"] [class*="text-[#707078]"],
+[data-theme="light"] [class*="text-[#80808a]"],
+[data-theme="light"] [class*="text-[#8a8a92]"],
+[data-theme="light"] [class*="text-[#a0a0aa]"],
+.light-theme [class*="text-[#606068]"],
+.light-theme [class*="text-[#707078]"],
+.light-theme [class*="text-[#80808a]"],
+.light-theme [class*="text-[#8a8a92]"],
+.light-theme [class*="text-[#a0a0aa]"] {
+  color: #666674 !important;
+}
+
+/* Border: additional dark variants */
+[data-theme="light"] [class*="border-[#14141a]"],
+[data-theme="light"] [class*="border-[#202026]"],
+[data-theme="light"] [class*="border-[#2a2a30]"],
+[data-theme="light"] [class*="border-[#1a1a1f]"],
+[data-theme="light"] [class*="border-[#404048]"],
+[data-theme="light"] [class*="border-[#505055]"],
+[data-theme="light"] [class*="border-[#0a0a0c]"],
+.light-theme [class*="border-[#14141a]"],
+.light-theme [class*="border-[#202026]"],
+.light-theme [class*="border-[#2a2a30]"],
+.light-theme [class*="border-[#1a1a1f]"],
+.light-theme [class*="border-[#404048]"],
+.light-theme [class*="border-[#505055]"],
+.light-theme [class*="border-[#0a0a0c]"] {
+  border-color: #d4d4da !important;
+}
+
+/* bg-[#2b2b2f] — used in some card/panel variants */
+[data-theme="light"] [class*="bg-[#2b2b2f]"],
+.light-theme [class*="bg-[#2b2b2f]"] {
+  background-color: #e8e8ec !important;
+}
+
+/* placeholder text colors */
+[data-theme="light"] [class*="placeholder-[#505055]"],
+.light-theme [class*="placeholder-[#505055]"] {
+  --tw-placeholder-opacity: 1;
+  color: #aaaaB4 !important;
+}
+
 /* Smooth transitions for theme switching */
 * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
