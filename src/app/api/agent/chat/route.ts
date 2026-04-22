@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         parameters: z.object({
           scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
         }),
-        execute: async (args) => await executeTool("get_global_state", args),
+        execute: async (args) => await executeTool("get_global_state", args as any),
       });
     }
 
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         }),
         execute: async (args) => {
           const { toolArgs, ...rest } = args;
-          return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs });
+          return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs } as any);
         },
       });
     }
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
           locationName: z.string().describe("Bellevue, Elkhorn, Gretna, Omaha"),
           date: z.string().describe("YYYY-MM-DD"),
         }),
-        execute: async (args) => await executeTool("read_schedule", args),
+        execute: async (args) => await executeTool("read_schedule", args as any),
       });
     }
 
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
           targetBlockId: z.string(),
           reason: z.string(),
         }),
-        execute: async (args) => await executeTool("move_student", args),
+        execute: async (args) => await executeTool("move_student", args as any),
       });
     }
 
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
           date: z.string(),
           locationName: z.string(),
         }),
-        execute: async (args) => await executeTool("handle_teacher_callout", args),
+        execute: async (args) => await executeTool("handle_teacher_callout", args as any),
       });
     }
 
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
           locationName: z.string(),
           date: z.string(),
         }),
-        execute: async (args) => await executeTool("find_booking_gaps", args),
+        execute: async (args) => await executeTool("find_booking_gaps", args as any),
       });
     }
 
@@ -123,7 +123,6 @@ export async function POST(req: Request) {
       maxSteps: 5,
     });
 
-    // streamText handles the protocol formatting required by Vercel's useChat hooks
     return result.toDataStreamResponse();
 
   } catch (error: any) {

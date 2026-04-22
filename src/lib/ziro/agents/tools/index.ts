@@ -41,9 +41,10 @@ export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
   send_email: (RAVEN_TOOLS as any)?.send_email,
 };
 
+// FIX: Relaxed input from Record<string, any> to any
 export async function executeTool(
   toolName: string,
-  input: Record<string, any>
+  input: any 
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   const tool = TOOL_REGISTRY[toolName];
 
