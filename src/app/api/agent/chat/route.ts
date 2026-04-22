@@ -227,16 +227,9 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // Initialize OpenAI client with MANUS_API_KEY ONLY (no fallback to avoid 401 errors)
-    if (!process.env.MANUS_API_KEY) {
-      return NextResponse.json(
-        { error: "MANUS_API_KEY not configured in environment" },
-        { status: 500 }
-      );
-    }
-    const openai = new OpenAI({
-      apiKey: process.env.MANUS_API_KEY
-    });
+    // Initialize OpenAI client with direct Manus endpoint
+    // The OpenAI client is pre-configured in this environment to use Manus
+    const openai = new OpenAI();
     
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
@@ -254,12 +247,21 @@ export async function POST(req: NextRequest) {
     ];
 
     for (let round = 0; round < 5; round++) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: messages,
-        tools: ALL_TOOLS,
-        tool_choice: "auto",
-      });
+      let response;
+      try {
+        response = await openai.chat.completions.create({
+          model: "gpt-4.1-mini",
+          messages: messages,
+          tools: ALL_TOOLS,
+          tool_choice: "auto",
+        });
+      } catch (apiError: any) {
+        console.error("LLM API Error:", apiError.message);
+        return NextResponse.json(
+          { error: `LLM Error: ${apiError.message}` },
+          { status: 500 }
+        );
+      }
 
       const assistantMessage = response.choices[0].message;
       messages.push(assistantMessage);
