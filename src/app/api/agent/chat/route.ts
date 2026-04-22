@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     const agentDef = getAgentDefinition(agentId);
     if (!agentDef) {
-      return NextResponse.json({ error: `Agent "\${agentId}" not found\` }, { status: 404 });
+      return NextResponse.json({ error: `Agent "${agentId}" not found` }, { status: 404 });
     }
 
     // Map history to the format expected by AI SDK
