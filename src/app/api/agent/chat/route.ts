@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateText, tool } from "ai";
+import { streamText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -9,14 +8,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — SOLID PRODUCTION MODE
- * 
- * 1. Resolves "type: None" via explicit tool() helper and Zod object schemas.
- * 2. Fixes "parameters" naming collision in delegation tool.
- * 3. Maintains "Legacy UI Compatibility" by returning a static JSON response.
- * 4. Enables "Agentic Reasoning" via maxSteps: 5.
+ * ZiroWork Agentic Chat Route — GOLDEN STATE
+ * * Upgraded to streamText. The UI hook (useChat) fundamentally requires 
+ * toDataStreamResponse() in AI SDK v6 to register tool states (loading, results).
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
@@ -27,10 +23,12 @@ export async function POST(req: NextRequest) {
 
     const agentDef = getAgentDefinition(agentId);
     if (!agentDef) {
-      return NextResponse.json({ error: `Agent "${agentId}" not found` }, { status: 404 });
+      return new Response(JSON.stringify({ error: `Agent "${agentId}" not found` }), { 
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    // Map history to the format expected by AI SDK
     const messageHistory: any[] = [
       ...history.map((m: any) => ({
         role: m.role,
@@ -39,9 +37,8 @@ export async function POST(req: NextRequest) {
       { role: "user", content: message },
     ];
 
-    const agentTools: any = {};
+    const agentTools: Record<string, any> = {};
 
-    // 1. get_global_state (Ziro Only)
     if (agentDef.tools.includes("get_global_state")) {
       agentTools.get_global_state = tool({
         description: "Scan the business for gaps, callouts, and unpaid invoices.",
@@ -52,7 +49,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. delegate_to_agent (Ziro Only) - FIX: Rename 'parameters' to 'toolArgs' to avoid collision
     if (agentDef.tools.includes("delegate_to_agent")) {
       agentTools.delegate_to_agent = tool({
         description: "Command a specialist agent (Ruby, Raven, Bub, Sid, Stewie, Star) to perform a task.",
@@ -63,14 +59,12 @@ export async function POST(req: NextRequest) {
           reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
         }),
         execute: async (args) => {
-          // Map toolArgs back to parameters for the underlying execution if needed
           const { toolArgs, ...rest } = args;
           return await executeTool("delegate_to_agent", { ...rest, parameters: toolArgs });
         },
       });
     }
 
-    // 3. read_schedule (Ruby)
     if (agentDef.tools.includes("read_schedule")) {
       agentTools.read_schedule = tool({
         description: "Read lesson schedule for a location.",
@@ -82,7 +76,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 4. move_student (Ruby)
     if (agentDef.tools.includes("move_student")) {
       agentTools.move_student = tool({
         description: "Move a student between schedule blocks. Requires a reason.",
@@ -95,7 +88,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 5. handle_teacher_callout (Ruby)
     if (agentDef.tools.includes("handle_teacher_callout")) {
       agentTools.handle_teacher_callout = tool({
         description: "Resolve conflicts when a teacher calls out sick.",
@@ -108,7 +100,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 6. find_booking_gaps (Ruby)
     if (agentDef.tools.includes("find_booking_gaps")) {
       agentTools.find_booking_gaps = tool({
         description: "Scan for 'Swiss cheese' gaps to optimize revenue.",
@@ -124,8 +115,7 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // FIX: Corrected model identifier to 'gpt-4o-mini'
-    const { text, toolResults } = await generateText({
+    const result = await streamText({
       model: openai("gpt-4o-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
@@ -133,18 +123,14 @@ export async function POST(req: NextRequest) {
       maxSteps: 5,
     });
 
-    // Return exact structure expected by the Ruby UI
-    return NextResponse.json({
-      content: [{ text }],
-      toolResults,
-      agentId,
-      timestamp: new Date().toISOString()
-    });
+    // streamText handles the protocol formatting required by Vercel's useChat hooks
+    return result.toDataStreamResponse();
 
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
-// Force build trigger: Wed Apr 22 08:02:41 EDT 2026
-// Vercel Force Trigger: Wed Apr 22 08:02:47 EDT 2026

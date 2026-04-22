@@ -1,7 +1,6 @@
 /**
  * Ruby Tool Definitions — SCHEDULER & ORCHESTRATOR MODE
- * 
- * Focus:
+ * * Focus:
  * 1. Conflict Arbiter (Teacher Callout & Batch Rescheduling)
  * 2. Revenue Optimizer (Gap Detection & Proactive Rescheduling)
  */
@@ -30,16 +29,7 @@ function resolveLocationId(locationInput: string): string | null {
   return LOCATION_MAP[key] || null;
 }
 
-/**
- * read_schedule
- */
-export async function read_schedule({
-  locationName,
-  date,
-}: {
-  locationName: string;
-  date: string;
-}) {
+export async function read_schedule({ locationName, date }: { locationName: string; date: string; }) {
   const supabase = getSupabase();
   const locationId = resolveLocationId(locationName);
 
@@ -57,7 +47,7 @@ export async function read_schedule({
 
   if (error) return { success: false, error: error.message };
 
-  const safeBlocks = blocks || [];
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
 
   return {
     success: true,
@@ -69,18 +59,7 @@ export async function read_schedule({
   };
 }
 
-/**
- * move_student
- */
-export async function move_student({
-  sourceBlockId,
-  targetBlockId,
-  reason,
-}: {
-  sourceBlockId: string;
-  targetBlockId: string;
-  reason: string;
-}) {
+export async function move_student({ sourceBlockId, targetBlockId, reason }: { sourceBlockId: string; targetBlockId: string; reason: string; }) {
   const supabase = getSupabase();
 
   const { data: sourceBlock, error: sourceError } = await supabase
@@ -93,7 +72,6 @@ export async function move_student({
     return { success: false, error: "Source block not found or has no student" };
   }
 
-  // Transaction: Book target, Clear source
   const { error: targetErr } = await supabase
     .from("schedule_blocks")
     .update({ student_id: sourceBlock.student_id, status: "booked", notes: reason })
@@ -109,18 +87,7 @@ export async function move_student({
   return { success: true, message: `Moved student to block ${targetBlockId}`, studentId: sourceBlock.student_id };
 }
 
-/**
- * MISSION 1: handle_teacher_callout
- */
-export async function handle_teacher_callout({
-  teacherName,
-  date,
-  locationName,
-}: {
-  teacherName: string;
-  date: string;
-  locationName: string;
-}) {
+export async function handle_teacher_callout({ teacherName, date, locationName }: { teacherName: string; date: string; locationName: string; }) {
   const supabase = getSupabase();
   const locationId = resolveLocationId(locationName);
 
@@ -140,7 +107,7 @@ export async function handle_teacher_callout({
     .eq("block_date", date)
     .eq("status", "booked");
 
-  const safeLessons = lessons || [];
+  const safeLessons = Array.isArray(lessons) ? lessons : [];
 
   if (safeLessons.length === 0) {
     return { success: true, message: `No lessons found for ${teacherName} on ${date}`, proposals: [] };
@@ -153,7 +120,7 @@ export async function handle_teacher_callout({
     .eq("block_date", date)
     .eq("status", "available");
 
-  const safeOpenSlots = openSlots || [];
+  const safeOpenSlots = Array.isArray(openSlots) ? openSlots : [];
 
   const proposals = safeLessons.map((lesson: any) => {
     const match = safeOpenSlots.find((slot: any) => slot.start_time === lesson.start_time);
@@ -175,20 +142,11 @@ export async function handle_teacher_callout({
   };
 }
 
-/**
- * MISSION 2: find_booking_gaps
- */
-export async function find_booking_gaps({
-  locationName,
-  date,
-}: {
-  locationName: string;
-  date: string;
-}) {
+export async function find_booking_gaps({ locationName, date }: { locationName: string; date: string; }) {
   const result = await read_schedule({ locationName, date });
   if (!result.success || !result.blocks) return { success: false, error: result.error || "No blocks found" };
 
-  const blocks = result.blocks || [];
+  const blocks = result.blocks;
   if (blocks.length < 3) return { success: true, gaps: [], gapCount: 0 };
 
   const gaps = [];

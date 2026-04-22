@@ -1,7 +1,6 @@
 /**
  * ZiroWork Agent Definitions — THE SOVEREIGN SYSTEM
- * 
- * Hierarchy:
+ * * Hierarchy:
  * - Ziro: The Director (Strategic Orchestration)
  * - Ruby: The Schedule (Conflict Arbiter, Revenue Optimizer)
  * - Raven: The Communication Agent (SMS/Email/Parent Loops)
@@ -22,10 +21,6 @@ export interface AgentDefinition {
   canSpawnSubAgents: boolean;
 }
 
-/**
- * ZIRO - The Director (CEO)
- * The central brain of the Sovereign System.
- */
 export const ZIRO: AgentDefinition = {
   id: "ziro",
   name: "Ziro",
@@ -44,9 +39,6 @@ You do not talk to the database directly; you command your Executive Team.`,
   canSpawnSubAgents: true,
 };
 
-/**
- * RUBY - The Schedule (Surgical Protocol)
- */
 export const RUBY: AgentDefinition = {
   id: "ruby",
   name: "Ruby",
@@ -65,9 +57,6 @@ Verification Loop: After you move a student, re-read the schedule to verify the 
   canSpawnSubAgents: false,
 };
 
-/**
- * RAVEN - The Communication Agent
- */
 export const RAVEN: AgentDefinition = {
   id: "raven",
   name: "Raven",
@@ -81,9 +70,6 @@ export const RAVEN: AgentDefinition = {
   canSpawnSubAgents: false,
 };
 
-/**
- * BUB - The Financials
- */
 export const BUB: AgentDefinition = {
   id: "bub",
   name: "Bub",
@@ -95,9 +81,6 @@ export const BUB: AgentDefinition = {
   canSpawnSubAgents: false,
 };
 
-/**
- * SID - The Teacher Agent
- */
 export const SID: AgentDefinition = {
   id: "sid",
   name: "Sid",
@@ -109,9 +92,6 @@ export const SID: AgentDefinition = {
   canSpawnSubAgents: false,
 };
 
-/**
- * STEWIE - Retention
- */
 export const STEWIE: AgentDefinition = {
   id: "stewie",
   name: "Stewie",
@@ -123,9 +103,6 @@ export const STEWIE: AgentDefinition = {
   canSpawnSubAgents: false,
 };
 
-/**
- * STAR - The Leads
- */
 export const STAR: AgentDefinition = {
   id: "star",
   name: "Star",
