@@ -269,6 +269,10 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
   const [ratePerBlock, setRatePerBlock] = React.useState(teacher.rate_per_block != null ? String(teacher.rate_per_block) : "");
   const [isSubAvailable, setIsSubAvailable] = React.useState(teacher.is_sub_available ?? teacher.sub_available ?? false);
   const [bio, setBio] = React.useState(teacher.bio ?? "");
+  const [photoUrl, setPhotoUrl] = React.useState(teacher.photo_url ?? "");
+  const [personality, setPersonality] = React.useState(teacher.personality ?? "");
+  const [customerFacingSummary, setCustomerFacingSummary] = React.useState(teacher.customer_facing_match_summary ?? "");
+  const [bestMatchStudents, setBestMatchStudents] = React.useState(teacher.best_match_students ?? "");
   const [lessonStyle, setLessonStyle] = React.useState(teacher.lesson_style ?? "");
   const [teachingStrengths, setTeachingStrengths] = React.useState(teacher.teaching_strengths ?? "");
   const [musicalBackground, setMusicalBackground] = React.useState(teacher.musical_strengths_background ?? "");
@@ -299,6 +303,10 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         director_notes: directorNotes || null,
         instruments: instrumentsStr ? instrumentsStr.split(",").map(s => s.trim()).filter(Boolean) : [],
         primary_instruments: primaryInstruments || null,
+        photo_url: photoUrl || null,
+        personality: personality || null,
+        customer_facing_match_summary: customerFacingSummary || null,
+        best_match_students: bestMatchStudents || null,
       };
       const res = await fetch(`/api/crm/teachers/${teacher.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
@@ -378,8 +386,17 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         <div><label className={labelCls}>Primary Instruments</label><input className={inputCls} value={primaryInstruments} onChange={e => setPrimaryInstruments(e.target.value)} placeholder="Guitar" /></div>
       </div>
       <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Teaching Profile</div>
-        <div><label className={labelCls}>Bio</label><textarea className={inputCls} rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="Teacher bio visible to families…" /></div>
+        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Meet Your Teacher — Family-Facing Profile</div>
+        <p className="text-[10px] text-[#505055] leading-relaxed">This section is shown to families on their profile page. Write it like you&apos;re introducing the teacher to a new parent — warm, personal, confidence-building.</p>
+        <div>
+          <label className={labelCls}>Headshot Photo URL</label>
+          <input className={inputCls} value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://… (paste Supabase storage URL)" />
+          {photoUrl && <img src={photoUrl} alt="Preview" className="mt-2 h-24 w-24 rounded-full object-cover border border-[#1c1c1e]" />}
+        </div>
+        <div><label className={labelCls}>Bio (visible to families)</label><textarea className={inputCls} rows={4} value={bio} onChange={e => setBio(e.target.value)} placeholder="e.g. Meet Alex — a customer favorite and rising guitar pro! Alex has quickly become one of our most-requested teachers. His sharp ear, patient approach, and genuine love for music make every lesson an adventure…" /></div>
+        <div><label className={labelCls}>Customer-Facing Summary</label><textarea className={inputCls} rows={2} value={customerFacingSummary} onChange={e => setCustomerFacingSummary(e.target.value)} placeholder="One-liner shown on the family profile card…" /></div>
+        <div><label className={labelCls}>Best Match Students</label><input className={inputCls} value={bestMatchStudents} onChange={e => setBestMatchStudents(e.target.value)} placeholder="Beginners, kids 8-14, adults returning to music…" /></div>
+        <div><label className={labelCls}>Personality Tags (comma separated)</label><input className={inputCls} value={personality} onChange={e => setPersonality(e.target.value)} placeholder="Patient, Energetic, Detail-oriented, Fun…" /></div>
         <div><label className={labelCls}>Lesson Style</label><input className={inputCls} value={lessonStyle} onChange={e => setLessonStyle(e.target.value)} placeholder="Structured, exploratory, etc." /></div>
         <div><label className={labelCls}>Teaching Strengths</label><textarea className={inputCls} rows={2} value={teachingStrengths} onChange={e => setTeachingStrengths(e.target.value)} /></div>
         <div><label className={labelCls}>Musical Background</label><textarea className={inputCls} rows={2} value={musicalBackground} onChange={e => setMusicalBackground(e.target.value)} /></div>
