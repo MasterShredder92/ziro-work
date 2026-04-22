@@ -2,7 +2,7 @@
  * ZiroWork Agent Definitions — THE SOVEREIGN SYSTEM
  * * Hierarchy:
  * - Ziro: The Director (Strategic Orchestration)
- * - Ruby: The Schedule (Conflict Arbiter, Revenue Optimizer)
+ * - Ruby: The Scheduler (Conflict Arbiter, Revenue Optimizer)
  * - Raven: The Communication Agent (SMS/Email/Parent Loops)
  * - Bub: The Financials (Invoicing, Billing, Payroll)
  * - Sid: The Teacher Agent (Instructor Data, Feedback, Training)
@@ -17,8 +17,12 @@ export interface AgentDefinition {
   description: string;
   systemPrompt: string;
   tools: string[];
-  approvalRequired: string[]; 
+  approvalRequired: string[];
   canSpawnSubAgents: boolean;
+  // UI FIELDS — required for frontend rendering
+  accent: string;
+  glow: string;
+  tagline: string;
 }
 
 export const ZIRO: AgentDefinition = {
@@ -26,6 +30,9 @@ export const ZIRO: AgentDefinition = {
   name: "Ziro",
   role: "ceo",
   description: "Director & Strategic Orchestrator",
+  tagline: "GLOBAL REVENUE OPERATIONS",
+  accent: "#00ff88",
+  glow: "rgba(0, 255, 136, 0.5)",
   systemPrompt: `You are Ziro, the Director of ZiroWork. Your job is to orchestrate all specialized agents to reach $1M/month in revenue.
 
 You hold the Global State. No agent acts without your TaskID.
@@ -44,6 +51,9 @@ export const RUBY: AgentDefinition = {
   name: "Ruby",
   role: "worker",
   description: "Scheduler & Revenue Optimizer",
+  tagline: "SURGICAL PRECISION SCHEDULING",
+  accent: "#fb923c",
+  glow: "rgba(251, 146, 60, 0.5)",
   systemPrompt: `You are Ruby, the ZiroWork Scheduling Agent. You operate under Ziro's TaskID.
 Your job is to manage the lesson schedule with SURGICAL precision.
 - Use read_schedule to monitor slots.
@@ -62,6 +72,9 @@ export const RAVEN: AgentDefinition = {
   name: "Raven",
   role: "worker",
   description: "Communication Agent (SMS/Email)",
+  tagline: "HIGH-TECH. HIGH-TOUCH.",
+  accent: "#a78bfa",
+  glow: "rgba(167, 139, 250, 0.5)",
   systemPrompt: `You are Raven, the ZiroWork Communication Agent. You handle all parent/student loops.
 - Use send_sms/send_email to notify about schedule optimizations.
 - All outbound comms must follow the "Brand Voice" (High-tech, High-touch).`,
@@ -75,6 +88,9 @@ export const BUB: AgentDefinition = {
   name: "Bub",
   role: "specialist",
   description: "Financial & Billing Manager",
+  tagline: "EVERY DOLLAR ACCOUNTED FOR",
+  accent: "#facc15",
+  glow: "rgba(250, 204, 21, 0.5)",
   systemPrompt: `You are Bub, the ZiroWork Financial Agent. You handle invoicing, billing, and payroll. Ensure every move Ruby makes is vetted for billing impact.`,
   tools: ["read_invoices", "create_invoice", "calculate_payroll", "check_balance"],
   approvalRequired: ["create_invoice"],
@@ -86,6 +102,9 @@ export const SID: AgentDefinition = {
   name: "Sid",
   role: "worker",
   description: "Teacher Agent (Instructor Data & Training)",
+  tagline: "INSTRUCTOR EXCELLENCE ENGINE",
+  accent: "#38bdf8",
+  glow: "rgba(56, 189, 248, 0.5)",
   systemPrompt: `You are Sid, the ZiroWork Teacher Agent. You manage instructor data and teaching quality. Refer to yourself as 'she/her'.`,
   tools: ["read_instructor", "update_instructor_info", "analyze_teacher_feedback"],
   approvalRequired: ["update_instructor_info"],
@@ -97,6 +116,9 @@ export const STEWIE: AgentDefinition = {
   name: "Stewie",
   role: "specialist",
   description: "Retention & Student Success",
+  tagline: "ZERO CHURN. MAXIMUM RETENTION.",
+  accent: "#f472b6",
+  glow: "rgba(244, 114, 182, 0.5)",
   systemPrompt: `You are Stewie, the ZiroWork Retention Agent. You predict churn and monitor progress.`,
   tools: ["predict_churn", "analyze_student_progress", "flag_at_risk_student"],
   approvalRequired: [],
@@ -108,6 +130,9 @@ export const STAR: AgentDefinition = {
   name: "Star",
   role: "worker",
   description: "Leads & Sales Manager",
+  tagline: "FILL EVERY SEAT. CLOSE EVERY LEAD.",
+  accent: "#34d399",
+  glow: "rgba(52, 211, 153, 0.5)",
   systemPrompt: `You are Star, the ZiroWork Leads Agent. You manage the sales funnel and onboarding.`,
   tools: ["read_leads", "update_lead_status", "schedule_intro_lesson"],
   approvalRequired: ["update_lead_status"],
@@ -127,5 +152,6 @@ export const AGENT_REGISTRY: Record<string, AgentDefinition> = {
 export function getAgentDefinition(agentId: string): AgentDefinition | null {
   return AGENT_REGISTRY[agentId] || null;
 }
+
 // ALIAS FOR FRONTEND COMPATIBILITY
 export const AGENT_DEFINITIONS = AGENT_REGISTRY;
