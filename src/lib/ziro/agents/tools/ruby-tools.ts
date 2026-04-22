@@ -179,9 +179,10 @@ export async function find_booking_gaps({
   locationName: string;
   date: string;
 }) {
-  const { blocks, success, error } = await read_schedule({ locationName, date });
-  if (!success) return { success: false, error };
+  const result = await read_schedule({ locationName, date });
+  if (!result.success || !result.blocks) return { success: false, error: result.error || "No blocks found" };
 
+  const blocks = result.blocks;
   const gaps = [];
   for (let i = 1; i < blocks.length - 1; i++) {
     const prev = blocks[i - 1];
