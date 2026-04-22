@@ -112,7 +112,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Use generateText (Sync) instead of streamText (Async Stream) for UI compatibility
-    const { text, toolResults } = await generateText({
+    // Using 'as any' to bypass strict type inference issues in this specific environment
+    const { text, toolResults } = await (generateText as any)({
       model: openai("gpt-4.1-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
