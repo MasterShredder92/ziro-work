@@ -43,18 +43,18 @@ export async function POST(req: NextRequest) {
 
     /**
      * Tools definition using the standard AI SDK pattern.
-     * Updated to the latest 'ai' package for full type support.
+     * Cleaned up Zod descriptions for OpenAI schema validation.
      */
     const agentTools: any = {};
 
     if (agentDef.tools.includes("read_schedule")) {
       agentTools.read_schedule = {
-        description: "Read the current lesson schedule for a location. Locations: Bellevue, Elkhorn, Gretna, Omaha.",
+        description: "Read lesson schedule for a location. Locations: Bellevue, Elkhorn, Gretna, Omaha.",
         parameters: z.object({
-          locationName: z.string().describe("Location name: Bellevue, Elkhorn, Gretna, or Omaha"),
-          date: z.string().describe("Date in YYYY-MM-DD format (e.g. 2026-04-21)"),
+          locationName: z.string().describe("Location: Bellevue, Elkhorn, Gretna, or Omaha"),
+          date: z.string().describe("Date (YYYY-MM-DD)"),
         }),
-        execute: async (args: any) => {
+        execute: async (args: { locationName: string; date: string }) => {
           return await executeTool("read_schedule", args);
         },
       };
@@ -62,10 +62,10 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("check_conflicts")) {
       agentTools.check_conflicts = {
-        description: "Check for scheduling conflicts for a teacher in a given time window.",
+        description: "Check for teacher scheduling conflicts.",
         parameters: z.object({
           locationName: z.string().describe("Location name"),
-          date: z.string().describe("Date in YYYY-MM-DD format"),
+          date: z.string().describe("Date (YYYY-MM-DD)"),
           startTime: z.string().describe("Start time (HH:MM:SS)"),
           endTime: z.string().describe("End time (HH:MM:SS)"),
           teacherId: z.string().optional().describe("Teacher ID"),
@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("suggest_slot")) {
       agentTools.suggest_slot = {
-        description: "Suggest available open time slots at a location on a given date.",
+        description: "Suggest open slots at a location.",
         parameters: z.object({
           locationName: z.string().describe("Location name"),
-          date: z.string().describe("Date in YYYY-MM-DD format"),
+          date: z.string().describe("Date (YYYY-MM-DD)"),
           durationMinutes: z.number().optional().describe("Duration in minutes"),
         }),
         execute: async (args: any) => {
@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("read_student")) {
       agentTools.read_student = {
-        description: "Read a student's profile and enrollment details.",
+        description: "Read student profile.",
         parameters: z.object({
-          studentId: z.string().describe("The student ID"),
+          studentId: z.string().describe("Student ID"),
         }),
         execute: async (args: any) => {
           return await executeTool("read_student", args);
@@ -104,9 +104,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("get_lesson_history")) {
       agentTools.get_lesson_history = {
-        description: "Get the lesson history for a student.",
+        description: "Get lesson history for a student.",
         parameters: z.object({
-          studentId: z.string().describe("The student ID"),
+          studentId: z.string().describe("Student ID"),
           limit: z.number().optional().describe("Limit"),
         }),
         execute: async (args: any) => {
@@ -117,9 +117,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("read_instructor")) {
       agentTools.read_instructor = {
-        description: "Read an instructor's profile and availability.",
+        description: "Read instructor profile.",
         parameters: z.object({
-          instructorId: z.string().describe("The instructor ID"),
+          instructorId: z.string().describe("Instructor ID"),
         }),
         execute: async (args: any) => {
           return await executeTool("read_instructor", args);
@@ -129,9 +129,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("check_balance")) {
       agentTools.check_balance = {
-        description: "Check the studio's financial balance.",
+        description: "Check studio financial balance.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
+          studioId: z.string().describe("Studio ID"),
         }),
         execute: async (args: any) => {
           return await executeTool("check_balance", {
@@ -143,9 +143,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("read_invoices")) {
       agentTools.read_invoices = {
-        description: "Read invoices for a studio.",
+        description: "Read studio invoices.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
+          studioId: z.string().describe("Studio ID"),
           status: z.enum(["paid", "unpaid", "overdue", "all"]).optional().describe("Status"),
         }),
         execute: async (args: any) => {
@@ -159,9 +159,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("analyze_trends")) {
       agentTools.analyze_trends = {
-        description: "Analyze trends in attendance, revenue, or enrollment.",
+        description: "Analyze attendance or revenue trends.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
+          studioId: z.string().describe("Studio ID"),
           metric: z.enum(["attendance", "revenue", "new_students", "cancellations"]).describe("Metric"),
           days: z.number().optional().describe("Days back"),
         }),
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
       agentTools.predict_churn = {
         description: "Identify students at risk of churning.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
+          studioId: z.string().describe("Studio ID"),
         }),
         execute: async (args: any) => {
           return await executeTool("predict_churn", {
@@ -190,9 +190,9 @@ export async function POST(req: NextRequest) {
 
     if (agentDef.tools.includes("generate_insights")) {
       agentTools.generate_insights = {
-        description: "Generate a comprehensive insights report.",
+        description: "Generate insights report.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
+          studioId: z.string().describe("Studio ID"),
         }),
         execute: async (args: any) => {
           return await executeTool("generate_insights", {
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      // @ts-ignore - maxSteps is available at runtime but missing from current SDK types
+      // @ts-ignore
       maxSteps: 5,
     });
 
