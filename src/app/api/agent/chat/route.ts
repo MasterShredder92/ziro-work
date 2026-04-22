@@ -228,10 +228,21 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 export async function POST(req: NextRequest) {
   try {
     // Initialize OpenAI client with explicit Manus configuration
-    // Pass environment variables explicitly to ensure they're picked up on Vercel
+    // We use a custom fetch to ensure the Authorization header is sent EXACTLY as Manus expects
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL || "https://api.manus.im/api/llm-proxy/v1"
+      baseURL: process.env.OPENAI_BASE_URL || "https://api.manus.im/api/llm-proxy/v1",
+      fetch: async (url, options) => {
+        const headers = new Headers(options?.headers);
+        // Ensure the API key is sent directly if the Bearer prefix is causing issues
+        const apiKey = process.env.OPENAI_API_KEY || "";
+        if (apiKey) {
+          headers.set("Authorization", apiKey.startsWith("sk-") ? `Bearer ${apiKey}` : apiKey);
+          // Also add as a custom header just in case
+          headers.set("X-API-Key", apiKey);
+        }
+        return fetch(url, { ...options, headers });
+      }
     });
     
     const body = await req.json();
