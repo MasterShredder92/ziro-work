@@ -127,3 +127,5 @@ export const AGENT_REGISTRY: Record<string, AgentDefinition> = {
 export function getAgentDefinition(agentId: string): AgentDefinition | null {
   return AGENT_REGISTRY[agentId] || null;
 }
+// ALIAS FOR FRONTEND COMPATIBILITY
+export const AGENT_DEFINITIONS = AGENT_REGISTRY;
