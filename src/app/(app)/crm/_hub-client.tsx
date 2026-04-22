@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageTransition } from "@/components/system/PageTransition";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { LOCATION_MAP, LOCATIONS } from "@/lib/config/locations";
 
 type Location = { id: string; name: string };
@@ -251,8 +250,6 @@ export function CRMHubClient() {
             <Link href="/crm/families/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-3 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ New</Link>
           </div>
           <div className="mt-3">
-            <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about families or relationship management…"
-              pageContext={{ page: "crm-families", totalFamilies: families.length, activeCount, inactiveCount, selectedLocation: selectedLocationId !== "all" ? getLocName(selectedLocationId) : "All Locations" }} />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {["all", ...LOCATIONS.map(l => l.id)].map(locId => {

@@ -2,7 +2,6 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
-import { type RubyEvent } from "@/app/(app)/schedule/components/RubyScheduleBar";
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
@@ -35,7 +34,6 @@ type Props = {
   rooms: ScheduleRoom[];
   locationHours: LocationHoursMap;
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
-  onRubyEvent?: (e: RubyEvent) => void;
 };
 
 // ─── Block type display config ─────────────────────────────────────────────────
@@ -127,7 +125,6 @@ export function LocationScheduleGrid({
   rooms,
   locationHours,
   onBlocksChange,
-  onRubyEvent,
 }: Props) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
@@ -137,11 +134,8 @@ export function LocationScheduleGrid({
   // Sync selectedBlockId with Ruby events for state persistence
   React.useEffect(() => {
     if (selectedBlockId) {
-      onRubyEvent?.({ type: "idle", message: "Block selected", blockId: selectedBlockId });
     } else {
-      onRubyEvent?.({ type: "idle", message: "Selection cleared", blockId: null });
     }
-  }, [selectedBlockId, onRubyEvent]);
 
   // ── Current time indicator ──────────────────────────────────────────────────
   const [nowMinute, setNowMinute] = React.useState<number>(() => {
@@ -231,7 +225,6 @@ export function LocationScheduleGrid({
         );
       }
       const student = cancelTarget.student_id ? studentsById.get(cancelTarget.student_id) : null;
-      onRubyEvent?.({ type: "call_out", message: `${student ? studentName(student) : "Session"} cancelled (${cancelScope}) — ${cancelReason.trim()}` });
       setCancelTarget(null);
       setCancelReason("");
       setCancelScope("recurring");
@@ -302,7 +295,6 @@ export function LocationScheduleGrid({
       const updated = await res.json() as { data: ScheduleBlock };
       onBlocksChange(blocks.map(b => b.id === blockId ? { ...b, ...updated.data } : b));
       if (closePanel) setSelectedBlockId(null);
-      onRubyEvent?.({ type: "idle", message: "Block updated successfully" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
     } finally {
@@ -325,7 +317,6 @@ export function LocationScheduleGrid({
       status: "available",
     };
     await patchBlock(block, patch, true);
-    onRubyEvent?.({ type: "call_out", message: "Teacher call-out logged" });
   }
 
   async function bookStudent(block: ProjectedBlock) {
@@ -350,7 +341,6 @@ export function LocationScheduleGrid({
       // For now, let's assume the API returns the updated base block or new block
       onBlocksChange(blocks.map(b => b.id === updated.data.id ? updated.data : b));
       setSelectedBlockId(null);
-      onRubyEvent?.({ type: "book_student", message: `Booked ${studentName(studentsById.get(bookingStudentId)!)}` });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Booking failed");
     } finally {

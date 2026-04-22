@@ -3,7 +3,6 @@ import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase";
 import { badRequest, created, ok, readJson, resolveTenantId, serverError } from "@/lib/http";
 import { emitEvent } from "@/lib/events/emitEvent";
-import { processAgentEvent } from "@/lib/agents/eventProcessor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,7 +102,6 @@ export async function PATCH(req: NextRequest) {
       };
       await emitEvent(signedEvent);
       // Fire-and-forget: Sid activates the student
-      processAgentEvent(signedEvent).catch((e) =>
         console.error("[agreements] Agent event processing failed:", e)
       );
     }

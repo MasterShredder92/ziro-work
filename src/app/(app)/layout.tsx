@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { CleanLayout } from "@/components/layouts/CleanLayout";
 import { SystemProviders } from "@/components/system/SystemProviders";
-import { AgentOSRoot } from "@/components/agentOS";
 import { getSession } from "@/lib/auth/session";
 import { getBrandingRuntime } from "@/lib/branding";
 import { ensureQueueHandlersRegistered } from "@/lib/queue/registerHandlers";
@@ -24,10 +23,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SystemProviders defaultTenantId={tenantId}>
-      <AgentOSRoot>
-        {runtime ? <BrandingStyleTag runtime={runtime} /> : null}
-        <CleanLayout>{children}</CleanLayout>
-      </AgentOSRoot>
+      {runtime ? <BrandingStyleTag runtime={runtime} /> : null}
+      <CleanLayout>{children}</CleanLayout>
     </SystemProviders>
   );
 }

@@ -4,7 +4,6 @@ import { enrollStudent, listEnrollmentsFor } from "@/lib/crm";
 import { badRequest, created, ok, readJson, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../_context";
 import { emitEvent } from "@/lib/events/emitEvent";
-import { processAgentEvent } from "@/lib/agents/eventProcessor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,7 +73,6 @@ export async function POST(req: NextRequest) {
       entityId: parsed.data.studentId,
       payload: { enrollment: row, teacherId: parsed.data.teacherId, studentId: parsed.data.studentId },
     };
-    processAgentEvent(enrolledEvent).catch((e) =>
       console.error("[enrollments] Agent event processing failed:", e)
     );
     return created({ data: row });

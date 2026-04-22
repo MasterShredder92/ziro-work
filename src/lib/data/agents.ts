@@ -1,5 +1,4 @@
 import { getServiceClient } from "@/lib/supabase";
-import { getSupabase } from "@/lib/agents/supabase";
 
 export type FacadeResult<T> =
   | { data: T; error: null }

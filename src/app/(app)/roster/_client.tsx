@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 // ─── Location config ──────────────────────────────────────────────────────────
 const LOCATION_CONFIG: Record<string, { color: string; accent: string; border: string }> = {
@@ -455,31 +454,6 @@ export function RosterClient({ families, students, teacherNames, locationStats }
 
   return (
     <PageShell title="Roster">
-      <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about any student on the roster…" pageContext={{ page: "roster" }} />
-      <div className="space-y-6">
-        {/* ── Summary bar ── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
-          {[
-            { val: totalActive,   label: "Active students",  color: "var(--z-accent)" },
-            { val: totalFamilies, label: "Active families",  color: "var(--z-fg)"     },
-            { val: `$${totalMonthly.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, label: "Monthly revenue", color: "#4ADE80" },
-            { val: noCard,        label: "No card on file",  color: "#F87171"          },
-          ].map(({ val, label, color }) => (
-            <div key={label} className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-              <div className="text-2xl font-extrabold" style={{ color }}>{val}</div>
-              <div className="text-xs text-[var(--z-muted)]">{label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Location cards ── */}
-        <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--z-muted)]">
-            Click a studio to filter
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
-            {locationStats.map((stat) => (
-              <LocationCard key={stat.id} stat={stat} isActive={activeLocationId === stat.id} onClick={() => toggleLocation(stat.id)} />
             ))}
           </div>
         </div>

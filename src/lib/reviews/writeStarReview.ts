@@ -1,5 +1,4 @@
 import { getServiceClient } from "@/lib/supabase";
-import { releaseAgentLoad } from "@/lib/agents/retireEphemeral";
 import type { ReviewVerdict } from "@/types/orchestrator";
 
 export interface ReviewInput {
@@ -135,13 +134,11 @@ export async function writeStarReview(input: ReviewInput): Promise<string | null
   // Retire ephemeral agent after review — per STAR operating model Stage 8
   if (input.agentId && input.agentMode === "ephemeral") {
     try {
-      await releaseAgentLoad(input.agentId, true);
     } catch (retireErr) {
       console.warn(`[REVIEW] Failed to retire ephemeral agent ${input.agentId}: ${retireErr}`);
     }
   } else if (input.agentId && input.agentMode === "persistent") {
     try {
-      await releaseAgentLoad(input.agentId, false);
     } catch (releaseErr) {
       console.warn(`[REVIEW] Failed to release agent load for ${input.agentId}: ${releaseErr}`);
     }

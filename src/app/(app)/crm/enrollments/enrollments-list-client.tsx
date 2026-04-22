@@ -11,7 +11,6 @@ import { useInlineCrmEdit } from "../_components/hooks/useInlineCrmEdit";
 import { EditableCell } from "../table-shell";
 import { useCrmSort } from "../useCrmSort";
 import { EnrollmentRowActions } from "./_client";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 const COLUMN_KEYS = [
   "student",
@@ -216,34 +215,6 @@ export function EnrollmentsListClient({
 
   return (
     <>
-      <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about enrollments…" pageContext={{ page: "enrollments", count: localRows.length }} />
-      {inlineEdit.toast ? (
-        <div className="mb-2 flex justify-end">
-          <button
-            type="button"
-            onClick={inlineEdit.clearToast}
-            className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-200"
-          >
-            {inlineEdit.toast.message}
-          </button>
-        </div>
-      ) : null}
-      <CRMListTableSection
-        tableId="list-enrollments"
-        columnKeys={[...COLUMN_KEYS]}
-        headers={[...HEADERS]}
-        bulk={bulk}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        sortableColumnKeys={SORTABLE_COLUMN_KEYS}
-        onSortColumn={toggleSort}
-      >
-        {localRows.map((r) => (
-          <tr
-            key={r.id}
-            className="border-b border-[var(--z-border,#1c1c1e)] last:border-0"
-          >
-            <BulkSelectCell rowId={r.id} />
             <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
               <Link
                 href={`/crm/students/${r.student_id}`}

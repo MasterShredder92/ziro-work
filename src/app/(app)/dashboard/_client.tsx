@@ -31,8 +31,6 @@ function BlockSkeleton({ rows }: { rows: number }) {
   );
 }
 
-const AgentCards = dynamic(
-  () => import("@/components/agent/AgentCards").then((m) => ({ default: m.AgentCards })),
   { loading: () => <AgentGridSkeleton /> },
 );
 
@@ -102,7 +100,6 @@ export function DashboardClient() {
             withSurface={false}
           >
             <div data-tour="agent-cards">
-              <AgentCards />
             </div>
           </DashboardSection>
 

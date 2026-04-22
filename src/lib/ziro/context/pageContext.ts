@@ -1,7 +1,12 @@
-import {
-  getPageBindings,
-  type PageBindings,
-} from "@/lib/ziro/runtime/pageIntelligence";
+// runtime/pageIntelligence removed — stub for CRM-only mode
+type PageBindings = {
+  agent: string;
+  contextLoaders: string[];
+  skills: string[];
+};
+function getPageBindings(_pathname: string): PageBindings {
+  return { agent: "", contextLoaders: [], skills: [] };
+}
 import {
   CONTEXT_LOADERS,
   CONTEXT_LOADER_ID_KEYS,

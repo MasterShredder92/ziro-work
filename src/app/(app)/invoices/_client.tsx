@@ -4,7 +4,6 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
 import { BillingSummaryBar } from "@/components/billing/BillingSummaryBar";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import type { BillingMetrics } from "./page";
 
 // ─── Location config ──────────────────────────────────────────────────────────
@@ -212,11 +211,6 @@ export function InvoicesClient({
         {/* ── Bub agent bar + Square sync ── */}
         <div className="flex items-stretch gap-3">
           <div className="flex-1">
-            <AgentPageBar
-              agentId="bub"
-              chatPlaceholder="Ask Bub about invoices, payments, or revenue…"
-              pageContext={{ page: "invoices", totalCount, paidTotal, unpaidTotal, overdueCount }}
-            />
           </div>
           <SquareSyncButton />
         </div>

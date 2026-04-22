@@ -5,7 +5,6 @@ import { PageShell } from "@/components/layouts/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useFamilies } from "@/hooks/data/useFamilies";
 import { useTenantUi } from "@/components/tenant/TenantUiContext";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 
 const PAGE = { mode: "offset" as const, page: 1, pageSize: 500 };
 
@@ -22,15 +21,6 @@ export function FamiliesClient() {
   return (
     <PageShell title="Families / Accounts">
       <div className="mx-auto max-w-5xl space-y-[var(--z-space-6)]">
-        <AgentPageBar agentId="sid" chatPlaceholder="Ask Sid about this family…" pageContext={{ page: "families", count }} />
-        <PageHeader
-          title="Families / Accounts"
-          subtitle={
-            currentLocation
-              ? `Accounts prioritized for ${currentLocation.name} (includes accounts with no primary location).`
-              : "All locations for this tenant."
-          }
-        />
         {familiesQuery.error ? (
           <p className="text-sm text-[var(--z-danger)]">{familiesQuery.error.message}</p>
         ) : (

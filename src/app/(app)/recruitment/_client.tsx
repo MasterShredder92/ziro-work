@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { PageTransition } from "@/components/system/PageTransition";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { LOCATION_MAP, LOCATIONS } from "@/lib/config/locations";
 
 type Prospect = {
@@ -469,21 +468,6 @@ export function RecruitmentClient() {
             ) : (
               <div className="p-4 space-y-4">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">AI Assistant</div>
-                <AgentPageBar agentId="star" chatPlaceholder="Ask Star about candidates or hiring…" pageContext={{ page: "recruitment", activeCount, totalCount: prospects.length, statusCounts: counts }} />
-                <div className="space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">Pipeline Summary</div>
-                  {STATUSES.map(s => counts[s.key] > 0 ? (
-                    <div key={s.key} className="flex items-center justify-between rounded-lg border border-[#1c1c1e] px-3 py-2">
-                      <span className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</span>
-                      <span className="text-xs text-[#505055]">{counts[s.key]}</span>
-                    </div>
-                  ) : null)}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        {showAdd && <AddProspectModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
       </div>
     </PageTransition>
   );

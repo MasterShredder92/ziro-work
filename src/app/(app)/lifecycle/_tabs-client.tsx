@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StageSurfaceClient } from "./[stage]/_client";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import type { LifecycleStageId } from "@/lib/lifecycle/types";
 
 // ─── Stage definitions ────────────────────────────────────────────────────────
@@ -64,11 +63,6 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
         </div>
 
         {/* ── STAR agent bar ── */}
-        <AgentPageBar
-          agentId="star"
-          chatPlaceholder="Ask STAR about this stage…"
-          pageContext={{ page: "lifecycle", stage: safeActiveTab }}
-        />
 
         {/* ── Mobile: dropdown stage selector ── */}
         <div className="sm:hidden">

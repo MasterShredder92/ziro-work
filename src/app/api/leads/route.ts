@@ -16,7 +16,6 @@ import {
   serverError,
 } from "@/lib/http";
 import { emitEvent } from "@/lib/events/emitEvent";
-import { processAgentEvent } from "@/lib/agents/eventProcessor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,7 +95,6 @@ export async function POST(req: NextRequest) {
     };
     await emitEvent(leadEvent);
     // Fire-and-forget: Star processes the event (sends welcome email, updates stage)
-    processAgentEvent(leadEvent).catch((e) =>
       console.error("[leads] Agent event processing failed:", e)
     );
     return created({ data: row });

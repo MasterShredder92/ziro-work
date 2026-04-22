@@ -3,7 +3,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { StudentTimeline } from "@/components/students/StudentTimeline";
 import { ChampionshipReportCard } from "@/components/reports/ChampionshipReportCard";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -517,21 +516,6 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
             <PageHeader title={data.studentName} subtitle={`${data.stageName} · ${data.riskBand} risk`} />
 
             {/* ── Sid agent bar — always at top, not a tab ── */}
-            <AgentPageBar
-              agentId="sid"
-              chatPlaceholder="Ask Sid about this student…"
-              pageContext={{
-                page: "student-profile",
-                studentId,
-                studentName: data.studentName,
-                stageName: data.stageName,
-                riskBand: data.riskBand,
-                agentSummary: data.agentSummary,
-                nextActions: data.nextActions,
-                blockers: data.blockers,
-                agentStatus,
-              }}
-            />
 
             {/* ── Tabs ── */}
             <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">

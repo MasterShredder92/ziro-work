@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
 import type { ScheduleRoom } from "@/lib/schedule/types";
-import type { RubyEvent } from "./RubyScheduleBar";
 
 // ─── Location room counts ─────────────────────────────────────────────────────
 // These are the canonical room counts per location. Rooms that don't yet exist
@@ -47,12 +46,10 @@ type Props = {
   locationName: string;
   locationColor: string;
   rooms: ScheduleRoom[];
-  onRubyEvent?: (e: RubyEvent) => void;
 };
 
 type RoomWithInventory = ScheduleRoom & { _editing?: boolean; _newItem?: string };
 
-export function ScheduleRoomsPanel({ locationId, locationName, locationColor, rooms: initialRooms, onRubyEvent }: Props) {
   const expectedCount = LOCATION_ROOM_COUNTS[locationId] ?? 0;
   const [rooms, setRooms] = React.useState<RoomWithInventory[]>(() =>
     initialRooms.filter((r) => r.locationId === locationId || !r.locationId)
@@ -84,11 +81,9 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
       });
       if (res.ok) {
         setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, equipment: newEquipment, _newItem: "" } : r));
-        onRubyEvent?.({ type: "book_student", message: `Added "${trimmed}" to ${room.name}.` });
       } else {
         // Optimistic update even if API isn't wired yet
         setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, equipment: newEquipment, _newItem: "" } : r));
-        onRubyEvent?.({ type: "book_student", message: `Added "${trimmed}" to ${room.name} (saved locally).` });
       }
     } catch {
       setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, equipment: newEquipment, _newItem: "" } : r));
@@ -111,7 +106,6 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
       });
       if (res.ok || true) {
         setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, equipment: newEquipment } : r));
-        onRubyEvent?.({ type: "book_student", message: `Removed "${item}" from ${room.name}.` });
       }
     } catch {
       setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, equipment: newEquipment } : r));
@@ -142,7 +136,6 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
       if (res.ok) {
         const created = await res.json();
         setRooms((prev) => [...prev, created]);
-        onRubyEvent?.({ type: "book_student", message: `Room "${newRoomName}" created at ${locationName}.` });
       } else {
         // Optimistic local add
         const fake: ScheduleRoom = {
@@ -156,7 +149,6 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
           isActive: true,
         };
         setRooms((prev) => [...prev, fake]);
-        onRubyEvent?.({ type: "book_student", message: `Room "${newRoomName}" added locally — will sync when API is wired.` });
       }
     } catch {
       setCreateError("Failed to create room.");
@@ -392,7 +384,6 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
                   </div>
 
                   {/* Ruby mismatch check tool */}
-                  <RubyMismatchChecker room={room} onCheck={(msg) => onRubyEvent?.({ type: "conflict", message: msg })} />
                 </div>
               )}
             </div>

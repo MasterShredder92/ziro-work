@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
 import { useParams } from "next/navigation";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { PageTransition } from "@/components/system/PageTransition";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
@@ -707,11 +706,6 @@ export function TeacherDetailClient() {
           {teacher && (
             <>
               <PageHeader title={displayName} subtitle={teacher.status ?? (teacher.is_active ? "active" : "inactive")} />
-              <AgentPageBar
-                agentId="vader"
-                chatPlaceholder="Ask Vader about this teacher…"
-                pageContext={{ page: "teacher-profile", teacherId: id, teacherName: displayName, status: teacher.status, w9Status: teacher.w9_status, contractStatus: teacher.contract_status, ratePerBlock: teacher.rate_per_block }}
-              />
               <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">
                 {TABS.map(t => (
                   <button key={t.id} onClick={() => setTab(t.id)}

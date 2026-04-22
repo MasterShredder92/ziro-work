@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { PageTransition } from "@/components/system/PageTransition";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { LOCATION_MAP, LOCATIONS } from "@/lib/config/locations";
 
 type Teacher = {
@@ -190,8 +189,6 @@ export function TeachersClient() {
             <Link href="/crm/teachers/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ Add Teacher</Link>
           </div>
           <div className="mt-3">
-            <AgentPageBar agentId="vader" chatPlaceholder="Ask Vader about teachers or staffing…"
-              pageContext={{ page: "teachers", totalTeachers: filtered.length, locationFilter, statusFilter }} />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {["all", ...LOCATIONS.map(l => l.id)].map(locId => {

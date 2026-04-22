@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { PageTransition } from "@/components/system/PageTransition";
-import { AgentPageBar } from "@/components/agentOS/AgentPageBar";
 import { LOCATION_MAP, LOCATIONS } from "@/lib/config/locations";
 
 type PayrollRow = {
@@ -100,8 +99,6 @@ export function PayrollClient() {
             </div>
           </div>
           <div className="mb-3">
-            <AgentPageBar agentId="bub" chatPlaceholder="Ask Bub about payroll or teacher pay…"
-              pageContext={{ page: "payroll", period: period.label, totalGross: filteredGross, totalSessions: filteredSessions }} />
           </div>
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-3 mb-3">

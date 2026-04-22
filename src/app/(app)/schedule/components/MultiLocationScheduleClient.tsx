@@ -13,7 +13,6 @@ import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { LocationScheduleGrid } from "./LocationScheduleGrid";
 import { MobileScheduleView } from "./MobileScheduleView";
 import { SubModal, CallOutModal, GoVirtualModal } from "./ScheduleToolbarModals";
-import { type RubyEvent } from "./RubyScheduleBar";
 import { ScheduleRoomsPanel } from "./ScheduleRoomsPanel";
 import { useOperatorSession } from "../hooks/useOperatorSession";
 
@@ -121,7 +120,6 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   });
   const [loading, setLoading] = React.useState(false);
   const [activeModal, setActiveModal] = React.useState<ToolModal>(null);
-  const [rubyEvent, setRubyEvent] = React.useState<RubyEvent | null>(null);
   const [activeView, setActiveView] = React.useState<"schedule" | "rooms">("schedule");
   const [focusedBlockId, setFocusedBlockId] = React.useState<string | null>(null);
 
@@ -137,12 +135,9 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   // Auto-clear ruby event after 6 seconds
   React.useEffect(() => {
     if (!rubyEvent || rubyEvent.type === "idle") return;
-    const t = setTimeout(() => setRubyEvent(null), 6000);
     return () => clearTimeout(t);
   }, [rubyEvent]);
 
-  function fireRubyEvent(e: RubyEvent) {
-    setRubyEvent({ ...e, timestamp: Date.now() });
     if (e.blockId) setFocusedBlockId(e.blockId);
   }
 
@@ -411,7 +406,6 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             rooms={activeData?.rooms ?? []}
             locationHours={activeData?.locationHours ?? {}}
             onBlocksChange={handleBlocksChange}
-            onRubyEvent={fireRubyEvent}
           />
         ) : (
           <ScheduleRoomsPanel
@@ -419,7 +413,6 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             locationName={activeLocConfig?.name ?? "Studio"}
             locationColor={activeLocConfig?.color ?? "#7C3AED"}
             rooms={activeData?.rooms ?? []}
-            onRubyEvent={fireRubyEvent}
           />
         )}
       </div>

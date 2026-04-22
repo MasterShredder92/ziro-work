@@ -8,10 +8,6 @@ import { useTenantUi } from "@/components/tenant/TenantUiContext";
 import { getRouteByHref } from "@/lib/routes";
 import Link from "next/link";
 import { ClientPageTitle } from "@/components/navigation/ClientPageTitle";
-import { AgentCommandHub } from "@/components/agentOS/AgentCommandHub";
-import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
-import { getPageBinding } from "@/lib/agentOS/pageIntelligence";
-import { getAgentMetadata } from "@/lib/agents/agentMetadata";
 import { cn } from "@/components/ui/utils";
 
 function titleForPath(pathname: string): string {
@@ -43,13 +39,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
   const pathname = usePathname();
   const { tenantId } = useTenantUi();
   const [commandOpen, setCommandOpen] = React.useState(false);
-  const [agentOpen, setAgentOpen] = React.useState(false);
   const pageTitle = titleForPath(pathname);
-  const binding = React.useMemo(() => getPageBinding(pathname), [pathname]);
-  const agentId = binding.primaryAgentId || "ziro";
-  const agentDef = AGENT_DEFINITIONS[agentId];
-  const agentMeta = React.useMemo(() => getAgentMetadata(agentId), [agentId]);
-  const showAgent = agentId !== "ziro"; // Show agent card for all non-Ziro agents
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -91,50 +81,6 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           </button>
           <div className="min-w-0 flex-1 flex items-center gap-4">
             <ClientPageTitle title={pageTitle} />
-            
-            {showAgent && agentDef && agentMeta && (
-              <button
-                type="button"
-                onClick={() => setAgentOpen(true)}
-                className="group relative flex items-center gap-3 rounded-xl border transition-all px-3 py-1.5"
-                style={{
-                  borderColor: `${agentDef.accent}30`,
-                  backgroundColor: `${agentDef.accent}05`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = `${agentDef.accent}15`;
-                  e.currentTarget.style.borderColor = `${agentDef.accent}60`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = `${agentDef.accent}05`;
-                  e.currentTarget.style.borderColor = `${agentDef.accent}30`;
-                }}
-              >
-                <div className="relative shrink-0">
-                  <div 
-                    className="h-7 w-7 rounded-full border overflow-hidden bg-[var(--z-surface-2)]"
-                    style={{ 
-                      borderColor: `${agentDef.accent}40`,
-                      boxShadow: `0 0 16px ${agentDef.glow}`
-                    }}
-                  >
-                    <img 
-                      src={agentMeta.imagePath} 
-                      alt={agentDef.name} 
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${agentDef.name}&background=${agentDef.accent.replace('#', '')}&color=fff`;
-                      }}
-                    />
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#00ff88] border border-[#0f0f12]" />
-                </div>
-                <div className="text-left hidden sm:block">
-                  <div className="text-[9px] font-black uppercase tracking-widest leading-none" style={{ color: agentDef.accent }}>{agentDef.name}</div>
-                  <div className="text-[8px] font-bold text-white/40 uppercase tracking-tighter leading-none mt-0.5 group-hover:text-white transition-colors">OPERATOR</div>
-                </div>
-              </button>
-            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-[var(--z-space-2)] sm:gap-[var(--z-space-3)]">
@@ -149,13 +95,9 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           >
             ⌘K
           </span>
-        <NotificationBell />
-      </div>
-    </header>
-
-    {showAgent && agentId && (
-      <AgentCommandHub isOpen={agentOpen} onClose={() => setAgentOpen(false)} agentId={agentId} />
-    )}
+          <NotificationBell />
+        </div>
+      </header>
 
       <CommandPalette
         open={commandOpen}

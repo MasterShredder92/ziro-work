@@ -97,7 +97,7 @@ export type AgentsNodeData = {
   href: string;
 };
 
-export type AgentPipelineNodeData = {
+export type PipelineNodeData = {
   agentId: string;
   name: string;
   role: string;
@@ -276,8 +276,8 @@ export function StudentMiniNode({ data }: NodeProps) {
 }
 
 // ── Agent Pipeline Node (The Senior Operator Card) ──────────────────────────
-export function AgentPipelineNode({ data }: NodeProps) {
-  const d = data as AgentPipelineNodeData;
+export function PipelineNode({ data }: NodeProps) {
+  const d = data as PipelineNodeData;
   const isZiro = d.isDirector;
 
   return (
