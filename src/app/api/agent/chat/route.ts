@@ -227,14 +227,9 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // Use MANUS_API_KEY from Vercel environment, or fall back to local pre-configured client
-    const apiKey = process.env.MANUS_API_KEY || process.env.OPENAI_API_KEY;
-    
-    // Initialize OpenAI client with hardcoded Manus endpoint
-    const openai = new OpenAI({
-      baseURL: "https://api.manus.im/api/llm-proxy/v1",
-      apiKey: apiKey || undefined
-    });
+    // Initialize OpenAI client using pre-configured Manus environment
+    // The client automatically picks up OPENAI_BASE_URL and OPENAI_API_KEY from environment
+    const openai = new OpenAI();
     
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
@@ -261,9 +256,9 @@ export async function POST(req: NextRequest) {
           tool_choice: "auto",
         });
       } catch (apiError: any) {
-        console.error("LLM API Error:", apiError.message);
+        console.error("LLM API Error:", apiError);
         return NextResponse.json(
-          { error: `LLM Error: ${apiError.message}` },
+          { error: `LLM Error: ${apiError.message || JSON.stringify(apiError)}` },
           { status: 500 }
         );
       }
