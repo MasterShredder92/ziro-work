@@ -227,9 +227,15 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 export async function POST(req: NextRequest) {
   try {
-    // Initialize OpenAI client with the key you added to Vercel
+    // Initialize OpenAI client with MANUS_API_KEY ONLY (no fallback to avoid 401 errors)
+    if (!process.env.MANUS_API_KEY) {
+      return NextResponse.json(
+        { error: "MANUS_API_KEY not configured in environment" },
+        { status: 500 }
+      );
+    }
     const openai = new OpenAI({
-      apiKey: process.env.MANUS_API_KEY || process.env.OPENAI_API_KEY
+      apiKey: process.env.MANUS_API_KEY
     });
     
     const body = await req.json();
