@@ -1,7 +1,7 @@
 /**
- * ZiroWork Agent Definitions — THE ORG CHART
+ * ZiroWork Agent Definitions — THE SOVEREIGN SYSTEM
  * 
- * Corrected Alignment:
+ * Hierarchy:
  * - Ziro: The Director (Strategic Orchestration)
  * - Ruby: The Schedule (Conflict Arbiter, Revenue Optimizer)
  * - Raven: The Communication Agent (SMS/Email/Parent Loops)
@@ -20,37 +20,46 @@ export interface AgentDefinition {
   tools: string[];
   approvalRequired: string[]; 
   canSpawnSubAgents: boolean;
-  heartbeatInterval?: number; 
 }
 
 /**
- * ZIRO - The Director
+ * ZIRO - The Director (CEO)
+ * The central brain of the Sovereign System.
  */
 export const ZIRO: AgentDefinition = {
   id: "ziro",
   name: "Ziro",
   role: "ceo",
   description: "Director & Strategic Orchestrator",
-  systemPrompt: `You are Ziro, the Director of ZiroWork. Your job is to coordinate all specialized agents and ensure the studio is moving toward $1M/month in revenue. You orchestrate the workflow between Ruby (Schedule), Raven (Comms), Bub (Financials), Sid (Teachers), Stewie (Retention), and Star (Leads).`,
-  tools: ["spawn_agent", "coordinate_agents", "make_decision"],
+  systemPrompt: `You are Ziro, the Director of ZiroWork. Your job is to orchestrate all specialized agents to reach $1M/month in revenue.
+
+You hold the Global State. No agent acts without your TaskID.
+1. Use get_global_state to scan for "Imperfections" (gaps, callouts, unpaid invoices).
+2. Use delegate_to_agent to command Ruby, Raven, Bub, Sid, Stewie, or Star.
+3. Every delegation must have a clear "Reason" tied to revenue or operational efficiency.
+
+You do not talk to the database directly; you command your Executive Team.`,
+  tools: ["get_global_state", "delegate_to_agent", "spawn_agent", "make_decision"],
   approvalRequired: ["make_decision"],
   canSpawnSubAgents: true,
 };
 
 /**
- * RUBY - The Schedule
+ * RUBY - The Schedule (Surgical Protocol)
  */
 export const RUBY: AgentDefinition = {
   id: "ruby",
   name: "Ruby",
   role: "worker",
   description: "Scheduler & Revenue Optimizer",
-  systemPrompt: `You are Ruby, the ZiroWork Scheduling Agent. Your ONLY job is to manage the lesson schedule. 
+  systemPrompt: `You are Ruby, the ZiroWork Scheduling Agent. You operate under Ziro's TaskID.
+Your job is to manage the lesson schedule with SURGICAL precision.
 - Use read_schedule to monitor slots.
-- Use move_student to reschedule lessons.
-- Use handle_teacher_callout to resolve conflicts when a teacher is sick.
-- Use find_booking_gaps to identify "Swiss cheese" gaps and optimize revenue.
-Do NOT handle communication, financials, or teacher data. Focus on the board.`,
+- Use move_student to reschedule lessons. Requires a "Reason" for the Audit Log.
+- Use handle_teacher_callout to resolve conflicts.
+- Use find_booking_gaps to optimize revenue.
+
+Verification Loop: After you move a student, re-read the schedule to verify the update.`,
   tools: ["read_schedule", "move_student", "handle_teacher_callout", "find_booking_gaps"],
   approvalRequired: ["move_student", "handle_teacher_callout"],
   canSpawnSubAgents: false,
@@ -64,7 +73,9 @@ export const RAVEN: AgentDefinition = {
   name: "Raven",
   role: "worker",
   description: "Communication Agent (SMS/Email)",
-  systemPrompt: `You are Raven, the ZiroWork Communication Agent. Your job is to handle all outgoing and incoming communication with parents and students. When Ruby moves a student, you are responsible for sending the notification.`,
+  systemPrompt: `You are Raven, the ZiroWork Communication Agent. You handle all parent/student loops.
+- Use send_sms/send_email to notify about schedule optimizations.
+- All outbound comms must follow the "Brand Voice" (High-tech, High-touch).`,
   tools: ["send_sms", "send_email", "read_inbox"],
   approvalRequired: ["send_sms", "send_email"],
   canSpawnSubAgents: false,
@@ -78,7 +89,7 @@ export const BUB: AgentDefinition = {
   name: "Bub",
   role: "specialist",
   description: "Financial & Billing Manager",
-  systemPrompt: `You are Bub, the ZiroWork Financial Agent. Your job is to handle invoicing, billing, and payroll calculations. You ensure that every lesson taught is correctly tallied and billed.`,
+  systemPrompt: `You are Bub, the ZiroWork Financial Agent. You handle invoicing, billing, and payroll. Ensure every move Ruby makes is vetted for billing impact.`,
   tools: ["read_invoices", "create_invoice", "calculate_payroll", "check_balance"],
   approvalRequired: ["create_invoice"],
   canSpawnSubAgents: false,
@@ -92,7 +103,7 @@ export const SID: AgentDefinition = {
   name: "Sid",
   role: "worker",
   description: "Teacher Agent (Instructor Data & Training)",
-  systemPrompt: `You are Sid, the ZiroWork Teacher Agent. Your job is to manage instructor data, provide feedback based on student notes, and ensure teaching quality. Refer to yourself as 'she/her'.`,
+  systemPrompt: `You are Sid, the ZiroWork Teacher Agent. You manage instructor data and teaching quality. Refer to yourself as 'she/her'.`,
   tools: ["read_instructor", "update_instructor_info", "analyze_teacher_feedback"],
   approvalRequired: ["update_instructor_info"],
   canSpawnSubAgents: false,
@@ -106,7 +117,7 @@ export const STEWIE: AgentDefinition = {
   name: "Stewie",
   role: "specialist",
   description: "Retention & Student Success",
-  systemPrompt: `You are Stewie, the ZiroWork Retention Agent. Your job is to monitor student progress, predict churn, and implement success strategies to keep students enrolled long-term.`,
+  systemPrompt: `You are Stewie, the ZiroWork Retention Agent. You predict churn and monitor progress.`,
   tools: ["predict_churn", "analyze_student_progress", "flag_at_risk_student"],
   approvalRequired: [],
   canSpawnSubAgents: false,
@@ -120,7 +131,7 @@ export const STAR: AgentDefinition = {
   name: "Star",
   role: "worker",
   description: "Leads & Sales Manager",
-  systemPrompt: `You are Star, the ZiroWork Leads Agent. Your job is to manage the sales funnel, convert leads into students, and handle initial onboarding.`,
+  systemPrompt: `You are Star, the ZiroWork Leads Agent. You manage the sales funnel and onboarding.`,
   tools: ["read_leads", "update_lead_status", "schedule_intro_lesson"],
   approvalRequired: ["update_lead_status"],
   canSpawnSubAgents: false,

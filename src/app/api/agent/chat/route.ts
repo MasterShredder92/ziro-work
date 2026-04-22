@@ -9,20 +9,18 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — SCHEDULER & ORCHESTRATOR MODE
+ * ZiroWork Agentic Chat Route — THE SOVEREIGN SYSTEM
  * 
- * Ruby's Tools:
- * 1. read_schedule
- * 2. move_student
- * 3. handle_teacher_callout
- * 4. find_booking_gaps
+ * Hierarchy:
+ * - Ziro: The Director (Strategic Orchestration)
+ * - Ruby, Raven, Bub, Sid, Stewie, Star: Specialist Modules
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
       message,
-      agentId = "ruby",
+      agentId = "ziro",
       messages = [],
       studioId,
     } = body;
@@ -39,51 +37,73 @@ export async function POST(req: NextRequest) {
 
     const agentTools: any = {};
 
-    // 1. read_schedule
+    // 1. get_global_state (Ziro Only)
+    if (agentDef.tools.includes("get_global_state")) {
+      agentTools.get_global_state = {
+        description: "Scan the business for gaps, callouts, and unpaid invoices.",
+        parameters: z.object({
+          scope: z.enum(["all", "schedule", "financials", "leads"]).optional(),
+        }),
+        execute: async (args: any) => await executeTool("get_global_state", args),
+      };
+    }
+
+    // 2. delegate_to_agent (Ziro Only)
+    if (agentDef.tools.includes("delegate_to_agent")) {
+      agentTools.delegate_to_agent = {
+        description: "Command a specialist agent (Ruby, Raven, Bub, Sid, Stewie, Star) to perform a task.",
+        parameters: z.object({
+          agentId: z.string().describe("The ID of the target agent"),
+          toolName: z.string().describe("The name of the tool to execute"),
+          parameters: z.record(z.any()).describe("The input data for the tool"),
+          reason: z.string().describe("Why this move is happening (Revenue, Operational, etc.)"),
+        }),
+        execute: async (args: any) => await executeTool("delegate_to_agent", args),
+      };
+    }
+
+    // 3. Specialist Tools (Ruby's Scheduling)
     if (agentDef.tools.includes("read_schedule")) {
       agentTools.read_schedule = {
-        description: "Read lesson schedule for a location (Bellevue, Elkhorn, Gretna, Omaha).",
+        description: "Read lesson schedule for a location.",
         parameters: z.object({
-          locationName: z.string().describe("Location: Bellevue, Elkhorn, Gretna, or Omaha"),
-          date: z.string().describe("Date (YYYY-MM-DD)"),
+          locationName: z.string().describe("Bellevue, Elkhorn, Gretna, Omaha"),
+          date: z.string().describe("YYYY-MM-DD"),
         }),
         execute: async (args: any) => await executeTool("read_schedule", args),
       };
     }
 
-    // 2. move_student
     if (agentDef.tools.includes("move_student")) {
       agentTools.move_student = {
-        description: "Move a student from one schedule block to another. This reschedules the student.",
+        description: "Move a student between schedule blocks. Requires a reason.",
         parameters: z.object({
-          sourceBlockId: z.string().describe("The ID of the block the student is currently in"),
-          targetBlockId: z.string().describe("The ID of the available block to move the student into"),
-          reason: z.string().optional().describe("Reason for moving the student"),
+          sourceBlockId: z.string(),
+          targetBlockId: z.string(),
+          reason: z.string(),
         }),
         execute: async (args: any) => await executeTool("move_student", args),
       };
     }
 
-    // 3. handle_teacher_callout
     if (agentDef.tools.includes("handle_teacher_callout")) {
       agentTools.handle_teacher_callout = {
-        description: "Find alternative slots for all students of a teacher who called out sick.",
+        description: "Resolve conflicts when a teacher calls out sick.",
         parameters: z.object({
-          teacherName: z.string().describe("The name of the teacher who called out"),
-          date: z.string().describe("Date of the callout (YYYY-MM-DD)"),
-          locationName: z.string().describe("Location name"),
+          teacherName: z.string(),
+          date: z.string(),
+          locationName: z.string(),
         }),
         execute: async (args: any) => await executeTool("handle_teacher_callout", args),
       };
     }
 
-    // 4. find_booking_gaps
     if (agentDef.tools.includes("find_booking_gaps")) {
       agentTools.find_booking_gaps = {
-        description: "Scan for 'Swiss cheese' gaps (single open 30-min slots) to optimize revenue.",
+        description: "Scan for 'Swiss cheese' gaps to optimize revenue.",
         parameters: z.object({
-          locationName: z.string().describe("Location name"),
-          date: z.string().describe("Date (YYYY-MM-DD)"),
+          locationName: z.string(),
+          date: z.string(),
         }),
         execute: async (args: any) => await executeTool("find_booking_gaps", args),
       };

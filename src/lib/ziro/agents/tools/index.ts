@@ -1,15 +1,20 @@
 /**
- * ZiroWork Unified Tool Registry — SCHEDULER & ORCHESTRATOR MODE
+ * ZiroWork Unified Tool Registry — THE SOVEREIGN SYSTEM
  * 
- * Maps tool names to their implementations.
+ * Maps tool names to their implementations across all agents.
  */
 
 import { RUBY_TOOLS } from "./ruby-tools";
 import { SID_TOOLS } from "./sid-tools";
 import { VADER_TOOLS } from "./vader-tools";
 import { RAVEN_TOOLS } from "./raven-tools";
+import { ZIRO_TOOLS } from "./ziro-tools";
 
 export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
+  // Ziro — Director/CEO (Orchestration)
+  delegate_to_agent: (ZIRO_TOOLS as any).delegate_to_agent,
+  get_global_state: (ZIRO_TOOLS as any).get_global_state,
+
   // Ruby — Scheduling & Orchestration
   read_schedule: RUBY_TOOLS.read_schedule,
   move_student: (RUBY_TOOLS as any).move_student,
@@ -29,10 +34,12 @@ export const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any>> = {
   check_balance: VADER_TOOLS.check_balance,
   generate_report: VADER_TOOLS.generate_report,
 
-  // Raven — Analytics
+  // Raven — Analytics & Communication
   analyze_trends: RAVEN_TOOLS.analyze_trends,
   predict_churn: RAVEN_TOOLS.predict_churn,
   generate_insights: RAVEN_TOOLS.generate_insights,
+  send_sms: (RAVEN_TOOLS as any).send_sms,
+  send_email: (RAVEN_TOOLS as any).send_email,
 };
 
 export async function executeTool(
@@ -54,4 +61,4 @@ export async function executeTool(
   }
 }
 
-export { RUBY_TOOLS, SID_TOOLS, VADER_TOOLS, RAVEN_TOOLS };
+export { RUBY_TOOLS, SID_TOOLS, VADER_TOOLS, RAVEN_TOOLS, ZIRO_TOOLS };
