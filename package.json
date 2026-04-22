@@ -28,12 +28,14 @@
     "apply:target-sql": "node scripts/apply-sql-to-target.mjs"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.53",
     "@anthropic-ai/sdk": "^0.88.0",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
     "@types/papaparse": "^5.5.2",
     "@xyflow/react": "^12.10.2",
+    "ai": "^6.0.168",
     "clsx": "^2.1.1",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.4.2",

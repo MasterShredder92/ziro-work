@@ -1,71 +1,277 @@
 import { NextRequest, NextResponse } from "next/server";
+import { streamText, tool } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { z } from "zod";
+import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
+import { executeTool } from "@/lib/ziro/agents/tools";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Max duration for Vercel Hobby/Pro to allow agent execution
+export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Relay
- * Based on the Manus v2 Task Architecture (Ivan Leo, Manus AI)
- * This route transforms a simple chat prompt into an autonomous Manus Task.
+ * ZiroWork Agentic Chat Route
+ *
+ * Architecture: Vercel AI SDK Tool Loop (Observe → Think → Act → Verify)
+ * Model: OpenAI gpt-4.1-mini (direct, no proxy — stable, fast, no DNS issues)
+ * Tools: ZiroWork database tools (Ruby=schedule, Sid=students, Vader=finance, Raven=analytics)
+ * Max Steps: 5 (agent loops up to 5 times to complete a task)
+ *
+ * Manus sk-s- key is reserved for future deep research / autonomous browsing tasks.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message, agentId = "ruby" } = body;
+    const {
+      message,
+      agentId = "ruby",
+      messages = [],
+      studioId,
+    } = body;
 
-    // Use the latest sk-s- key provided by the user
-    const apiKey = process.env.MANUS_API_KEY || "";
-    
-    // Official Manus v2 Task Creation Endpoint
-    const endpoint = "https://api.manus.ai/v2/task.create";
-    
-    console.log(`[ZiroWork Agent] Initializing ${agentId} task: "${message.substring(0, 30)}..."`);
-
-    // We use the exact structure described in the Manus v2 documentation
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-manus-api-key": apiKey,
-        "User-Agent": "ZiroWork-Agentic-Orchestrator/1.0"
-      },
-      body: JSON.stringify({
-        message: {
-          content: message
-        },
-        // Optional: We can provide tool definitions here in the future
-        // for Ruby to actually "touch" the schedule.
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error(`[Manus API] Task Creation Failed: ${response.status}`, data);
+    // Load agent definition (system prompt + allowed tools)
+    const agentDef = getAgentDefinition(agentId);
+    if (!agentDef) {
       return NextResponse.json(
-        { error: `Agent Error: ${data.error?.message || "Failed to initialize agent task"}` },
-        { status: response.status }
+        { error: `Agent "${agentId}" not found` },
+        { status: 404 }
       );
     }
 
-    // The v2 API returns a task object. 
-    // For a seamless chat experience, we return the latest message content.
-    // If it's a long-running task, the first response might be an acknowledgment.
-    const reply = data.task?.latest_message?.content || 
-                  data.task?.status === 'processing' ? 
-                  "I'm looking into that for you right now..." : 
-                  "Task initialized. I'm on it.";
+    // Build message history for multi-turn conversation
+    const messageHistory = [
+      ...messages,
+      { role: "user" as const, content: message },
+    ];
 
-    return NextResponse.json({ 
-      reply,
-      taskId: data.task?.id,
-      status: data.task?.status
+    // Build tool definitions based on agent's allowed tools
+    const agentTools: Record<string, any> = {};
+
+    // ─── RUBY TOOLS (Scheduling) ───────────────────────────────────────────────
+    if (agentDef.tools.includes("read_schedule")) {
+      agentTools.read_schedule = tool({
+        description:
+          "Read the current lesson schedule for a studio. Use this to answer questions about what lessons are scheduled, who is teaching, and when.",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+          startDate: z
+            .string()
+            .describe("Start date in ISO format (e.g. 2026-04-21T00:00:00)"),
+          endDate: z
+            .string()
+            .describe("End date in ISO format (e.g. 2026-04-21T23:59:59)"),
+        }),
+        execute: async ({ studioId: sid, startDate, endDate }) => {
+          return await executeTool("read_schedule", {
+            studioId: sid || studioId,
+            startDate,
+            endDate,
+          });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("check_conflicts")) {
+      agentTools.check_conflicts = tool({
+        description:
+          "Check for scheduling conflicts for an instructor or room in a given time window.",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+          instructorId: z
+            .string()
+            .optional()
+            .describe("Instructor ID to check"),
+          startTime: z.string().describe("Start time in ISO format"),
+          endTime: z.string().describe("End time in ISO format"),
+        }),
+        execute: async (params) => {
+          return await executeTool("check_conflicts", {
+            ...params,
+            studioId: params.studioId || studioId,
+          });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("suggest_slot")) {
+      agentTools.suggest_slot = tool({
+        description:
+          "Suggest available time slots for a lesson based on instructor availability.",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+          instructorId: z.string().describe("Instructor ID"),
+          durationMinutes: z.number().describe("Lesson duration in minutes"),
+          preferredDate: z
+            .string()
+            .describe("Preferred date in YYYY-MM-DD format"),
+        }),
+        execute: async (params) => {
+          return await executeTool("suggest_slot", {
+            ...params,
+            studioId: params.studioId || studioId,
+          });
+        },
+      });
+    }
+
+    // ─── SID TOOLS (Student & Instructor Data) ────────────────────────────────
+    if (agentDef.tools.includes("read_student")) {
+      agentTools.read_student = tool({
+        description:
+          "Read a student's profile, contact info, and enrollment details.",
+        parameters: z.object({
+          studentId: z.string().describe("The student ID"),
+        }),
+        execute: async ({ studentId }) => {
+          return await executeTool("read_student", { studentId });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("get_lesson_history")) {
+      agentTools.get_lesson_history = tool({
+        description:
+          "Get the lesson history for a student — past lessons, attendance, and progress.",
+        parameters: z.object({
+          studentId: z.string().describe("The student ID"),
+          limit: z
+            .number()
+            .optional()
+            .describe("Number of lessons to return (default 20)"),
+        }),
+        execute: async ({ studentId, limit }) => {
+          return await executeTool("get_lesson_history", { studentId, limit });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("read_instructor")) {
+      agentTools.read_instructor = tool({
+        description:
+          "Read an instructor's profile, availability, and assigned students.",
+        parameters: z.object({
+          instructorId: z.string().describe("The instructor ID"),
+        }),
+        execute: async ({ instructorId }) => {
+          return await executeTool("read_instructor", { instructorId });
+        },
+      });
+    }
+
+    // ─── VADER TOOLS (Financial) ──────────────────────────────────────────────
+    if (agentDef.tools.includes("check_balance")) {
+      agentTools.check_balance = tool({
+        description:
+          "Check the studio's financial balance — revenue, outstanding invoices, and overdue amounts.",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+        }),
+        execute: async ({ studioId: sid }) => {
+          return await executeTool("check_balance", {
+            studioId: sid || studioId,
+          });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("read_invoices")) {
+      agentTools.read_invoices = tool({
+        description:
+          "Read invoices for a studio — filter by status (paid, unpaid, overdue).",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+          status: z
+            .enum(["paid", "unpaid", "overdue", "all"])
+            .optional()
+            .describe("Filter by invoice status"),
+        }),
+        execute: async (params) => {
+          return await executeTool("read_invoices", {
+            ...params,
+            studioId: params.studioId || studioId,
+          });
+        },
+      });
+    }
+
+    // ─── RAVEN TOOLS (Analytics) ──────────────────────────────────────────────
+    if (agentDef.tools.includes("analyze_trends")) {
+      agentTools.analyze_trends = tool({
+        description:
+          "Analyze trends in attendance, revenue, or student enrollment over a time period.",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+          metric: z
+            .enum(["attendance", "revenue", "new_students", "cancellations"])
+            .describe("The metric to analyze"),
+          days: z
+            .number()
+            .optional()
+            .describe("Number of days to look back (default 30)"),
+        }),
+        execute: async (params) => {
+          return await executeTool("analyze_trends", {
+            ...params,
+            studioId: params.studioId || studioId,
+          });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("predict_churn")) {
+      agentTools.predict_churn = tool({
+        description:
+          "Identify students at risk of churning (no lessons in 30+ days).",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+        }),
+        execute: async ({ studioId: sid }) => {
+          return await executeTool("predict_churn", {
+            studioId: sid || studioId,
+          });
+        },
+      });
+    }
+
+    if (agentDef.tools.includes("generate_insights")) {
+      agentTools.generate_insights = tool({
+        description:
+          "Generate a comprehensive insights report — attendance, churn risk, and recommendations.",
+        parameters: z.object({
+          studioId: z.string().describe("The studio ID"),
+        }),
+        execute: async ({ studioId: sid }) => {
+          return await executeTool("generate_insights", {
+            studioId: sid || studioId,
+          });
+        },
+      });
+    }
+
+    // ─── STREAM THE RESPONSE ──────────────────────────────────────────────────
+    const result = streamText({
+      model: openai("gpt-4.1-mini"),
+      system: agentDef.systemPrompt,
+      messages: messageHistory,
+      tools: agentTools,
+      maxSteps: 5, // Tool loop: Observe → Think → Act → Verify (up to 5 steps)
+      onStepFinish: ({ stepType, toolCalls }) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[${agentDef.name}] Step: ${stepType}`, {
+            tools: toolCalls?.map((t) => t.toolName),
+          });
+        }
+      },
     });
 
+    return result.toDataStreamResponse();
   } catch (error: any) {
-    console.error("[ZiroWork Agent Error]:", error);
+    console.error("[Agent Chat Error]:", error);
     return NextResponse.json(
-      { error: "The agent is currently unavailable. Please check your connection." },
+      {
+        error: `Agent Error: ${
+          error.message || "The agent system is currently unavailable"
+        }`,
+      },
       { status: 500 }
     );
   }
