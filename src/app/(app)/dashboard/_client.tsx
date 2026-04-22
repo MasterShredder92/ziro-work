@@ -31,8 +31,7 @@ function BlockSkeleton({ rows }: { rows: number }) {
   );
 }
 
-  { loading: () => <AgentGridSkeleton /> },
-);
+// Agent grid removed
 
 const QuickActions = dynamic(
   () => import("@/components/dashboard/QuickActions").then((m) => ({ default: m.QuickActions })),

@@ -133,4 +133,48 @@ export function LeadKanbanBoard({
 
   const totalLeads = Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0);
   return (
-    <div>
+    <div className="space-y-4">
+      {err && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          {err}
+        </div>
+      )}
+      <div className="text-xs text-[var(--z-muted)]">{totalLeads} total leads</div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {STAGES.map((stage) => (
+          <div key={stage} className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-3">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--z-muted)]">
+              {stage} ({(grouped[stage] ?? []).length})
+            </div>
+            <div className="space-y-2">
+              {(grouped[stage] ?? []).map((lead) => (
+                <div key={lead.id} className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-2 text-sm">
+                  <div className="font-medium text-[var(--z-fg)]">{lead.name}</div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {STAGES.filter((s) => s !== stage).map((s) => (
+                      <button
+                        key={s}
+                        disabled={busyId === lead.id}
+                        onClick={() => patchStage(lead.id, s)}
+                        className="rounded border border-[var(--z-border)] px-1.5 py-0.5 text-[10px] text-[var(--z-muted)] hover:text-[var(--z-fg)] disabled:opacity-50"
+                      >
+                        → {s}
+                      </button>
+                    ))}
+                    <button
+                      disabled={busyId === lead.id}
+                      onClick={() => convertLead(lead.id)}
+                      className="rounded border border-green-500/40 px-1.5 py-0.5 text-[10px] text-green-400 hover:bg-green-500/10 disabled:opacity-50"
+                    >
+                      Convert
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

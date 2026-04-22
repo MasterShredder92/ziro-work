@@ -94,9 +94,7 @@ export async function POST(req: NextRequest) {
       payload: { lead: row },
     };
     await emitEvent(leadEvent);
-    // Fire-and-forget: Star processes the event (sends welcome email, updates stage)
-      console.error("[leads] Agent event processing failed:", e)
-    );
+    // Agent event processing removed
     return created({ data: row });
   } catch (err) {
     return serverError(err);

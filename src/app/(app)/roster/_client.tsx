@@ -454,9 +454,6 @@ export function RosterClient({ families, students, teacherNames, locationStats }
 
   return (
     <PageShell title="Roster">
-            ))}
-          </div>
-        </div>
 
         {/* ── Filters ── */}
         <div className="flex flex-wrap items-center gap-3">

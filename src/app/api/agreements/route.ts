@@ -101,9 +101,7 @@ export async function PATCH(req: NextRequest) {
         payload: { agreement: row },
       };
       await emitEvent(signedEvent);
-      // Fire-and-forget: Sid activates the student
-        console.error("[agreements] Agent event processing failed:", e)
-      );
+      // Agent event processing removed
     }
     return ok({ data: row });
   } catch (err) {

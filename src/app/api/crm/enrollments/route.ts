@@ -73,8 +73,7 @@ export async function POST(req: NextRequest) {
       entityId: parsed.data.studentId,
       payload: { enrollment: row, teacherId: parsed.data.teacherId, studentId: parsed.data.studentId },
     };
-      console.error("[enrollments] Agent event processing failed:", e)
-    );
+    // Agent event processing removed
     return created({ data: row });
   } catch (err) {
     return serverError(err);
