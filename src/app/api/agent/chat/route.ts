@@ -10,50 +10,85 @@ export async function POST(req: NextRequest) {
     // Use the latest key provided by the user: sk-s-3zKuff...
     const apiKey = process.env.MANUS_API_KEY || "";
     
-    // Official Manus API endpoint - api.manus.ai is more globally resolvable than api.manus.im
-    const endpoint = "https://api.manus.ai/v2/task.create";
+    // We will try the most likely endpoints and header combinations
+    // based on the user's latest documentation and sk- key logic.
     
-    console.log(`[Manus API] Direct relay request to ${endpoint}`);
+    const tryRequest = async (url: string, headers: any, body: any) => {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            ...headers
+          },
+          body: JSON.stringify(body)
+        });
+        return response;
+      } catch (e) {
+        return null;
+      }
+    };
 
-    // Pure fetch request with standard headers to bypass Vercel Bot Protection and DNS issues
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-manus-api-key": apiKey,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      },
-      body: JSON.stringify({
-        message: {
-          content: message
-        }
-      })
-    });
+    // Attempt 1: Standard V2 Task API with sk- key in Authorization header
+    // (Based on user's suggestion that sk- keys use Bearer)
+    console.log("[Manus API] Attempt 1: api.manus.ai/v2 with Bearer token");
+    let response = await tryRequest(
+      "https://api.manus.ai/v2/task.create",
+      { "Authorization": `Bearer ${apiKey}` },
+      { message: { content: message } }
+    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error(`[Manus API] Error: ${response.status}`, data);
-      return NextResponse.json(
-        { error: `Agent Error: ${data.error?.message || "Authentication or Network Error"}` },
-        { status: response.status }
+    // Attempt 2: Standard V2 Task API with sk- key in x-manus-api-key header
+    if (!response || !response.ok) {
+      console.log("[Manus API] Attempt 2: api.manus.ai/v2 with x-manus-api-key header");
+      response = await tryRequest(
+        "https://api.manus.ai/v2/task.create",
+        { "x-manus-api-key": apiKey },
+        { message: { content: message } }
       );
     }
 
-    // According to Manus v2 docs, it returns a task object
-    const reply = data.task?.latest_message?.content || "Ruby has received your request and is processing it.";
+    // Attempt 3: OpenAI-compatible proxy on open.manus.im (New SK logic)
+    if (!response || !response.ok) {
+      console.log("[Manus API] Attempt 3: open.manus.im/v1 with Bearer token");
+      response = await tryRequest(
+        "https://open.manus.im/v1/chat/completions",
+        { "Authorization": `Bearer ${apiKey}` },
+        {
+          model: "gpt-4.1-mini",
+          messages: [{ role: "user", content: message }]
+        }
+      );
+    }
+
+    if (!response || !response.ok) {
+      const errorData = response ? await response.json().catch(() => ({})) : {};
+      console.error(`[Manus API] All attempts failed. Last status: ${response?.status}`, errorData);
+      return NextResponse.json(
+        { error: `Agent Error: ${errorData.error?.message || "All connection attempts failed. Check Vercel Firewall/DNS."}` },
+        { status: response?.status || 500 }
+      );
+    }
+
+    const data = await response.json();
+    
+    // Extract reply based on which API format succeeded
+    let reply = "";
+    if (data.task?.latest_message?.content) {
+      reply = data.task.latest_message.content;
+    } else if (data.choices?.[0]?.message?.content) {
+      reply = data.choices[0].message.content;
+    } else {
+      reply = "Ruby has received your request and is processing it.";
+    }
 
     return NextResponse.json({ reply });
 
   } catch (error: any) {
     console.error("[Manus API Error]:", error);
-    // Provide a clearer error message for network issues
-    const errorMessage = error.code === 'ENOTFOUND' 
-      ? "Manus API domain could not be resolved. Please check Vercel DNS settings."
-      : (error.message || "An unexpected error occurred");
-      
     return NextResponse.json(
-      { error: errorMessage },
+      { error: error.message || "An unexpected error occurred" },
       { status: 500 }
     );
   }
