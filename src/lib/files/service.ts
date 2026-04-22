@@ -349,23 +349,7 @@ export async function createFile({
     createdBy: context.userId,
     updatedBy: context.userId,
   });
-  try {
-    const { evaluateTriggers } = await import("@/lib/automation/workflows/automationOps");
-    await evaluateTriggers({
-      tenantId,
-      triggerType: "file.uploaded",
-      payload: {
-        fileId: created.id,
-        folderId: created.folderId,
-        name: created.name,
-        mimeType: created.mimeType,
-        size: created.size,
-      },
-      triggeredBy: context.userId,
-    });
-  } catch {
-    /* noop */
-  }
+  // automation removed — file.uploaded trigger is a no-op until agents are rebuilt
   return created;
 }
 

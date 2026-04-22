@@ -3,7 +3,7 @@ import { assertTenantAccess } from "@/lib/auth/guards";
 import { getSession } from "@/lib/auth/session";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { logAudit } from "@/lib/audit/log";
-import { dispatchAutomationEvent } from "@/lib/automation/engine";
+// automation removed
 import {
   createForm,
   createSubmission,
@@ -503,30 +503,7 @@ export async function submitForm(
     status: submission.status,
   });
 
-  let automationsDispatched = 0;
-  try {
-    const executions = await dispatchAutomationEvent("form.submitted", {
-      tenantId: form.tenantId,
-      profileId: submission.profileId ?? undefined,
-      locationId: context.locationId ?? undefined,
-      data: {
-        formId: form.id,
-        formName: form.name,
-        formSlug: form.slug,
-        submissionId: submission.id,
-        status: submission.status,
-        answers: submission.answers,
-      },
-    });
-    automationsDispatched = executions.length;
-  } catch (err) {
-    await logAudit("forms.automation.failure", {
-      tenantId: form.tenantId,
-      formId: form.id,
-      submissionId: submission.id,
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
+  const automationsDispatched = 0; // automation removed — no-op until agents rebuilt
 
   return {
     submission,

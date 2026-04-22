@@ -151,6 +151,7 @@ export function TeachersClient() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
   const [search, setSearch] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
 
   const loadTeachers = useCallback(() => {
     setLoading(true);
@@ -186,7 +187,10 @@ export function TeachersClient() {
         <div className="shrink-0 border-b border-[#1c1c1e] px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <PageHeader title="Teachers" subtitle="Staff directory, pay rates, and W-9 status" />
-            <Link href="/crm/teachers/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ Add Teacher</Link>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowInvite(true)} className="shrink-0 rounded-lg border border-[#1c1c1e] px-4 py-2 text-sm font-semibold text-[#909098] hover:text-white hover:border-[#2b2b2f] transition-colors">✉ Invite Teacher</button>
+              <Link href="/crm/teachers/new" className="shrink-0 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ Add Teacher</Link>
+            </div>
           </div>
           <div className="mt-3">
           </div>
@@ -283,6 +287,109 @@ export function TeachersClient() {
 
         </div>
       </div>
+      {showInvite && <InviteTeacherModal onClose={() => setShowInvite(false)} onSent={() => { setShowInvite(false); loadTeachers(); }} />}
     </PageTransition>
+  );
+}
+
+// ── Invite Teacher Modal ──────────────────────────────────────────────────────
+function InviteTeacherModal({ onClose, onSent }: { onClose: () => void; onSent: () => void }) {
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  async function handleSend() {
+    if (!email.trim()) { setError("Email is required"); return; }
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/teachers/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), first_name: firstName.trim(), last_name: lastName.trim() }),
+      });
+      const j = await res.json().catch(() => ({})) as { error?: string; ok?: boolean; note?: string };
+      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`);
+      setSuccess(true);
+      setTimeout(() => onSent(), 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send invite");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-[#1c1c1e] bg-[#0a0a0c] p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <div className="text-base font-bold text-white">Invite Teacher</div>
+            <div className="text-xs text-[#505055] mt-0.5">Sends a magic link to their email to set up their account.</div>
+          </div>
+          <button onClick={onClose} className="text-[#505055] hover:text-white text-lg">✕</button>
+        </div>
+        {success ? (
+          <div className="rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 px-4 py-3 text-sm font-semibold text-[#00ff88]">
+            ✓ Invite sent to {email}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="mb-1 block text-xs font-semibold text-[#505055]">First Name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  placeholder="Jane"
+                  className="w-full rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder:text-[#303035] focus:border-[#00ff88]/40 focus:outline-none"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="mb-1 block text-xs font-semibold text-[#505055]">Last Name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  placeholder="Smith"
+                  className="w-full rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder:text-[#303035] focus:border-[#00ff88]/40 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#505055]">Email <span className="text-[#ef4444]">*</span></label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError(null); }}
+                onKeyDown={e => e.key === "Enter" && handleSend()}
+                placeholder="teacher@example.com"
+                className="w-full rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder:text-[#303035] focus:border-[#00ff88]/40 focus:outline-none"
+              />
+            </div>
+            {error && <p className="text-xs text-[#ef4444]">{error}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-[#1c1c1e] py-2 text-sm font-semibold text-[#505055] hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending || !email.trim()}
+                className="flex-1 rounded-lg bg-[#00ff88]/10 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors disabled:opacity-50"
+              >
+                {sending ? "Sending…" : "Send Invite"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

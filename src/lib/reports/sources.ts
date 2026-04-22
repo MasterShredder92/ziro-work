@@ -31,8 +31,7 @@ import { listAssessmentAttempts } from "@data/assessmentAttempts";
 import { listForms, listFormSubmissions } from "@data/forms";
 import { listThreads } from "@data/messageThreads";
 import { listMessages } from "@data/messageRecords";
-import { listAutomationRuns } from "@data/automationRuns";
-import { listAutomationLogs } from "@data/automationLogs";
+// automation removed
 
 import type { ReportSource } from "./types";
 
@@ -93,10 +92,8 @@ const SOURCE_FETCHERS: Record<ReportSource, Fetcher> = {
     safeFetch(() => listThreads(t, undefined, { limit: SAFETY_LIMIT })),
   messages: (t) =>
     safeFetch(() => listMessages(t, undefined, { limit: SAFETY_LIMIT })),
-  automation_runs: (t) =>
-    safeFetch(() => listAutomationRuns(t, undefined, { limit: SAFETY_LIMIT })),
-  automation_logs: (t) =>
-    safeFetch(() => listAutomationLogs(t, undefined, { limit: SAFETY_LIMIT })),
+  automation_runs: () => Promise.resolve([]), // automation removed
+  automation_logs: () => Promise.resolve([]), // automation removed
 };
 
 /**

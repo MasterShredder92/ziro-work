@@ -534,47 +534,74 @@ export function InvoicesClient({
   );
 }
 
-// ── Create Invoice Modal ─────────────────────────────────────────────────────
+// ── Invoice Builder Modal ─────────────────────────────────────────────────────
+// Full-featured invoice builder: line items, theme toggle, location logo,
+// Google Review toggle, student/family linking, live total calculation.
+
+type LineItem = {
+  id: string;
+  description: string;
+  quantity: string;
+  unit_price: string;
+  is_makeup: boolean;
+};
+
+function newLineItem(): LineItem {
+  return { id: Math.random().toString(36).slice(2), description: "", quantity: "1", unit_price: "", is_makeup: false };
+}
+
 function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
-  // Family search autocomplete
+  // ── Family / Student search ──
   const [searchQuery, setSearchQuery] = React.useState("");
   const [searchResults, setSearchResults] = React.useState<{ id: string; name: string; primary_email: string | null }[]>([]);
   const [selectedFamilyId, setSelectedFamilyId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searching, setSearching] = React.useState(false);
 
-  // Invoice fields
+  // ── Invoice fields ──
   const [customerName, setCustomerName] = React.useState("");
   const [customerEmail, setCustomerEmail] = React.useState("");
-  const [amountDollars, setAmountDollars] = React.useState("");
+  const [locationId, setLocationId] = React.useState("");
   const [dueDate, setDueDate] = React.useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   });
   const [note, setNote] = React.useState("");
+  const [lineItems, setLineItems] = React.useState<LineItem[]>([newLineItem()]);
+  const [themePreference, setThemePreference] = React.useState<"dark" | "light">("dark");
+  const [googleReview, setGoogleReview] = React.useState(false);
+
+  // ── UI state ──
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
+  const [createdToken, setCreatedToken] = React.useState<string | null>(null);
 
-  // Debounced family search
+  // ── Computed total ──
+  const subtotal = lineItems.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const price = parseFloat(item.unit_price) || 0;
+    return sum + qty * price;
+  }, 0);
+
+  // ── Location logo ──
+  const locationInfo = LOCATIONS.find(l => l.id === locationId);
+
+  // ── Debounced family search ──
   React.useEffect(() => {
-    if (!searchQuery.trim() || selectedFamilyId) { setSearchResults([]); setShowDropdown(false); return; }
-    const t = setTimeout(async () => {
+    if (searchQuery.length < 2) { setSearchResults([]); setShowDropdown(false); return; }
+    const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`/api/families?search=${encodeURIComponent(searchQuery.trim())}&limit=10`);
-        if (res.ok) {
-          const j = await res.json();
-          const items = (j?.data ?? []) as { id: string; name: string; primary_email: string | null }[];
-          setSearchResults(items);
-          setShowDropdown(items.length > 0);
-        }
-      } finally {
-        setSearching(false);
-      }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [searchQuery, selectedFamilyId]);
+        const res = await fetch(`/api/families?search=${encodeURIComponent(searchQuery)}&limit=8`);
+        const j = await res.json();
+        setSearchResults(j.data ?? []);
+        setShowDropdown(true);
+      } catch { /* noop */ }
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   function selectFamily(f: { id: string; name: string; primary_email: string | null }) {
     setSelectedFamilyId(f.id);
@@ -582,181 +609,338 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
     setCustomerEmail(f.primary_email ?? "");
     setSearchQuery(f.name);
     setShowDropdown(false);
-    setSearchResults([]);
   }
 
-  function clearFamily() {
-    setSelectedFamilyId(null);
-    setSearchQuery("");
-    setCustomerName("");
-    setCustomerEmail("");
-    setSearchResults([]);
-    setShowDropdown(false);
+  // ── Line item helpers ──
+  function updateItem(id: string, field: keyof LineItem, value: string | boolean) {
+    setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   }
+  function addItem() { setLineItems(prev => [...prev, newLineItem()]); }
+  function removeItem(id: string) { setLineItems(prev => prev.filter(i => i.id !== id)); }
 
+  // ── Submit ──
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!customerName.trim() || !amountDollars || !dueDate) return;
+    if (!customerName.trim()) { setError("Customer name is required."); return; }
+    if (subtotal <= 0) { setError("Add at least one line item with a price."); return; }
     setSaving(true);
     setError(null);
     try {
+      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const payload = {
+        family_id: selectedFamilyId,
+        customer_name: customerName.trim(),
+        customer_email: customerEmail.trim() || null,
+        location_id: locationId || null,
+        due_date: dueDate,
+        notes: note.trim() || null,
+        amount_cents: Math.round(subtotal * 100),
+        subtotal_cents: Math.round(subtotal * 100),
+        total_cents: Math.round(subtotal * 100),
+        status: "draft",
+        theme_preference: themePreference,
+        google_review_enabled: googleReview,
+        live_url_token: token,
+        line_items: lineItems.filter(i => i.description.trim()).map(i => ({
+          description: i.description.trim(),
+          quantity: parseFloat(i.quantity) || 1,
+          unit_price: parseFloat(i.unit_price) || 0,
+          is_makeup_session: i.is_makeup,
+        })),
+      };
       const res = await fetch("/api/invoices/create", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          customer_name: customerName.trim(),
-          customer_email: customerEmail.trim() || null,
-          family_id: selectedFamilyId,
-          amount_cents: Math.round(parseFloat(amountDollars) * 100),
-          due_date: dueDate,
-          note: note.trim() || null,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error ?? "Failed to create invoice");
-      }
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error ?? "Failed to create invoice");
+      setCreatedToken(token);
       setSuccess(true);
-      setTimeout(() => { onClose(); window.location.reload(); }, 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   }
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative w-full max-w-md rounded-2xl border border-[#2b2b2f] bg-[#0f0f12] p-6 shadow-2xl space-y-4"
-        onClick={e => e.stopPropagation()}
-      >
-        <h3 className="text-base font-bold text-white">Create Invoice</h3>
-        {success ? (
-          <p className="text-sm text-[#00ff88] font-semibold">Invoice created successfully!</p>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
+  // ── Success screen ──
+  if (success) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--z-border)] bg-[var(--z-bg)] p-8 text-center space-y-4">
+          <div className="text-5xl">✅</div>
+          <div className="text-lg font-bold text-[var(--z-fg)]">Invoice Created</div>
+          <div className="text-sm text-[var(--z-muted)]">
+            Draft saved. Share the live link with the family when ready.
+          </div>
+          {createdToken && (
+            <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-xs font-mono text-[var(--z-fg)] break-all">
+              /invoice/{createdToken}
+            </div>
+          )}
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl bg-[var(--z-accent)] py-2.5 text-sm font-semibold text-[var(--z-on-accent)] hover:opacity-90 transition-opacity"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-            {/* Family search autocomplete */}
-            <div className="space-y-1 relative">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">
-                Family <span className="text-[#00ff88]">*</span>
-              </label>
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  autoFocus
-                  required
-                  value={searchQuery}
-                  onChange={e => { setSearchQuery(e.target.value); if (selectedFamilyId) clearFamily(); }}
-                  placeholder="Search by family name or email…"
-                  className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none pr-8"
-                />
-                {searching && (
-                  <span className="absolute right-3 text-[10px] text-[#505055]">searching…</span>
-                )}
-                {selectedFamilyId && (
-                  <button type="button" onClick={clearFamily} className="absolute right-3 text-[#505055] hover:text-white text-xs">✕</button>
-                )}
+  // ── Builder UI ──
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--z-border)] bg-[var(--z-bg)]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[var(--z-border)] px-6 py-4">
+          <div>
+            <div className="text-base font-bold text-[var(--z-fg)]">Invoice Builder</div>
+            <div className="text-xs text-[var(--z-muted)]">Draft saves automatically — send when ready</div>
+          </div>
+          <button onClick={onClose} className="text-[var(--z-muted)] hover:text-[var(--z-fg)] text-xl leading-none">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* ── Row 1: Theme + Location ── */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Theme toggle */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Invoice Theme</label>
+              <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
+                {(["dark", "light"] as const).map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setThemePreference(t)}
+                    className="flex-1 py-2 capitalize transition-colors"
+                    style={{
+                      background: themePreference === t ? "var(--z-accent)" : "var(--z-surface)",
+                      color: themePreference === t ? "var(--z-on-accent)" : "var(--z-muted)",
+                      fontWeight: themePreference === t ? 700 : 400,
+                    }}
+                  >
+                    {t === "dark" ? "🌙 Dark" : "☀️ Light"}
+                  </button>
+                ))}
               </div>
-              {showDropdown && (
-                <div className="absolute z-10 w-full mt-1 rounded-xl border border-[#2b2b2f] bg-[#0f0f12] shadow-2xl overflow-hidden">
-                  {searchResults.map(f => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => selectFamily(f)}
-                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-[#1a1a1e] transition-colors"
-                    >
-                      <span className="text-white font-medium">{f.name}</span>
-                      {f.primary_email && <span className="ml-2 text-[#505055] text-xs">{f.primary_email}</span>}
-                    </button>
-                  ))}
+            </div>
+            {/* Location */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Location</label>
+              <select
+                value={locationId}
+                onChange={e => setLocationId(e.target.value)}
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map(l => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+              {locationInfo && (
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: locationInfo.color }}>
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: locationInfo.color }} />
+                  {locationInfo.name} logo will appear on invoice
                 </div>
               )}
-              {selectedFamilyId && (
-                <p className="text-[10px] text-[#00ff88]">Family selected — name and email pre-filled below</p>
-              )}
             </div>
+          </div>
 
-            {/* Auto-populated fields (editable) */}
-            <div className="space-y-1">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Customer Name <span className="text-[#00ff88]">*</span></label>
+          {/* ── Row 2: Family search ── */}
+          <div className="space-y-1.5 relative">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+              Family / Customer <span className="text-[var(--z-accent)]">*</span>
+            </label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search family name…"
+              className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+            />
+            {searching && <div className="absolute right-3 top-8 text-xs text-[var(--z-muted)]">Searching…</div>}
+            {showDropdown && searchResults.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] shadow-xl overflow-hidden">
+                {searchResults.map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => selectFamily(f)}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-[var(--z-surface-hover)] transition-colors"
+                  >
+                    <span className="font-medium text-[var(--z-fg)]">{f.name}</span>
+                    {f.primary_email && <span className="ml-2 text-[var(--z-muted)] text-xs">{f.primary_email}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedFamilyId && (
+              <p className="text-[10px] text-[var(--z-accent)]">✓ Family linked — name and email pre-filled</p>
+            )}
+          </div>
+
+          {/* ── Row 3: Name + Email ── */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+                Customer Name <span className="text-[var(--z-accent)]">*</span>
+              </label>
               <input
                 type="text"
                 required
                 value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
-                placeholder="Auto-filled from family selection"
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
+                placeholder="Auto-filled from family"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               />
             </div>
-            <div className="space-y-1">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Email</label>
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Email</label>
               <input
                 type="email"
                 value={customerEmail}
                 onChange={e => setCustomerEmail(e.target.value)}
-                placeholder="Auto-filled from family selection"
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
+                placeholder="Auto-filled from family"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               />
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Amount ($) <span className="text-[#00ff88]">*</span></label>
-                <input
-                  type="number"
-                  required
-                  min="0.01"
-                  step="0.01"
-                  value={amountDollars}
-                  onChange={e => setAmountDollars(e.target.value)}
-                  placeholder="45.00"
-                  className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Due Date <span className="text-[#00ff88]">*</span></label>
-                <input
-                  type="date"
-                  required
-                  value={dueDate}
-                  onChange={e => setDueDate(e.target.value)}
-                  className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
-                />
-              </div>
+          {/* ── Row 4: Due Date + Note ── */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
+                Due Date <span className="text-[var(--z-accent)]">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+              />
             </div>
-            <div className="space-y-1">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#909098]">Note</label>
-              <textarea
-                rows={2}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Note</label>
+              <input
+                type="text"
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                placeholder="Optional note or description"
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white placeholder-[#505055] focus:border-[#00ff88]/50 focus:outline-none resize-none"
+                placeholder="Optional note"
+                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
               />
             </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            <div className="flex gap-2 pt-1">
+          </div>
+
+          {/* ── Line Items ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Line Items</label>
               <button
                 type="button"
-                onClick={onClose}
-                className="flex-1 rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2.5 text-sm font-semibold text-[#909098] hover:text-white transition-colors"
+                onClick={addItem}
+                className="text-xs font-semibold text-[var(--z-accent)] hover:opacity-80 transition-opacity"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving || !customerName.trim() || !amountDollars || !dueDate}
-                className="flex-1 rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-40 hover:bg-[#00ff88]/25 transition-colors"
-              >
-                {saving ? "Creating…" : "Create Invoice"}
+                + Add Item
               </button>
             </div>
-          </form>
-        )}
+            {/* Column headers */}
+            <div className="grid grid-cols-[1fr_80px_90px_32px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] px-1">
+              <span>Description</span>
+              <span>Qty</span>
+              <span>Unit Price</span>
+              <span />
+            </div>
+            {lineItems.map(item => (
+              <div key={item.id} className="grid grid-cols-[1fr_80px_90px_32px] gap-2 items-center">
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    value={item.description}
+                    onChange={e => updateItem(item.id, "description", e.target.value)}
+                    placeholder="e.g. Guitar lesson – June"
+                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2.5 py-1.5 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                  />
+                  <label className="flex items-center gap-1.5 text-[10px] text-[var(--z-muted)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.is_makeup}
+                      onChange={e => updateItem(item.id, "is_makeup", e.target.checked)}
+                      className="rounded"
+                    />
+                    5th-week makeup
+                  </label>
+                </div>
+                <input
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={item.quantity}
+                  onChange={e => updateItem(item.id, "quantity", e.target.value)}
+                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2.5 py-1.5 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.unit_price}
+                  onChange={e => updateItem(item.id, "unit_price", e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-2.5 py-1.5 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(item.id)}
+                  disabled={lineItems.length === 1}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--z-muted)] hover:text-red-400 disabled:opacity-30 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {/* Total */}
+            <div className="flex justify-end pt-2 border-t border-[var(--z-border)]">
+              <div className="text-sm font-bold text-[var(--z-fg)]">
+                Total: <span className="text-[var(--z-accent)]">${subtotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Toggles ── */}
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm text-[var(--z-muted)] cursor-pointer select-none">
+              <div
+                onClick={() => setGoogleReview(v => !v)}
+                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${googleReview ? "bg-[var(--z-accent)]" : "bg-[var(--z-surface-2)]"}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${googleReview ? "translate-x-4" : ""}`} />
+              </div>
+              Google Review button on invoice
+            </label>
+          </div>
+
+          {error && <p className="text-xs text-red-400">{error}</p>}
+
+          {/* ── Actions ── */}
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-2.5 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !customerName.trim() || subtotal <= 0}
+              className="flex-1 rounded-xl border border-[var(--z-accent)]/40 bg-[var(--z-accent)]/15 px-3 py-2.5 text-sm font-semibold text-[var(--z-accent)] disabled:opacity-40 hover:bg-[var(--z-accent)]/25 transition-colors"
+            >
+              {saving ? "Creating…" : "Create Invoice"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

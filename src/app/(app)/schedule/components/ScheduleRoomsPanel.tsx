@@ -419,8 +419,8 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
   );
 }
 
-// ── Ruby mismatch checker sub-component ──────────────────────────────────────
-function RubyMismatchChecker({ room, onCheck }: { room: ScheduleRoom; onCheck: (msg: string) => void }) {
+// ── Room fit checker sub-component ──────────────────────────────────────────
+function RoomFitChecker({ room, onCheck }: { room: ScheduleRoom; onCheck: (msg: string) => void }) {
   const [instrument, setInstrument] = React.useState("");
   const [result, setResult] = React.useState<{ ok: boolean; message: string } | null>(null);
 
@@ -447,7 +447,7 @@ function RubyMismatchChecker({ room, onCheck }: { room: ScheduleRoom; onCheck: (
   return (
     <div className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 space-y-2">
       <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
-        Ruby: Check Instrument Fit
+        Room Fit Check
       </div>
       <div className="flex gap-2">
         <input

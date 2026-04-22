@@ -1,13 +1,7 @@
 import "server-only";
-import { dispatchAutomationEvent } from "@/lib/automation/engine";
-import type { AutomationExecution } from "@/lib/automation/types";
+// automation removed — triggers are no-ops until agents are rebuilt
 import type { ContentItemRow } from "@data/contentItems";
 
-/**
- * Content triggers — dispatch automation events tied to the content library.
- * These integrate with Automation OS without requiring any changes to its
- * public types (BuiltInTrigger is `event: BuiltInTrigger | string`).
- */
 export const CONTENT_TRIGGER_EVENTS = [
   "content.created",
   "content.updated",
@@ -34,26 +28,17 @@ export type ContentTriggerPayload = {
 };
 
 export async function fireContentTrigger(
-  event: ContentTriggerEvent,
-  payload: ContentTriggerPayload,
-): Promise<AutomationExecution[]> {
-  return dispatchAutomationEvent(event, {
-    tenantId: payload.tenantId,
-    profileId: payload.profileId ?? null,
-    data: {
-      itemId: payload.itemId,
-      folderId: payload.folderId ?? null,
-      tag: payload.tag,
-      ...(payload.data ?? {}),
-    },
-  });
+  _event: ContentTriggerEvent,
+  _payload: ContentTriggerPayload,
+): Promise<void> {
+  // no-op until automation agents are rebuilt
 }
 
 export async function fireContentItemEvent(
   event: ContentTriggerEvent,
   item: ContentItemRow,
   extras?: Record<string, unknown>,
-): Promise<AutomationExecution[]> {
+): Promise<void> {
   return fireContentTrigger(event, {
     tenantId: item.tenant_id,
     itemId: item.id,

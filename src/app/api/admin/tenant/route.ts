@@ -41,11 +41,8 @@ export async function PATCH(req: NextRequest) {
       accent_color:
         (body.accent_color as string | null | undefined) ?? undefined,
       timezone: (body.timezone as string | null | undefined) ?? undefined,
-      locale: (body.locale as string | null | undefined) ?? undefined,
       plan: (body.plan as string | null | undefined) ?? undefined,
-      status:
-        (body.status as "active" | "suspended" | "archived" | undefined) ??
-        undefined,
+      // locale and status are not columns in the tenants table — omitted
     });
     return NextResponse.json({ data: updated });
   } catch (err) {

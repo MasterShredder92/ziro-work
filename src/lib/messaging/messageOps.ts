@@ -375,19 +375,7 @@ export async function sendMessage(
       recipientIds,
       channelType,
     });
-    const { evaluateTriggers } = await import("@/lib/automation/workflows/automationOps");
-    await evaluateTriggers({
-      tenantId,
-      triggerType: "message.received",
-      payload: {
-        threadId: threadRow.id,
-        messageId: messageRow.id,
-        senderId,
-        recipientIds,
-        channelType,
-      },
-      triggeredBy: senderId,
-    });
+    // automation removed — message.received trigger no-op until agents rebuilt
   } catch {
     /* noop */
   }

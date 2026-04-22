@@ -182,37 +182,14 @@ export async function scheduleReminder(input: {
 }
 
 /**
- * Automation OS trigger — emit an automation event so rules like
- * "on new message" or "on unread for X hours" can fire. Uses a dynamic import
- * so tests and bootstrap code don't hard-depend on Automation OS.
+ * Automation trigger — no-op until automation engine is rebuilt.
  */
 export async function emitAutomationTrigger(
-  tenantId: string,
-  event: string,
-  payload: Record<string, unknown>,
+  _tenantId: string,
+  _event: string,
+  _payload: Record<string, unknown>,
 ): Promise<void> {
-  try {
-    const { dispatchAutomationEvent } = await import(
-      "@/lib/automation/engine"
-    );
-    await dispatchAutomationEvent(event, {
-      tenantId,
-      data: payload,
-    });
-    return;
-  } catch {
-    /* noop */
-  }
-  try {
-    const { logAuditWithContext } = await import("@/lib/audit/log");
-    await logAuditWithContext(
-      `automation.trigger.${event}`,
-      { tenantId },
-      payload,
-    );
-  } catch {
-    /* noop */
-  }
+  // automation removed — no-op
 }
 
 export type AttachmentInput = MessageAttachment;

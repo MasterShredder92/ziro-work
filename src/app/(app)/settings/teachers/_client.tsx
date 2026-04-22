@@ -6,7 +6,7 @@ import { PageShell } from "@/components/layouts/PageShell";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { List } from "@/components/ui/List";
+import { Button } from "@/components/ui/Button";
 import { useTenantSettings } from "@/hooks/data/useTenantSettings";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
@@ -19,20 +19,38 @@ export function TeachersSettingsClient() {
   const kpi = React.useMemo(() => asRecord(settings.data?.kpi_settings), [settings.data?.kpi_settings]);
 
   const [maxStudents, setMaxStudents] = React.useState("18");
-  const [sequenceNotes, setSequenceNotes] = React.useState(
-    "Day 0 welcome · Day 3 curriculum check · Day 10 retention pulse",
-  );
+  const [saving, setSaving] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<"idle" | "success" | "error">("idle");
 
   React.useEffect(() => {
     if (kpi.default_max_students != null) setMaxStudents(String(kpi.default_max_students));
-    if (typeof kpi.onboarding_sequence === "string") setSequenceNotes(kpi.onboarding_sequence);
   }, [kpi]);
 
-  const steps = [
-    { id: "1", title: "Invite teacher", description: "Send magic link + policy pack." },
-    { id: "2", title: "Capacity audit", description: "Align roster targets with payroll bands." },
-    { id: "3", title: "First 30 days", description: "Automations nudge attendance + lesson notes." },
-  ];
+  async function handleSave() {
+    setSaving(true);
+    setSaveStatus("idle");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kpi_settings: {
+            ...(settings.data?.kpi_settings as Record<string, unknown> ?? {}),
+            default_max_students: Number(maxStudents) || 18,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setSaveStatus("success");
+      await settings.reload();
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   return (
     <PageShell title="Teachers">
@@ -56,18 +74,14 @@ export function TeachersSettingsClient() {
             inputMode="numeric"
             value={maxStudents}
             onChange={(e) => setMaxStudents(e.target.value)}
-            hint="Hydrates from `kpi_settings.default_max_students` when configured."
+            hint="Maximum number of active students per teacher before the roster flags as full."
           />
-        </Card>
-
-        <Card variant="elevated" padding="md" radius="lg" shadow="sm" className="space-y-[var(--z-space-4)]">
-          <div className="text-sm font-semibold text-[var(--z-fg)]">Default onboarding sequence</div>
-          <Input label="Playbook notes" value={sequenceNotes} onChange={(e) => setSequenceNotes(e.target.value)} />
-          <div>
-            <div className="mb-[var(--z-space-2)] text-xs font-semibold uppercase tracking-[0.12em] text-[var(--z-muted)]">
-              Reference checklist
-            </div>
-            <List items={steps} />
+          <div className="flex items-center gap-3">
+            <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            {saveStatus === "success" && <span className="text-xs text-[var(--z-success)]">Saved</span>}
+            {saveStatus === "error" && <span className="text-xs text-[var(--z-danger)]">Save failed</span>}
           </div>
         </Card>
       </SettingsSection>

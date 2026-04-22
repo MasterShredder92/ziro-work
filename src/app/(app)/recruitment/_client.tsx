@@ -467,12 +467,13 @@ export function RecruitmentClient() {
               <ProspectDetailPanel prospect={selectedProspect} onClose={() => setSelectedProspect(null)} onStatusChange={handleStatusChange} onUpdate={handleUpdate} />
             ) : (
               <div className="p-4 space-y-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">AI Assistant</div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">Select a candidate to view details</div>
               </div>
             )}
           </div>
         </div>
       </div>
+      {showAdd && <AddProspectModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
     </PageTransition>
   );
 }

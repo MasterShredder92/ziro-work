@@ -28,7 +28,7 @@ export const DIRECTOR_NAV: DirectorNavItem[] = [
   { id: "files", label: "Files", href: "/files", description: "Documents, signatures, share links", scope: "files.read" },
   { id: "messages", label: "Messages", href: "/messages", description: "Inbox, threads & delivery", scope: "messages.read" },
   { id: "templates", label: "Templates", href: "/templates", description: "Communication templates", scope: "templates.read" },
-  { id: "automation", label: "Automation", href: "/automation", description: "Workflows & runs", scope: "automation.read" },
+  { id: "student-messages", label: "Student Messages", href: "#student-messages", description: "Feedback routed to director" },
   { id: "reports", label: "Reports", href: "/reports", description: "Dashboards, KPIs & exports", scope: "reports.read" },
 ];
 

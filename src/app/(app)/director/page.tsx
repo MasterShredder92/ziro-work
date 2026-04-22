@@ -13,6 +13,7 @@ import { DataTable, type DataTableColumn } from "./components/DataTable";
 import { BillingSummary } from "./components/BillingSummary";
 import { ScheduleHeatmap } from "./components/ScheduleHeatmap";
 import { TeacherLoadChart } from "./components/TeacherLoadChart";
+import { StudentMessagesInbox } from "./components/StudentMessagesInbox";
 
 export const dynamic = "force-dynamic";
 
@@ -450,6 +451,9 @@ export default async function DirectorDashboardPage({
 
       <section id="billing" className="space-y-3 scroll-mt-24">
         <BillingSummary billing={data.billing} />
+      </section>
+      <section id="student-messages" className="space-y-3 scroll-mt-24">
+        <StudentMessagesInbox />
       </section>
     </div>
   );

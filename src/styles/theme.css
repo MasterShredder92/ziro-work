@@ -317,6 +317,136 @@
   color: #aaaaB4 !important;
 }
 
+/* ── Light mode: fix neon green and orange/amber on white backgrounds ─ */
+
+/* The dark theme uses #00ff88 (neon green) at /10 opacity — invisible on white.
+   In light mode we replace all neon-green accent tints with solid dark green. */
+
+/* Active nav item and accent text */
+[data-theme="light"] [class*="text-[#00ff88]"],
+.light-theme [class*="text-[#00ff88]"] {
+  color: #007a38 !important;
+}
+
+/* Accent borders */
+[data-theme="light"] [class*="border-[#00ff88]"],
+.light-theme [class*="border-[#00ff88]"] {
+  border-color: #007a38 !important;
+}
+
+/* Accent backgrounds (solid) */
+[data-theme="light"] [class*="bg-[#00ff88]"],
+.light-theme [class*="bg-[#00ff88]"] {
+  background-color: #007a38 !important;
+  color: #ffffff !important;
+}
+
+/* Active nav highlight: bg-[#00ff88]/10 and bg-[#00ff88]/15 */
+[data-theme="light"] [class*="bg-[#00ff88]/"],
+.light-theme [class*="bg-[#00ff88]/"] {
+  background-color: #e6f5ed !important;
+}
+[data-theme="light"] [class*="bg-[#00ff88]/"] [class*="text-[#00ff88]"],
+.light-theme [class*="bg-[#00ff88]/"] [class*="text-[#00ff88]"] {
+  color: #007a38 !important;
+}
+
+/* Hover accent: hover:bg-[#00ff88]/25 */
+[data-theme="light"] [class*="hover:bg-[#00ff88]/"]:hover,
+.light-theme [class*="hover:bg-[#00ff88]/"]:hover {
+  background-color: #d0eddc !important;
+}
+
+/* border-[#00ff88]/40 and similar opacity variants */
+[data-theme="light"] [class*="border-[#00ff88]/"],
+.light-theme [class*="border-[#00ff88]/"] {
+  border-color: #007a38 !important;
+}
+
+/* focus:border-[#00ff88]/50 */
+[data-theme="light"] [class*="focus:border-[#00ff88]/"]:focus,
+.light-theme [class*="focus:border-[#00ff88]/"]:focus {
+  border-color: #007a38 !important;
+  outline-color: #007a38 !important;
+}
+
+/* bg-[#00e679] and bg-[#00e077] — alternate greens */
+[data-theme="light"] [class*="bg-[#00e679]"],
+[data-theme="light"] [class*="bg-[#00e077]"],
+[data-theme="light"] [class*="bg-[#00ffd0]"],
+.light-theme [class*="bg-[#00e679]"],
+.light-theme [class*="bg-[#00e077]"],
+.light-theme [class*="bg-[#00ffd0]"] {
+  background-color: #007a38 !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] [class*="text-[#00e679]"],
+[data-theme="light"] [class*="text-[#00ffd0]"],
+.light-theme [class*="text-[#00e679]"],
+.light-theme [class*="text-[#00ffd0]"] {
+  color: #007a38 !important;
+}
+
+/* ── Orange / Amber badges and pills on white ─────────────────────────── */
+/* Dark theme uses amber-400/10 (transparent amber) — invisible on white.
+   Replace with solid readable amber background + dark text. */
+
+[data-theme="light"] .bg-amber-400\/10,
+.light-theme .bg-amber-400\/10 {
+  background-color: #fef3c7 !important;
+}
+[data-theme="light"] .text-amber-400,
+.light-theme .text-amber-400 {
+  color: #92400e !important;
+}
+[data-theme="light"] .bg-amber-500\/10,
+[data-theme="light"] .bg-amber-500\/20,
+.light-theme .bg-amber-500\/10,
+.light-theme .bg-amber-500\/20 {
+  background-color: #fef3c7 !important;
+}
+[data-theme="light"] .text-amber-500,
+.light-theme .text-amber-500 {
+  color: #92400e !important;
+}
+
+/* bg-[#fb923c] orange */
+[data-theme="light"] [class*="bg-[#fb923c]"],
+.light-theme [class*="bg-[#fb923c]"] {
+  background-color: #ea580c !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] [class*="text-[#fb923c]"],
+.light-theme [class*="text-[#fb923c]"] {
+  color: #c2410c !important;
+}
+
+/* Red error badges */
+[data-theme="light"] .bg-red-500\/10,
+.light-theme .bg-red-500\/10 {
+  background-color: #fee2e2 !important;
+}
+[data-theme="light"] .text-red-400,
+.light-theme .text-red-400 {
+  color: #b91c1c !important;
+}
+
+/* Blue info badges */
+[data-theme="light"] .bg-blue-500\/10,
+.light-theme .bg-blue-500\/10 {
+  background-color: #dbeafe !important;
+}
+[data-theme="light"] .text-blue-400,
+.light-theme .text-blue-400 {
+  color: #1d4ed8 !important;
+}
+
+/* bg-white/5 used for inactive status pills */
+[data-theme="light"] [class*="bg-white/5"],
+.light-theme [class*="bg-white/5"] {
+  background-color: #e8e8ec !important;
+}
+
 /* Smooth transitions for theme switching */
 * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;

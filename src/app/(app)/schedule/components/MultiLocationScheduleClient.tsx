@@ -123,7 +123,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const [activeView, setActiveView] = React.useState<"schedule" | "rooms">("schedule");
   const [focusedBlockId, setFocusedBlockId] = React.useState<string | null>(null);
 
-  // Sync state to Supabase for Ruby's vision
+  // Sync state to Supabase
   useOperatorSession({
     activeLocationId,
     activeDate: selectedDates[activeLocationId] ?? null,
@@ -267,7 +267,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             </button>
           </div>
 
-          {/* Center space (Ruby removed) */}
+          {/* Center space */}
           <div className="flex-1" />
 
           {/* Week nav + date jump */}

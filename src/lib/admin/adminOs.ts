@@ -6,8 +6,7 @@ import { listFeatureFlags } from "@data/featureFlags";
 import { tableMissing } from "@data/_missingTable";
 import { getTenant } from "@data/tenants";
 import { getTenantSettings } from "@data/tenantSettings";
-import { listAutomationRules } from "@data/automationRules";
-import { listAutomationRuns } from "@data/automationRuns";
+// automation removed
 import { ensureSystemRoles } from "./roles";
 import type { AdminOsDashboard, SystemHealthSnapshot } from "./adminTypes";
 
@@ -15,20 +14,9 @@ export async function getSystemHealth(
   tenantId: string,
 ): Promise<SystemHealthSnapshot> {
   await assertTenantAccess(tenantId);
-  const [rules, runs, settings] = await Promise.all([
-    safeList(() => listAutomationRules(tenantId)),
-    safeList(() => listAutomationRuns(tenantId, undefined, { limit: 200 })),
-    getTenantSettings(tenantId),
-  ]);
-
-  const activeRules = rules.filter(
-    (r) => (r as { status?: string; is_active?: boolean }).status === "active" ||
-      (r as { is_active?: boolean }).is_active === true,
-  ).length;
-
-  const recentFailures = runs.filter(
-    (r) => (r as { status?: string }).status === "failed",
-  ).length;
+  const settings = await getTenantSettings(tenantId);
+  const activeRules = 0;
+  const recentFailures = 0;
 
   const storageUsedMb = 0;
   const storageLimitMb =
@@ -44,7 +32,7 @@ export async function getSystemHealth(
   return {
     tenantId,
     automations: {
-      totalRules: rules.length,
+      totalRules: 0, // automation removed
       activeRules,
       recentFailures,
     },

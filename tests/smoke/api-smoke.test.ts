@@ -5,7 +5,6 @@ import { POST as sendMessagePost } from "../../src/app/api/messages/send/route";
 import { POST as filesUploadPost } from "../../src/app/api/files/upload/route";
 import { POST as schedulingCreatePost } from "../../src/app/api/scheduling/create/route";
 import { POST as billingSubscriptionsPost } from "../../src/app/api/billing/subscriptions/route";
-import { POST as automationRunPost } from "../../src/app/api/automation/run/route";
 
 function jsonRequest(url: string, payload: unknown): NextRequest {
   return new NextRequest(url, {
@@ -42,12 +41,5 @@ describe("API smoke checks", () => {
       jsonRequest("http://localhost/api/billing/subscriptions", {}),
     );
     expect([400, 401, 403, 500]).toContain(res.status);
-  });
-
-  it("POST /api/automation/run rejects invalid body safely", async () => {
-    const res = await automationRunPost(
-      jsonRequest("http://localhost/api/automation/run", {}),
-    );
-    expect(res.status).toBe(400);
   });
 });

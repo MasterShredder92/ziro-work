@@ -3,7 +3,8 @@ import Stripe from "stripe";
 import { clientFor } from "@data/_client";
 import { getTenant } from "@data/tenants";
 import type { Plan } from "@/lib/billing/types";
-import { dispatchBillingTrigger } from "@/lib/automation/workflows/triggers";
+// automation removed — stub
+async function dispatchBillingTrigger(_tenantId: string, _event: string, _payload?: unknown): Promise<void> { /* no-op until agents are rebuilt */ }
 
 type StripeSyncSubscriptionInput = {
   tenantId: string;
