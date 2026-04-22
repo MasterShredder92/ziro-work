@@ -1,37 +1,62 @@
 /**
- * Sid Tool Definitions
- * 
- * Tools for managing student and instructor data.
- * 
- * Tools:
- * - read_student: Get student profile and history
- * - update_student_bio: Edit student information (requires approval)
- * - read_instructor: Get instructor profile
- * - update_instructor_info: Edit instructor information (requires approval)
- * - get_lesson_history: Retrieve past lessons and progress
+ * Sid Tool Definitions — SOVEREIGN SCHEMA
+ *
+ * Tools for managing student and teacher data.
+ * All queries use tenant_id isolation and ilike for resilient name matching.
+ * Legacy "instructors" table replaced with "teachers".
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  );
+}
 
-export async function read_student({ studentId }: { studentId: string }) {
-  const { data, error } = await supabase
-    .from("students")
-    .select(`
-      id, first_name, last_name, email, phone,
-      date_of_birth, skill_level, instrument,
-      enrollment_date, status, notes,
-      parent_name, parent_email, parent_phone
-    `)
-    .eq("id", studentId)
-    .single();
+const TENANT_ID = DEFAULT_TENANT_ID;
 
-  if (error) return { success: false, error: error.message };
-  return { success: true, student: data };
+export async function read_student({
+  studentId,
+  studentName,
+}: {
+  studentId?: string;
+  studentName?: string;
+}) {
+  const supabase = getSupabase();
+
+  if (studentId) {
+    const { data, error } = await supabase
+      .from("students")
+      .select("id, first_name, last_name, email, phone, instrument, status, bio, goals, prior_experience, notes, parent_name, parent_email, parent_phone, created_at")
+      .eq("id", studentId)
+      .eq("tenant_id", TENANT_ID)
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, student: data };
+  }
+
+  if (studentName) {
+    const parts = studentName.trim().split(" ");
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+
+    const { data, error } = await supabase
+      .from("students")
+      .select("id, first_name, last_name, email, phone, instrument, status, bio, goals, prior_experience, notes, parent_name, parent_email, parent_phone, created_at")
+      .eq("tenant_id", TENANT_ID)
+      .ilike("first_name", "%" + firstName + "%")
+      .ilike("last_name", "%" + lastName + "%");
+
+    if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) return { success: false, error: "No student found matching: " + studentName };
+    return { success: true, student: data[0], matchCount: data.length };
+  }
+
+  return { success: false, error: "Provide studentId or studentName" };
 }
 
 export async function update_student_bio({
@@ -41,10 +66,12 @@ export async function update_student_bio({
   studentId: string;
   updates: Record<string, any>;
 }) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from("students")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", studentId)
+    .eq("tenant_id", TENANT_ID)
     .select()
     .single();
 
@@ -52,37 +79,65 @@ export async function update_student_bio({
   return { success: true, student: data, message: "Student profile updated" };
 }
 
-export async function read_instructor({ instructorId }: { instructorId: string }) {
-  const { data, error } = await supabase
-    .from("instructors")
-    .select(`
-      id, first_name, last_name, email, phone,
-      specialties, bio, hire_date, status,
-      max_weekly_hours, hourly_rate
-    `)
-    .eq("id", instructorId)
-    .single();
+export async function read_instructor({
+  teacherId,
+  teacherName,
+}: {
+  teacherId?: string;
+  teacherName?: string;
+}) {
+  const supabase = getSupabase();
 
-  if (error) return { success: false, error: error.message };
-  return { success: true, instructor: data };
+  if (teacherId) {
+    const { data, error } = await supabase
+      .from("teachers")
+      .select("id, first_name, last_name, email, phone, specialties, bio, hire_date, status, pay_rate")
+      .eq("id", teacherId)
+      .eq("tenant_id", TENANT_ID)
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, teacher: data };
+  }
+
+  if (teacherName) {
+    const parts = teacherName.trim().split(" ");
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+
+    const { data, error } = await supabase
+      .from("teachers")
+      .select("id, first_name, last_name, email, phone, specialties, bio, hire_date, status, pay_rate")
+      .eq("tenant_id", TENANT_ID)
+      .ilike("first_name", "%" + firstName + "%")
+      .ilike("last_name", "%" + lastName + "%");
+
+    if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) return { success: false, error: "No teacher found matching: " + teacherName };
+    return { success: true, teacher: data[0], matchCount: data.length };
+  }
+
+  return { success: false, error: "Provide teacherId or teacherName" };
 }
 
 export async function update_instructor_info({
-  instructorId,
+  teacherId,
   updates,
 }: {
-  instructorId: string;
+  teacherId: string;
   updates: Record<string, any>;
 }) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
-    .from("instructors")
+    .from("teachers")
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq("id", instructorId)
+    .eq("id", teacherId)
+    .eq("tenant_id", TENANT_ID)
     .select()
     .single();
 
   if (error) return { success: false, error: error.message };
-  return { success: true, instructor: data, message: "Instructor profile updated" };
+  return { success: true, teacher: data, message: "Teacher profile updated" };
 }
 
 export async function get_lesson_history({
@@ -92,14 +147,13 @@ export async function get_lesson_history({
   studentId: string;
   limit?: number;
 }) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
-    .from("lessons")
-    .select(`
-      id, start_time, end_time, status, notes,
-      instructor:instructors(first_name, last_name),
-      lesson_type
-    `)
+    .from("schedule_blocks")
+    .select("id, start_time, end_time, status, block_type, teacher:teachers(first_name, last_name)")
     .eq("student_id", studentId)
+    .eq("tenant_id", TENANT_ID)
+    .eq("block_type", "student_session")
     .order("start_time", { ascending: false })
     .limit(limit);
 
