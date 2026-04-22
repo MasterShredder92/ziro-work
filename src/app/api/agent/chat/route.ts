@@ -211,7 +211,13 @@ export async function POST(req: NextRequest) {
       maxSteps: 5,
     });
 
-    return result.toDataStreamResponse();
+    /**
+     * The Protocol Fix for AI SDK v6:
+     * Use toUIMessageStreamResponse() to ensure perfect synchronization
+     * with the frontend useChat hook and maxSteps metadata.
+     */
+    // @ts-ignore
+    return result.toUIMessageStreamResponse();
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
     return NextResponse.json(
