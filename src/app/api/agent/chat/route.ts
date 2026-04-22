@@ -124,9 +124,9 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Use generateText to avoid "Data Stream" parsing errors in the current UI
+    // FIX: Corrected model identifier to 'gpt-4o-mini'
     const { text, toolResults } = await generateText({
-      model: openai("gpt-4.1-mini"),
+      model: openai("gpt-4o-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
