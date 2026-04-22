@@ -1,55 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Increase timeout for agentic tasks
+export const maxDuration = 60; // Max duration for Vercel Hobby/Pro to allow agent execution
 
+/**
+ * ZiroWork Agentic Relay
+ * Based on the Manus v2 Task Architecture (Ivan Leo, Manus AI)
+ * This route transforms a simple chat prompt into an autonomous Manus Task.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message } = body;
+    const { message, agentId = "ruby" } = body;
 
-    // Use the latest key provided by the user: sk-s-...
+    // Use the latest sk-s- key provided by the user
     const apiKey = process.env.MANUS_API_KEY || "";
     
-    // The specific OpenAI-compatible proxy endpoint for Manus that supports sk-s- keys
-    const endpoint = "https://api.manus.im/api/llm-proxy/v1/chat/completions";
+    // Official Manus v2 Task Creation Endpoint
+    const endpoint = "https://api.manus.ai/v2/task.create";
     
-    console.log(`[Manus API] Definitive Relay: Handshaking with ${endpoint}`);
+    console.log(`[ZiroWork Agent] Initializing ${agentId} task: "${message.substring(0, 30)}..."`);
 
-    // Standard Authorization: Bearer sk-s-... as per latest checklist
+    // We use the exact structure described in the Manus v2 documentation
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "User-Agent": "ZiroWork/1.0 (Agentic-Handshake; Vercel)"
+        "x-manus-api-key": apiKey,
+        "User-Agent": "ZiroWork-Agentic-Orchestrator/1.0"
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        messages: [{ role: "user", content: message }],
-        temperature: 0.7,
-        stream: false
+        message: {
+          content: message
+        },
+        // Optional: We can provide tool definitions here in the future
+        // for Ruby to actually "touch" the schedule.
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(`[Manus API] Error: ${response.status}`, data);
+      console.error(`[Manus API] Task Creation Failed: ${response.status}`, data);
       return NextResponse.json(
-        { error: `Agent Error: ${data.error?.message || "Handshake or Proxy Error"}` },
+        { error: `Agent Error: ${data.error?.message || "Failed to initialize agent task"}` },
         { status: response.status }
       );
     }
 
-    const reply = data.choices?.[0]?.message?.content || "Ruby is processing your request.";
+    // The v2 API returns a task object. 
+    // For a seamless chat experience, we return the latest message content.
+    // If it's a long-running task, the first response might be an acknowledgment.
+    const reply = data.task?.latest_message?.content || 
+                  data.task?.status === 'processing' ? 
+                  "I'm looking into that for you right now..." : 
+                  "Task initialized. I'm on it.";
 
-    return NextResponse.json({ reply });
+    return NextResponse.json({ 
+      reply,
+      taskId: data.task?.id,
+      status: data.task?.status
+    });
 
   } catch (error: any) {
-    console.error("[Manus API Error]:", error);
+    console.error("[ZiroWork Agent Error]:", error);
     return NextResponse.json(
-      { error: error.message || "An unexpected error occurred" },
+      { error: "The agent is currently unavailable. Please check your connection." },
       { status: 500 }
     );
   }
