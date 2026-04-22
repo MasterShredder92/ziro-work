@@ -1,4 +1,4 @@
-import { streamText } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * ZiroWork Agentic Chat Route — GOLDEN STATE
+ * ZiroWork Agentic Chat Route — TRUE MULTI-STEP V6
  * * 1. Bypasses the AI SDK tool() generic inference bug by using raw objects.
  * * 2. Uses streamText for proper UI toolInvocation streaming.
+ * * 3. Restores agentic reasoning using the modern stopWhen: stepCountIs(5) API.
  */
 export async function POST(req: Request) {
   try {
@@ -37,7 +38,6 @@ export async function POST(req: Request) {
       { role: "user", content: message },
     ];
 
-    // Typed as 'any' to prevent strict index signature checking during assignment
     const agentTools: any = {};
 
     if (agentDef.tools.includes("get_global_state")) {
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
-      maxSteps: 5,
+      stopWhen: stepCountIs(5), 
     });
 
     return result.toDataStreamResponse();
