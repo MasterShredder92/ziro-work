@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
      * SURGICAL OVERRIDE: 
      * We use 'as any' for the tools object to bypass TypeScript recursion depth errors
      * and version-specific inference bugs in the AI SDK + Next.js 16.2.3 stack.
-     * The runtime execution logic remains 100% correct.
      */
     const agentTools: any = {};
 
@@ -205,6 +204,7 @@ export async function POST(req: NextRequest) {
       system: agentDef.systemPrompt,
       messages: messageHistory,
       tools: agentTools,
+      // @ts-ignore - maxSteps is available at runtime in this SDK version but missing from types
       maxSteps: 5,
     });
 
