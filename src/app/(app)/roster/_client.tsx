@@ -548,6 +548,7 @@ export function RosterClient({ families, students, teacherNames, locationStats }
           </div>
         </div>
       </div>
+    </div>
     </PageShell>
   );
 }

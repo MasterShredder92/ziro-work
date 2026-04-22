@@ -131,12 +131,6 @@ export function LocationScheduleGrid({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Sync selectedBlockId with Ruby events for state persistence
-  React.useEffect(() => {
-    if (selectedBlockId) {
-    } else {
-    }
-
   // ── Current time indicator ──────────────────────────────────────────────────
   const [nowMinute, setNowMinute] = React.useState<number>(() => {
     const n = new Date();

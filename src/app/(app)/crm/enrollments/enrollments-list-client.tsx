@@ -223,7 +223,7 @@ export function EnrollmentsListClient({
         sortKey={sortKey}
         sortDir={sortDir}
         sortableColumnKeys={[...SORTABLE_COLUMN_KEYS]}
-        onSort={toggleSort}
+        onSortColumn={toggleSort}
       >
         {localRows.map((r) => (
           <tr key={r.id} className="border-b border-[var(--z-border)] hover:bg-[var(--z-surface-2)]">

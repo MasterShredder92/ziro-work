@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         locationId: location.id,
         tenantId: location.tenant_id,
         profileId: session?.userId ?? null,
-        skillId: automation.skillId,
+        skillId: (automation as any).skillId,
         ok: automation.ok,
         durationMs: automation.durationMs,
       });

@@ -147,7 +147,7 @@ async function runAction(
           durationMs: Date.now() - t0,
           startedAt,
           output: result,
-          error: result.error,
+          error: result.error ? (typeof result.error === "string" ? { message: result.error } : result.error as { message: string; code?: string }) : undefined,
         };
       }
       case "sendMessage": {
@@ -221,7 +221,7 @@ async function runAction(
           durationMs: Date.now() - t0,
           startedAt,
           output: result,
-          error: result.error,
+          error: result.error ? (typeof result.error === "string" ? { message: result.error } : result.error as { message: string; code?: string }) : undefined,
         };
       }
       case "scheduleFollowup": {
@@ -241,7 +241,7 @@ async function runAction(
           durationMs: Date.now() - t0,
           startedAt,
           output: result,
-          error: result.error,
+          error: result.error ? (typeof result.error === "string" ? { message: result.error } : result.error as { message: string; code?: string }) : undefined,
         };
       }
       case "createLead": {
@@ -264,7 +264,7 @@ async function runAction(
           durationMs: Date.now() - t0,
           startedAt,
           output: result,
-          error: result.error,
+          error: result.error ? (typeof result.error === "string" ? { message: result.error } : result.error as { message: string; code?: string }) : undefined,
         };
       }
       case "tagProfile": {
@@ -284,7 +284,7 @@ async function runAction(
           durationMs: Date.now() - t0,
           startedAt,
           output: result,
-          error: result.error,
+          error: result.error ? (typeof result.error === "string" ? { message: result.error } : result.error as { message: string; code?: string }) : undefined,
         };
       }
       default: {

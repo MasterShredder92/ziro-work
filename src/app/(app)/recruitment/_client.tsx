@@ -468,6 +468,10 @@ export function RecruitmentClient() {
             ) : (
               <div className="p-4 space-y-4">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035]">AI Assistant</div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </PageTransition>
   );
