@@ -3,17 +3,16 @@ import type { NextRequest } from "next/server";
 import { roleGuard } from "@/middleware/roleGuard";
 
 /**
- * ZiroWork Middleware
+ * ZiroWork Proxy (Next.js 16.2.3+)
  * 
- * Handles two concerns:
+ * In Next.js 16.2.3, the 'middleware.ts' file is replaced by 'proxy.ts'.
+ * The main export function MUST be named 'proxy' instead of 'middleware'.
+ * 
+ * Architecture:
  * 1. Role-based access control for protected routes (via roleGuard)
  * 2. Open pass-through for agentic API routes (no auth challenge)
- * 
- * Per the PaperclipAI implementation guide:
- * "You must explicitly exclude your agentic API routes from your middleware."
- * This prevents Vercel's WAF from blocking agentic requests with 403 errors.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow all agent API routes to pass through without auth challenge
