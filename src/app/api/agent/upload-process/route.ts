@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Anthropic } from "@anthropic-ai/sdk";
-import { AGENT_DEFINITIONS } from "@/lib/agents/agentDefinitions";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
 import { getServiceClient } from "@/lib/supabase";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-const client = new Anthropic();
+export const dynamic = "force-dynamic";
 
+/**
+ * Universal File Upload Processor - SOVEREIGN SCHEMA
+ *
+ * Replaces the Sid-only Anthropic route.
+ * Any agent can now process bulk file uploads via GPT-4o-mini.
+ *
+ * POST /api/agent/upload-process
+ */
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -21,19 +30,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const agent = AGENT_DEFINITIONS[agentId];
-    if (!agent) {
+    const agentDef = getAgentDefinition(agentId);
+    if (!agentDef) {
       return NextResponse.json(
-        { error: `Unknown agent: ${agentId}` },
+        { error: "Unknown agent: " + agentId },
         { status: 400 }
-      );
-    }
-
-    // Only Sid can process bulk student uploads
-    if (agentId !== "sid") {
-      return NextResponse.json(
-        { error: "Only Sid can process bulk student data" },
-        { status: 403 }
       );
     }
 
@@ -53,49 +54,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call Claude to parse the file and generate updates
-    const parsePrompt = `You are Sid, a student profile AI. You have received bulk student data (from a text file or voice transcription).
+    const studentList = allStudents
+      ?.map((s: any) => "- " + s.first_name + " " + s.last_name + " (ID: " + s.id + ")")
+      .join("\n") || "No students found";
 
-Your job:
-1. Parse the data to identify which students are mentioned
-2. CATEGORIZE the information into the correct profile fields:
-   - Bio: Personality, musicianship style, dedication, character traits, how they approach learning
-   - Goals: Aspirational learning objectives, performance dreams, repertoire expansion, confidence-building
-   - Prior Experience: Years of playing, previous instruments, formal training, background
-   - Notes: Practical observations, teacher feedback, behavioral notes
-3. For each field with content, generate a "spruced up" professional version
-4. Return a JSON array with the categorized and polished updates
+    const systemPrompt = agentDef.systemPrompt + "\n\nYou are processing a bulk file upload. Parse the data, match students by name, and return a valid JSON array of updates.";
 
-The file content is:
-${content}
+    const parsePrompt = "You have received bulk student data from a file upload.\n\nYour job:\n1. Parse the data to identify which students are mentioned\n2. CATEGORIZE the information into the correct profile fields:\n   - Bio: Personality, musicianship style, dedication, character traits\n   - Goals: Aspirational learning objectives, performance dreams\n   - Prior Experience: Years of playing, previous instruments, formal training\n   - Notes: Practical observations, teacher feedback, behavioral notes\n3. For each field with content, generate a polished professional version\n4. Return a JSON array with the categorized and polished updates\n\nThe file content is:\n" + content + "\n\nHere are the students in the system:\n" + studentList + "\n\nReturn ONLY a valid JSON array (no markdown, no code blocks):\n[\n  {\n    \"studentId\": \"uuid-here\",\n    \"studentName\": \"First Last\",\n    \"bio\": \"Polished bio text or null\",\n    \"goals\": \"Polished goals text or null\",\n    \"prior_experience\": \"Polished prior experience or null\",\n    \"notes\": \"Practical notes or null\"\n  }\n]\n\nIf you cannot match a student, skip them. Use null for fields with no relevant information.";
 
-Here are the students in the system:
-${allStudents?.map((s: any) => `- ${s.first_name} ${s.last_name} (ID: ${s.id})`).join("\n")}
-
-Return ONLY a valid JSON array like this (no markdown, no code blocks):
-[
-  {
-    "studentId": "uuid-here",
-    "studentName": "First Last",
-    "bio": "Spruced up bio text here or null if no bio info",
-    "goals": "Spruced up goals text here or null if no goals info",
-    "prior_experience": "Spruced up prior experience text or null if no experience info",
-    "notes": "Practical notes or null if no notes"
-  }
-]
-
-If you can't parse or match a student, skip them. Only return students you can confidently match. Use null for fields with no relevant information.`;
-
-    const parseResponse = await client.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 4000,
-      messages: [{ role: "user", content: parsePrompt }],
+    const { text: parseText } = await generateText({
+      model: openai("gpt-4o-mini"),
+      system: systemPrompt,
+      prompt: parsePrompt,
+      maxTokens: 4000,
     });
 
-    const parseText =
-      parseResponse.content[0].type === "text" ? parseResponse.content[0].text : "";
-
-    // Extract JSON from the response
     let updates: Array<{
       studentId: string;
       studentName: string;
@@ -104,17 +77,16 @@ If you can't parse or match a student, skip them. Only return students you can c
       prior_experience: string | null;
       notes: string | null;
     }> = [];
+
     try {
       updates = JSON.parse(parseText);
     } catch {
-      // Try to extract JSON from markdown code blocks
       const jsonMatch = parseText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         updates = JSON.parse(jsonMatch[0]);
       }
     }
 
-    // Execute updates for each student
     const results = [];
     for (const update of updates) {
       try {
@@ -133,45 +105,25 @@ If you can't parse or match a student, skip them. Only return students you can c
           .eq("tenant_id", tenantId);
 
         if (updateError) {
-          results.push({
-            student: update.studentName,
-            status: "failed",
-            error: updateError.message,
-          });
+          results.push({ student: update.studentName, status: "failed", error: updateError.message });
         } else {
-          results.push({
-            student: update.studentName,
-            status: "updated",
-          });
+          results.push({ student: update.studentName, status: "updated" });
         }
       } catch (err) {
-        results.push({
-          student: update.studentName,
-          status: "failed",
-          error: String(err),
-        });
+        results.push({ student: update.studentName, status: "failed", error: String(err) });
       }
     }
 
-    // Generate summary message
     const successCount = results.filter((r) => r.status === "updated").length;
     const failureCount = results.filter((r) => r.status === "failed").length;
-
-    const reply =
-      successCount > 0
-        ? `Done! ✓ I've updated ${successCount} student profile${successCount !== 1 ? "s" : ""}. ${
-            failureCount > 0
-              ? `${failureCount} update${failureCount !== 1 ? "s" : ""} failed.`
-              : ""
-          }`
-        : "No students were updated. Please check the file format and try again.";
+    const reply = successCount > 0
+      ? "Done. Updated " + successCount + " student profile(s)." + (failureCount > 0 ? " " + failureCount + " update(s) failed." : "")
+      : "No students were updated. Please check the file format and try again.";
 
     return NextResponse.json({ reply, results });
-  } catch (error) {
+
+  } catch (error: any) {
     console.error("Upload process error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

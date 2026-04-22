@@ -1,87 +1,76 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Agent Heartbeat Route
- * 
- * Called by Vercel Cron every 30 minutes.
- * Proactively checks for issues and alerts the owner.
- * 
- * Checks:
- * - Scheduling conflicts in the next 24 hours
- * - Students at risk of churning
- * - Overdue invoices
- * - Instructor availability gaps
- * 
- * This is the "Proactive Heartbeat" from the PaperclipAI pattern.
- */
-export async function GET(req: NextRequest) {
-  // Verify this is a legitimate cron request
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-  );
-
-  const alerts: string[] = [];
-  const now = new Date();
-  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
+export async function POST(req: NextRequest) {
   try {
-    // Check 1: Lessons with no instructor assigned in next 24 hours
-    const { data: unassignedLessons } = await supabase
-      .from("lessons")
-      .select("id, start_time, student:students(first_name, last_name)")
-      .is("instructor_id", null)
-      .gte("start_time", now.toISOString())
-      .lte("start_time", in24Hours.toISOString())
-      .neq("status", "cancelled");
+    const tenantId = DEFAULT_TENANT_ID;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
+    const now = new Date();
+    const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+    const todayEnd = new Date(now.setHours(23, 59, 59, 999)).toISOString();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const alerts: string[] = [];
 
-    if (unassignedLessons && unassignedLessons.length > 0) {
-      alerts.push(`⚠️ ${unassignedLessons.length} lesson(s) in next 24h have no instructor assigned`);
+    const { data: openBlocks } = await supabase
+      .from("schedule_blocks")
+      .select("id, start_time, location_name")
+      .eq("tenant_id", tenantId)
+      .eq("block_type", "open_time")
+      .gte("start_time", todayStart)
+      .lte("end_time", todayEnd);
+    if (openBlocks && openBlocks.length > 0) {
+      alerts.push(openBlocks.length + " open slot(s) on today schedule");
     }
 
-    // Check 2: Students with no lessons in 30+ days (churn risk)
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const { data: recentLessons } = await supabase
-      .from("lessons")
-      .select("student_id")
-      .gte("start_time", thirtyDaysAgo.toISOString())
-      .eq("status", "completed");
+    const { data: callouts } = await supabase
+      .from("schedule_blocks")
+      .select("id, teacher_id, start_time")
+      .eq("tenant_id", tenantId)
+      .eq("block_type", "call_out")
+      .gte("start_time", todayStart)
+      .lte("end_time", todayEnd);
+    if (callouts && callouts.length > 0) {
+      alerts.push(callouts.length + " teacher callout(s) today - students may need reassignment");
+    }
 
-    const activeStudentIds = new Set(recentLessons?.map(l => l.student_id) || []);
+    const { data: recentBlocks } = await supabase
+      .from("schedule_blocks")
+      .select("student_id")
+      .eq("tenant_id", tenantId)
+      .eq("block_type", "student_session")
+      .gte("start_time", thirtyDaysAgo);
+    const activeStudentIds = new Set(recentBlocks?.map((b: any) => b.student_id).filter(Boolean) || []);
 
     const { data: allActiveStudents } = await supabase
       .from("students")
       .select("id, first_name, last_name")
+      .eq("tenant_id", tenantId)
       .eq("status", "active");
-
-    const atRisk = allActiveStudents?.filter(s => !activeStudentIds.has(s.id)) || [];
+    const atRisk = allActiveStudents?.filter((s: any) => !activeStudentIds.has(s.id)) || [];
     if (atRisk.length > 0) {
-      alerts.push(`⚠️ ${atRisk.length} student(s) haven't had a lesson in 30+ days`);
+      alerts.push(atRisk.length + " student(s) have not had a session in 30+ days");
     }
 
-    // Check 3: Overdue invoices
     const { data: overdueInvoices } = await supabase
       .from("invoices")
       .select("id, amount")
+      .eq("tenant_id", tenantId)
       .eq("status", "overdue");
-
     if (overdueInvoices && overdueInvoices.length > 0) {
-      const totalOverdue = overdueInvoices.reduce((sum, i) => sum + i.amount, 0);
-      alerts.push(`💰 ${overdueInvoices.length} overdue invoice(s) totaling $${totalOverdue}`);
+      const totalOverdue = overdueInvoices.reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+      alerts.push(overdueInvoices.length + " overdue invoice(s) totaling $" + totalOverdue);
     }
 
-    // Store alerts in the database for the dashboard to display
     if (alerts.length > 0) {
       await supabase.from("agent_alerts").insert(
-        alerts.map(alert => ({
+        alerts.map((alert: string) => ({
+          tenant_id: tenantId,
           message: alert,
           agent_id: "heartbeat",
           created_at: new Date().toISOString(),
@@ -92,14 +81,13 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      timestamp: now.toISOString(),
+      timestamp: new Date().toISOString(),
       alertCount: alerts.length,
       alerts,
       message: alerts.length > 0
-        ? `Heartbeat complete: ${alerts.length} alert(s) generated`
+        ? "Heartbeat complete: " + alerts.length + " alert(s) generated"
         : "Heartbeat complete: All systems normal",
     });
-
   } catch (error: any) {
     console.error("[Heartbeat Error]:", error);
     return NextResponse.json({ error: "Heartbeat failed", details: error.message }, { status: 500 });

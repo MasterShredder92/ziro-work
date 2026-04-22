@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Agent State Endpoint
- * 
+ * Agent State Endpoint — SOVEREIGN SCHEMA
+ *
  * Used by agents in the Tool Loop "Observe" step.
  * Returns the current state of the studio so agents can
  * understand what they're working with before taking action.
- * 
- * GET /api/agent/state?studioId=xxx&type=schedule|students|finances
+ *
+ * GET /api/agent/state?locationName=Bellevue&type=schedule|students|overview
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const studioId = searchParams.get("studioId");
+    const locationName = searchParams.get("locationName");
     const type = searchParams.get("type") || "overview";
-
-    if (!studioId) {
-      return NextResponse.json(
-        { error: "studioId is required" },
-        { status: 400 }
-      );
-    }
+    const tenantId = DEFAULT_TENANT_ID;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -35,28 +30,33 @@ export async function GET(req: NextRequest) {
     const todayEnd = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
     if (type === "schedule") {
-      const { data, error } = await supabase
-        .from("lessons")
+      let query = supabase
+        .from("schedule_blocks")
         .select(`
-          id, start_time, end_time, status,
+          id, start_time, end_time, block_type, status,
+          teacher:teachers(first_name, last_name),
           student:students(first_name, last_name),
-          instructor:instructors(first_name, last_name),
-          room:rooms(name)
+          location:locations(name)
         `)
-        .eq("studio_id", studioId)
+        .eq("tenant_id", tenantId)
         .gte("start_time", todayStart)
         .lte("end_time", todayEnd)
         .order("start_time", { ascending: true });
 
+      if (locationName) {
+        query = query.eq("location_name", locationName);
+      }
+
+      const { data, error } = await query;
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json({ type: "schedule", date: todayStart, lessons: data, count: data?.length || 0 });
+      return NextResponse.json({ type: "schedule", date: todayStart, blocks: data, count: data?.length || 0 });
     }
 
     if (type === "students") {
       const { data, error } = await supabase
         .from("students")
-        .select("id, first_name, last_name, status, skill_level, instrument")
-        .eq("studio_id", studioId)
+        .select("id, first_name, last_name, status, instrument")
+        .eq("tenant_id", tenantId)
         .eq("status", "active");
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -64,20 +64,33 @@ export async function GET(req: NextRequest) {
     }
 
     // Default: overview
-    const [lessonsRes, studentsRes, instructorsRes] = await Promise.all([
-      supabase.from("lessons").select("id, status").eq("studio_id", studioId).gte("start_time", todayStart).lte("end_time", todayEnd),
-      supabase.from("students").select("id, status").eq("studio_id", studioId).eq("status", "active"),
-      supabase.from("instructors").select("id, status").eq("studio_id", studioId).eq("status", "active"),
+    const [blocksRes, studentsRes, teachersRes] = await Promise.all([
+      supabase
+        .from("schedule_blocks")
+        .select("id, status")
+        .eq("tenant_id", tenantId)
+        .gte("start_time", todayStart)
+        .lte("end_time", todayEnd),
+      supabase
+        .from("students")
+        .select("id, status")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active"),
+      supabase
+        .from("teachers")
+        .select("id, status")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active"),
     ]);
 
     return NextResponse.json({
       type: "overview",
-      studioId,
+      tenantId,
       timestamp: new Date().toISOString(),
       today: {
-        lessons: lessonsRes.data?.length || 0,
+        scheduleBlocks: blocksRes.data?.length || 0,
         activeStudents: studentsRes.data?.length || 0,
-        activeInstructors: instructorsRes.data?.length || 0,
+        activeTeachers: teachersRes.data?.length || 0,
       },
     });
 
