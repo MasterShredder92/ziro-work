@@ -112,11 +112,13 @@ export async function POST(req: Request) {
       };
     }
 
+    // Initialize the OpenAI provider (This was missing in your snippet)
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const result = await streamText({
+    // Remove the 'await' here, as streamText is now synchronous
+    const result = streamText({
       model: openai("gpt-4o-mini"),
       system: agentDef.systemPrompt,
       messages: messageHistory,
@@ -124,7 +126,8 @@ export async function POST(req: Request) {
       stopWhen: stepCountIs(5), 
     });
 
-    return result.toDataStreamResponse();
+    // Use the new v5/v6 method to properly stream tool UI states
+    return result.toUIMessageStreamResponse();
 
   } catch (error: any) {
     console.error("[Agent Chat Error]:", error);
@@ -133,4 +136,4 @@ export async function POST(req: Request) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-}// Final Golden Trigger: Wed Apr 22 08:31:35 EDT 2026
+}
