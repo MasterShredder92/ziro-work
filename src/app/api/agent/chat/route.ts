@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { streamText, tool, CoreMessage } from "ai";
+import { streamText, tool } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { getAgentDefinition } from "@/lib/ziro/agents/definitions";
@@ -15,8 +15,6 @@ export const maxDuration = 60;
  * Model: OpenAI gpt-4.1-mini (direct, no proxy — stable, fast, no DNS issues)
  * Tools: ZiroWork database tools (Ruby=schedule, Sid=students, Vader=finance, Raven=analytics)
  * Max Steps: 5 (agent loops up to 5 times to complete a task)
- *
- * Manus sk-s- key is reserved for future deep research / autonomous browsing tasks.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build message history for multi-turn conversation
-    const messageHistory: CoreMessage[] = [
+    const messageHistory: any[] = [
       ...messages,
       { role: "user", content: message },
     ];
@@ -55,7 +53,7 @@ export async function POST(req: NextRequest) {
           locationName: z.string().describe("Location name: Bellevue, Elkhorn, Gretna, or Omaha"),
           date: z.string().describe("Date in YYYY-MM-DD format (e.g. 2026-04-21)"),
         }),
-        execute: async (params: { locationName: string; date: string }) => {
+        execute: async (params) => {
           return await executeTool("read_schedule", params);
         },
       });
@@ -72,13 +70,7 @@ export async function POST(req: NextRequest) {
           endTime: z.string().describe("End time in HH:MM:SS format (e.g. 15:00:00)"),
           teacherId: z.string().optional().describe("Teacher ID to check (optional)"),
         }),
-        execute: async (params: { 
-          locationName: string; 
-          date: string; 
-          startTime: string; 
-          endTime: string; 
-          teacherId?: string 
-        }) => {
+        execute: async (params) => {
           return await executeTool("check_conflicts", params);
         },
       });
@@ -93,11 +85,7 @@ export async function POST(req: NextRequest) {
           date: z.string().describe("Date in YYYY-MM-DD format"),
           durationMinutes: z.number().optional().describe("Lesson duration in minutes (default 30)"),
         }),
-        execute: async (params: { 
-          locationName: string; 
-          date: string; 
-          durationMinutes?: number 
-        }) => {
+        execute: async (params) => {
           return await executeTool("suggest_slot", params);
         },
       });
@@ -111,7 +99,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           studentId: z.string().describe("The student ID"),
         }),
-        execute: async (params: { studentId: string }) => {
+        execute: async (params) => {
           return await executeTool("read_student", params);
         },
       });
@@ -128,7 +116,7 @@ export async function POST(req: NextRequest) {
             .optional()
             .describe("Number of lessons to return (default 20)"),
         }),
-        execute: async (params: { studentId: string; limit?: number }) => {
+        execute: async (params) => {
           return await executeTool("get_lesson_history", params);
         },
       });
@@ -141,7 +129,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           instructorId: z.string().describe("The instructor ID"),
         }),
-        execute: async (params: { instructorId: string }) => {
+        execute: async (params) => {
           return await executeTool("read_instructor", params);
         },
       });
@@ -155,7 +143,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           studioId: z.string().describe("The studio ID"),
         }),
-        execute: async (params: { studioId: string }) => {
+        execute: async (params) => {
           return await executeTool("check_balance", {
             studioId: params.studioId || studioId,
           });
@@ -174,7 +162,7 @@ export async function POST(req: NextRequest) {
             .optional()
             .describe("Filter by invoice status"),
         }),
-        execute: async (params: { studioId: string; status?: "paid" | "unpaid" | "overdue" | "all" }) => {
+        execute: async (params) => {
           return await executeTool("read_invoices", {
             ...params,
             studioId: params.studioId || studioId,
@@ -198,11 +186,7 @@ export async function POST(req: NextRequest) {
             .optional()
             .describe("Number of days to look back (default 30)"),
         }),
-        execute: async (params: { 
-          studioId: string; 
-          metric: "attendance" | "revenue" | "new_students" | "cancellations"; 
-          days?: number 
-        }) => {
+        execute: async (params) => {
           return await executeTool("analyze_trends", {
             ...params,
             studioId: params.studioId || studioId,
@@ -218,7 +202,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           studioId: z.string().describe("The studio ID"),
         }),
-        execute: async (params: { studioId: string }) => {
+        execute: async (params) => {
           return await executeTool("predict_churn", {
             studioId: params.studioId || studioId,
           });
@@ -233,7 +217,7 @@ export async function POST(req: NextRequest) {
         parameters: z.object({
           studioId: z.string().describe("The studio ID"),
         }),
-        execute: async (params: { studioId: string }) => {
+        execute: async (params) => {
           return await executeTool("generate_insights", {
             studioId: params.studioId || studioId,
           });
