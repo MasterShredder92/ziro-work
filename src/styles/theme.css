@@ -36,33 +36,46 @@
 [data-theme="light"],
 .light-theme {
   /* Primary Colors */
-  --z-accent: #00d966;
-  --z-on-accent: #000000;
-  
+  --z-accent: #00b854;
+  --z-on-accent: #ffffff;
+
+  /* Page background & body text — MUST override globals.css :root values */
+  --z-bg: #f0f0f3;
+  --background: #f0f0f3;
+  --foreground: #1a1a1a;
+
   /* Surfaces */
   --z-surface: #ffffff;
-  --z-surface-2: #f5f5f7;
-  --z-surface-3: #e8e8eb;
-  --z-surface-hover: #f0f0f2;
-  
+  --z-surface-2: #e8e8ec;
+  --z-surface-3: #dcdce2;
+  --z-surface-hover: #e4e4e8;
+
   /* Text */
   --z-fg: #1a1a1a;
-  --z-fg-secondary: #666666;
-  --z-fg-tertiary: #999999;
-  
+  --z-fg-secondary: #52525c;
+  --z-fg-tertiary: #888894;
+
   /* Borders */
-  --z-border: #e0e0e3;
-  --z-border-light: #d0d0d3;
-  
+  --z-border: #d4d4da;
+  --z-border-light: #c4c4cc;
+
   /* Status Colors */
   --z-success: #059669;
   --z-warning: #d97706;
   --z-error: #dc2626;
   --z-info: #2563eb;
-  
+
   /* Semantic */
   --z-overlay: rgba(0, 0, 0, 0.3);
-  --z-shadow: rgba(0, 0, 0, 0.1);
+  --z-shadow: rgba(0, 0, 0, 0.08);
+
+  /* Legacy tokens used in globals.css */
+  --card-bg: #ffffff;
+  --card-border: #d4d4da;
+  --card-border-hover: #b4b4bc;
+  --input-bg: #ffffff;
+  --input-border: #c8c8d0;
+  --surface-dim: #ebebee;
 }
 
 /* Schedule Block Colors - PRESERVED across both themes */
@@ -84,6 +97,107 @@
   --block-available: #10b981;
   --block-booked: #3b82f6;
   --block-unavailable: #6b7280;
+}
+
+/* ============================================================
+   LIGHT MODE — Global hardcoded color overrides
+   Tailwind arbitrary values like bg-[#0a0a0c] don't respond to
+   CSS variables, so we override them here with attribute selectors.
+   ============================================================ */
+[data-theme="light"] body,
+.light-theme body {
+  background-color: #f0f0f3 !important;
+  color: #1a1a1a !important;
+}
+
+/* Sidebar background */
+[data-theme="light"] aside,
+.light-theme aside {
+  background-color: #ffffff !important;
+  border-color: #d4d4da !important;
+}
+
+/* Main content area */
+[data-theme="light"] main,
+.light-theme main {
+  background-color: #f0f0f3 !important;
+}
+
+/* Cards and panels with dark backgrounds */
+[data-theme="light"] [class*="bg-[#0a0a0c]"],
+[data-theme="light"] [class*="bg-[#080808]"],
+[data-theme="light"] [class*="bg-[#0b0b0d]"],
+[data-theme="light"] [class*="bg-[#101012]"],
+[data-theme="light"] [class*="bg-[#0c0c0e]"],
+.light-theme [class*="bg-[#0a0a0c]"],
+.light-theme [class*="bg-[#080808]"],
+.light-theme [class*="bg-[#0b0b0d]"],
+.light-theme [class*="bg-[#101012]"],
+.light-theme [class*="bg-[#0c0c0e]"] {
+  background-color: #ffffff !important;
+}
+
+/* Secondary surface colors */
+[data-theme="light"] [class*="bg-[#1a1a1e]"],
+[data-theme="light"] [class*="bg-[#141416]"],
+[data-theme="light"] [class*="bg-[#18181b]"],
+.light-theme [class*="bg-[#1a1a1e]"],
+.light-theme [class*="bg-[#141416]"],
+.light-theme [class*="bg-[#18181b]"] {
+  background-color: #e8e8ec !important;
+}
+
+/* Border colors */
+[data-theme="light"] [class*="border-[#1c1c1e]"],
+[data-theme="light"] [class*="border-[#2b2b2f]"],
+[data-theme="light"] [class*="border-[#2a2a2e]"],
+.light-theme [class*="border-[#1c1c1e]"],
+.light-theme [class*="border-[#2b2b2f]"],
+.light-theme [class*="border-[#2a2a2e]"] {
+  border-color: #d4d4da !important;
+}
+
+/* Text colors — muted/secondary */
+[data-theme="light"] [class*="text-[#909098]"],
+[data-theme="light"] [class*="text-[#808088]"],
+.light-theme [class*="text-[#909098]"],
+.light-theme [class*="text-[#808088]"] {
+  color: #52525c !important;
+}
+
+[data-theme="light"] [class*="text-[#505055]"],
+[data-theme="light"] [class*="text-[#404048]"],
+[data-theme="light"] [class*="text-[#303035]"],
+.light-theme [class*="text-[#505055]"],
+.light-theme [class*="text-[#404048]"],
+.light-theme [class*="text-[#303035]"] {
+  color: #888894 !important;
+}
+
+/* White text on dark → dark text on light */
+[data-theme="light"] aside [class*="text-white"],
+.light-theme aside [class*="text-white"] {
+  color: #1a1a1a !important;
+}
+
+/* Hover overlays — white/5 and white/8 don't work on light bg */
+[data-theme="light"] [class*="hover:bg-white\/5"],
+.light-theme [class*="hover:bg-white\/5"] {
+  --tw-bg-opacity: 1;
+}
+[data-theme="light"] [class*="hover:bg-white\/5"]:hover,
+.light-theme [class*="hover:bg-white\/5"]:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Scrollbar for light mode */
+[data-theme="light"] ::-webkit-scrollbar-thumb,
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #c4c4cc;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover,
+.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: #a4a4ac;
 }
 
 /* Smooth transitions for theme switching */

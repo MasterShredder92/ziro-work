@@ -17,7 +17,6 @@ function Icon({ children, size = 18 }: { children: React.ReactNode; size?: numbe
 const ICONS: Record<string, React.ReactNode> = {
   "/dashboard": <Icon><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/></Icon>,
   "/schedule": <Icon><rect x="2.5" y="3.5" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2.5 7.5h15M6.5 2v3M13.5 2v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="7" cy="11.5" r="1" fill="currentColor"/><circle cx="10" cy="11.5" r="1" fill="currentColor"/><circle cx="13" cy="11.5" r="1" fill="currentColor"/></Icon>,
-  "/agent-map": <Icon><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2" fill="currentColor"/><circle cx="14" cy="7" r="1.5" fill="currentColor"/><circle cx="14" cy="13" r="1.5" fill="currentColor"/><circle cx="6" cy="7" r="1.5" fill="currentColor"/><circle cx="6" cy="13" r="1.5" fill="currentColor"/></Icon>,
   "/studio-map": <Icon><path d="M10 2L2 6v8l8 4 8-4V6L10 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M2 6l8 4m0 0l8-4m-8 4v8" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></Icon>,
   "/crm": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11l1.5 1.5L20 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></Icon>,
   "/roster": <Icon><path d="M3 15c0-2.761 3.134-5 7-5s7 2.239 7 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
@@ -26,7 +25,6 @@ const ICONS: Record<string, React.ReactNode> = {
   "/payroll": <Icon><circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 6v1.5m0 5V14m2.5-6.5c0-.828-.895-1.5-2.5-1.5S7.5 6.672 7.5 7.5c0 1.657 5 1.657 5 3.5 0 .828-.895 1.5-2.5 1.5S7.5 11.828 7.5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
   "/financials": <Icon><path d="M3 14l4-5 4 3 3-4 3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 17h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
   "/lifecycle": <Icon><circle cx="4" cy="10" r="2" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.5"/><circle cx="16" cy="10" r="2" stroke="currentColor" strokeWidth="1.5"/><path d="M6 10h2M12 10h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
-  "/agent-reports": <Icon><path d="M10 2a4 4 0 100 8 4 4 0 000-8z" stroke="currentColor" strokeWidth="1.5"/><path d="M3 18c0-3.314 3.134-6 7-6s7 2.686 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M14 10l4 4m0 0l-2 2m2-2l-2-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></Icon>,
   "/recruitment": <Icon><circle cx="8" cy="8" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 5.5v5M5.5 8h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
   "/settings": <Icon><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 2.5v1.25M10 16.25V17.5M17.5 10h-1.25M3.75 10H2.5M15.303 4.697l-.884.884M5.581 14.419l-.884.884M15.303 15.303l-.884-.884M5.581 5.581l-.884-.884" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></Icon>,
 };
@@ -49,7 +47,6 @@ const GROUPS = [
     items: [
       { href: "/dashboard",  label: "Dashboard"  },
       { href: "/schedule",   label: "Schedule"   },
-      { href: "/agent-map",  label: "Agent Map"  },
       { href: "/studio-map", label: "Studio Map" },
     ],
   },
@@ -75,9 +72,8 @@ const GROUPS = [
     id: "growth",
     label: "GROWTH",
     items: [
-      { href: "/lifecycle",     label: "Student Journey", isLifecycle: true },
-      { href: "/agent-reports", label: "Agent Reports"                       },
-      { href: "/recruitment",   label: "Recruitment"                         },
+      { href: "/lifecycle",    label: "Student Journey", isLifecycle: true },
+      { href: "/recruitment",  label: "Recruitment"                         },
     ],
   },
   {
