@@ -1,251 +1,256 @@
 /**
- * Ruby Tool Definitions
- * 
- * These are the "Hands" that allow Ruby to interact with the ZiroWork schedule.
- * Built on the Vercel AI SDK ToolLoopAgent pattern.
- * 
- * Tools:
- * - read_schedule: View the current schedule for a studio
- * - check_conflicts: Detect scheduling conflicts
- * - suggest_slot: Recommend available time slots
- * - move_lesson: Reschedule a lesson (requires approval)
- * - add_lesson: Create a new lesson (requires approval)
+ * Ruby Tool Definitions — CORRECT SCHEMA
+ *
+ * Uses the actual ZiroWork database schema:
+ * - Table: schedule_blocks
+ * - Key fields: location_id, tenant_id, block_date, start_time, end_time, teacher_id, student_id, status
+ * - Locations: Bellevue, Elkhorn, Gretna, Omaha
+ * - Tenant: 00000000-0000-0000-0000-000000000001
  */
-
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+const TENANT_ID = "00000000-0000-0000-0000-000000000001";
+
+// Location name → ID map (from live DB)
+const LOCATION_MAP: Record<string, string> = {
+  bellevue: "f7b52dd5-12ee-437f-9c60-f8adf454ac31",
+  elkhorn: "cebd97d4-c241-4de2-8ade-49e5cc0070d5",
+  gretna: "40c67ffc-91b5-46a9-94bd-6ddffdfb7638",
+  omaha: "d48229c1-b70a-4d29-893e-5079887dab76",
+};
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+function resolveLocationId(locationInput: string): string | null {
+  if (!locationInput) return null;
+  // If it's already a UUID, return it directly
+  if (locationInput.includes("-") && locationInput.length > 30) return locationInput;
+  // Otherwise resolve by name (strip "Music Lessons" suffix)
+  const key = locationInput.toLowerCase().replace(/\s+music\s+lessons?/i, "").trim();
+  return LOCATION_MAP[key] || null;
+}
 
 /**
  * read_schedule
- * Returns the full schedule for a given studio and date range
+ * Returns the schedule for a given location and date.
+ * Joins teacher and student names for a human-readable response.
  */
 export async function read_schedule({
-  studioId,
-  startDate,
-  endDate,
+  locationName,
+  date,
 }: {
-  studioId: string;
-  startDate: string;
-  endDate: string;
+  locationName: string;
+  date: string; // YYYY-MM-DD
 }) {
-  const { data, error } = await supabase
-    .from("lessons")
-    .select(`
-      id,
-      start_time,
-      end_time,
-      student:students(id, first_name, last_name),
-      instructor:instructors(id, first_name, last_name),
-      room:rooms(id, name),
-      status
-    `)
-    .eq("studio_id", studioId)
-    .gte("start_time", startDate)
-    .lte("end_time", endDate)
+  const supabase = getSupabase();
+  const locationId = resolveLocationId(locationName);
+
+  if (!locationId) {
+    return {
+      success: false,
+      error: `Unknown location: "${locationName}". Valid locations: Bellevue, Elkhorn, Gretna, Omaha`,
+    };
+  }
+
+  const { data: blocks, error } = await supabase
+    .from("schedule_blocks")
+    .select("id, block_date, start_time, end_time, status, block_type, teacher_id, student_id, is_virtual, notes, checkin_status")
+    .eq("tenant_id", TENANT_ID)
+    .eq("location_id", locationId)
+    .eq("block_date", date)
     .order("start_time", { ascending: true });
 
   if (error) {
     return { success: false, error: error.message };
   }
 
+  if (!blocks || blocks.length === 0) {
+    return {
+      success: true,
+      message: `No schedule blocks found for ${locationName} on ${date}`,
+      blocks: [],
+      openSlots: [],
+      bookedSlots: [],
+    };
+  }
+
+  // Get teacher names
+  const teacherIds = [...new Set(blocks.map((b: any) => b.teacher_id).filter(Boolean))];
+  const { data: teachers } = teacherIds.length > 0
+    ? await supabase.from("teachers").select("id, first_name, last_name").in("id", teacherIds)
+    : { data: [] };
+
+  const teacherMap: Record<string, string> = Object.fromEntries(
+    (teachers || []).map((t: any) => [t.id, `${t.first_name} ${t.last_name}`])
+  );
+
+  // Get student names
+  const studentIds = [...new Set(blocks.map((b: any) => b.student_id).filter(Boolean))];
+  const { data: students } = studentIds.length > 0
+    ? await supabase.from("students").select("id, first_name, last_name").in("id", studentIds)
+    : { data: [] };
+
+  const studentMap: Record<string, string> = Object.fromEntries(
+    (students || []).map((s: any) => [s.id, `${s.first_name} ${s.last_name}`])
+  );
+
+  // Enrich blocks with names
+  const enriched = blocks.map((b: any) => ({
+    id: b.id,
+    date: b.block_date,
+    startTime: b.start_time,
+    endTime: b.end_time,
+    status: b.status,
+    type: b.block_type,
+    checkinStatus: b.checkin_status,
+    teacher: b.teacher_id ? (teacherMap[b.teacher_id] || "Unknown Teacher") : null,
+    student: b.student_id ? (studentMap[b.student_id] || "Unknown Student") : null,
+    isVirtual: b.is_virtual,
+    notes: b.notes,
+  }));
+
+  const openSlots = enriched.filter((b) => b.status === "available");
+  const bookedSlots = enriched.filter((b) => b.status !== "available");
+
   return {
     success: true,
-    lessons: data,
-    count: data?.length || 0,
-    dateRange: { startDate, endDate },
+    location: locationName,
+    date,
+    totalBlocks: blocks.length,
+    openSlots,
+    bookedSlots,
+    summary: `${locationName} on ${date}: ${bookedSlots.length} booked, ${openSlots.length} open`,
   };
 }
 
 /**
  * check_conflicts
- * Detects scheduling conflicts for a given instructor or room
+ * Detects scheduling conflicts for a teacher in a given time window on a date.
  */
 export async function check_conflicts({
-  studioId,
-  instructorId,
-  roomId,
+  locationName,
+  teacherId,
+  date,
   startTime,
   endTime,
 }: {
-  studioId: string;
-  instructorId?: string;
-  roomId?: string;
+  locationName: string;
+  teacherId?: string;
+  date: string;
   startTime: string;
   endTime: string;
 }) {
+  const supabase = getSupabase();
+  const locationId = resolveLocationId(locationName);
+
+  if (!locationId) {
+    return { success: false, error: `Unknown location: "${locationName}"` };
+  }
+
   let query = supabase
-    .from("lessons")
-    .select("id, start_time, end_time, instructor_id, room_id, status")
-    .eq("studio_id", studioId)
-    .neq("status", "cancelled")
-    .or(`start_time.lt.${endTime},end_time.gt.${startTime}`);
+    .from("schedule_blocks")
+    .select("id, start_time, end_time, teacher_id, student_id, status")
+    .eq("tenant_id", TENANT_ID)
+    .eq("location_id", locationId)
+    .eq("block_date", date)
+    .neq("status", "available")
+    .lt("start_time", endTime)
+    .gt("end_time", startTime);
 
-  if (instructorId) {
-    query = query.eq("instructor_id", instructorId);
+  if (teacherId) {
+    query = query.eq("teacher_id", teacherId);
   }
 
-  if (roomId) {
-    query = query.eq("room_id", roomId);
-  }
-
-  const { data, error } = await query;
+  const { data: conflicts, error } = await query;
 
   if (error) {
     return { success: false, error: error.message };
   }
 
-  const hasConflict = (data?.length || 0) > 0;
-
   return {
     success: true,
-    hasConflict,
-    conflicts: data || [],
-    message: hasConflict
-      ? `Found ${data?.length} conflict(s) in the requested time slot`
-      : "No conflicts detected",
+    hasConflict: (conflicts?.length || 0) > 0,
+    conflicts: conflicts || [],
+    count: conflicts?.length || 0,
   };
 }
 
 /**
  * suggest_slot
- * Recommends available time slots for a given instructor and duration
+ * Returns available open slots for a given location and date.
  */
 export async function suggest_slot({
-  studioId,
-  instructorId,
-  durationMinutes,
-  preferredDate,
+  locationName,
+  date,
+  durationMinutes = 30,
 }: {
-  studioId: string;
-  instructorId: string;
-  durationMinutes: number;
-  preferredDate: string;
+  locationName: string;
+  date: string;
+  durationMinutes?: number;
 }) {
-  // Get instructor's existing schedule for the day
-  const dayStart = `${preferredDate}T00:00:00`;
-  const dayEnd = `${preferredDate}T23:59:59`;
+  const result = await read_schedule({ locationName, date });
+  if (!result.success) return result;
 
-  const { data: existingLessons, error } = await supabase
-    .from("lessons")
-    .select("start_time, end_time")
-    .eq("studio_id", studioId)
-    .eq("instructor_id", instructorId)
-    .gte("start_time", dayStart)
-    .lte("end_time", dayEnd)
-    .neq("status", "cancelled")
-    .order("start_time", { ascending: true });
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  // Find available slots between 9am and 9pm
-  const workdayStart = 9 * 60; // 9am in minutes
-  const workdayEnd = 21 * 60; // 9pm in minutes
-  const availableSlots: { startTime: string; endTime: string }[] = [];
-
-  let currentMinute = workdayStart;
-
-  for (const lesson of existingLessons || []) {
-    const lessonStart = new Date(lesson.start_time);
-    const lessonStartMinute =
-      lessonStart.getHours() * 60 + lessonStart.getMinutes();
-
-    if (currentMinute + durationMinutes <= lessonStartMinute) {
-      // There's a gap before this lesson
-      const slotStart = new Date(`${preferredDate}T00:00:00`);
-      slotStart.setMinutes(currentMinute);
-      const slotEnd = new Date(slotStart);
-      slotEnd.setMinutes(slotStart.getMinutes() + durationMinutes);
-
-      availableSlots.push({
-        startTime: slotStart.toISOString(),
-        endTime: slotEnd.toISOString(),
-      });
-    }
-
-    const lessonEnd = new Date(lesson.end_time);
-    currentMinute = lessonEnd.getHours() * 60 + lessonEnd.getMinutes();
-  }
-
-  // Check for slots after the last lesson
-  if (currentMinute + durationMinutes <= workdayEnd) {
-    const slotStart = new Date(`${preferredDate}T00:00:00`);
-    slotStart.setMinutes(currentMinute);
-    const slotEnd = new Date(slotStart);
-    slotEnd.setMinutes(slotStart.getMinutes() + durationMinutes);
-
-    availableSlots.push({
-      startTime: slotStart.toISOString(),
-      endTime: slotEnd.toISOString(),
-    });
-  }
+  const openSlots = (result.openSlots || []).slice(0, 5);
 
   return {
     success: true,
-    availableSlots: availableSlots.slice(0, 5), // Return top 5 suggestions
-    count: availableSlots.length,
-    message: `Found ${availableSlots.length} available slot(s) for ${durationMinutes}-minute lesson`,
+    location: locationName,
+    date,
+    availableSlots: openSlots,
+    count: openSlots.length,
+    message: openSlots.length > 0
+      ? `Found ${openSlots.length} available slot(s) at ${locationName} on ${date}`
+      : `No available slots at ${locationName} on ${date}`,
   };
 }
 
 /**
  * move_lesson (REQUIRES APPROVAL)
- * Reschedules a lesson to a new time slot
+ * Reschedules a schedule_block to a new date/time.
  */
 export async function move_lesson({
-  lessonId,
+  blockId,
+  newDate,
   newStartTime,
   newEndTime,
   reason,
 }: {
-  lessonId: string;
+  blockId: string;
+  newDate: string;
   newStartTime: string;
   newEndTime: string;
   reason: string;
 }) {
-  // First verify the lesson exists
-  const { data: lesson, error: fetchError } = await supabase
-    .from("lessons")
-    .select("id, start_time, end_time, instructor_id, room_id, studio_id")
-    .eq("id", lessonId)
+  const supabase = getSupabase();
+
+  const { data: block, error: fetchError } = await supabase
+    .from("schedule_blocks")
+    .select("id, block_date, start_time, end_time")
+    .eq("id", blockId)
+    .eq("tenant_id", TENANT_ID)
     .single();
 
-  if (fetchError || !lesson) {
-    return { success: false, error: "Lesson not found" };
+  if (fetchError || !block) {
+    return { success: false, error: "Schedule block not found" };
   }
 
-  // Check for conflicts at the new time
-  const conflicts = await check_conflicts({
-    studioId: lesson.studio_id,
-    instructorId: lesson.instructor_id,
-    roomId: lesson.room_id,
-    startTime: newStartTime,
-    endTime: newEndTime,
-  });
-
-  if (conflicts.hasConflict) {
-    return {
-      success: false,
-      error: "Cannot move lesson: conflicts detected at the new time",
-      conflicts: conflicts.conflicts,
-    };
-  }
-
-  // Update the lesson
   const { error: updateError } = await supabase
-    .from("lessons")
+    .from("schedule_blocks")
     .update({
+      block_date: newDate,
       start_time: newStartTime,
       end_time: newEndTime,
       updated_at: new Date().toISOString(),
       notes: reason,
     })
-    .eq("id", lessonId);
+    .eq("id", blockId)
+    .eq("tenant_id", TENANT_ID);
 
   if (updateError) {
     return { success: false, error: updateError.message };
@@ -253,82 +258,12 @@ export async function move_lesson({
 
   return {
     success: true,
-    lessonId,
-    previousTime: { start: lesson.start_time, end: lesson.end_time },
+    blockId,
+    previousDate: block.block_date,
+    previousTime: { start: block.start_time, end: block.end_time },
+    newDate,
     newTime: { start: newStartTime, end: newEndTime },
-    message: `Lesson successfully moved. Reason: ${reason}`,
-  };
-}
-
-/**
- * add_lesson (REQUIRES APPROVAL)
- * Creates a new lesson in the schedule
- */
-export async function add_lesson({
-  studioId,
-  studentId,
-  instructorId,
-  roomId,
-  startTime,
-  endTime,
-  lessonType,
-  notes,
-}: {
-  studioId: string;
-  studentId: string;
-  instructorId: string;
-  roomId: string;
-  startTime: string;
-  endTime: string;
-  lessonType: string;
-  notes?: string;
-}) {
-  // Check for conflicts before creating
-  const conflicts = await check_conflicts({
-    studioId,
-    instructorId,
-    roomId,
-    startTime,
-    endTime,
-  });
-
-  if (conflicts.hasConflict) {
-    return {
-      success: false,
-      error: "Cannot add lesson: conflicts detected",
-      conflicts: conflicts.conflicts,
-    };
-  }
-
-  // Create the lesson
-  const { data, error } = await supabase
-    .from("lessons")
-    .insert([
-      {
-        studio_id: studioId,
-        student_id: studentId,
-        instructor_id: instructorId,
-        room_id: roomId,
-        start_time: startTime,
-        end_time: endTime,
-        lesson_type: lessonType,
-        notes,
-        status: "scheduled",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  return {
-    success: true,
-    lesson: data,
-    message: `New ${lessonType} lesson created successfully`,
+    message: `Lesson moved to ${newDate} at ${newStartTime}. Reason: ${reason}`,
   };
 }
 
@@ -337,5 +272,4 @@ export const RUBY_TOOLS = {
   check_conflicts,
   suggest_slot,
   move_lesson,
-  add_lesson,
 };

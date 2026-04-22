@@ -50,22 +50,13 @@ export async function POST(req: NextRequest) {
     if (agentDef.tools.includes("read_schedule")) {
       agentTools.read_schedule = tool({
         description:
-          "Read the current lesson schedule for a studio. Use this to answer questions about what lessons are scheduled, who is teaching, and when.",
+          "Read the current lesson schedule for a location. Use this to answer questions about what lessons are scheduled, who is teaching, and when. Locations: Bellevue, Elkhorn, Gretna, Omaha.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
-          startDate: z
-            .string()
-            .describe("Start date in ISO format (e.g. 2026-04-21T00:00:00)"),
-          endDate: z
-            .string()
-            .describe("End date in ISO format (e.g. 2026-04-21T23:59:59)"),
+          locationName: z.string().describe("Location name: Bellevue, Elkhorn, Gretna, or Omaha"),
+          date: z.string().describe("Date in YYYY-MM-DD format (e.g. 2026-04-21)"),
         }),
-        execute: async ({ studioId: sid, startDate, endDate }) => {
-          return await executeTool("read_schedule", {
-            studioId: sid || studioId,
-            startDate,
-            endDate,
-          });
+        execute: async ({ locationName, date }) => {
+          return await executeTool("read_schedule", { locationName, date });
         },
       });
     }
@@ -73,21 +64,16 @@ export async function POST(req: NextRequest) {
     if (agentDef.tools.includes("check_conflicts")) {
       agentTools.check_conflicts = tool({
         description:
-          "Check for scheduling conflicts for an instructor or room in a given time window.",
+          "Check for scheduling conflicts for a teacher in a given time window on a specific date.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
-          instructorId: z
-            .string()
-            .optional()
-            .describe("Instructor ID to check"),
-          startTime: z.string().describe("Start time in ISO format"),
-          endTime: z.string().describe("End time in ISO format"),
+          locationName: z.string().describe("Location name: Bellevue, Elkhorn, Gretna, or Omaha"),
+          date: z.string().describe("Date in YYYY-MM-DD format"),
+          startTime: z.string().describe("Start time in HH:MM:SS format (e.g. 14:00:00)"),
+          endTime: z.string().describe("End time in HH:MM:SS format (e.g. 15:00:00)"),
+          teacherId: z.string().optional().describe("Teacher ID to check (optional)"),
         }),
         execute: async (params) => {
-          return await executeTool("check_conflicts", {
-            ...params,
-            studioId: params.studioId || studioId,
-          });
+          return await executeTool("check_conflicts", params);
         },
       });
     }
@@ -95,20 +81,14 @@ export async function POST(req: NextRequest) {
     if (agentDef.tools.includes("suggest_slot")) {
       agentTools.suggest_slot = tool({
         description:
-          "Suggest available time slots for a lesson based on instructor availability.",
+          "Suggest available open time slots at a location on a given date.",
         parameters: z.object({
-          studioId: z.string().describe("The studio ID"),
-          instructorId: z.string().describe("Instructor ID"),
-          durationMinutes: z.number().describe("Lesson duration in minutes"),
-          preferredDate: z
-            .string()
-            .describe("Preferred date in YYYY-MM-DD format"),
+          locationName: z.string().describe("Location name: Bellevue, Elkhorn, Gretna, or Omaha"),
+          date: z.string().describe("Date in YYYY-MM-DD format"),
+          durationMinutes: z.number().optional().describe("Lesson duration in minutes (default 30)"),
         }),
         execute: async (params) => {
-          return await executeTool("suggest_slot", {
-            ...params,
-            studioId: params.studioId || studioId,
-          });
+          return await executeTool("suggest_slot", params);
         },
       });
     }
