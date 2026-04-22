@@ -7,7 +7,6 @@ import { VADER_TOOLS } from "@/lib/agents/tools/vaderTools";
 import { STEWIE_TOOLS } from "@/lib/agents/tools/stewieTools";
 import { BUB_TOOLS } from "@/lib/agents/tools/bubTools";
 import { RAVEN_TOOLS } from "@/lib/agents/tools/ravenCommunicationTools";
-import OpenAI from "openai";
 
 // --- CONFIGURATION ---
 export const runtime = "nodejs";
@@ -225,12 +224,33 @@ async function executeTool(name: string, input: any, tenantId: string, userId?: 
 
 // --- CHAT LOGIC ---
 
+async function callManusBrain(messages: any[], tools: any[]) {
+  const apiKey = process.env.MANUS_API_KEY || "manus-internal-bypass";
+  const response = await fetch("https://api.manus.im/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "X-Manus-Project-ID": "ziro-work"
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1-mini",
+      messages,
+      tools,
+      tool_choice: "auto"
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Manus API Error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Initialize the Manus-native OpenAI client without any overrides
-    // This pattern has been verified to work in the Manus sandbox environment
-    const openai = new OpenAI();
-    
     const body = await req.json();
     const { message, agentId = "ziro", context: clientContext = {}, history = [] } = body;
     const session = await getSession();
@@ -238,9 +258,7 @@ export async function POST(req: NextRequest) {
     const userId = session?.userId || clientContext.userId;
 
     const agentDef = AGENT_DEFINITIONS[agentId] || AGENT_DEFINITIONS["ziro"];
-    
-    // PAPERCLIP AI METHODOLOGY: SNAP TO STATE IMMEDIATELY
-    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${new Date().toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nDIRECTIVE: You are a Senior Operator. Execute tools immediately to find information or perform actions. Never ask for info you can retrieve yourself. Use 'get_operator_context' to see the user's current view.`;
+    const systemContent = `${agentDef.systemPrompt}\n\nCONTEXT: Date: ${new Date().toLocaleDateString()}. Tenant ID: ${tenantId}. User ID: ${userId || "Unknown"}.\n\nDIRECTIVE: You are a Senior Operator. Execute tools immediately. Use 'get_operator_context' to see the user's current view.`;
 
     let messages: any[] = [
       { role: "system", content: systemContent },
@@ -249,14 +267,8 @@ export async function POST(req: NextRequest) {
     ];
 
     for (let round = 0; round < 5; round++) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: messages,
-        tools: ALL_TOOLS,
-        tool_choice: "auto",
-      });
-
-      const assistantMessage = response.choices[0].message;
+      const data = await callManusBrain(messages, ALL_TOOLS);
+      const assistantMessage = data.choices[0].message;
       messages.push(assistantMessage);
 
       if (!assistantMessage.tool_calls) {
@@ -268,7 +280,6 @@ export async function POST(req: NextRequest) {
 
       // Handle tool calls
       for (const toolCall of assistantMessage.tool_calls) {
-        if (toolCall.type !== "function") continue;
         const result = await executeTool(
           toolCall.function.name, 
           JSON.parse(toolCall.function.arguments), 
