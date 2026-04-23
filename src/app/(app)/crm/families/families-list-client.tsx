@@ -235,7 +235,7 @@ export function FamiliesListClient({
         background: "var(--z-bg, var(--z-surface))",
         borderBottom: "1px solid var(--z-border)",
         display: "grid",
-        gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px 110px minmax(0,1.2fr) 90px",
+        gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px minmax(0,1.4fr) minmax(0,1.4fr) 90px",
         padding: "6px 16px 6px 20px",
         gap: 8,
       }}>
@@ -273,7 +273,7 @@ export function FamiliesListClient({
                   style={{
                     position: "relative",
                     display: "grid",
-                    gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px 110px minmax(0,1.2fr) 90px",
+                    gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px minmax(0,1.4fr) minmax(0,1.4fr) 90px",
                     alignItems: "center",
                     gap: 8,
                     padding: "8px 16px 8px 0",
@@ -314,7 +314,7 @@ export function FamiliesListClient({
                           fontSize: 13, fontWeight: 700, color: "var(--z-fg)",
                           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 200,
                         }}>
-                          {row.name}
+                          {row.name.replace(/\s+family$/i, "").trim()}
                         </span>
                         {isMil && (
                           <span style={{
@@ -380,14 +380,14 @@ export function FamiliesListClient({
                       <>
                         {firstNames.map((fn, i) => (
                           <span key={i} style={{
-                            fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 20,
+                            fontSize: 12, fontWeight: 500, padding: "1px 7px", borderRadius: 20,
                             background: "var(--z-surface)", color: "var(--z-muted)",
                             border: "1px solid var(--z-border)", whiteSpace: "nowrap",
                           }}>{fn}</span>
                         ))}
                         {extraCount > 0 && (
                           <span style={{
-                            fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 20,
+                            fontSize: 12, fontWeight: 500, padding: "1px 7px", borderRadius: 20,
                             background: "var(--z-surface)", color: "var(--z-muted)",
                             border: "1px solid var(--z-border)", whiteSpace: "nowrap",
                           }}>+{extraCount}</span>

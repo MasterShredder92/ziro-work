@@ -61,15 +61,15 @@ export default async function FamiliesIndexPage() {
     });
   }
 
-  // Pick the most-common teacher per family (by frequency across students)
+  // Aggregate ALL unique teachers per family (alphabetically, comma-separated)
   const teacherByFamily: Record<string, string> = {};
   for (const [famId, studs] of Object.entries(studentsByFamily)) {
-    const freq: Record<string, number> = {};
+    const seen = new Set<string>();
     for (const s of studs) {
-      if (s.teacherName) freq[s.teacherName] = (freq[s.teacherName] ?? 0) + 1;
+      if (s.teacherName) seen.add(s.teacherName);
     }
-    const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
-    if (top) teacherByFamily[famId] = top[0];
+    const unique = Array.from(seen).sort();
+    if (unique.length > 0) teacherByFamily[famId] = unique.join(", ");
   }
 
   return (
