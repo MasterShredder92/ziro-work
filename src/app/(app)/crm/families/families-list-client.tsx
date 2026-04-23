@@ -4,32 +4,53 @@ import { useMemo, useState } from "react";
 import type { Family as FamilyRow } from "@/lib/types/entities";
 
 /* ─── Location Brand Colors ──────────────────────────────────
-   Mandatory mapping — never use random colors for locations.
-   Bellevue: Royal Purple | Gretna: Emerald | Omaha: Slate Blue | Elkhorn: Burnt Gold
+   Bellevue: Royal Purple | Gretna: Emerald | Omaha: Crimson | Elkhorn: Royal Blue
+   The left stripe on each row matches the family's location color.
 */
-const LOCATION_COLORS: Record<string, { bg: string; text: string; glow: string }> = {
-  bellevue: { bg: "rgba(109,40,217,0.12)", text: "#7c3aed", glow: "rgba(109,40,217,0.25)" },
-  gretna:   { bg: "rgba(5,150,105,0.12)",  text: "#059669", glow: "rgba(5,150,105,0.25)" },
-  omaha:    { bg: "rgba(37,99,235,0.12)",  text: "#2563eb", glow: "rgba(37,99,235,0.25)" },
-  elkhorn:  { bg: "rgba(217,119,6,0.12)",  text: "#d97706", glow: "rgba(217,119,6,0.25)" },
+const LOCATION_COLORS: Record<string, { bg: string; text: string; stripe: string }> = {
+  bellevue: { bg: "rgba(109,40,217,0.12)", text: "#7c3aed", stripe: "#7c3aed" },   // Royal Purple
+  gretna:   { bg: "rgba(5,150,105,0.12)",  text: "#059669", stripe: "#059669" },   // Emerald Green
+  omaha:    { bg: "rgba(185,28,28,0.12)",  text: "#b91c1c", stripe: "#b91c1c" },   // Crimson Red
+  elkhorn:  { bg: "rgba(29,78,216,0.12)",  text: "#1d4ed8", stripe: "#1d4ed8" },   // Royal Blue
 };
 function locationColor(name: string) {
   const n = (name ?? "").toLowerCase();
   for (const [key, val] of Object.entries(LOCATION_COLORS)) {
     if (n.includes(key)) return val;
   }
-  return { bg: "rgba(99,102,241,0.12)", text: "#6366f1", glow: "rgba(99,102,241,0.25)" };
+  return { bg: "rgba(99,102,241,0.12)", text: "#6366f1", stripe: "#6366f1" };
+}
+
+/* ─── Instrument Normalization ───────────────────────────────
+   Typo map → canonical ALL CAPS name.
+   Any unrecognized instrument is uppercased as-is.
+*/
+const INSTRUMENT_CANON: Record<string, string> = {
+  piano: "PIANO", paino: "PIANO", piana: "PIANO", keyb: "PIANO", keyboard: "PIANO",
+  guitar: "GUITAR", gitar: "GUITAR", gutiar: "GUITAR", gutar: "GUITAR",
+  vocals: "VOCALS", vocal: "VOCALS", voice: "VOCALS", singing: "VOCALS",
+  drums: "DRUMS", drum: "DRUMS", percussion: "DRUMS",
+  bass: "BASS",
+  violin: "VIOLIN", fiddle: "VIOLIN",
+  ukulele: "UKULELE", uke: "UKULELE",
+  saxophone: "SAXOPHONE", sax: "SAXOPHONE",
+  trumpet: "TRUMPET",
+  flute: "FLUTE",
+};
+function normalizeInstrument(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const key = raw.trim().toLowerCase();
+  return INSTRUMENT_CANON[key] ?? raw.trim().toUpperCase();
 }
 
 /* ─── Instrument Colors ──────────────────────────────────── */
 const INSTRUMENT_COLORS: Record<string, string> = {
-  Piano: "#6366f1", Guitar: "#f59e0b", Vocals: "#ec4899", Drums: "#ef4444",
-  Bass: "#8b5cf6", Violin: "#10b981", Ukulele: "#06b6d4", Saxophone: "#f97316",
-  Trumpet: "#eab308", Flute: "#14b8a6",
+  PIANO: "#6366f1", GUITAR: "#f59e0b", VOCALS: "#ec4899", DRUMS: "#ef4444",
+  BASS: "#8b5cf6", VIOLIN: "#10b981", UKULELE: "#06b6d4", SAXOPHONE: "#f97316",
+  TRUMPET: "#eab308", FLUTE: "#14b8a6",
 };
-function instrColor(i: string) {
-  const key = Object.keys(INSTRUMENT_COLORS).find(k => k.toLowerCase() === (i ?? "").toLowerCase());
-  return key ? INSTRUMENT_COLORS[key] : "#6366f1";
+function instrColor(normalized: string) {
+  return INSTRUMENT_COLORS[normalized] ?? "#6366f1";
 }
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -65,9 +86,9 @@ const AVATAR_COLORS = [
   ["#d97706", "rgba(217,119,6,0.18)"],
   ["#059669", "rgba(5,150,105,0.18)"],
   ["#ec4899", "rgba(236,72,153,0.18)"],
-  ["#2563eb", "rgba(37,99,235,0.18)"],
+  ["#1d4ed8", "rgba(29,78,216,0.18)"],
   ["#8b5cf6", "rgba(139,92,246,0.18)"],
-  ["#ef4444", "rgba(239,68,68,0.18)"],
+  ["#b91c1c", "rgba(185,28,28,0.18)"],
   ["#f97316", "rgba(249,115,22,0.18)"],
 ];
 function avatarColor(name: string): [string, string] {
@@ -146,7 +167,7 @@ export function FamiliesListClient({
 
     r.sort((a, b) => {
       let va: string | number = "", vb: string | number = "";
-      if (sortBy === "name")     { va = (a.name ?? "").toLowerCase(); vb = (b.name ?? "").toLowerCase(); }
+      if (sortBy === "name")      { va = (a.name ?? "").toLowerCase(); vb = (b.name ?? "").toLowerCase(); }
       else if (sortBy === "balance")  { va = a.balance ?? 0; vb = b.balance ?? 0; }
       else if (sortBy === "students") { va = counts[a.id] ?? 0; vb = counts[b.id] ?? 0; }
       else if (sortBy === "lifetime") { va = a.lifetime_paid_cents ?? 0; vb = b.lifetime_paid_cents ?? 0; }
@@ -173,7 +194,7 @@ export function FamiliesListClient({
       ? <span className="ml-0.5 text-[10px]">{sortDir === "asc" ? "↑" : "↓"}</span>
       : <span className="ml-0.5 text-[10px] opacity-25">↕</span>;
 
-  const overdueCnt   = rows.filter(f => (f.overdue_balance_cents ?? 0) > 0 || (f.balance ?? 0) > 0).length;
+  const overdueCnt    = rows.filter(f => (f.overdue_balance_cents ?? 0) > 0 || (f.balance ?? 0) > 0).length;
   const lifetimeTotal = rows.reduce((s, f) => s + (f.lifetime_paid_cents ?? 0), 0);
 
   return (
@@ -264,32 +285,38 @@ export function FamiliesListClient({
         </select>
       </div>
 
-      {/* ── Table — border-collapse:separate enables per-row rounding + shadow ── */}
+      {/* ── Table ──────────────────────────────────────────── */}
       <div className="flex-1 overflow-auto">
-        <div className="px-4 py-2">
+        <div className="px-4 pt-1 pb-2">
           <table className="w-full text-sm" style={{ borderCollapse: "separate", borderSpacing: "0 4px" }}>
-            <thead>
+
+            {/* Sticky header */}
+            <thead className="sticky top-0 z-10" style={{ background: "var(--z-bg, var(--z-surface))" }}>
               <tr>
                 {[
-                  { label: "Family",   col: "name"     as const, align: "left"  },
-                  { label: "Contact",  col: null,                align: "left"  },
-                  { label: "Students", col: "students" as const, align: "left"  },
-                  { label: "Location", col: null,                align: "left"  },
-                  { label: "Billing",  col: null,                align: "left"  },
-                  { label: "Balance",  col: "balance"  as const, align: "right" },
-                  { label: "Lifetime", col: "lifetime" as const, align: "right" },
+                  { label: "FAMILY",   col: "name"     as const, align: "left"  },
+                  { label: "CONTACT",  col: null,                align: "left"  },
+                  { label: "STUDENTS", col: "students" as const, align: "left"  },
+                  { label: "LOCATION", col: null,                align: "left"  },
+                  { label: "BILLING",  col: null,                align: "left"  },
+                  { label: "BALANCE",  col: "balance"  as const, align: "right" },
+                  { label: "LIFETIME", col: "lifetime" as const, align: "right" },
                   { label: "",         col: null,                align: "right" },
                 ].map(({ label, col, align }) => (
                   <th
-                    key={label}
-                    className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider ${col ? "cursor-pointer select-none" : ""} text-${align}`}
-                    style={{ color: "var(--z-muted)" }}
+                    key={label || "_actions"}
+                    className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest ${col ? "cursor-pointer select-none" : ""} text-${align}`}
+                    style={{
+                      color: "var(--z-muted)",
+                      borderBottom: "1px solid var(--z-border)",
+                    }}
                     onClick={col ? () => toggleSort(col) : undefined}>
                     {label}{col && <SI col={col} />}
                   </th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {filtered.length === 0 && (
                 <tr>
@@ -301,42 +328,48 @@ export function FamiliesListClient({
                 </tr>
               )}
               {filtered.map(f => {
-                const bs       = billingStatus(f);
-                const students = studentsByFamily[f.id] ?? [];
-                const cnt      = counts[f.id] ?? students.length;
-                const locName  = f.primary_location_id ? (locationNameById[f.primary_location_id] ?? null) : null;
-                const locC     = locName ? locationColor(locName) : null;
-                const isOverdue = (f.overdue_balance_cents ?? 0) > 0 || (f.balance ?? 0) > 0;
-                const balCents  = (f.balance ?? 0) * 100;
+                const bs         = billingStatus(f);
+                const students   = studentsByFamily[f.id] ?? [];
+                const cnt        = counts[f.id] ?? students.length;
+                const locName    = f.primary_location_id ? (locationNameById[f.primary_location_id] ?? null) : null;
+                const locC       = locName ? locationColor(locName) : null;
+                const stripeColor = locC?.stripe ?? "transparent";
+                const balCents   = (f.balance ?? 0) * 100;
                 const familyName = f.name ?? "Unnamed";
+
+                /* Normalize + alphabetize instruments */
+                const normalizedInstruments = students
+                  .map(s => normalizeInstrument(s.instrument))
+                  .filter(i => i !== "—")
+                  .sort();
 
                 return (
                   <tr
                     key={f.id}
                     className="group"
                     style={{
-                      background: isOverdue ? "rgba(239,68,68,0.03)" : "var(--z-bg, transparent)",
+                      background: "var(--z-bg, transparent)",
                       transition: "all 0.15s ease",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)";
                       e.currentTarget.style.transform = "translateY(-1px)";
-                      e.currentTarget.style.background = isOverdue ? "rgba(239,68,68,0.06)" : "var(--z-surface)";
+                      e.currentTarget.style.background = "var(--z-surface)";
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)";
                       e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.background = isOverdue ? "rgba(239,68,68,0.03)" : "var(--z-bg, transparent)";
+                      e.currentTarget.style.background = "var(--z-bg, transparent)";
                     }}
                   >
 
-                    {/* ── Family — Avatar + Name + sub-label ── */}
+                    {/* ── Family — location-colored left stripe ── */}
                     <td
-                      className="py-4 pl-5 pr-3"
+                      className="py-4 pl-4 pr-3"
                       style={{
                         borderRadius: "12px 0 0 12px",
-                        borderLeft: isOverdue ? "3px solid #ef4444" : "3px solid transparent",
+                        borderLeft: `4px solid ${stripeColor}`,
                       }}>
                       <Link href={`/crm/families/${f.id}`} className="flex items-center gap-3 hover:opacity-90">
                         <FamilyAvatar name={familyName} />
@@ -347,7 +380,7 @@ export function FamiliesListClient({
                           <div className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: "var(--z-muted)" }}>
                             {cnt > 0 && <span>{cnt} student{cnt !== 1 ? "s" : ""}</span>}
                             {cnt > 0 && locName && <span>·</span>}
-                            {locName && <span>{locName}</span>}
+                            {locName && <span>{locName.replace(" Music Lessons", "")}</span>}
                             {f.is_military && (
                               <span
                                 className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
@@ -368,25 +401,27 @@ export function FamiliesListClient({
                       )}
                     </td>
 
-                    {/* ── Students — soft-tint instrument pills ── */}
+                    {/* ── Students — normalized ALL CAPS alphabetized pills ── */}
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1 items-center">
-                        {students.length === 0 && (
+                        {normalizedInstruments.length === 0 && (
                           <span className="text-xs" style={{ color: "var(--z-muted)" }}>—</span>
                         )}
-                        {students.slice(0, 3).map(s => {
-                          const ic = instrColor(s.instrument ?? "");
+                        {normalizedInstruments.slice(0, 3).map((instr, idx) => {
+                          const ic = instrColor(instr);
                           return (
                             <span
-                              key={s.id}
-                              className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide"
+                              key={`${instr}-${idx}`}
+                              className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide"
                               style={{ background: `${ic}1e`, color: ic, border: "none" }}>
-                              {s.instrument ?? "—"}
+                              {instr}
                             </span>
                           );
                         })}
-                        {students.length > 3 && (
-                          <span className="text-[10px]" style={{ color: "var(--z-muted)" }}>+{students.length - 3}</span>
+                        {normalizedInstruments.length > 3 && (
+                          <span className="text-[10px]" style={{ color: "var(--z-muted)" }}>
+                            +{normalizedInstruments.length - 3}
+                          </span>
                         )}
                       </div>
                     </td>
