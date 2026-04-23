@@ -138,3 +138,65 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     return serverError(err instanceof Error ? err.message : "Internal error");
   }
 }
+
+/* ── DELETE /api/crm/families/[id]/files?fileId=xxx ───────
+   Deletes a family_file record and its storage object.
+──────────────────────────────────────────────────────────── */
+export async function DELETE(req: NextRequest, ctx: RouteContext) {
+  const resolved = await resolveCRMContext(req, {
+    permissions: ["crm.write"],
+    minRole: "director",
+  });
+  if ("response" in resolved) return resolved.response;
+  try {
+    const { id: familyId } = await ctx.params;
+    const { tenantId } = resolved.context;
+    const supabase = clientFor(tenantId);
+
+    const { searchParams } = new URL(req.url);
+    const fileId = searchParams.get("fileId");
+    if (!fileId) {
+      return new Response(JSON.stringify({ error: "fileId is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Fetch the record to get the storage path before deleting
+    const { data: fileRecord, error: fetchErr } = await supabase
+      .from("family_files")
+      .select("id, file_url, family_id")
+      .eq("id", fileId)
+      .eq("family_id", familyId)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!fileRecord) return notFound("File not found");
+
+    // Delete from Supabase Storage if it's a storage-backed file
+    if (fileRecord.file_url?.startsWith("storage://")) {
+      const storagePath = fileRecord.file_url.replace("storage://", "");
+      const { error: storageErr } = await supabase.storage
+        .from("family-files")
+        .remove([storagePath]);
+      // Non-fatal: log but continue so the DB record is still cleaned up
+      if (storageErr) console.warn("Storage delete warning:", storageErr.message);
+    }
+
+    // Delete the DB record
+    const { error: deleteErr } = await supabase
+      .from("family_files")
+      .delete()
+      .eq("id", fileId)
+      .eq("family_id", familyId);
+
+    if (deleteErr) throw deleteErr;
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return serverError(err instanceof Error ? err.message : "Internal error");
+  }
+}

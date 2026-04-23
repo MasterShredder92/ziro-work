@@ -1067,14 +1067,30 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtDate(f.created_at)}</td>
                     <td className="px-5 py-3"><SignwellBadge status={f.signwell_status} /></td>
                     <td className="px-5 py-3">
-                      {f.file_url ? (
-                        <a href={f.file_url} target="_blank" rel="noopener noreferrer"
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {f.file_url ? (
+                          <a href={f.file_url} target="_blank" rel="noopener noreferrer"
+                            className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+                            style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>View</a>
+                        ) : (
+                          <span className="rounded-lg px-2.5 py-1 text-xs font-medium"
+                            style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}`, opacity: 0.5, cursor: "default" }}>Unavailable</span>
+                        )}
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm("Are you sure you want to delete this document? This cannot be undone.")) return;
+                            const res = await fetch(`/api/crm/families/${familyId}/files?fileId=${f.id}`, {
+                              method: "DELETE", headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+                            });
+                            if (res.ok) setFamilyFiles(prev => prev.filter(x => x.id !== f.id));
+                            else alert("Delete failed. Please try again.");
+                          }}
                           className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                          style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>View</a>
-                      ) : (
-                        <span className="rounded-lg px-2.5 py-1 text-xs font-medium"
-                          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}`, opacity: 0.5, cursor: "default" }}>Unavailable</span>
-                      )}
+                          style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)", cursor: "pointer" }}
+                          title="Delete document">
+                          🗑
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1111,14 +1127,30 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtBytes(f.file_size)}</td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtDate(f.created_at)}</td>
                     <td className="px-5 py-3">
-                      {f.file_url ? (
-                        <a href={f.file_url} target="_blank" rel="noopener noreferrer"
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {f.file_url ? (
+                          <a href={f.file_url} target="_blank" rel="noopener noreferrer"
+                            className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+                            style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>Download</a>
+                        ) : (
+                          <span className="rounded-lg px-2.5 py-1 text-xs font-medium"
+                            style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}`, opacity: 0.5, cursor: "default" }}>Unavailable</span>
+                        )}
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm("Are you sure you want to delete this document? This cannot be undone.")) return;
+                            const res = await fetch(`/api/crm/families/${familyId}/files?fileId=${f.id}`, {
+                              method: "DELETE", headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+                            });
+                            if (res.ok) setStudentFiles(prev => prev.filter(x => x.id !== f.id));
+                            else alert("Delete failed. Please try again.");
+                          }}
                           className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                          style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>Download</a>
-                      ) : (
-                        <span className="rounded-lg px-2.5 py-1 text-xs font-medium"
-                          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}`, opacity: 0.5, cursor: "default" }}>Unavailable</span>
-                      )}
+                          style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)", cursor: "pointer" }}
+                          title="Delete document">
+                          🗑
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
