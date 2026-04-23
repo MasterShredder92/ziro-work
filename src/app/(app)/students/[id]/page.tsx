@@ -1,10 +1,20 @@
-import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { PageShell } from "@/components/layouts/PageShell";
+import { StudentOverviewHeader } from "./_header";
+import { StudentOverviewContent } from "./_content";
 
-const StudentDetailClient = dynamic(() => import("./_client").then((m) => m.StudentDetailClient), {
-  loading: () => <PageShell title="Student" />,
-});
+export default function StudentOverviewPage() {
+  return (
+    <Suspense fallback={<PageShell title="Student" />}>
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Header + breadcrumbs */}
+        <StudentOverviewHeader />
 
-export default function StudentDetailPage() {
-  return <StudentDetailClient />;
+        {/* Spacer between header and tabs */}
+        <div className="mt-6">
+          <StudentOverviewContent />
+        </div>
+      </div>
+    </Suspense>
+  );
 }

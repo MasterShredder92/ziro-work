@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Modal } from "@/components/ui/Modal";
-import { GlobalSearch } from "@/components/search/GlobalSearch";
+import { OmniSearch } from "@/components/search/OmniSearch";
 
 export default function SandboxSearchPage() {
   const [open, setOpen] = React.useState(true);
@@ -23,7 +23,7 @@ export default function SandboxSearchPage() {
         Open search modal
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Search" panelClassName="max-w-2xl">
-        <GlobalSearch tenantId={process.env.NEXT_PUBLIC_ZIRO_DEFAULT_TENANT_ID ?? ""} onClose={() => setOpen(false)} />
+        <OmniSearch onClose={() => setOpen(false)} />
       </Modal>
     </div>
   );

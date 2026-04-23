@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { List, type ListItem } from "@/components/ui/List";
-import { GlobalSearch } from "@/components/search/GlobalSearch";
+import { OmniSearch } from "@/components/search/OmniSearch";
 import { fuzzyScore } from "@/lib/search/fuzzy";
 import { cn, focusRingClassName } from "@/components/ui/utils";
 
@@ -160,7 +160,7 @@ export function CommandPalette({
         />
 
         {tab === "search" ? (
-          <GlobalSearch tenantId={tenantId} onClose={onClose} />
+          <OmniSearch onClose={onClose} />
         ) : (
           <div>
             <input

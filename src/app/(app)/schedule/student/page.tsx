@@ -1,6 +1,5 @@
 import { resolveScheduleContext } from "../guard";
 import { listEvents } from "@/lib/schedule/service";
-import { resolveStudentContext } from "@/app/(app)/student/guard";
 import { PortalScheduleList } from "@/components/portals/PortalScheduleList";
 import { getStudentById } from "@data/students";
 
@@ -26,9 +25,7 @@ export default async function StudentSchedulePage({
     typeof resolved.studentId === "string" ? resolved.studentId.trim() : "";
 
   const studentId =
-    ctx.session.role === "student"
-      ? (await resolveStudentContext().catch(() => null))?.studentId ?? ""
-      : requestedStudentId;
+    requestedStudentId;
 
   const now = new Date();
   const from = now.toISOString();
