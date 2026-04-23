@@ -672,6 +672,21 @@ function CreateInvoiceModal({
 
   const locationInfo = LOCATIONS.find(l => l.id === locationId);
 
+  // ── Pre-fill family when launched from family profile ──
+  React.useEffect(() => {
+    if (!returnFamilyId) return;
+    fetch(`/api/crm/families/${returnFamilyId}`, { headers: { "x-tenant-id": "" } })
+      .then(r => r.json())
+      .then(j => {
+        const f = j.data;
+        if (!f) return;
+        setSelectedFamilyId(f.id);
+        setCustomerName(f.name ?? "");
+        setCustomerEmail(f.primary_email ?? "");
+        setSearchQuery(f.name ?? "");
+      })
+      .catch(() => {});
+  }, [returnFamilyId]);
   // ── Debounced family search — uses dedicated /api/families/search ──
   React.useEffect(() => {
     if (searchQuery.length < 1) { setSearchResults([]); setShowDropdown(false); return; }

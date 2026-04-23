@@ -14,7 +14,7 @@ type Family = {
   city?: string | null; state?: string | null; postal_code?: string | null;
   notes?: string | null; billing_notes?: string | null;
   billing_day?: number | null; billing_status?: string | null;
-  rate_tier?: string | null; rate_tier_override?: string | null;
+  rate_tier?: number | null; rate_tier_override?: boolean | null;
   rate_tier_reason?: string | null; autopay_enabled?: boolean | null;
   emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
   emergency_contact_relationship?: string | null;
@@ -104,6 +104,8 @@ export default function FamilyDetailPage() {
   const tenantId = DEFAULT_TENANT_ID;
 
   const [tab, setTab] = useState<Tab>("students");
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceType, setInvoiceType] = useState<"recurring" | "one-time" | null>(null);
   const [family, setFamily] = useState<Family | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -368,12 +370,12 @@ export default function FamilyDetailPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-[var(--z-muted)]">{invoices.length} invoice{invoices.length !== 1 ? "s" : ""} on file</p>
-            <Link
-              href={`/invoices?family_id=${family.id}&return=family`}
+            <button
+              onClick={() => { setShowInvoiceModal(true); setInvoiceType(null); }}
               className="rounded-xl bg-[var(--z-accent)] px-4 py-2 text-xs font-bold text-black hover:opacity-90 transition-opacity"
             >
               + Create Invoice
-            </Link>
+            </button>
           </div>
           {invoices.length === 0 ? (
             <div className={sectionCls}>
@@ -449,6 +451,53 @@ export default function FamilyDetailPage() {
         </div>
       )}
 
+      {/* ── Invoice Type Picker Modal ── */}
+      {showInvoiceModal && invoiceType === null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border shadow-2xl p-8 space-y-6"
+            style={{ background: "var(--z-surface)", borderColor: "var(--z-border)" }}>
+            <div>
+              <div className="text-base font-bold text-[var(--z-fg)]">What type of invoice?</div>
+              <div className="text-xs text-[var(--z-muted)] mt-1">For {family.name}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setInvoiceType("recurring")}
+                className="flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all hover:border-[var(--z-accent)]"
+                style={{ borderColor: "var(--z-border)", background: "var(--z-bg)" }}
+              >
+                <span className="text-2xl">🔁</span>
+                <span className="text-sm font-bold text-[var(--z-fg)]">Recurring</span>
+                <span className="text-[10px] text-[var(--z-muted)] text-center leading-relaxed">Sends 1st of each month</span>
+              </button>
+              <button
+                onClick={() => setInvoiceType("one-time")}
+                className="flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all hover:border-[var(--z-accent)]"
+                style={{ borderColor: "var(--z-border)", background: "var(--z-bg)" }}
+              >
+                <span className="text-2xl">1×</span>
+                <span className="text-sm font-bold text-[var(--z-fg)]">One-Time</span>
+                <span className="text-[10px] text-[var(--z-muted)] text-center leading-relaxed">Single invoice, no recurrence</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowInvoiceModal(false)}
+              className="w-full text-xs text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+            >Cancel</button>
+          </div>
+        </div>
+      )}
+      {/* ── Invoice Builder (redirect to /invoices with pre-fill) ── */}
+      {showInvoiceModal && invoiceType !== null && (() => {
+        const params = new URLSearchParams();
+        params.set("family_id", family.id);
+        params.set("return", "family");
+        params.set("type", invoiceType);
+        if (typeof window !== "undefined") {
+          window.location.href = `/invoices?${params.toString()}`;
+        }
+        return null;
+      })()}
       {/* ── Meet Your Teachers Tab ── */}
       {tab === "teachers" && (
         <div className="space-y-4">
@@ -590,8 +639,8 @@ function EditFamilyForm({ family, tenantId, onSaved }: {
   const [notes, setNotes] = useState(family.notes ?? "");
   const [billingNotes, setBillingNotes] = useState(family.billing_notes ?? "");
   const [billingDay, setBillingDay] = useState(family.billing_day?.toString() ?? "1");
-  const [rateTier, setRateTier] = useState(family.rate_tier ?? "");
-  const [rateTierOverride, setRateTierOverride] = useState(family.rate_tier_override ?? "");
+  const [rateTier, setRateTier] = useState<string>(family.rate_tier != null ? String(family.rate_tier) : "");
+  const [rateTierOverride, setRateTierOverride] = useState(family.rate_tier_override ?? false);
   const [rateTierReason, setRateTierReason] = useState(family.rate_tier_reason ?? "");
   const [autopay, setAutopay] = useState(family.autopay_enabled ?? false);
   const [isMilitary, setIsMilitary] = useState(family.is_military ?? false);
@@ -616,8 +665,8 @@ function EditFamilyForm({ family, tenantId, onSaved }: {
           city: city || null, state: state || null, postal_code: zip || null,
           notes: notes || null, billing_notes: billingNotes || null,
           billing_day: billingDay ? parseInt(billingDay) : null,
-          rate_tier: rateTier || null,
-          rate_tier_override: rateTierOverride || null,
+          rate_tier: rateTier ? parseFloat(rateTier) : null,
+          rate_tier_override: rateTierOverride,
           rate_tier_reason: rateTierReason || null,
           autopay_enabled: autopay, is_military: isMilitary,
           emergency_contact_name: ecName || null,
@@ -678,30 +727,25 @@ function EditFamilyForm({ family, tenantId, onSaved }: {
         <div className="text-xs font-bold uppercase tracking-widest text-[var(--z-muted)]">Billing</div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Rate Tier</label>
-            <select className={inputCls} value={rateTier} onChange={e => setRateTier(e.target.value)}>
-              <option value="">— Select —</option>
-              <option value="standard">Standard</option>
-              <option value="premium">Premium</option>
-              <option value="discount">Discount</option>
-              <option value="military">Military</option>
-              <option value="scholarship">Scholarship</option>
-              <option value="custom">Custom</option>
-            </select>
+            <label className={labelCls}>Rate ($/session)</label>
+            <input className={inputCls} type="number" min="0" step="0.01" value={rateTier} onChange={e => setRateTier(e.target.value)} placeholder="e.g. 75.00" />
+            <p className="mt-1 text-[10px] text-[var(--z-muted)]">Per-session rate for this family.</p>
           </div>
           <div>
-            <label className={labelCls}>Rate Override ($)</label>
-            <input className={inputCls} type="number" min="0" step="0.01" value={rateTierOverride} onChange={e => setRateTierOverride(e.target.value)} placeholder="e.g. 85.00" />
+            <label className={labelCls}>Billing Day</label>
+            <input className={inputCls} type="number" min="1" max="28" value={billingDay} onChange={e => setBillingDay(e.target.value)} />
+            <p className="mt-1 text-[10px] text-[var(--z-muted)]">Day of month invoices generate.</p>
           </div>
+        </div>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--z-fg)]">
+            <input type="checkbox" checked={rateTierOverride} onChange={e => setRateTierOverride(e.target.checked)} className="h-4 w-4 accent-[var(--z-accent)]" />
+            Rate Override Active
+          </label>
         </div>
         {rateTierOverride && (
           <div><label className={labelCls}>Override Reason</label><input className={inputCls} value={rateTierReason} onChange={e => setRateTierReason(e.target.value)} placeholder="Scholarship, sibling discount, etc." /></div>
         )}
-        <div>
-          <label className={labelCls}>Billing Day of Month</label>
-          <input className={inputCls} type="number" min="1" max="28" value={billingDay} onChange={e => setBillingDay(e.target.value)} />
-          <p className="mt-1 text-[10px] text-[var(--z-muted)]">Recurring invoices send on this day. Default: 1st.</p>
-        </div>
         <div className="flex gap-4">
           <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--z-fg)]">
             <input type="checkbox" checked={autopay} onChange={e => setAutopay(e.target.checked)} className="h-4 w-4 accent-[var(--z-accent)]" />

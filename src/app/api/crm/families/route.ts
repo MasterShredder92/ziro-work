@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createFamily, listFamilies, type FamilyFilter } from "@data/families";
 import { badRequest, created, ok, readJson, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../_context";
+import { clientFor } from "@data/_client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,42 @@ export async function GET(req: NextRequest) {
       billing_status: url.searchParams.get("status") ?? undefined,
       search: url.searchParams.get("search") ?? undefined,
     };
-    const data = await listFamilies(resolved.context.tenantId, filter);
+    const tenantId = resolved.context.tenantId;
+    const data = await listFamilies(tenantId, filter);
+
+    if (data.length > 0) {
+      const supabase = clientFor(tenantId);
+      const familyIds = data.map((f) => f.id);
+      const { data: students } = await supabase
+        .from("students")
+        .select("id, family_id, instrument, status")
+        .eq("tenant_id", tenantId)
+        .in("family_id", familyIds);
+
+      const countMap: Record<string, number> = {};
+      const studentsMap: Record<string, { instrument?: string | null; status?: string | null }[]> = {};
+      for (const s of students ?? []) {
+        if (!s.family_id) continue;
+        countMap[s.family_id] = (countMap[s.family_id] ?? 0) + 1;
+        if (!studentsMap[s.family_id]) studentsMap[s.family_id] = [];
+        studentsMap[s.family_id].push({ instrument: s.instrument, status: s.status });
+      }
+
+      const enriched = data.map((f) => {
+        const row = f as Record<string, unknown>;
+        return {
+          ...f,
+          student_count: countMap[f.id] ?? 0,
+          students: studentsMap[f.id] ?? [],
+          balance_owed: (row.balance as number) ?? 0,
+          lifetime_paid: row.lifetime_paid_cents
+            ? (row.lifetime_paid_cents as number) / 100
+            : 0,
+        };
+      });
+      return ok({ data: enriched, count: enriched.length });
+    }
+
     return ok({ data, count: data.length });
   } catch (err) {
     return serverError(err);

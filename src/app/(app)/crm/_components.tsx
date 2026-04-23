@@ -42,7 +42,6 @@ export function CRMNav({ current }: { current: string }) {
   const items: Array<{ href: string; label: string; id: string }> = [
     { id: "home", href: "/crm", label: "Dashboard" },
     { id: "contacts", href: "/crm/contacts", label: "Contacts" },
-    { id: "students", href: "/crm/students", label: "Students" },
     { id: "families", href: "/crm/families", label: "Families" },
     { id: "teachers", href: "/crm/teachers", label: "Teachers" },
     { id: "enrollments", href: "/crm/enrollments", label: "Enrollments" },
