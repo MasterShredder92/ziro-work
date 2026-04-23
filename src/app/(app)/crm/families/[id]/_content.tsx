@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -213,10 +213,83 @@ function PrimaryContactCard({ family }: { family: FamilyDetail }) {
 }
 
 /* ─── Account Settings card ──────────────────────────────── */
-function AccountSettingsCard({ family }: { family: FamilyDetail }) {
+function AccountSettingsCard({ family, familyId, onStatusChange }: {
+  family: FamilyDetail;
+  familyId: string;
+  onStatusChange: (newStatus: string) => void;
+}) {
+  const [status, setStatus] = useState(family.status ?? "active");
+  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleStatusChange(newStatus: string) {
+    const prev = status;
+    setStatus(newStatus);
+    setSaving(true);
+    setSaveState("idle");
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/crm/families/${familyId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": DEFAULT_TENANT_ID,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Save failed (${res.status})`);
+      }
+      setSaveState("saved");
+      onStatusChange(newStatus);
+      router.refresh();
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch (err) {
+      setStatus(prev);
+      setSaveState("error");
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Card title="Account Settings">
       <dl className="flex flex-col gap-4">
+        {/* Family Status — live dropdown */}
+        <div className="flex flex-col gap-1.5">
+          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+            Family Status
+          </dt>
+          <dd className="flex items-center gap-2">
+            <select
+              value={status}
+              disabled={saving}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm outline-none transition-colors hover:border-zinc-300 focus:ring-2 focus:ring-zinc-900/10 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-zinc-600"
+            >
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+              <option value="inactive">Inactive</option>
+              <option value="archived">Archived</option>
+            </select>
+            {saving && (
+              <span className="text-xs text-zinc-400 dark:text-zinc-500">Saving…</span>
+            )}
+            {saveState === "saved" && !saving && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ Saved</span>
+            )}
+            {saveState === "error" && !saving && (
+              <span className="text-xs text-red-500 dark:text-red-400" title={saveError ?? undefined}>
+                {saveError ?? "Error"}
+              </span>
+            )}
+          </dd>
+        </div>
+
         <Field
           label="Autopay"
           value={<BoolBadge value={family.autopay_enabled} trueLabel="Enabled" falseLabel="Disabled" />}
@@ -297,7 +370,11 @@ function OverviewTab({ familyId }: { familyId: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <PrimaryContactCard family={family} />
-      <AccountSettingsCard family={family} />
+      <AccountSettingsCard
+        family={family}
+        familyId={familyId}
+        onStatusChange={(newStatus) => setFamily(f => f ? { ...f, status: newStatus } : f)}
+      />
     </div>
   );
 }
