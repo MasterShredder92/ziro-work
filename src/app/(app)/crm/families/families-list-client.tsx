@@ -109,23 +109,58 @@ export function FamiliesListClient({
   studentsByFamily = {},
   teacherByFamily = {},
 }: Props) {
-  const router = useRouter();
+   const router = useRouter();
   const [tab, setTab] = useState<TabId>("active");
   const [search, setSearch] = useState("");
+  const [filterTeacher, setFilterTeacher] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
 
   const activeRows   = useMemo(() => rows.filter(r => (r.status ?? "").toLowerCase() === "active"), [rows]);
   const inactiveRows = useMemo(() => rows.filter(r => ["inactive","paused","archived"].includes((r.status ?? "").toLowerCase())), [rows]);
   const displayRows  = tab === "active" ? activeRows : inactiveRows;
 
+  // Build unique teacher + location lists for dropdowns
+  const allTeachers = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of rows) {
+      const t = teacherByFamily[row.id];
+      if (t) set.add(t);
+    }
+    return [...set].sort();
+  }, [rows, teacherByFamily]);
+
+  const allLocations = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of rows) {
+      const l = locationNameById[row.primary_location_id ?? ""];
+      if (l) set.add(l);
+    }
+    return [...set].sort();
+  }, [rows, locationNameById]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return displayRows;
-    const q = search.toLowerCase();
-    return displayRows.filter(r =>
-      r.name.toLowerCase().includes(q) ||
-      (r.primary_email ?? "").toLowerCase().includes(q) ||
-      (locationNameById[r.primary_location_id ?? ""] ?? "").toLowerCase().includes(q)
-    );
-  }, [displayRows, search, locationNameById]);
+    let list = displayRows;
+    // Deep search: family name + email + location + ALL student first/last names
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(r => {
+        if (r.name.toLowerCase().includes(q)) return true;
+        if ((r.primary_email ?? "").toLowerCase().includes(q)) return true;
+        if ((locationNameById[r.primary_location_id ?? ""] ?? "").toLowerCase().includes(q)) return true;
+        const studs = studentsByFamily[r.id] ?? [];
+        return studs.some(s => s.name.toLowerCase().includes(q));
+      });
+    }
+    // Teacher filter
+    if (filterTeacher) {
+      list = list.filter(r => teacherByFamily[r.id] === filterTeacher);
+    }
+    // Location filter
+    if (filterLocation) {
+      list = list.filter(r => (locationNameById[r.primary_location_id ?? ""] ?? "") === filterLocation);
+    }
+    return list;
+  }, [displayRows, search, locationNameById, studentsByFamily, teacherByFamily, filterTeacher, filterLocation]);
 
   return (
     <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", gap: 0 }}>
@@ -135,7 +170,7 @@ export function FamiliesListClient({
         {/* Tabs */}
         <div style={{ display: "flex", gap: 2, background: "var(--z-surface)", borderRadius: 8, padding: 3, border: "1px solid var(--z-border)" }}>
           {(["active","inactive"] as TabId[]).map(t => {
-            const cnt = t === "active" ? activeRows.length : inactiveRows.length;
+            const cnt = t === "active" ? (tab === "active" ? filtered.length : activeRows.length) : (tab === "inactive" ? filtered.length : inactiveRows.length);
             const on = tab === t;
             return (
               <button key={t} onClick={() => setTab(t)} style={{
@@ -156,13 +191,42 @@ export function FamiliesListClient({
           })}
         </div>
 
-        {/* Search */}
-        <input type="search" placeholder="Search families…" value={search} onChange={e => setSearch(e.target.value)}
-          style={{
-            padding: "5px 12px", borderRadius: 7, border: "1px solid var(--z-border)",
-            background: "var(--z-surface)", color: "var(--z-fg)", fontSize: 12, outline: "none", width: 200,
-          }}
-        />
+        {/* Right controls: search + dropdowns */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <input type="search" placeholder="Search families, students…" value={search} onChange={e => setSearch(e.target.value)}
+            style={{
+              padding: "5px 12px", borderRadius: 7, border: "1px solid var(--z-border)",
+              background: "var(--z-surface)", color: "var(--z-fg)", fontSize: 12, outline: "none", width: 220,
+            }}
+          />
+          {/* Teacher filter */}
+          <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
+            style={{
+              padding: "5px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
+              background: "var(--z-surface)", color: filterTeacher ? "var(--z-fg)" : "var(--z-muted)",
+              fontSize: 12, outline: "none", cursor: "pointer",
+            }}>
+            <option value="">All Teachers</option>
+            {allTeachers.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          {/* Location filter */}
+          <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}
+            style={{
+              padding: "5px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
+              background: "var(--z-surface)", color: filterLocation ? "var(--z-fg)" : "var(--z-muted)",
+              fontSize: 12, outline: "none", cursor: "pointer",
+            }}>
+            <option value="">All Locations</option>
+            {allLocations.map(l => <option key={l} value={l}>{l.replace(" Music Lessons", "")}</option>)}
+          </select>
+          {(search || filterTeacher || filterLocation) && (
+            <button onClick={() => { setSearch(""); setFilterTeacher(""); setFilterLocation(""); }}
+              style={{
+                padding: "5px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
+                background: "transparent", color: "var(--z-muted)", fontSize: 11, cursor: "pointer",
+              }}>Clear</button>
+          )}
+        </div>
       </div>
 
       {/* ── Column header ── */}
@@ -183,7 +247,7 @@ export function FamiliesListClient({
       {/* ── Rows ── */}
       {filtered.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: "var(--z-muted)", fontSize: 13 }}>
-          {search ? `No families match "${search}"` : `No ${tab} families`}
+          {(search || filterTeacher || filterLocation) ? `No families match the current filters` : `No ${tab} families`}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
