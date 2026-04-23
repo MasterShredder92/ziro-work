@@ -124,7 +124,8 @@ export function FamiliesListClient({
     const set = new Set<string>();
     for (const row of rows) {
       const t = teacherByFamily[row.id];
-      if (t) set.add(t);
+      // teacherByFamily may be a comma-separated string — flatten to individual names
+      if (t) t.split(",").map(s => s.trim()).filter(Boolean).forEach(n => set.add(n));
     }
     return [...set].sort();
   }, [rows, teacherByFamily]);
@@ -151,9 +152,12 @@ export function FamiliesListClient({
         return studs.some(s => s.name.toLowerCase().includes(q));
       });
     }
-    // Teacher filter
+    // Teacher filter — match if the teacher appears anywhere in the family's teacher list
     if (filterTeacher) {
-      list = list.filter(r => teacherByFamily[r.id] === filterTeacher);
+      list = list.filter(r => {
+        const t = teacherByFamily[r.id] ?? "";
+        return t.split(",").map(s => s.trim()).includes(filterTeacher);
+      });
     }
     // Location filter
     if (filterLocation) {
@@ -262,8 +266,33 @@ export function FamiliesListClient({
             const isMil     = row.is_military === true;
             const isOverdue = (row.billing_status ?? "").toLowerCase() === "overdue";
 
-            // First names only, max 4
-            const firstNames = students.slice(0, 4).map(s => firstName(s.name));
+            // Group students by teacher, sorted by teacher name, then build paired display strings
+            // Students without a teacher go at the end under "—"
+            const teacherGroups: Map<string, string[]> = new Map();
+            for (const s of students) {
+              const tName = s.teacherName ?? "—";
+              if (!teacherGroups.has(tName)) teacherGroups.set(tName, []);
+              teacherGroups.get(tName)!.push(firstName(s.name));
+            }
+            // Sort groups: named teachers alphabetically, "—" last
+            const sortedGroups = [...teacherGroups.entries()].sort((a, b) => {
+              if (a[0] === "—") return 1;
+              if (b[0] === "—") return -1;
+              return a[0].localeCompare(b[0]);
+            });
+            // Build paired arrays (teacher display, student display) — max 4 students shown
+            const pairedTeachers: string[] = [];
+            const pairedStudents: string[] = [];
+            let shown = 0;
+            for (const [tName, sNames] of sortedGroups) {
+              if (shown >= 4) break;
+              const available = sNames.slice(0, 4 - shown);
+              pairedTeachers.push(tName === "—" ? "—" : tName);
+              pairedStudents.push(available.join(" & "));
+              shown += available.length;
+            }
+            const firstNames = pairedStudents; // used in Col 6
+            const teacherDisplay = pairedTeachers.filter(t => t !== "—").join(", ") || null;
             const extraCount = students.length > 4 ? students.length - 4 : 0;
 
             return (
@@ -370,9 +399,9 @@ export function FamiliesListClient({
                       background: ls.bg, color: ls.fg, whiteSpace: "nowrap",
                     }}>{locShort}</span>
                   </div>
-                  {/* Col 5: Teacher */}
+                  {/* Col 5: Teacher — paired with students */}
                   <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {teacher ?? <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>}
+                    {teacherDisplay ?? <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>}
                   </div>
                   {/* Col 6: Students — first names as inline pills */}
                   <div style={{ display: "flex", flexWrap: "nowrap", gap: 3, overflow: "hidden", alignItems: "center" }}>
