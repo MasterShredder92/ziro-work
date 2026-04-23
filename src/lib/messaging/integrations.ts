@@ -109,12 +109,29 @@ export async function resolveContact(
       const s = student as Record<string, unknown>;
       const display =
         `${(s.first_name as string) ?? ""} ${(s.last_name as string) ?? ""}`.trim() ||
-        (s.email as string | undefined) ||
         contactId;
+      // Contact data lives on the family, not the student.
+      // Resolve the linked family to get primary_email and primary_phone.
+      let familyEmail: string | null = null;
+      let familyPhone: string | null = null;
+      const familyId = (s.family_id as string | null) ?? null;
+      if (familyId) {
+        try {
+          const { getFamilyById } = await import("@data/families");
+          const family = await getFamilyById(familyId, tenantId);
+          if (family) {
+            const f = family as Record<string, unknown>;
+            familyEmail = (f.primary_email as string | null) ?? null;
+            familyPhone = (f.primary_phone as string | null) ?? null;
+          }
+        } catch {
+          /* noop */
+        }
+      }
       return {
         profileId: null,
-        email: (s.email as string | null) ?? null,
-        phone: (s.phone as string | null) ?? null,
+        email: familyEmail,
+        phone: familyPhone,
         displayName: display,
         source: "student",
       };

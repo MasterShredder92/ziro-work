@@ -68,14 +68,7 @@ async function resolveFamilyId(db: any, tenantId: string, squareCustomerId: stri
     .eq("square_customer_id", squareCustomerId)
     .limit(1);
   if (data?.length > 0) return data[0].id;
-  // Also check students
-  const { data: stuData } = await db
-    .from("students")
-    .select("family_id")
-    .eq("tenant_id", tenantId)
-    .eq("square_customer_id", squareCustomerId)
-    .limit(1);
-  if (stuData?.length > 0) return stuData[0].family_id ?? null;
+  // families is the exclusive billing entity — no student fallback.
   return null;
 }
 
@@ -207,20 +200,7 @@ async function handleCustomerEvent(db: any, tenantId: string, eventType: string,
     return;
   }
 
-  // Try to link to a student by email
-  const { data: students } = await db
-    .from("students")
-    .select("id, family_id, square_customer_id")
-    .eq("tenant_id", tenantId)
-    .ilike("email", email)
-    .limit(1);
-
-  if (students?.length > 0 && !students[0].square_customer_id) {
-    await db.from("students")
-      .update({ square_customer_id: squareCustId, updated_at: new Date().toISOString() })
-      .eq("id", students[0].id).eq("tenant_id", tenantId);
-    console.log(`[Square Webhook] Linked customer ${squareCustId} to student ${students[0].id}`);
-  }
+  // families is the exclusive billing entity — no student fallback.
 }
 
 export async function POST(req: NextRequest) {
@@ -271,7 +251,7 @@ export async function POST(req: NextRequest) {
         await handlePaymentEvent(db, tenantId, eventData);
         break;
 
-      // ── Customer events — keep family/student links current ─────────────
+      // ── Customer events — keep family links current (families is the exclusive billing entity) ──
       case "customer.created":
       case "customer.updated":
       case "customer.deleted":
