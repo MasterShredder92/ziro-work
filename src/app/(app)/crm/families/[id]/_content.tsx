@@ -4,12 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
+/* ─── Location Brand Colors (matches list + header) ──────────
+   Bellevue: Royal Purple | Gretna: Emerald | Omaha: Crimson | Elkhorn: Royal Blue
+*/
+const LOCATION_COLORS: Record<string, string> = {
+  bellevue: "#7c3aed",
+  gretna:   "#059669",
+  omaha:    "#b91c1c",
+  elkhorn:  "#1d4ed8",
+};
+function locationBrandColor(name: string | null): string {
+  if (!name) return "#6366f1";
+  const n = name.toLowerCase();
+  for (const [key, val] of Object.entries(LOCATION_COLORS)) {
+    if (n.includes(key)) return val;
+  }
+  return "#6366f1";
+}
+
 /* ─── Types ──────────────────────────────────────────────── */
 type FamilyDetail = {
   id: string;
   name: string;
   status: string | null;
-  // Primary contact
   primary_contact_name: string | null;
   primary_email: string | null;
   primary_phone: string | null;
@@ -18,7 +35,6 @@ type FamilyDetail = {
   city: string | null;
   state: string | null;
   postal_code: string | null;
-  // Account settings
   autopay_enabled: boolean | null;
   billing_day: number | null;
   billing_status: string;
@@ -30,6 +46,7 @@ type FamilyDetail = {
   notify_via_email: boolean;
   notify_via_sms: boolean;
   is_military: boolean | null;
+  primary_location_id: string | null;
 };
 
 type Tab = "overview" | "students" | "billing" | "documents";
@@ -50,17 +67,65 @@ function formatCurrency(val: number): string {
 
 /* ─── Light-theme design tokens ─────────────────────────── */
 const T = {
-  bg:         "#ffffff",
-  surface:    "#f9fafb",
-  border:     "#e5e7eb",
-  borderMid:  "#d1d5db",
-  fg:         "#111827",
-  muted:      "#6b7280",
-  label:      "#9ca3af",
-  accent:     "#111827",
-  shadow:     "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
-  shadowHover:"0 4px 16px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06)",
+  bg:      "#ffffff",
+  surface: "#f9fafb",
+  border:  "#e5e7eb",
+  borderMid: "#d1d5db",
+  fg:      "#111827",
+  muted:   "#6b7280",
+  label:   "#9ca3af",
+  shadow:  "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
 };
+
+/* ─── Fading Brand Border Card ───────────────────────────────
+   Renders a card with a 3px left gradient stripe that fades from
+   brandColor at 0% to transparent at 50%. Other 3 sides are 1px
+   light gray. Uses a positioned inner div — avoids border-image
+   which kills border-radius.
+*/
+function BrandCard({
+  brandColor,
+  children,
+  style,
+  className,
+}: {
+  brandColor: string;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        position: "relative",
+        background: T.bg,
+        borderRadius: 12,
+        border: `1px solid ${T.border}`,
+        borderLeft: "none",
+        boxShadow: T.shadow,
+        overflow: "hidden",
+        ...style,
+      }}
+    >
+      {/* Fading left stripe */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 3,
+          background: `linear-gradient(to bottom, ${brandColor} 0%, ${brandColor}00 50%)`,
+          borderRadius: "12px 0 0 12px",
+          pointerEvents: "none",
+        }}
+      />
+      {children}
+    </div>
+  );
+}
 
 /* ─── Tab nav ────────────────────────────────────────────── */
 const TABS: { id: Tab; label: string }[] = [
@@ -80,9 +145,9 @@ function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors"
+              className="px-4 py-3 text-sm whitespace-nowrap transition-colors"
               style={{
-                borderBottom: isActive ? `2px solid ${T.accent}` : "2px solid transparent",
+                borderBottom: isActive ? `2px solid ${T.fg}` : "2px solid transparent",
                 color: isActive ? T.fg : T.muted,
                 fontWeight: isActive ? 700 : 500,
                 background: "transparent",
@@ -95,19 +160,6 @@ function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
           );
         })}
       </nav>
-    </div>
-  );
-}
-
-/* ─── Card wrapper ───────────────────────────────────────── */
-function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl" style={{ background: T.bg, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
-        <h2 className="text-sm font-semibold" style={{ color: T.fg }}>{title}</h2>
-        {action}
-      </div>
-      <div className="px-5 py-4">{children}</div>
     </div>
   );
 }
@@ -142,9 +194,9 @@ function BoolBadge({ value, trueLabel = "Yes", falseLabel = "No" }: { value: boo
 function BillingStatusBadge({ status }: { status: string }) {
   const s = status.toLowerCase();
   let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
-  if (s === "current" || s === "paid")       { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
-  else if (s === "overdue" || s === "past_due") { bg = "rgba(185,28,28,0.1)";  color = "#b91c1c"; }
-  else if (s === "paused")                   { bg = "rgba(37,99,235,0.12)";  color = "#2563eb"; }
+  if (s === "current" || s === "paid")          { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
+  else if (s === "overdue" || s === "past_due") { bg = "rgba(185,28,28,0.1)";   color = "#b91c1c"; }
+  else if (s === "paused")                      { bg = "rgba(37,99,235,0.12)";  color = "#2563eb"; }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
       style={{ background: bg, color }}>
@@ -153,34 +205,99 @@ function BillingStatusBadge({ status }: { status: string }) {
   );
 }
 
-/* ─── Inline input style ─────────────────────────────────── */
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: `1px solid ${T.borderMid}`,
-  background: T.surface,
-  color: T.fg,
-  fontSize: 14,
-  outline: "none",
-};
+/* ─── Inline input with brand focus ring ─────────────────── */
+function BrandInput({
+  brandColor,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+}: {
+  brandColor: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: "100%",
+        padding: "6px 10px",
+        borderRadius: 8,
+        border: `1px solid ${focused ? brandColor : T.borderMid}`,
+        boxShadow: focused ? `0 0 0 3px ${brandColor}22` : "none",
+        background: T.surface,
+        color: T.fg,
+        fontSize: 14,
+        outline: "none",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    />
+  );
+}
 
-/* ─── Primary Contact Card — with inline edit ────────────── */
-function PrimaryContactCard({ family, familyId, onUpdate }: {
+/* ─── BrandSelect ────────────────────────────────────────── */
+function BrandSelect({
+  brandColor,
+  value,
+  onChange,
+  children,
+}: {
+  brandColor: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: "100%",
+        padding: "6px 10px",
+        borderRadius: 8,
+        border: `1px solid ${focused ? brandColor : T.borderMid}`,
+        boxShadow: focused ? `0 0 0 3px ${brandColor}22` : "none",
+        background: T.surface,
+        color: T.fg,
+        fontSize: 14,
+        outline: "none",
+        cursor: "pointer",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    >
+      {children}
+    </select>
+  );
+}
+
+/* ─── Primary Contact Card ───────────────────────────────── */
+function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
   family: FamilyDetail;
   familyId: string;
+  brandColor: string;
   onUpdate: (patch: Partial<FamilyDetail>) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [editing, setEditing]   = useState(false);
+  const [saving, setSaving]     = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [name, setName]   = useState(family.primary_contact_name ?? "");
+  const [name,  setName]  = useState(family.primary_contact_name ?? "");
   const [email, setEmail] = useState(family.primary_email ?? "");
   const [phone, setPhone] = useState(family.primary_phone ?? "");
 
-  // Reset draft when family data changes
   useEffect(() => {
     setName(family.primary_contact_name ?? "");
     setEmail(family.primary_email ?? "");
@@ -203,11 +320,7 @@ function PrimaryContactCard({ family, familyId, onUpdate }: {
       const res = await fetch(`/api/crm/families/${familyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
-        body: JSON.stringify({
-          primary_contact_name: name || null,
-          primary_email: email || null,
-          primary_phone: phone || null,
-        }),
+        body: JSON.stringify({ primary_contact_name: name || null, primary_email: email || null, primary_phone: phone || null }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -234,23 +347,21 @@ function PrimaryContactCard({ family, familyId, onUpdate }: {
         <span className="text-xs" style={{ color: "#b91c1c" }} title={saveError ?? undefined}>Error</span>
       )}
       <button onClick={handleCancel} disabled={saving}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+        className="rounded-lg px-3 py-1.5 text-xs font-medium"
         style={{ background: T.surface, color: T.muted, border: `1px solid ${T.border}` }}>
         Cancel
       </button>
       <button onClick={handleSave} disabled={saving}
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
-        style={{ background: T.accent, color: "#fff" }}>
+        className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
+        style={{ background: T.fg, color: "#fff" }}>
         {saving ? "Saving…" : "Save"}
       </button>
     </div>
   ) : (
     <div className="flex items-center gap-2">
-      {saveState === "saved" && (
-        <span className="text-xs" style={{ color: "#059669" }}>✓ Saved</span>
-      )}
+      {saveState === "saved" && <span className="text-xs" style={{ color: "#059669" }}>✓ Saved</span>}
       <button onClick={() => setEditing(true)}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:opacity-80"
+        className="rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
         style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>
         Edit
       </button>
@@ -258,58 +369,65 @@ function PrimaryContactCard({ family, familyId, onUpdate }: {
   );
 
   return (
-    <Card title="Primary Contact" action={editAction}>
-      <dl className="flex flex-col gap-4">
-        {editing ? (
-          <>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Contact Name</label>
-              <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Full name" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Email</label>
-              <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Phone</label>
-              <input style={inputStyle} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 000-0000" />
-            </div>
-          </>
-        ) : (
-          <>
-            <Field label="Contact Name" value={family.primary_contact_name} />
-            <Field label="Email" value={
-              family.primary_email
-                ? <a href={`mailto:${family.primary_email}`} className="underline underline-offset-2 hover:opacity-70" style={{ color: T.fg }}>{family.primary_email}</a>
-                : null
-            } />
-            <Field label="Phone" value={
-              family.primary_phone
-                ? <a href={`tel:${family.primary_phone}`} className="underline underline-offset-2 hover:opacity-70" style={{ color: T.fg }}>{family.primary_phone}</a>
-                : null
-            } />
-            <Field label="Address" value={address} />
-          </>
-        )}
-      </dl>
-    </Card>
+    <BrandCard brandColor={brandColor}>
+      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+        <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Primary Contact</h2>
+        {editAction}
+      </div>
+      <div className="px-5 py-4">
+        <dl className="flex flex-col gap-4">
+          {editing ? (
+            <>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Contact Name</label>
+                <BrandInput brandColor={brandColor} value={name} onChange={setName} placeholder="Full name" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Email</label>
+                <BrandInput brandColor={brandColor} type="email" value={email} onChange={setEmail} placeholder="email@example.com" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Phone</label>
+                <BrandInput brandColor={brandColor} type="tel" value={phone} onChange={setPhone} placeholder="(555) 000-0000" />
+              </div>
+            </>
+          ) : (
+            <>
+              <Field label="Contact Name" value={family.primary_contact_name} />
+              <Field label="Email" value={
+                family.primary_email
+                  ? <a href={`mailto:${family.primary_email}`} className="underline underline-offset-2 hover:opacity-70" style={{ color: T.fg }}>{family.primary_email}</a>
+                  : null
+              } />
+              <Field label="Phone" value={
+                family.primary_phone
+                  ? <a href={`tel:${family.primary_phone}`} className="underline underline-offset-2 hover:opacity-70" style={{ color: T.fg }}>{family.primary_phone}</a>
+                  : null
+              } />
+              <Field label="Address" value={address} />
+            </>
+          )}
+        </dl>
+      </div>
+    </BrandCard>
   );
 }
 
-/* ─── Account Settings Card — with inline edit ───────────── */
-function AccountSettingsCard({ family, familyId, onUpdate }: {
+/* ─── Account Settings Card ──────────────────────────────── */
+function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
   family: FamilyDetail;
   familyId: string;
+  brandColor: string;
   onUpdate: (patch: Partial<FamilyDetail>) => void;
 }) {
   const router = useRouter();
-  const [editing, setEditing]   = useState(false);
-  const [saving, setSaving]     = useState(false);
+  const [editing, setEditing]     = useState(false);
+  const [saving, setSaving]       = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [draftStatus,     setDraftStatus]     = useState(family.status ?? "active");
-  const [draftMilitary,   setDraftMilitary]   = useState(family.is_military ?? false);
+  const [draftStatus,   setDraftStatus]   = useState(family.status ?? "active");
+  const [draftMilitary, setDraftMilitary] = useState(family.is_military ?? false);
 
   useEffect(() => {
     setDraftStatus(family.status ?? "active");
@@ -363,7 +481,7 @@ function AccountSettingsCard({ family, familyId, onUpdate }: {
       </button>
       <button onClick={handleSave} disabled={saving}
         className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
-        style={{ background: T.accent, color: "#fff" }}>
+        style={{ background: T.fg, color: "#fff" }}>
         {saving ? "Saving…" : "Save"}
       </button>
     </div>
@@ -379,68 +497,71 @@ function AccountSettingsCard({ family, familyId, onUpdate }: {
   );
 
   return (
-    <Card title="Account Settings" action={editAction}>
-      <dl className="flex flex-col gap-4">
-        {editing ? (
-          <>
-            {/* Status select */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Family Status</label>
-              <select value={draftStatus} onChange={e => setDraftStatus(e.target.value)}
-                style={{ ...inputStyle, cursor: "pointer" }}>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="inactive">Inactive</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            {/* Military toggle */}
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Military Discount</label>
-              <button
-                type="button"
-                onClick={() => setDraftMilitary(v => !v)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                style={{ background: draftMilitary ? "#7c3aed" : "#d1d5db" }}>
-                <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                  style={{ transform: draftMilitary ? "translateX(22px)" : "translateX(2px)" }} />
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <Field label="Family Status" value={
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize"
-                style={
-                  (family.status ?? "").toLowerCase() === "active"
-                    ? { background: "rgba(16,185,129,0.12)", color: "#059669" }
-                    : { background: "rgba(107,114,128,0.1)", color: "#6b7280" }
-                }>
-                {family.status ?? "—"}
-              </span>
-            } />
-            <Field label="Military Discount" value={<BoolBadge value={family.is_military} trueLabel="Yes — ★ MIL" falseLabel="No" />} />
-          </>
-        )}
+    <BrandCard brandColor={brandColor}>
+      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+        <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Account Settings</h2>
+        {editAction}
+      </div>
+      <div className="px-5 py-4">
+        <dl className="flex flex-col gap-4">
+          {editing ? (
+            <>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Family Status</label>
+                <BrandSelect brandColor={brandColor} value={draftStatus} onChange={setDraftStatus}>
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="archived">Archived</option>
+                </BrandSelect>
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Military Discount</label>
+                <button
+                  type="button"
+                  onClick={() => setDraftMilitary(v => !v)}
+                  className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                  style={{ background: draftMilitary ? brandColor : "#d1d5db" }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    style={{ transform: draftMilitary ? "translateX(22px)" : "translateX(2px)" }} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Field label="Family Status" value={
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize"
+                  style={
+                    (family.status ?? "").toLowerCase() === "active"
+                      ? { background: "rgba(16,185,129,0.12)", color: "#059669" }
+                      : { background: "rgba(107,114,128,0.1)", color: "#6b7280" }
+                  }>
+                  {family.status ?? "—"}
+                </span>
+              } />
+              <Field label="Military Discount" value={<BoolBadge value={family.is_military} trueLabel="Yes — ★ MIL" falseLabel="No" />} />
+            </>
+          )}
 
-        {/* Always-visible read-only fields */}
-        <Field label="Autopay"        value={<BoolBadge value={family.autopay_enabled} trueLabel="Enabled" falseLabel="Disabled" />} />
-        <Field label="Billing Day"    value={family.billing_day !== null ? `Day ${family.billing_day} of month` : null} />
-        <Field label="Billing Status" value={<BillingStatusBadge status={family.billing_status} />} />
-        <Field label="Rate / Session" value={family.rate_tier ? formatCurrency(family.rate_tier) : null} />
-        {family.rate_tier_override && (
-          <Field label="Rate Override" value={
-            <span className="text-xs" style={{ color: T.muted }}>{family.rate_tier_reason ?? "Manual override applied"}</span>
-          } />
-        )}
-        <Field label="Notes" value={family.notes ?? family.billing_notes} />
-      </dl>
-    </Card>
+          {/* Always-visible read-only fields */}
+          <Field label="Autopay"        value={<BoolBadge value={family.autopay_enabled} trueLabel="Enabled" falseLabel="Disabled" />} />
+          <Field label="Billing Day"    value={family.billing_day !== null ? `Day ${family.billing_day} of month` : null} />
+          <Field label="Billing Status" value={<BillingStatusBadge status={family.billing_status} />} />
+          <Field label="Rate / Session" value={family.rate_tier ? formatCurrency(family.rate_tier) : null} />
+          {family.rate_tier_override && (
+            <Field label="Rate Override" value={
+              <span className="text-xs" style={{ color: T.muted }}>{family.rate_tier_reason ?? "Manual override applied"}</span>
+            } />
+          )}
+          <Field label="Notes" value={family.notes ?? family.billing_notes} />
+        </dl>
+      </div>
+    </BrandCard>
   );
 }
 
 /* ─── Overview tab ───────────────────────────────────────── */
-function OverviewTab({ familyId }: { familyId: string }) {
+function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -469,13 +590,10 @@ function OverviewTab({ familyId }: { familyId: string }) {
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 animate-pulse">
-        {[0, 1].map((i) => (
-          <div key={i} className="h-64 rounded-xl" style={{ background: T.surface }} />
-        ))}
+        {[0, 1].map(i => <div key={i} className="h-64 rounded-xl" style={{ background: T.surface }} />)}
       </div>
     );
   }
-
   if (error || !family) {
     return (
       <div className="rounded-lg px-4 py-3 text-sm"
@@ -491,8 +609,8 @@ function OverviewTab({ familyId }: { familyId: string }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <PrimaryContactCard family={family} familyId={familyId} onUpdate={handleUpdate} />
-      <AccountSettingsCard family={family} familyId={familyId} onUpdate={handleUpdate} />
+      <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
+      <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
     </div>
   );
 }
@@ -511,9 +629,9 @@ type FamilyStudent = {
 function StudentStatusBadge({ status }: { status: string | null }) {
   const s = (status ?? "").toLowerCase();
   let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
-  if (s === "active")                        { bg = "rgba(16,185,129,0.12)";  color = "#059669"; }
-  else if (s === "paused")                   { bg = "rgba(37,99,235,0.12)";   color = "#2563eb"; }
-  else if (s === "trial")                    { bg = "rgba(245,158,11,0.12)";  color = "#d97706"; }
+  if (s === "active")  { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
+  if (s === "paused")  { bg = "rgba(37,99,235,0.12)";  color = "#2563eb"; }
+  if (s === "trial")   { bg = "rgba(245,158,11,0.12)"; color = "#d97706"; }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
       style={{ background: bg, color }}>
@@ -522,40 +640,40 @@ function StudentStatusBadge({ status }: { status: string | null }) {
   );
 }
 
-/* ─── Student card ───────────────────────────────────────── */
-function StudentCard({ student }: { student: FamilyStudent & { teacherName?: string } }) {
+/* ─── Student card with fading brand border ──────────────── */
+function StudentCard({ student, brandColor }: { student: FamilyStudent & { teacherName?: string }; brandColor: string }) {
   const inits = [student.first_name[0], student.last_name[0]].filter(Boolean).join("").toUpperCase();
   return (
-    <a href={`/students/${student.id}`}
-      className="group flex items-center gap-4 rounded-xl p-4 transition-all hover:shadow-md"
-      style={{ background: T.bg, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-        style={{ background: T.surface, color: T.muted }}>
-        {inits}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold" style={{ color: T.fg }}>
-          {student.first_name} {student.last_name}
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          {student.instrument && <span className="text-xs" style={{ color: T.muted }}>{student.instrument}</span>}
-          {student.instrument && student.teacherName && <span style={{ color: T.label }}>·</span>}
-          {student.teacherName && <span className="text-xs" style={{ color: T.muted }}>{student.teacherName}</span>}
+    <BrandCard brandColor={brandColor} className="group transition-all hover:shadow-md" style={{ cursor: "pointer" }}>
+      <a href={`/students/${student.id}`} className="flex items-center gap-4 px-5 py-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+          style={{ background: T.surface, color: T.muted }}>
+          {inits}
         </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <StudentStatusBadge status={student.status} />
-        <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" style={{ color: T.label }}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </a>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold" style={{ color: T.fg }}>
+            {student.first_name} {student.last_name}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {student.instrument && <span className="text-xs" style={{ color: T.muted }}>{student.instrument}</span>}
+            {student.instrument && student.teacherName && <span style={{ color: T.label }}>·</span>}
+            {student.teacherName && <span className="text-xs" style={{ color: T.muted }}>{student.teacherName}</span>}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <StudentStatusBadge status={student.status} />
+          <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" style={{ color: T.label }}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+    </BrandCard>
   );
 }
 
 /* ─── Students tab ───────────────────────────────────────── */
-function StudentsTab({ familyId }: { familyId: string }) {
+function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [students, setStudents] = useState<(FamilyStudent & { teacherName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -621,7 +739,7 @@ function StudentsTab({ familyId }: { familyId: string }) {
       <p className="text-xs font-medium" style={{ color: T.muted }}>
         {students.length} student{students.length !== 1 ? "s" : ""} enrolled
       </p>
-      {students.map(s => <StudentCard key={s.id} student={s} />)}
+      {students.map(s => <StudentCard key={s.id} student={s} brandColor={brandColor} />)}
     </div>
   );
 }
@@ -650,10 +768,10 @@ function dollars(val: number): string {
 function InvoiceStatusBadge({ status }: { status: string }) {
   const s = status.toLowerCase();
   let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
-  if (s === "paid")                          { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
+  if (s === "paid")                             { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
   else if (s === "overdue" || s === "past_due") { bg = "rgba(185,28,28,0.1)";  color = "#b91c1c"; }
-  else if (s === "open" || s === "sent")     { bg = "rgba(37,99,235,0.12)";  color = "#2563eb"; }
-  else if (s === "draft")                    { bg = "rgba(245,158,11,0.12)"; color = "#d97706"; }
+  else if (s === "open" || s === "sent")        { bg = "rgba(37,99,235,0.12)"; color = "#2563eb"; }
+  else if (s === "draft")                       { bg = "rgba(245,158,11,0.12)"; color = "#d97706"; }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
       style={{ background: bg, color }}>
@@ -662,18 +780,20 @@ function InvoiceStatusBadge({ status }: { status: string }) {
   );
 }
 
-/* ─── Metric card ─────────────────────────────────────────── */
-function MetricCard({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+/* ─── Metric card with fading brand border ────────────────── */
+function MetricCard({ label, value, valueColor, brandColor }: { label: string; value: string; valueColor?: string; brandColor: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl p-4" style={{ background: T.bg, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>{label}</p>
-      <p className="text-xl font-bold" style={{ color: valueColor ?? T.fg }}>{value}</p>
-    </div>
+    <BrandCard brandColor={brandColor}>
+      <div className="px-5 py-4 flex flex-col gap-1">
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>{label}</p>
+        <p className="text-xl font-bold" style={{ color: valueColor ?? T.fg }}>{value}</p>
+      </div>
+    </BrandCard>
   );
 }
 
 /* ─── Billing tab ─────────────────────────────────────────── */
-function BillingTab({ familyId }: { familyId: string }) {
+function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [family, setFamily] = useState<BillingFamily | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -726,9 +846,9 @@ function BillingTab({ familyId }: { familyId: string }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-3 sm:grid-cols-3">
-        <MetricCard label="Current Balance" value={dollars(family?.balance ?? 0)} valueColor={balColor} />
-        <MetricCard label="Overdue" value={cents(family?.overdue_balance_cents ?? 0)} valueColor={(family?.overdue_balance_cents ?? 0) > 0 ? "#b91c1c" : T.fg} />
-        <MetricCard label="Lifetime Paid" value={cents(family?.lifetime_paid_cents ?? 0)} valueColor="#059669" />
+        <MetricCard label="Current Balance" value={dollars(family?.balance ?? 0)} valueColor={balColor} brandColor={brandColor} />
+        <MetricCard label="Overdue" value={cents(family?.overdue_balance_cents ?? 0)} valueColor={(family?.overdue_balance_cents ?? 0) > 0 ? "#b91c1c" : T.fg} brandColor={brandColor} />
+        <MetricCard label="Lifetime Paid" value={cents(family?.lifetime_paid_cents ?? 0)} valueColor="#059669" brandColor={brandColor} />
       </div>
 
       {invoices.length === 0 ? (
@@ -736,7 +856,7 @@ function BillingTab({ familyId }: { familyId: string }) {
           <p className="text-sm font-medium" style={{ color: T.muted }}>No invoices found for this family</p>
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden" style={{ background: T.bg, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+        <BrandCard brandColor={brandColor}>
           <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
             <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Recent Invoices</h2>
             <span className="text-xs" style={{ color: T.muted }}>{invoices.length} shown</span>
@@ -752,7 +872,7 @@ function BillingTab({ familyId }: { familyId: string }) {
               </thead>
               <tbody>
                 {invoices.map(inv => (
-                  <tr key={inv.id} className="transition-colors" style={{ borderBottom: `1px solid ${T.border}` }}
+                  <tr key={inv.id} style={{ borderBottom: `1px solid ${T.border}` }}
                     onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                     <td className="px-5 py-3 font-mono text-xs" style={{ color: T.muted }}>{inv.number ?? inv.id.slice(0, 8).toUpperCase()}</td>
@@ -763,7 +883,7 @@ function BillingTab({ familyId }: { familyId: string }) {
                     <td className="px-5 py-3"><InvoiceStatusBadge status={inv.status} /></td>
                     <td className="px-5 py-3">
                       <a href={`/billing/invoices/${inv.id}`}
-                        className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors hover:opacity-80"
+                        className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
                         style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>
                         View
                       </a>
@@ -773,7 +893,7 @@ function BillingTab({ familyId }: { familyId: string }) {
               </tbody>
             </table>
           </div>
-        </div>
+        </BrandCard>
       )}
     </div>
   );
@@ -787,8 +907,8 @@ function SignwellBadge({ status }: { status: string | null }) {
   if (!status) return null;
   const s = status.toLowerCase();
   let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
-  if (s === "completed" || s === "signed") { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
-  else if (s === "pending" || s === "sent") { bg = "rgba(245,158,11,0.12)"; color = "#d97706"; }
+  if (s === "completed" || s === "signed")  { bg = "rgba(16,185,129,0.12)";  color = "#059669"; }
+  else if (s === "pending" || s === "sent") { bg = "rgba(245,158,11,0.12)";  color = "#d97706"; }
   else if (s === "declined" || s === "expired") { bg = "rgba(185,28,28,0.1)"; color = "#b91c1c"; }
   return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide" style={{ background: bg, color }}>{status.replace(/_/g, " ")}</span>;
 }
@@ -815,7 +935,7 @@ function fileIcon(name: string): string {
 }
 
 /* ─── Upload dropzone ─────────────────────────────────────── */
-function UploadDropzone({ onUpload, uploading }: { onUpload: (file: File) => void; uploading: boolean }) {
+function UploadDropzone({ onUpload, uploading, brandColor }: { onUpload: (file: File) => void; uploading: boolean; brandColor: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   function handleDrop(e: React.DragEvent) {
@@ -830,7 +950,7 @@ function UploadDropzone({ onUpload, uploading }: { onUpload: (file: File) => voi
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-10 transition-colors"
-      style={{ borderColor: dragging ? "#9ca3af" : T.border, background: dragging ? T.surface : "transparent" }}>
+      style={{ borderColor: dragging ? brandColor : T.border, background: dragging ? T.surface : "transparent" }}>
       <svg className="h-8 w-8" style={{ color: T.label }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
       </svg>
@@ -848,7 +968,7 @@ function UploadDropzone({ onUpload, uploading }: { onUpload: (file: File) => voi
 }
 
 /* ─── Documents tab ───────────────────────────────────────── */
-function DocumentsTab({ familyId }: { familyId: string }) {
+function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [familyFiles, setFamilyFiles] = useState<FamilyFile[]>([]);
   const [studentFiles, setStudentFiles] = useState<StudentFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -906,13 +1026,11 @@ function DocumentsTab({ familyId }: { familyId: string }) {
     return <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>;
   }
 
-  const tableStyle: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, boxShadow: T.shadow };
-
   return (
     <div className="flex flex-col gap-8">
       <section>
         <h2 className="mb-3 text-sm font-semibold" style={{ color: T.fg }}>Account Documents &amp; Contracts</h2>
-        <UploadDropzone onUpload={handleUpload} uploading={uploading} />
+        <UploadDropzone onUpload={handleUpload} uploading={uploading} brandColor={brandColor} />
         {uploadMsg && (
           <p className="mt-2 text-xs" style={{ color: uploadMsg.type === "ok" ? "#059669" : "#b91c1c" }}>{uploadMsg.text}</p>
         )}
@@ -921,7 +1039,7 @@ function DocumentsTab({ familyId }: { familyId: string }) {
             <p className="text-sm" style={{ color: T.muted }}>No account documents uploaded yet</p>
           </div>
         ) : (
-          <div className="mt-4 rounded-xl overflow-hidden" style={tableStyle}>
+          <BrandCard brandColor={brandColor} style={{ marginTop: 16 }}>
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
@@ -948,7 +1066,7 @@ function DocumentsTab({ familyId }: { familyId: string }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </BrandCard>
         )}
       </section>
 
@@ -960,7 +1078,7 @@ function DocumentsTab({ familyId }: { familyId: string }) {
             <p className="text-sm" style={{ color: T.muted }}>No student files have been shared with this family yet</p>
           </div>
         ) : (
-          <div className="rounded-xl overflow-hidden" style={tableStyle}>
+          <BrandCard brandColor={brandColor}>
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
@@ -987,7 +1105,7 @@ function DocumentsTab({ familyId }: { familyId: string }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </BrandCard>
         )}
       </section>
     </div>
@@ -1000,14 +1118,42 @@ export function FamilyAccountContent() {
   const familyId = params?.id ?? "";
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
+  // Resolve location brand color for this family
+  const [brandColor, setBrandColor] = useState<string>("#6366f1");
+
+  useEffect(() => {
+    if (!familyId) return;
+    async function resolveColor() {
+      try {
+        const res = await fetch(`/api/crm/families/${familyId}`, {
+          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const f = json.data ?? json;
+        if (f.primary_location_id) {
+          const lr = await fetch(`/api/crm/locations/${f.primary_location_id}`, {
+            headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+          });
+          if (lr.ok) {
+            const lj = await lr.json();
+            const loc = lj.data ?? lj;
+            setBrandColor(locationBrandColor(loc.name ?? null));
+          }
+        }
+      } catch { /* non-blocking */ }
+    }
+    resolveColor();
+  }, [familyId]);
+
   return (
     <div className="flex flex-col gap-0">
       <TabNav active={activeTab} onChange={setActiveTab} />
       <div className="pt-5">
-        {activeTab === "overview"  && <OverviewTab  familyId={familyId} />}
-        {activeTab === "students"  && <StudentsTab  familyId={familyId} />}
-        {activeTab === "billing"   && <BillingTab   familyId={familyId} />}
-        {activeTab === "documents" && <DocumentsTab familyId={familyId} />}
+        {activeTab === "overview"  && <OverviewTab  familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "students"  && <StudentsTab  familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "billing"   && <BillingTab   familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "documents" && <DocumentsTab familyId={familyId} brandColor={brandColor} />}
       </div>
     </div>
   );
