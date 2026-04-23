@@ -4,6 +4,70 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import { useTheme } from "@/components/theme/ThemeProvider";
+
+// ─── Compact theme toggle ─────────────────────────────────────────────────────
+function SidebarThemeToggle({ isExpanded }: { isExpanded: boolean }) {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+  if (!isExpanded) {
+    return (
+      <div className="flex justify-center pb-4 pt-2">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-[#505055] hover:bg-white/5 hover:text-[#909098] transition-colors"
+        >
+          {isDark ? (
+            <svg viewBox="0 0 20 20" fill="none" style={{ width: 18, height: 18 }} aria-hidden>
+              <circle cx="10" cy="10" r="4" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.343 4.343l1.06 1.06M14.597 14.597l1.06 1.06M4.343 15.657l1.06-1.06M14.597 5.403l1.06-1.06" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="none" style={{ width: 18, height: 18 }} aria-hidden>
+              <path d="M17 11.5A7 7 0 1 1 8.5 3a5 5 0 0 0 8.5 8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="px-4 pb-4 pt-2 border-t border-[#1c1c1e]">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-[#505055] whitespace-nowrap">Theme</span>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="relative flex h-6 w-11 items-center rounded-full transition-colors duration-200"
+          style={{ background: isDark ? "#1c1c1e" : "#00D16C" }}
+          aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          <span
+            className="absolute flex h-5 w-5 items-center justify-center rounded-full shadow transition-transform duration-200"
+            style={{
+              background: isDark ? "#2a2a2e" : "#fff",
+              transform: isDark ? "translateX(1px)" : "translateX(22px)",
+            }}
+          >
+            {isDark ? (
+              <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}>
+                <path d="M10 6.5A4 4 0 1 1 5.5 2a3 3 0 0 0 4.5 4.5z" stroke="#909098" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}>
+                <circle cx="6" cy="6" r="2.5" stroke="#00D16C" strokeWidth="1.2"/>
+                <path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.636 2.636l.707.707M8.657 8.657l.707.707M2.636 9.364l.707-.707M8.657 3.343l.707-.707" stroke="#00D16C" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            )}
+          </span>
+        </button>
+      </div>
+      <p className="mt-1 text-[10px] text-[#303035] whitespace-nowrap">{isDark ? "Dark Mode" : "Light Mode"}</p>
+    </div>
+  );
+}
 
 // ─── Premium SVG icons ────────────────────────────────────────────────────────
 function Icon({ children, size = 18 }: { children: React.ReactNode; size?: number }) {
@@ -275,6 +339,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         )}
       </nav>
 
+      <SidebarThemeToggle isExpanded={isExpanded} />
       {isExpanded && (
         <div className="px-6 pb-5 text-[10px] text-[#303035] whitespace-nowrap select-none">
           Ziro Work

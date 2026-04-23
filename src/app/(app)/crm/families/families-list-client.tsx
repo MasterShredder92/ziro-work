@@ -235,11 +235,11 @@ export function FamiliesListClient({
         background: "var(--z-bg, var(--z-surface))",
         borderBottom: "1px solid var(--z-border)",
         display: "grid",
-        gridTemplateColumns: "minmax(0,2fr) 100px 130px 90px 80px",
+        gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px 110px minmax(0,1.2fr) 90px",
         padding: "6px 16px 6px 20px",
         gap: 8,
       }}>
-        {["Family","Location","Teacher","Students","Billing"].map(h => (
+        {["Family","Phone","Email","Location","Teacher","Students","Billing"].map(h => (
           <span key={h} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{h}</span>
         ))}
       </div>
@@ -273,7 +273,7 @@ export function FamiliesListClient({
                   style={{
                     position: "relative",
                     display: "grid",
-                    gridTemplateColumns: "minmax(0,2fr) 100px 130px 90px 80px",
+                    gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px 110px minmax(0,1.2fr) 90px",
                     alignItems: "center",
                     gap: 8,
                     padding: "8px 16px 8px 0",
@@ -332,27 +332,7 @@ export function FamiliesListClient({
                         )}
                       </div>
 
-                      {/* Student first-name tags */}
-                      {firstNames.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "nowrap", gap: 3, marginTop: 3, overflow: "hidden" }}>
-                          {firstNames.map((fn, i) => (
-                            <span key={i} style={{
-                              fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 20,
-                              background: "var(--z-surface)", color: "var(--z-muted)",
-                              border: "1px solid var(--z-border)", whiteSpace: "nowrap",
-                            }}>{fn}</span>
-                          ))}
-                          {extraCount > 0 && (
-                            <span style={{
-                              fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 20,
-                              background: "var(--z-surface)", color: "var(--z-muted)",
-                              border: "1px solid var(--z-border)", whiteSpace: "nowrap",
-                            }}>+{extraCount}</span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Instrument pills */}
+                       {/* Instrument pills — keep under name */}
                       {instruments.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "nowrap", gap: 3, marginTop: 3, overflow: "hidden" }}>
                           {instruments.slice(0, 3).map(inst => (
@@ -367,25 +347,58 @@ export function FamiliesListClient({
                     </div>
                   </div>
 
-                  {/* Col 2: Location pill */}
+                  {/* Col 2: Phone */}
+                  <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {row.primary_phone ? (
+                      <span>{row.primary_phone}</span>
+                    ) : (
+                      <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>
+                    )}
+                  </div>
+                  {/* Col 3: Email */}
+                  <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {row.primary_email ? (
+                      <span title={row.primary_email}>{row.primary_email}</span>
+                    ) : (
+                      <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>
+                    )}
+                  </div>
+                  {/* Col 4: Location pill */}
                   <div>
                     <span style={{
                       fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
                       background: ls.bg, color: ls.fg, whiteSpace: "nowrap",
                     }}>{locShort}</span>
                   </div>
-
-                  {/* Col 3: Teacher */}
-                  <div style={{ fontSize: 12, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {/* Col 5: Teacher */}
+                  <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {teacher ?? <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>}
                   </div>
-
-                  {/* Col 4: Student count */}
-                  <div style={{ fontSize: 12, color: "var(--z-muted)", fontWeight: 500 }}>
-                    {counts[row.id] ?? 0}
+                  {/* Col 6: Students — first names as inline pills */}
+                  <div style={{ display: "flex", flexWrap: "nowrap", gap: 3, overflow: "hidden", alignItems: "center" }}>
+                    {firstNames.length > 0 ? (
+                      <>
+                        {firstNames.map((fn, i) => (
+                          <span key={i} style={{
+                            fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 20,
+                            background: "var(--z-surface)", color: "var(--z-muted)",
+                            border: "1px solid var(--z-border)", whiteSpace: "nowrap",
+                          }}>{fn}</span>
+                        ))}
+                        {extraCount > 0 && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 20,
+                            background: "var(--z-surface)", color: "var(--z-muted)",
+                            border: "1px solid var(--z-border)", whiteSpace: "nowrap",
+                          }}>+{extraCount}</span>
+                        )}
+                      </>
+                    ) : (
+                      <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>
+                    )}
                   </div>
 
-                  {/* Col 5: Billing */}
+                  {/* Col 7: Billing */}
                   <div>
                     {(() => {
                       const bs = (row.billing_status ?? "").toLowerCase();
