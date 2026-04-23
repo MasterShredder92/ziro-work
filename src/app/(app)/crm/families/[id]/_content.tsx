@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-/* ─── Location Brand Colors (matches list + header) ──────────
+/* ─── Location Brand Colors ──────────────────────────────────
    Bellevue: Royal Purple | Gretna: Emerald | Omaha: Crimson | Elkhorn: Royal Blue
 */
 const LOCATION_COLORS: Record<string, string> = {
@@ -14,13 +14,31 @@ const LOCATION_COLORS: Record<string, string> = {
   elkhorn:  "#1d4ed8",
 };
 function locationBrandColor(name: string | null): string {
-  if (!name) return "#6366f1";
+  if (!name) return "#00D16C";
   const n = name.toLowerCase();
   for (const [key, val] of Object.entries(LOCATION_COLORS)) {
     if (n.includes(key)) return val;
   }
-  return "#6366f1";
+  return "#00D16C";
 }
+
+/* ─── Adaptive theme tokens ──────────────────────────────────
+   All values reference CSS variables set by the app's theme.
+   Dark mode: --z-bg is dark, --z-fg is white, etc.
+   Light mode: --z-bg is white, --z-fg is dark, etc.
+   No hardcoded hex values for backgrounds or text.
+*/
+const T = {
+  bg:        "var(--z-bg, var(--z-surface))",
+  surface:   "var(--z-surface)",
+  surface2:  "var(--z-surface-2, var(--z-surface))",
+  border:    "var(--z-border)",
+  fg:        "var(--z-fg)",
+  muted:     "var(--z-muted)",
+  label:     "var(--z-muted)",
+  shadow:    "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
+  shadowHover: "0 4px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08)",
+};
 
 /* ─── Types ──────────────────────────────────────────────── */
 type FamilyDetail = {
@@ -65,23 +83,10 @@ function formatCurrency(val: number): string {
   return val.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
-/* ─── Light-theme design tokens ─────────────────────────── */
-const T = {
-  bg:      "#ffffff",
-  surface: "#f9fafb",
-  border:  "#e5e7eb",
-  borderMid: "#d1d5db",
-  fg:      "#111827",
-  muted:   "#6b7280",
-  label:   "#9ca3af",
-  shadow:  "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
-};
-
 /* ─── Fading Brand Border Card ───────────────────────────────
-   Renders a card with a 3px left gradient stripe that fades from
-   brandColor at 0% to transparent at 50%. Other 3 sides are 1px
-   light gray. Uses a positioned inner div — avoids border-image
-   which kills border-radius.
+   3px left gradient stripe: brandColor → transparent at 50%.
+   Uses positioned inner div — border-image kills border-radius.
+   Background and border use CSS variables for adaptive theme.
 */
 function BrandCard({
   brandColor,
@@ -99,7 +104,7 @@ function BrandCard({
       className={className}
       style={{
         position: "relative",
-        background: T.bg,
+        background: T.surface,
         borderRadius: 12,
         border: `1px solid ${T.border}`,
         borderLeft: "none",
@@ -135,7 +140,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "documents", label: "Documents" },
 ];
 
-function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: Tab) => void; brandColor: string }) {
   return (
     <div style={{ borderBottom: `1px solid ${T.border}` }}>
       <nav className="-mb-px flex gap-0" aria-label="Family tabs">
@@ -147,7 +152,7 @@ function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
               onClick={() => onChange(tab.id)}
               className="px-4 py-3 text-sm whitespace-nowrap transition-colors"
               style={{
-                borderBottom: isActive ? `2px solid ${T.fg}` : "2px solid transparent",
+                borderBottom: isActive ? `2px solid ${brandColor}` : "2px solid transparent",
                 color: isActive ? T.fg : T.muted,
                 fontWeight: isActive ? 700 : 500,
                 background: "transparent",
@@ -232,9 +237,9 @@ function BrandInput({
         width: "100%",
         padding: "6px 10px",
         borderRadius: 8,
-        border: `1px solid ${focused ? brandColor : T.borderMid}`,
+        border: `1px solid ${focused ? brandColor : T.border}`,
         boxShadow: focused ? `0 0 0 3px ${brandColor}22` : "none",
-        background: T.surface,
+        background: T.bg,
         color: T.fg,
         fontSize: 14,
         outline: "none",
@@ -267,9 +272,9 @@ function BrandSelect({
         width: "100%",
         padding: "6px 10px",
         borderRadius: 8,
-        border: `1px solid ${focused ? brandColor : T.borderMid}`,
+        border: `1px solid ${focused ? brandColor : T.border}`,
         boxShadow: focused ? `0 0 0 3px ${brandColor}22` : "none",
-        background: T.surface,
+        background: T.bg,
         color: T.fg,
         fontSize: 14,
         outline: "none",
@@ -282,6 +287,56 @@ function BrandSelect({
   );
 }
 
+/* ─── Card action buttons ────────────────────────────────── */
+function CardActions({
+  editing,
+  saving,
+  saveState,
+  saveError,
+  onEdit,
+  onCancel,
+  onSave,
+}: {
+  editing: boolean;
+  saving: boolean;
+  saveState: "idle" | "saved" | "error";
+  saveError: string | null;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2">
+        {saving && <span className="text-xs" style={{ color: T.muted }}>Saving…</span>}
+        {saveState === "error" && !saving && (
+          <span className="text-xs" style={{ color: "#b91c1c" }} title={saveError ?? undefined}>Error</span>
+        )}
+        <button onClick={onCancel} disabled={saving}
+          className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-70"
+          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}` }}>
+          Cancel
+        </button>
+        <button onClick={onSave} disabled={saving}
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
+          style={{ background: T.fg, color: T.bg }}>
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      {saveState === "saved" && <span className="text-xs" style={{ color: "#059669" }}>✓ Saved</span>}
+      <button onClick={onEdit}
+        className="rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
+        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>
+        Edit
+      </button>
+    </div>
+  );
+}
+
 /* ─── Primary Contact Card ───────────────────────────────── */
 function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
   family: FamilyDetail;
@@ -289,8 +344,8 @@ function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
   brandColor: string;
   onUpdate: (patch: Partial<FamilyDetail>) => void;
 }) {
-  const [editing, setEditing]   = useState(false);
-  const [saving, setSaving]     = useState(false);
+  const [editing, setEditing]     = useState(false);
+  const [saving, setSaving]       = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -340,39 +395,14 @@ function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
 
   const address = formatAddress(family);
 
-  const editAction = editing ? (
-    <div className="flex items-center gap-2">
-      {saving && <span className="text-xs" style={{ color: T.muted }}>Saving…</span>}
-      {saveState === "error" && !saving && (
-        <span className="text-xs" style={{ color: "#b91c1c" }} title={saveError ?? undefined}>Error</span>
-      )}
-      <button onClick={handleCancel} disabled={saving}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium"
-        style={{ background: T.surface, color: T.muted, border: `1px solid ${T.border}` }}>
-        Cancel
-      </button>
-      <button onClick={handleSave} disabled={saving}
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
-        style={{ background: T.fg, color: "#fff" }}>
-        {saving ? "Saving…" : "Save"}
-      </button>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2">
-      {saveState === "saved" && <span className="text-xs" style={{ color: "#059669" }}>✓ Saved</span>}
-      <button onClick={() => setEditing(true)}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
-        style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>
-        Edit
-      </button>
-    </div>
-  );
-
   return (
     <BrandCard brandColor={brandColor}>
       <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
         <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Primary Contact</h2>
-        {editAction}
+        <CardActions
+          editing={editing} saving={saving} saveState={saveState} saveError={saveError}
+          onEdit={() => setEditing(true)} onCancel={handleCancel} onSave={handleSave}
+        />
       </div>
       <div className="px-5 py-4">
         <dl className="flex flex-col gap-4">
@@ -468,39 +498,14 @@ function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
     }
   }
 
-  const editAction = editing ? (
-    <div className="flex items-center gap-2">
-      {saving && <span className="text-xs" style={{ color: T.muted }}>Saving…</span>}
-      {saveState === "error" && !saving && (
-        <span className="text-xs" style={{ color: "#b91c1c" }} title={saveError ?? undefined}>Error</span>
-      )}
-      <button onClick={handleCancel} disabled={saving}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium"
-        style={{ background: T.surface, color: T.muted, border: `1px solid ${T.border}` }}>
-        Cancel
-      </button>
-      <button onClick={handleSave} disabled={saving}
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity"
-        style={{ background: T.fg, color: "#fff" }}>
-        {saving ? "Saving…" : "Save"}
-      </button>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2">
-      {saveState === "saved" && <span className="text-xs" style={{ color: "#059669" }}>✓ Saved</span>}
-      <button onClick={() => setEditing(true)}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
-        style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>
-        Edit
-      </button>
-    </div>
-  );
-
   return (
     <BrandCard brandColor={brandColor}>
       <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
         <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Account Settings</h2>
-        {editAction}
+        <CardActions
+          editing={editing} saving={saving} saveState={saveState} saveError={saveError}
+          onEdit={() => setEditing(true)} onCancel={handleCancel} onSave={handleSave}
+        />
       </div>
       <div className="px-5 py-4">
         <dl className="flex flex-col gap-4">
@@ -521,9 +526,12 @@ function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
                   type="button"
                   onClick={() => setDraftMilitary(v => !v)}
                   className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                  style={{ background: draftMilitary ? brandColor : "#d1d5db" }}>
-                  <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                    style={{ transform: draftMilitary ? "translateX(22px)" : "translateX(2px)" }} />
+                  style={{ background: draftMilitary ? brandColor : "rgba(107,114,128,0.3)" }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full shadow transition-transform"
+                    style={{
+                      background: "var(--z-fg, #fff)",
+                      transform: draftMilitary ? "translateX(22px)" : "translateX(2px)",
+                    }} />
                 </button>
               </div>
             </>
@@ -647,7 +655,7 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
     <BrandCard brandColor={brandColor} className="group transition-all hover:shadow-md" style={{ cursor: "pointer" }}>
       <a href={`/students/${student.id}`} className="flex items-center gap-4 px-5 py-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-          style={{ background: T.surface, color: T.muted }}>
+          style={{ background: T.surface2, color: T.muted }}>
           {inits}
         </div>
         <div className="min-w-0 flex-1">
@@ -656,13 +664,13 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {student.instrument && <span className="text-xs" style={{ color: T.muted }}>{student.instrument}</span>}
-            {student.instrument && student.teacherName && <span style={{ color: T.label }}>·</span>}
+            {student.instrument && student.teacherName && <span style={{ color: T.muted }}>·</span>}
             {student.teacherName && <span className="text-xs" style={{ color: T.muted }}>{student.teacherName}</span>}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <StudentStatusBadge status={student.status} />
-          <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" style={{ color: T.label }}
+          <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" style={{ color: T.muted }}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
@@ -728,7 +736,7 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
       <div className="flex flex-col items-center justify-center gap-3 py-14 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
         <p className="text-sm font-medium" style={{ color: T.muted }}>No students enrolled in this family yet</p>
         <button disabled className="mt-1 rounded-lg px-4 py-2 text-xs font-medium cursor-not-allowed opacity-60"
-          style={{ background: T.surface, color: T.muted, border: `1px solid ${T.border}` }}>
+          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}` }}>
           + Add Student
         </button>
       </div>
@@ -780,7 +788,7 @@ function InvoiceStatusBadge({ status }: { status: string }) {
   );
 }
 
-/* ─── Metric card with fading brand border ────────────────── */
+/* ─── Metric card ─────────────────────────────────────────── */
 function MetricCard({ label, value, valueColor, brandColor }: { label: string; value: string; valueColor?: string; brandColor: string }) {
   return (
     <BrandCard brandColor={brandColor}>
@@ -872,8 +880,9 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
               </thead>
               <tbody>
                 {invoices.map(inv => (
-                  <tr key={inv.id} style={{ borderBottom: `1px solid ${T.border}` }}
-                    onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
+                  <tr key={inv.id}
+                    style={{ borderBottom: `1px solid ${T.border}` }}
+                    onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                     <td className="px-5 py-3 font-mono text-xs" style={{ color: T.muted }}>{inv.number ?? inv.id.slice(0, 8).toUpperCase()}</td>
                     <td className="px-5 py-3" style={{ color: T.fg }}>{inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
@@ -884,7 +893,7 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
                     <td className="px-5 py-3">
                       <a href={`/billing/invoices/${inv.id}`}
                         className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                        style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>
+                        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>
                         View
                       </a>
                     </td>
@@ -907,9 +916,9 @@ function SignwellBadge({ status }: { status: string | null }) {
   if (!status) return null;
   const s = status.toLowerCase();
   let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
-  if (s === "completed" || s === "signed")  { bg = "rgba(16,185,129,0.12)";  color = "#059669"; }
-  else if (s === "pending" || s === "sent") { bg = "rgba(245,158,11,0.12)";  color = "#d97706"; }
-  else if (s === "declined" || s === "expired") { bg = "rgba(185,28,28,0.1)"; color = "#b91c1c"; }
+  if (s === "completed" || s === "signed")       { bg = "rgba(16,185,129,0.12)";  color = "#059669"; }
+  else if (s === "pending" || s === "sent")      { bg = "rgba(245,158,11,0.12)";  color = "#d97706"; }
+  else if (s === "declined" || s === "expired")  { bg = "rgba(185,28,28,0.1)";    color = "#b91c1c"; }
   return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide" style={{ background: bg, color }}>{status.replace(/_/g, " ")}</span>;
 }
 
@@ -950,8 +959,8 @@ function UploadDropzone({ onUpload, uploading, brandColor }: { onUpload: (file: 
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-10 transition-colors"
-      style={{ borderColor: dragging ? brandColor : T.border, background: dragging ? T.surface : "transparent" }}>
-      <svg className="h-8 w-8" style={{ color: T.label }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      style={{ borderColor: dragging ? brandColor : T.border, background: dragging ? T.surface2 : "transparent" }}>
+      <svg className="h-8 w-8" style={{ color: T.muted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
       </svg>
       <p className="text-sm" style={{ color: T.muted }}>
@@ -1051,7 +1060,7 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
               <tbody>
                 {familyFiles.map(f => (
                   <tr key={f.id} style={{ borderBottom: `1px solid ${T.border}` }}
-                    onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
+                    onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                     <td className="px-5 py-3"><span className="mr-2">{fileIcon(f.file_name)}</span><span style={{ color: T.fg }}>{f.file_name}</span></td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtBytes(f.file_size_bytes)}</td>
@@ -1060,7 +1069,7 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                     <td className="px-5 py-3">
                       <a href={f.file_url} target="_blank" rel="noopener noreferrer"
                         className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                        style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>View</a>
+                        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>View</a>
                     </td>
                   </tr>
                 ))}
@@ -1090,7 +1099,7 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
               <tbody>
                 {studentFiles.map(f => (
                   <tr key={f.id} style={{ borderBottom: `1px solid ${T.border}` }}
-                    onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
+                    onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                     <td className="px-5 py-3"><span className="mr-2">{fileIcon(f.file_name)}</span><span style={{ color: T.fg }}>{f.file_name}</span></td>
                     <td className="px-5 py-3"><span className="text-xs font-medium" style={{ color: T.fg }}>{f.student_name}</span></td>
@@ -1099,7 +1108,7 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                     <td className="px-5 py-3">
                       <a href={f.file_url} target="_blank" rel="noopener noreferrer"
                         className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                        style={{ background: T.surface, color: T.fg, border: `1px solid ${T.border}` }}>Download</a>
+                        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>Download</a>
                     </td>
                   </tr>
                 ))}
@@ -1117,9 +1126,7 @@ export function FamilyAccountContent() {
   const params = useParams<{ id: string }>();
   const familyId = params?.id ?? "";
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-
-  // Resolve location brand color for this family
-  const [brandColor, setBrandColor] = useState<string>("#6366f1");
+  const [brandColor, setBrandColor] = useState<string>("#00D16C");
 
   useEffect(() => {
     if (!familyId) return;
@@ -1148,7 +1155,7 @@ export function FamilyAccountContent() {
 
   return (
     <div className="flex flex-col gap-0">
-      <TabNav active={activeTab} onChange={setActiveTab} />
+      <TabNav active={activeTab} onChange={setActiveTab} brandColor={brandColor} />
       <div className="pt-5">
         {activeTab === "overview"  && <OverviewTab  familyId={familyId} brandColor={brandColor} />}
         {activeTab === "students"  && <StudentsTab  familyId={familyId} brandColor={brandColor} />}
