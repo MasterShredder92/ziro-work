@@ -11,8 +11,8 @@ export default async function FamiliesIndexPage() {
   const tenantId = await getCRMTenantId();
 
   const [locations, rows] = await Promise.all([
-    listLocations(tenantId, { is_active: true }, { limit: 200 }),
-    listFamilies(tenantId, {}, { limit: 500, orderBy: "name", ascending: true }) as Promise<FamilyRow[]>,
+    listLocations(tenantId, {}, { limit: 200 }),          // no is_active filter — include ALL locations
+    listFamilies(tenantId, {}, { limit: 2000, orderBy: "name", ascending: true }) as Promise<FamilyRow[]>,
   ]);
 
   const locationNameById = Object.fromEntries(
