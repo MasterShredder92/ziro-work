@@ -1052,7 +1052,7 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  {["File", "Size", "Date", "Signature", ""].map(h => (
+                  {["File", "Size", "Date", ""].map(h => (
                     <th key={h} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: T.label }}>{h}</th>
                   ))}
                 </tr>
@@ -1062,10 +1062,12 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                   <tr key={f.id} style={{ borderBottom: `1px solid ${T.border}` }}
                     onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                    <td className="px-5 py-3"><span className="mr-2">{fileIcon(f.file_name)}</span><span style={{ color: T.fg }}>{f.file_name}</span></td>
+                    <td className="px-5 py-3" style={{ maxWidth: 220 }}>
+                      <span className="mr-2">{fileIcon(f.file_name)}</span>
+                      <span className="truncate" style={{ color: T.fg, maxWidth: 180, display: "inline-block", verticalAlign: "middle", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={f.file_name}>{f.file_name}</span>
+                    </td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtBytes(f.file_size_bytes)}</td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtDate(f.created_at)}</td>
-                    <td className="px-5 py-3"><SignwellBadge status={f.signwell_status} /></td>
                     <td className="px-5 py-3">
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {f.file_url ? (
@@ -1122,7 +1124,10 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                   <tr key={f.id} style={{ borderBottom: `1px solid ${T.border}` }}
                     onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                    <td className="px-5 py-3"><span className="mr-2">{fileIcon(f.file_name)}</span><span style={{ color: T.fg }}>{f.file_name}</span></td>
+                    <td className="px-5 py-3" style={{ maxWidth: 220 }}>
+                      <span className="mr-2">{fileIcon(f.file_name)}</span>
+                      <span className="truncate" style={{ color: T.fg, maxWidth: 180, display: "inline-block", verticalAlign: "middle", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={f.file_name}>{f.file_name}</span>
+                    </td>
                     <td className="px-5 py-3"><span className="text-xs font-medium" style={{ color: T.fg }}>{f.student_name}</span></td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtBytes(f.file_size)}</td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtDate(f.created_at)}</td>
