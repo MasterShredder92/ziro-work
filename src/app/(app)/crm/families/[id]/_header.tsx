@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-/* ─── Location Brand Colors (matches families list) ──────────
+/* ─── Location Brand Colors ──────────────────────────────────
    Bellevue: Royal Purple | Gretna: Emerald | Omaha: Crimson | Elkhorn: Royal Blue
 */
 const LOCATION_COLORS: Record<string, { text: string; stripe: string; bg: string }> = {
@@ -57,10 +57,10 @@ function initials(name: string): string {
 /* ─── Status badge ───────────────────────────────────────── */
 function StatusBadge({ status }: { status: string | null }) {
   const s = (status ?? "").toLowerCase();
-  let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
-  if (s === "active")                    { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
-  else if (s === "paused")               { bg = "rgba(37,99,235,0.12)";  color = "#2563eb"; }
-  else if (s === "inactive" || s === "archived") { bg = "rgba(107,114,128,0.1)"; color = "#6b7280"; }
+  let bg = "rgba(107,114,128,0.1)", color = "var(--z-muted, #6b7280)";
+  if (s === "active")                              { bg = "rgba(16,185,129,0.12)";  color = "#059669"; }
+  else if (s === "paused")                         { bg = "rgba(37,99,235,0.12)";   color = "#2563eb"; }
+  else if (s === "inactive" || s === "archived")   { bg = "rgba(107,114,128,0.1)";  color = "var(--z-muted, #6b7280)"; }
   return (
     <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide"
       style={{ background: bg, color }}>
@@ -73,7 +73,7 @@ function StatusBadge({ status }: { status: string | null }) {
 function BalanceBadge({ balance }: { balance: number }) {
   const isOverdue = balance > 0;
   const isCredit  = balance < 0;
-  let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
+  let bg = "rgba(107,114,128,0.1)", color = "var(--z-muted, #6b7280)";
   if (isOverdue) { bg = "rgba(185,28,28,0.1)";  color = "#b91c1c"; }
   if (isCredit)  { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
   const label = isOverdue ? "Owes" : isCredit ? "Credit" : "Paid";
@@ -90,15 +90,15 @@ function HeaderSkeleton() {
   return (
     <div className="animate-pulse">
       <div className="flex items-center gap-2 mb-5">
-        <div className="h-3 w-16 rounded" style={{ background: "#e5e7eb" }} />
-        <div className="h-3 w-2 rounded"  style={{ background: "#e5e7eb" }} />
-        <div className="h-3 w-32 rounded" style={{ background: "#e5e7eb" }} />
+        <div className="h-3 w-16 rounded" style={{ background: "var(--z-border)" }} />
+        <div className="h-3 w-2 rounded"  style={{ background: "var(--z-border)" }} />
+        <div className="h-3 w-32 rounded" style={{ background: "var(--z-border)" }} />
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="h-9 w-64 rounded" style={{ background: "#e5e7eb" }} />
+        <div className="h-9 w-64 rounded" style={{ background: "var(--z-border)" }} />
         <div className="flex gap-2">
-          <div className="h-6 w-16 rounded-full" style={{ background: "#e5e7eb" }} />
-          <div className="h-6 w-24 rounded-full" style={{ background: "#e5e7eb" }} />
+          <div className="h-6 w-16 rounded-full" style={{ background: "var(--z-border)" }} />
+          <div className="h-6 w-24 rounded-full" style={{ background: "var(--z-border)" }} />
         </div>
       </div>
     </div>
@@ -137,7 +137,6 @@ export function FamilyAccountHeader() {
           is_military: f.is_military ?? null,
         });
 
-        // Resolve location name for brand color
         if (f.primary_location_id) {
           try {
             const lr = await fetch(`/api/crm/locations/${f.primary_location_id}`, {
@@ -149,7 +148,7 @@ export function FamilyAccountHeader() {
               setLocationName(loc.name ?? null);
             }
           } catch {
-            // non-blocking — location name is optional for branding
+            // non-blocking
           }
         }
       } catch (err) {
@@ -179,12 +178,17 @@ export function FamilyAccountHeader() {
   return (
     <div>
       {/* ── Breadcrumbs ─────────────────────────────────────── */}
-      <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-sm" style={{ color: "#9ca3af" }}>
-        <Link href="/crm/families" className="transition-colors hover:text-zinc-900">
+      <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-sm"
+        style={{ color: "var(--z-muted)" }}>
+        <Link href="/crm/families"
+          className="transition-colors"
+          style={{ color: "var(--z-muted)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--z-fg)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--z-muted)")}>
           Families
         </Link>
-        <span aria-hidden className="select-none" style={{ color: "#d1d5db" }}>/</span>
-        <span className="font-medium" style={{ color: "#111827" }} aria-current="page">
+        <span aria-hidden className="select-none" style={{ color: "var(--z-border)" }}>/</span>
+        <span className="font-medium" style={{ color: "var(--z-fg)" }} aria-current="page">
           {family.name}
         </span>
       </nav>
@@ -192,8 +196,8 @@ export function FamilyAccountHeader() {
       {/* ── Header card with location accent ────────────────── */}
       <div className="rounded-2xl overflow-hidden"
         style={{
-          background: "#ffffff",
-          border: "1px solid #e5e7eb",
+          background: "var(--z-surface)",
+          border: "1px solid var(--z-border)",
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
         }}>
 
@@ -218,7 +222,8 @@ export function FamilyAccountHeader() {
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl" style={{ color: "#111827" }}>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl"
+                style={{ color: "var(--z-fg)" }}>
                 {familyDisplayName(family.name)}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-2">
