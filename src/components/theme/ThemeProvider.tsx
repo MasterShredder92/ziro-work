@@ -10,22 +10,40 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Default context value so useTheme() never throws before mount
+const defaultCtx: ThemeContextType = {
+  theme: "dark",
+  setTheme: () => {},
+  toggleTheme: () => {},
+};
+
+const ThemeContext = createContext<ThemeContextType>(defaultCtx);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
 
-  // Load theme from localStorage on mount
+  // Load theme from localStorage on mount and apply to <html>
   useEffect(() => {
     const stored = localStorage.getItem("ziro-theme") as Theme | null;
-    const systemPreference = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const initialTheme = stored || systemPreference;
-    
+    const systemPreference = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    const initialTheme = stored ?? systemPreference;
     setThemeState(initialTheme);
     applyTheme(initialTheme);
-    setMounted(true);
   }, []);
+
+  const applyTheme = (newTheme: Theme) => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", newTheme);
+    if (newTheme === "light") {
+      root.classList.add("light-theme");
+      root.classList.remove("dark-theme");
+    } else {
+      root.classList.add("dark-theme");
+      root.classList.remove("light-theme");
+    }
+  };
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -37,23 +55,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
-  const applyTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", newTheme);
-    
-    if (newTheme === "light") {
-      root.classList.add("light-theme");
-      root.classList.remove("dark-theme");
-    } else {
-      root.classList.add("dark-theme");
-      root.classList.remove("light-theme");
-    }
-  };
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
+  // Always render the Provider — never bail out without context.
+  // Before hydration, theme defaults to "dark" (matches SSR HTML).
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       {children}
@@ -62,9 +65,5 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
-  return context;
+  return useContext(ThemeContext);
 }
