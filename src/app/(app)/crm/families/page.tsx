@@ -5,7 +5,9 @@ import { listLocations } from "@data/locations";
 import type { Family as FamilyRow } from "@/lib/types/entities";
 import { getCRMTenantId } from "../_tenant";
 import { FamiliesListClient } from "./families-list-client";
+
 export const dynamic = "force-dynamic";
+
 export default async function FamiliesIndexPage() {
   const tenantId = await getCRMTenantId();
 
@@ -19,13 +21,14 @@ export default async function FamiliesIndexPage() {
     locations.map((l) => [l.id, l.name ?? l.id]),
   );
 
-  // Build teacher name lookup: id -> short name
+  // Build teacher name lookup: id -> display name
   const teacherNameById: Record<string, string> = {};
   for (const t of allTeachers) {
-    const name = (t as { display_name?: string | null; first_name?: string; last_name?: string }).display_name
-      ?? [(t as { first_name?: string }).first_name, (t as { last_name?: string }).last_name].filter(Boolean).join(" ")
-      ?? "";
-    if (name) teacherNameById[t.id] = name;
+    const raw = t as { id: string; display_name?: string | null; first_name?: string | null; last_name?: string | null };
+    const name =
+      raw.display_name?.trim() ||
+      [raw.first_name, raw.last_name].filter(Boolean).join(" ").trim();
+    if (name) teacherNameById[raw.id] = name;
   }
 
   const counts = await countStudentsByFamilyIds(
@@ -33,22 +36,32 @@ export default async function FamiliesIndexPage() {
     rows.map((r) => r.id),
   );
 
+  // Fetch all students for instrument pills + first-name tags + teacher lookup
   const allStudents = await listStudents(tenantId, {}, { limit: 2000, orderBy: "created_at", ascending: false });
-  const studentsByFamily: Record<string, { id: string; name: string; instrument?: string | null; status?: string | null; teacherName?: string | null }[]> = {};
+
+  const studentsByFamily: Record<string, {
+    id: string;
+    name: string;
+    instrument?: string | null;
+    status?: string | null;
+    teacherName?: string | null;
+  }[]> = {};
+
   for (const s of allStudents) {
     if (!s.family_id) continue;
     if (!studentsByFamily[s.family_id]) studentsByFamily[s.family_id] = [];
-    const teacherId = (s as { teacher_id?: string | null }).teacher_id;
+    const raw = s as { teacher_id?: string | null; instrument?: string | null };
+    const teacherName = raw.teacher_id ? (teacherNameById[raw.teacher_id] ?? null) : null;
     studentsByFamily[s.family_id]!.push({
       id: s.id,
-      name: [s.first_name, s.last_name].filter(Boolean).join(" ") || (s as { name?: string }).name || s.id,
-      instrument: (s as { instrument?: string | null }).instrument ?? null,
+      name: [s.first_name, s.last_name].filter(Boolean).join(" ") || s.id,
+      instrument: raw.instrument ?? null,
       status: s.status ?? null,
-      teacherName: teacherId ? (teacherNameById[teacherId] ?? null) : null,
+      teacherName,
     });
   }
 
-  // Pick the most common teacher per family
+  // Pick the most-common teacher per family (by frequency across students)
   const teacherByFamily: Record<string, string> = {};
   for (const [famId, studs] of Object.entries(studentsByFamily)) {
     const freq: Record<string, number> = {};
