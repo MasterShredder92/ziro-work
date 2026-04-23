@@ -5,6 +5,23 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
+/* ─── Location Brand Colors (matches families list) ──────────
+   Bellevue: Royal Purple | Gretna: Emerald | Omaha: Crimson | Elkhorn: Royal Blue
+*/
+const LOCATION_COLORS: Record<string, { text: string; stripe: string; bg: string }> = {
+  bellevue: { text: "#7c3aed", stripe: "#7c3aed", bg: "rgba(109,40,217,0.07)" },
+  gretna:   { text: "#059669", stripe: "#059669", bg: "rgba(5,150,105,0.07)"  },
+  omaha:    { text: "#b91c1c", stripe: "#b91c1c", bg: "rgba(185,28,28,0.07)"  },
+  elkhorn:  { text: "#1d4ed8", stripe: "#1d4ed8", bg: "rgba(29,78,216,0.07)"  },
+};
+function locationColor(name: string) {
+  const n = (name ?? "").toLowerCase();
+  for (const [key, val] of Object.entries(LOCATION_COLORS)) {
+    if (n.includes(key)) return val;
+  }
+  return { text: "#6366f1", stripe: "#6366f1", bg: "rgba(99,102,241,0.07)" };
+}
+
 /* ─── Types ──────────────────────────────────────────────── */
 type FamilyHeader = {
   id: string;
@@ -12,6 +29,8 @@ type FamilyHeader = {
   status: string | null;
   balance: number;
   billing_status: string;
+  primary_location_id: string | null;
+  is_military: boolean | null;
 };
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -27,47 +46,40 @@ function formatBalance(amount: number): string {
 
 function familyDisplayName(name: string): string {
   const trimmed = name.trim();
-  // If it already ends with "Family", show as-is; otherwise append it
   if (/family$/i.test(trimmed)) return trimmed;
   return `The ${trimmed} Family`;
+}
+
+function initials(name: string): string {
+  return name.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("");
 }
 
 /* ─── Status badge ───────────────────────────────────────── */
 function StatusBadge({ status }: { status: string | null }) {
   const s = (status ?? "").toLowerCase();
-  let cls =
-    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ";
-  if (s === "active") {
-    cls += "bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300";
-  } else if (s === "inactive" || s === "archived") {
-    cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  } else if (s === "paused") {
-    cls += "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300";
-  } else {
-    cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  }
-  return <span className={cls}>{status ?? "Unknown"}</span>;
+  let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
+  if (s === "active")                    { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
+  else if (s === "paused")               { bg = "rgba(37,99,235,0.12)";  color = "#2563eb"; }
+  else if (s === "inactive" || s === "archived") { bg = "rgba(107,114,128,0.1)"; color = "#6b7280"; }
+  return (
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide"
+      style={{ background: bg, color }}>
+      {status ?? "Unknown"}
+    </span>
+  );
 }
 
 /* ─── Balance badge ──────────────────────────────────────── */
 function BalanceBadge({ balance }: { balance: number }) {
   const isOverdue = balance > 0;
-  const isCredit = balance < 0;
-
-  let cls =
-    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ";
-  if (isOverdue) {
-    cls += "bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400";
-  } else if (isCredit) {
-    cls += "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400";
-  } else {
-    cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  }
-
+  const isCredit  = balance < 0;
+  let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
+  if (isOverdue) { bg = "rgba(185,28,28,0.1)";  color = "#b91c1c"; }
+  if (isCredit)  { bg = "rgba(16,185,129,0.12)"; color = "#059669"; }
   const label = isOverdue ? "Owes" : isCredit ? "Credit" : "Paid";
-
   return (
-    <span className={cls}>
+    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+      style={{ background: bg, color }}>
       {label} {formatBalance(balance)}
     </span>
   );
@@ -78,15 +90,15 @@ function HeaderSkeleton() {
   return (
     <div className="animate-pulse">
       <div className="flex items-center gap-2 mb-5">
-        <div className="h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-700" />
-        <div className="h-3 w-2 rounded bg-zinc-200 dark:bg-zinc-700" />
-        <div className="h-3 w-32 rounded bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-3 w-16 rounded" style={{ background: "#e5e7eb" }} />
+        <div className="h-3 w-2 rounded"  style={{ background: "#e5e7eb" }} />
+        <div className="h-3 w-32 rounded" style={{ background: "#e5e7eb" }} />
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="h-9 w-64 rounded bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-9 w-64 rounded" style={{ background: "#e5e7eb" }} />
         <div className="flex gap-2">
-          <div className="h-6 w-16 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-          <div className="h-6 w-24 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+          <div className="h-6 w-16 rounded-full" style={{ background: "#e5e7eb" }} />
+          <div className="h-6 w-24 rounded-full" style={{ background: "#e5e7eb" }} />
         </div>
       </div>
     </div>
@@ -99,6 +111,7 @@ export function FamilyAccountHeader() {
   const familyId = params?.id ?? "";
 
   const [family, setFamily] = useState<FamilyHeader | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,7 +133,25 @@ export function FamilyAccountHeader() {
           status: f.status ?? null,
           balance: f.balance ?? 0,
           billing_status: f.billing_status ?? "unknown",
+          primary_location_id: f.primary_location_id ?? null,
+          is_military: f.is_military ?? null,
         });
+
+        // Resolve location name for brand color
+        if (f.primary_location_id) {
+          try {
+            const lr = await fetch(`/api/crm/locations/${f.primary_location_id}`, {
+              headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+            });
+            if (lr.ok) {
+              const lj = await lr.json();
+              const loc = lj.data ?? lj;
+              setLocationName(loc.name ?? null);
+            }
+          } catch {
+            // non-blocking — location name is optional for branding
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load family");
       } finally {
@@ -134,47 +165,84 @@ export function FamilyAccountHeader() {
 
   if (error || !family) {
     return (
-      <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+      <div className="rounded-lg px-4 py-3 text-sm"
+        style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>
         {error ?? "Family not found."}
       </div>
     );
   }
 
+  const locC = locationName ? locationColor(locationName) : null;
+  const avatarBg = locC?.bg ?? "rgba(99,102,241,0.12)";
+  const avatarFg = locC?.text ?? "#6366f1";
+
   return (
     <div>
       {/* ── Breadcrumbs ─────────────────────────────────────── */}
-      <nav
-        aria-label="Breadcrumb"
-        className="mb-5 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400"
-      >
-        <Link
-          href="/crm/families"
-          className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-        >
+      <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-sm" style={{ color: "#9ca3af" }}>
+        <Link href="/crm/families" className="transition-colors hover:text-zinc-900">
           Families
         </Link>
-        <span aria-hidden className="select-none text-zinc-300 dark:text-zinc-600">
-          /
-        </span>
-        <span
-          className="font-medium text-zinc-900 dark:text-zinc-100"
-          aria-current="page"
-        >
+        <span aria-hidden className="select-none" style={{ color: "#d1d5db" }}>/</span>
+        <span className="font-medium" style={{ color: "#111827" }} aria-current="page">
           {family.name}
         </span>
       </nav>
 
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        {/* Family name */}
-        <h1 className="text-2xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
-          {familyDisplayName(family.name)}
-        </h1>
+      {/* ── Header card with location accent ────────────────── */}
+      <div className="rounded-2xl overflow-hidden"
+        style={{
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        }}>
 
-        {/* Right: status + balance */}
-        <div className="flex shrink-0 flex-wrap items-center gap-2 pt-0.5">
-          <StatusBadge status={family.status} />
-          <BalanceBadge balance={family.balance} />
+        {/* Location-brand top stripe */}
+        {locC && (
+          <div style={{ height: 4, background: locC.stripe, width: "100%" }} />
+        )}
+
+        <div className="px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Left: avatar + name + location */}
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
+            <div
+              className="h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 select-none"
+              style={{
+                background: `radial-gradient(circle at 30% 30%, ${avatarBg.replace("0.07","0.35")}, ${avatarBg})`,
+                color: avatarFg,
+                boxShadow: `0 2px 10px ${avatarBg.replace("0.07","0.3")}`,
+                border: `2px solid ${avatarFg}30`,
+              }}>
+              {initials(family.name)}
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl" style={{ color: "#111827" }}>
+                {familyDisplayName(family.name)}
+              </h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {locationName && locC && (
+                  <span className="text-xs font-semibold rounded-full px-2 py-0.5"
+                    style={{ background: locC.bg, color: locC.text }}>
+                    {locationName.replace(" Music Lessons", "")}
+                  </span>
+                )}
+                {family.is_military && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                    style={{ background: "rgba(109,40,217,0.12)", color: "#7c3aed", letterSpacing: "0.07em" }}>
+                    ★ MIL
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: status + balance */}
+          <div className="flex shrink-0 flex-wrap items-center gap-2 pt-0.5">
+            <StatusBadge status={family.status} />
+            <BalanceBadge balance={family.balance} />
+          </div>
         </div>
       </div>
     </div>
