@@ -44,8 +44,6 @@ type StudentRaw = {
   teacher_notes?: string | null;
   experience?: string | null;
   notes?: string | null;
-  email?: string | null;
-  phone?: string | null;
   date_of_birth?: string | null;
   start_date?: string | null;
   rate_per_session?: number | null;
@@ -211,8 +209,6 @@ function StudentProfileView({ studentId }: { studentId: string }) {
   const rows: { label: string; value: string | null | undefined }[] = [
     { label: "Instrument", value: student.instrument },
     { label: "Status", value: student.status },
-    { label: "Email", value: student.email },
-    { label: "Phone", value: student.phone },
     { label: "Date of Birth", value: student.date_of_birth },
     { label: "Start Date", value: student.start_date },
   ];
@@ -276,8 +272,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
   const [lastName, setLastName] = useState("");
   const [instrument, setInstrument] = useState("");
   const [status, setStatus] = useState("active");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [startDate, setStartDate] = useState("");
 
@@ -300,8 +295,6 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
         setLastName(s.last_name ?? "");
         setInstrument(s.instrument ?? "");
         setStatus(s.status ?? "active");
-        setEmail(s.email ?? "");
-        setPhone(s.phone ?? "");
         setDateOfBirth(s.date_of_birth ?? "");
         setStartDate(s.start_date ?? "");
 
@@ -326,8 +319,6 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
         last_name: lastName,
         instrument: instrument || null,
         status,
-        email: email || null,
-        phone: phone || null,
         date_of_birth: dateOfBirth || null,
         start_date: startDate || null,
 
@@ -396,16 +387,6 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
               <option value="inactive">Inactive</option>
               <option value="former">Former</option>
             </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Email</label>
-            <input className={inputCls} type="email" value={email} onChange={e => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <label className={labelCls}>Phone</label>
-            <input className={inputCls} type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">

@@ -27,8 +27,6 @@ export function StudentInfoCard({ student, family, teacher, className }: Student
               </Badge>
             </div>
             <div className="mt-2 space-y-1 text-sm text-[var(--z-muted)]">
-              {student.email ? <div>{student.email}</div> : null}
-              {student.phone ? <div>{student.phone}</div> : null}
               {student.date_of_birth ? <div>DOB {student.date_of_birth}</div> : null}
             </div>
           </div>

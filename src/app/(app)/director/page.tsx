@@ -209,16 +209,10 @@ export default async function DirectorDashboardPage({
             {`${row.first_name ?? ""} ${row.last_name ?? ""}`.trim() || "Unnamed"}
           </div>
           <div className="text-xs text-[var(--z-muted)] truncate">
-            {row.email ?? "—"}
+            {row.instrument ?? "—"}
           </div>
         </div>
       ),
-    },
-    {
-      id: "instrument",
-      header: "Instrument",
-      width: "140px",
-      cell: (row) => row.instrument ?? "—",
     },
     {
       id: "enrollment",

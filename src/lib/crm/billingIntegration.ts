@@ -58,7 +58,6 @@ export type FamilyStudentRow = {
   rate_per_session: number | null;
   total_paid: number | null;
   teacher_label: string | null;
-  is_military: boolean;
 };
 
 export async function listStudentsForFamily(
@@ -69,7 +68,7 @@ export async function listStudentsForFamily(
   const { data, error } = await supabase
     .from("students")
     .select(
-      "id, first_name, last_name, status, instrument, location_id, rate_per_session, total_paid, first_teacher_name, last_teacher_name, is_military",
+      "id, first_name, last_name, status, instrument, location_id, rate_per_session, total_paid, first_teacher_name, last_teacher_name",
     )
     .eq("tenant_id", tenantId)
     .eq("family_id", familyId);
@@ -87,7 +86,6 @@ export async function listStudentsForFamily(
         typeof r.rate_per_session === "number" ? r.rate_per_session : null,
       total_paid: typeof r.total_paid === "number" ? r.total_paid : null,
       teacher_label: r.last_teacher_name ?? r.first_teacher_name ?? null,
-      is_military: Boolean(r.is_military),
     };
   });
 }

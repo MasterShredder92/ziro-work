@@ -22,8 +22,9 @@ function digitsOnly(phone: string): string {
 export type StageStudentListRow = {
   id: string;
   name: string;
-  email: string | null;
-  phone: string | null;
+  // Contact info comes from the linked family, not the student record
+  family_email: string | null;
+  family_phone: string | null;
   blockers: string[];
   nextStep: string;
   riskBand: "low" | "medium" | "high";
@@ -42,8 +43,8 @@ function riskVariant(band: StageStudentListRow["riskBand"]): "success" | "warnin
 
 export function StageStudentList({ students, className }: StageStudentListProps) {
   const items: ListItem[] = students.map((s) => {
-    const phone = (s.phone ?? "").trim();
-    const email = (s.email ?? "").trim();
+    const phone = (s.family_phone ?? "").trim();
+    const email = (s.family_email ?? "").trim();
     const tel = phone ? digitsOnly(phone) : "";
     const canCall = tel.length > 0;
     const canText = tel.length > 0;

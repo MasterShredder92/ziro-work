@@ -85,8 +85,7 @@ export async function searchCRM(
         tenant_id: c.tenantId,
         first_name: c.firstName ?? "",
         last_name: c.lastName ?? "",
-        email: c.email,
-        phone: c.phone,
+        // email/phone dropped from students table; contact data lives on the family record
         status: c.status ?? "",
         family_id: c.familyId,
         teacher_id: c.teacherId,
@@ -95,7 +94,7 @@ export async function searchCRM(
         source: c.source,
         created_at: c.createdAt ?? "",
         updated_at: c.updatedAt ?? "",
-      } as Student);
+      } as unknown as Student);
     }
     if (c.kind === "teacher") {
       teachers.push({

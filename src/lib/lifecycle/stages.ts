@@ -52,10 +52,11 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
       if (!ctx.lead) out.push(blocker("missing_lead", "Add how they found you and what they want."));
-      const email = (ctx.student?.email as string | null | undefined) ?? null;
-      const phone = (ctx.student?.phone as string | null | undefined) ?? null;
+      // Contact data lives on the family record; student.email/phone were dropped.
+      const email = (ctx.student?.primary_email as string | null | undefined) ?? null;
+      const phone = (ctx.student?.primary_phone as string | null | undefined) ?? null;
       if (!email && !phone) {
-        out.push(blocker("missing_contact", "Add a phone number or email so you can reach them.", "error"));
+        out.push(blocker("missing_contact", "Add a phone number or email to the family account so you can reach them.", "error"));
       }
       return out;
     },
@@ -212,10 +213,11 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     exit: () => false,
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
-      const email = (ctx.student?.email as string | null | undefined) ?? null;
-      const phone = (ctx.student?.phone as string | null | undefined) ?? null;
+      // Contact data lives on the family record; student.email/phone were dropped.
+      const email = (ctx.student?.primary_email as string | null | undefined) ?? null;
+      const phone = (ctx.student?.primary_phone as string | null | undefined) ?? null;
       if (!email && !phone) {
-        out.push(blocker("missing_contact", "Add a phone number or email so you can invite them back.", "error"));
+        out.push(blocker("missing_contact", "Add a phone number or email to the family account so you can invite them back.", "error"));
       }
       return out;
     },

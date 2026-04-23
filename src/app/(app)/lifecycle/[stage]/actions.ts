@@ -24,8 +24,9 @@ export type LifecycleStageSurfaceDTO = {
   students: Array<{
     id: string;
     name: string;
-    email: string | null;
-    phone: string | null;
+    // Contact info sourced from linked family, not student record
+    family_email: string | null;
+    family_phone: string | null;
     blockers: string[];
     nextStep: string;
     riskBand: "low" | "medium" | "high";
@@ -93,10 +94,11 @@ function hasValue(row: Record<string, unknown>, key: string): boolean {
   return true;
 }
 
-function pickContact(row: Record<string, unknown>): { email: string | null; phone: string | null } {
-  const email = getString(row, "email") || null;
-  const phone = getString(row, "phone") || null;
-  return { email, phone };
+function pickContact(row: Record<string, unknown>): { family_email: string | null; family_phone: string | null } {
+  // Contact data lives on the family record, not the student.
+  const email = getString(row, "primary_email") || getString(row, "family_primary_email") || null;
+  const phone = getString(row, "primary_phone") || getString(row, "family_primary_phone") || null;
+  return { family_email: email, family_phone: phone };
 }
 
 function inferFallbackRiskBand(row: Record<string, unknown>): "low" | "medium" | "high" {
@@ -282,8 +284,8 @@ function buildFallbackStudent(
   return {
     id,
     name: fullName,
-    email: contact.email,
-    phone: contact.phone,
+    family_email: contact.family_email,
+    family_phone: contact.family_phone,
     blockers: [],
     nextStep: `Open their profile and finish the next step for ${defNameForStageId(stageId)}.`,
     riskBand: inferFallbackRiskBand(row),
@@ -326,8 +328,8 @@ async function projectStudentToStage(
       student: {
         id,
         name: fullName,
-        email: rowContact.email,
-        phone: rowContact.phone,
+        family_email: rowContact.family_email,
+        family_phone: rowContact.family_phone,
         blockers: ["This list is taking longer than usual to load. Refresh once, then try again."],
         nextStep: "Refresh the page to reload the full details.",
         riskBand: inferFallbackRiskBand(row),
@@ -357,8 +359,8 @@ async function projectStudentToStage(
       student: {
         id,
         name: fullName,
-        email: mergedContact.email ?? rowContact.email,
-        phone: mergedContact.phone ?? rowContact.phone,
+        family_email: mergedContact.family_email ?? rowContact.family_email,
+        family_phone: mergedContact.family_phone ?? rowContact.family_phone,
         blockers: summarizeBlockers(computed.blockers),
         nextStep,
         riskBand: ctx.riskBand,
@@ -380,8 +382,8 @@ async function projectStudentToStage(
       student: {
         id,
         name: fullName,
-        email: rowContact.email,
-        phone: rowContact.phone,
+        family_email: rowContact.family_email,
+        family_phone: rowContact.family_phone,
         blockers: [`We could not load everything for this student: ${normalized.message}`],
         nextStep: "Open their profile and fix missing info, then come back here.",
         riskBand: inferFallbackRiskBand(row),

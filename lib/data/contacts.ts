@@ -40,8 +40,9 @@ function projectStudent(row: Student): Contact {
     firstName: row.first_name ?? null,
     lastName: row.last_name ?? null,
     fullName: composeName(row.first_name, row.last_name),
-    email: row.email ?? null,
-    phone: row.phone ?? null,
+    // email/phone dropped from students table; contact data lives on the family record
+    email: null,
+    phone: null,
     status: row.status ?? null,
     stage: row.status ?? null,
     familyId: row.family_id ?? null,
@@ -168,7 +169,7 @@ export async function listContacts(
     if (filter?.status) q = q.eq("status", filter.status);
     if (search) {
       q = q.or(
-        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`,
+        `first_name.ilike.%${search}%,last_name.ilike.%${search}%`,
       );
     }
     const { data, error } = await q.limit(limit);

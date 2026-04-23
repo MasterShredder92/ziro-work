@@ -5959,8 +5959,6 @@ export type Database = {
           attendance_streak: number | null
           bio: string | null
           blocks_per_week: number
-          card_brand: string | null
-          card_last_four: string | null
           churn_risk: string | null
           coming_back: boolean | null
           counts_toward_family_tier: boolean
@@ -5968,7 +5966,6 @@ export type Database = {
           date_of_birth: string | null
           deactivated_at: string | null
           deactivated_by: string | null
-          email: string | null
           end_date: string | null
           enrollment_date: string | null
           enrollment_type: string | null
@@ -5991,7 +5988,6 @@ export type Database = {
           id: string
           instrument: string | null
           intake_submission_id: string | null
-          is_military: boolean | null
           last_attendance_at: string | null
           last_name: string
           last_teacher_id: string | null
@@ -6006,7 +6002,6 @@ export type Database = {
           overdue_amount: number | null
           pause_reason: string | null
           pause_reason_detail: string | null
-          phone: string | null
           preferred_days: string[] | null
           previous_teacher_id: string | null
           profile_id: string | null
@@ -6014,7 +6009,6 @@ export type Database = {
           reactivation_date: string | null
           sessions_per_month: number
           source: string | null
-          square_customer_id: string | null
           start_date: string | null
           status: string
           student_display_id: string | null
