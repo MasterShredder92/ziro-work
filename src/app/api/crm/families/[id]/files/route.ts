@@ -38,7 +38,21 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return ok({ items: data ?? [] });
+
+    // Resolve signed URLs for storage-backed files (stored as "storage://path")
+    const items = await Promise.all(
+      (data ?? []).map(async (f) => {
+        if (f.file_url?.startsWith("storage://")) {
+          const storagePath = f.file_url.replace("storage://", "");
+          const { data: signed, error: signErr } = await supabase.storage
+            .from("family-files")
+            .createSignedUrl(storagePath, 3600);
+          return { ...f, file_url: signErr || !signed ? null : signed.signedUrl };
+        }
+        return f;
+      })
+    );
+    return ok({ items });
   } catch (err) {
     return serverError(err instanceof Error ? err.message : "Internal error");
   }
@@ -76,10 +90,22 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
       });
     }
 
-    // TODO: Upload to Supabase Storage when bucket is configured
-    // const { data: storageData, error: storageErr } = await supabase.storage
-    //   .from("family-files")
-    //   .upload(`${tenantId}/${familyId}/${Date.now()}_${file.name}`, file);
+    // Upload to Supabase Storage (family-files bucket)
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${tenantId}/${familyId}/${Date.now()}_${safeName}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const { error: storageErr } = await supabase.storage
+      .from("family-files")
+      .upload(storagePath, arrayBuffer, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+    if (storageErr) throw new Error(`Storage upload failed: ${storageErr.message}`);
+
+    // Generate a 1-hour signed URL for immediate display
+    const { data: signed, error: signErr } = await supabase.storage
+      .from("family-files")
+      .createSignedUrl(storagePath, 3600);
 
     const { data, error } = await supabase
       .from("family_files")
@@ -87,7 +113,8 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
         family_id: familyId,
         tenant_id: tenantId,
         file_name: file.name,
-        file_url: `stub://${file.name}`,
+        // Store path with prefix so GET can re-sign it later
+        file_url: `storage://${storagePath}`,
         file_type: file.type || "application/octet-stream",
         file_size_bytes: file.size,
         uploaded_by: session.userId ?? null,
@@ -97,10 +124,11 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
       .single();
 
     if (error) throw error;
-    return new Response(JSON.stringify({ data }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Return with the fresh signed URL so the UI can show it immediately
+    return new Response(
+      JSON.stringify({ data: { ...data, file_url: signErr || !signed ? null : signed.signedUrl } }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
+    );
   } catch (err) {
     return serverError(err instanceof Error ? err.message : "Internal error");
   }
