@@ -242,76 +242,120 @@ export default function FamilyDetailPage() {
       {/* ── Students Tab ── */}
       {tab === "students" && (
         <div className="space-y-3">
-          {students.length === 0 ? (
+          {/* Header with Add Student */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-[var(--z-muted)] font-semibold uppercase tracking-wider">{students.length} Student{students.length !== 1 ? "s" : ""}</p>
+            <button
+              onClick={() => { setEditingStudentId("__new__"); setExpandedStudentId("__new__"); setStudentSaveStatus("idle"); }}
+              className="rounded-xl bg-[var(--z-accent)] px-3 py-1.5 text-xs font-bold text-black hover:opacity-90 transition-opacity"
+            >
+              + Add Student
+            </button>
+          </div>
+
+          {/* New student inline form */}
+          {editingStudentId === "__new__" && (
+            <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--z-border)] flex items-center justify-between">
+                <p className="text-sm font-semibold text-[var(--z-fg)]">New Student</p>
+              </div>
+              <StudentInlineEdit
+                student={{ id: "__new__", first_name: "", last_name: "" } as Student}
+                teachers={teachers}
+                tenantId={tenantId}
+                saving={studentSaving}
+                saveStatus={studentSaveStatus}
+                isNew
+                familyId={family.id}
+                onCancel={() => { setEditingStudentId(null); setExpandedStudentId(null); }}
+                onSaved={(created) => {
+                  setStudents(prev => [...prev, created]);
+                  setEditingStudentId(null);
+                  setExpandedStudentId(null);
+                }}
+                setSaving={setStudentSaving}
+                setSaveStatus={setStudentSaveStatus}
+              />
+            </div>
+          )}
+
+          {/* Existing students */}
+          {students.length === 0 && editingStudentId !== "__new__" ? (
             <div className={sectionCls}>
-              <p className="text-sm text-[var(--z-muted)]">No students linked to this family.</p>
+              <p className="text-sm text-[var(--z-muted)]">No students yet. Add one above.</p>
             </div>
           ) : (
             students.map(s => {
               const teacher = teachers.find(t => t.id === s.teacher_id);
               const loc = s.location_id ? LOCATIONS[s.location_id] : null;
+              const isExpanded = expandedStudentId === s.id;
+              const isEditing = editingStudentId === s.id;
               return (
-                <div key={s.id} className="rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--z-surface)] text-sm font-bold text-[var(--z-muted)] shrink-0">
+                <div key={s.id} className="rounded-xl border border-[var(--z-border)] bg-[var(--z-bg)] overflow-hidden">
+                  {/* Clickable header */}
+                  <div
+                    className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--z-surface)] transition-colors select-none"
+                    onClick={() => { if (!isEditing) setExpandedStudentId(isExpanded ? null : s.id); }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--z-surface)] text-xs font-bold text-[var(--z-muted)] shrink-0 border border-[var(--z-border)]">
                         {initials(`${s.first_name} ${s.last_name}`)}
                       </div>
-                      <div>
-                        <p className="font-semibold text-[var(--z-fg)]">{s.first_name} {s.last_name}</p>
-                        <p className="text-xs text-[var(--z-muted)]">
-                          {s.instrument ?? "No instrument"}{loc ? ` · ${loc.name}` : ""}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[var(--z-fg)] text-sm truncate">{s.first_name} {s.last_name}</p>
+                        <p className="text-xs text-[var(--z-muted)] truncate">
+                          {s.instrument ?? "No instrument"}{teacher ? ` · ${teacher.display_name ?? [teacher.first_name, teacher.last_name].filter(Boolean).join(" ")}` : ""}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {loc && (
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: loc.color + "20", color: loc.color }}>
-                          {loc.name}
-                        </span>
-                      )}
-                      {s.status && (
-                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${statusColor(s.status)}`}>
-                          {s.status}
-                        </span>
-                      )}
+                      {loc && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: loc.color + "20", color: loc.color }}>{loc.name}</span>}
+                      {s.status && <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${statusColor(s.status)}`}>{s.status}</span>}
+                      <span className="text-[var(--z-muted)] text-xs ml-1">{isExpanded ? "▲" : "▼"}</span>
                     </div>
                   </div>
 
-                  {/* Student details grid */}
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
-                    {s.enrollment_date && <div><span className="text-[var(--z-muted)]">Enrolled</span> <span className="text-[var(--z-fg)]">{new Date(s.enrollment_date).toLocaleDateString()}</span></div>}
-                    {s.start_date && <div><span className="text-[var(--z-muted)]">Start Date</span> <span className="text-[var(--z-fg)]">{new Date(s.start_date).toLocaleDateString()}</span></div>}
-                    {s.experience && <div><span className="text-[var(--z-muted)]">Experience</span> <span className="text-[var(--z-fg)]">{s.experience}</span></div>}
-                    {s.learning_style && <div><span className="text-[var(--z-muted)]">Learning Style</span> <span className="text-[var(--z-fg)]">{s.learning_style}</span></div>}
-                    {teacher && <div><span className="text-[var(--z-muted)]">Teacher</span> <span className="text-[var(--z-fg)]">{teacher.display_name ?? [teacher.first_name, teacher.last_name].filter(Boolean).join(" ")}</span></div>}
-                  </div>
-
-                  {s.goals && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)] mb-1">Goals</p>
-                      <p className="text-xs text-[var(--z-fg)] leading-relaxed">{s.goals}</p>
-                    </div>
-                  )}
-                  {s.notes && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)] mb-1">Notes</p>
-                      <p className="text-xs text-[var(--z-fg)] leading-relaxed">{s.notes}</p>
-                    </div>
-                  )}
-                  {s.teacher_notes && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)] mb-1">Teacher Notes</p>
-                      <p className="text-xs text-[var(--z-fg)] leading-relaxed">{s.teacher_notes}</p>
+                  {/* Expanded read-only */}
+                  {isExpanded && !isEditing && (
+                    <div className="border-t border-[var(--z-border)] p-4 space-y-3 bg-[var(--z-surface)]">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                        {s.enrollment_date && <div><span className="text-[var(--z-muted)]">Enrolled </span><span className="text-[var(--z-fg)]">{new Date(s.enrollment_date).toLocaleDateString()}</span></div>}
+                        {s.start_date && <div><span className="text-[var(--z-muted)]">Start </span><span className="text-[var(--z-fg)]">{new Date(s.start_date).toLocaleDateString()}</span></div>}
+                        {s.experience && <div><span className="text-[var(--z-muted)]">Experience </span><span className="text-[var(--z-fg)]">{s.experience}</span></div>}
+                        {s.learning_style && <div><span className="text-[var(--z-muted)]">Style </span><span className="text-[var(--z-fg)]">{s.learning_style}</span></div>}
+                        {s.date_of_birth && <div><span className="text-[var(--z-muted)]">DOB </span><span className="text-[var(--z-fg)]">{new Date(s.date_of_birth).toLocaleDateString()}</span></div>}
+                        {s.email && <div><span className="text-[var(--z-muted)]">Email </span><span className="text-[var(--z-fg)]">{s.email}</span></div>}
+                        {s.phone && <div><span className="text-[var(--z-muted)]">Phone </span><span className="text-[var(--z-fg)]">{s.phone}</span></div>}
+                      </div>
+                      {s.goals && <div><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)] mb-1">Goals</p><p className="text-xs text-[var(--z-fg)] leading-relaxed">{s.goals}</p></div>}
+                      {s.notes && <div><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)] mb-1">Notes</p><p className="text-xs text-[var(--z-fg)] leading-relaxed">{s.notes}</p></div>}
+                      {s.teacher_notes && <div><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)] mb-1">Teacher Notes</p><p className="text-xs text-[var(--z-fg)] leading-relaxed">{s.teacher_notes}</p></div>}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingStudentId(s.id); setStudentSaveStatus("idle"); }}
+                        className="rounded-lg border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:bg-[var(--z-bg)] transition-colors"
+                      >
+                        Edit Student
+                      </button>
                     </div>
                   )}
 
-                  {/* Progress report link */}
-                  <div className="flex items-center gap-2 pt-1">
-                    <Link href={`/students/${s.id}/progress`} className="text-xs text-[var(--z-accent)] hover:opacity-80 transition-opacity">
-                      View Progress Reports →
-                    </Link>
-                  </div>
+                  {/* Inline edit */}
+                  {isExpanded && isEditing && (
+                    <StudentInlineEdit
+                      student={s}
+                      teachers={teachers}
+                      tenantId={tenantId}
+                      saving={studentSaving}
+                      saveStatus={studentSaveStatus}
+                      onCancel={() => setEditingStudentId(null)}
+                      onSaved={(updated) => {
+                        setStudents(prev => prev.map(x => x.id === updated.id ? updated : x));
+                        setEditingStudentId(null);
+                      }}
+                      setSaving={setStudentSaving}
+                      setSaveStatus={setStudentSaveStatus}
+                    />
+                  )}
                 </div>
               );
             })
@@ -728,11 +772,13 @@ type StudentInlineEditProps = {
   onSaved: (updated: Student) => void;
   setSaving: (v: boolean) => void;
   setSaveStatus: (v: "idle" | "success" | "error") => void;
+  isNew?: boolean;
+  familyId?: string;
 };
 
 function StudentInlineEdit({
   student, teachers, tenantId, saving, saveStatus,
-  onCancel, onSaved, setSaving, setSaveStatus,
+  onCancel, onSaved, setSaving, setSaveStatus, isNew, familyId,
 }: StudentInlineEditProps) {
   const [firstName, setFirstName] = useState(student.first_name ?? "");
   const [lastName, setLastName] = useState(student.last_name ?? "");
@@ -758,24 +804,29 @@ function StudentInlineEdit({
     setSaveStatus("idle");
     setErrMsg(null);
     try {
-      const res = await fetch(`/api/crm/students/${student.id}`, {
-        method: "PATCH",
+      const payload = {
+        first_name: firstName, last_name: lastName,
+        instrument: instrument || null, status: stuStatus,
+        teacher_id: teacherId || null,
+        email: email || null, phone: phone || null,
+        date_of_birth: dob || null,
+        experience: experience || null,
+        learning_style: learningStyle || null,
+        goals: goals || null,
+        notes: notes || null,
+        teacher_notes: teacherNotes || null,
+        ...(isNew && familyId ? { family_id: familyId } : {}),
+      };
+      const url = isNew ? `/api/crm/students` : `/api/crm/students/${student.id}`;
+      const method = isNew ? "POST" : "PATCH";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-        body: JSON.stringify({
-          first_name: firstName, last_name: lastName,
-          instrument: instrument || null, status: stuStatus,
-          teacher_id: teacherId || null,
-          email: email || null, phone: phone || null,
-          date_of_birth: dob || null,
-          experience: experience || null,
-          learning_style: learningStyle || null,
-          goals: goals || null,
-          notes: notes || null,
-          teacher_notes: teacherNotes || null,
-        }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok) { setErrMsg(json?.error ?? "Save failed"); setSaveStatus("error"); return; }
+      setSaveStatus("success");
       onSaved(json.data ?? { ...student, first_name: firstName, last_name: lastName });
     } catch {
       setErrMsg("Network error"); setSaveStatus("error");
