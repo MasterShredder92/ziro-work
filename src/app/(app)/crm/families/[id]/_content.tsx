@@ -1067,9 +1067,14 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtDate(f.created_at)}</td>
                     <td className="px-5 py-3"><SignwellBadge status={f.signwell_status} /></td>
                     <td className="px-5 py-3">
-                      <a href={f.file_url} target="_blank" rel="noopener noreferrer"
-                        className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>View</a>
+                      {f.file_url ? (
+                        <a href={f.file_url} target="_blank" rel="noopener noreferrer"
+                          className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+                          style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>View</a>
+                      ) : (
+                        <span className="rounded-lg px-2.5 py-1 text-xs font-medium"
+                          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}`, opacity: 0.5, cursor: "default" }}>Unavailable</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1106,9 +1111,14 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtBytes(f.file_size)}</td>
                     <td className="px-5 py-3 text-xs" style={{ color: T.muted }}>{fmtDate(f.created_at)}</td>
                     <td className="px-5 py-3">
-                      <a href={f.file_url} target="_blank" rel="noopener noreferrer"
-                        className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>Download</a>
+                      {f.file_url ? (
+                        <a href={f.file_url} target="_blank" rel="noopener noreferrer"
+                          className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
+                          style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>Download</a>
+                      ) : (
+                        <span className="rounded-lg px-2.5 py-1 text-xs font-medium"
+                          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}`, opacity: 0.5, cursor: "default" }}>Unavailable</span>
+                      )}
                     </td>
                   </tr>
                 ))}

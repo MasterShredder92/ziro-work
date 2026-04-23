@@ -40,6 +40,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     if (error) throw error;
 
     // Resolve signed URLs for storage-backed files (stored as "storage://path")
+    // Files with stub:// prefix are legacy records with no real storage — return null URL
     const items = await Promise.all(
       (data ?? []).map(async (f) => {
         if (f.file_url?.startsWith("storage://")) {
@@ -48,6 +49,10 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
             .from("family-files")
             .createSignedUrl(storagePath, 3600);
           return { ...f, file_url: signErr || !signed ? null : signed.signedUrl };
+        }
+        // Legacy stub records or unknown schemes — no viewable URL
+        if (!f.file_url || f.file_url.startsWith("stub://")) {
+          return { ...f, file_url: null };
         }
         return f;
       })
