@@ -239,11 +239,11 @@ export function FamiliesListClient({
         background: "var(--z-bg, var(--z-surface))",
         borderBottom: "1px solid var(--z-border)",
         display: "grid",
-        gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px minmax(0,1.4fr) minmax(0,1.4fr) 90px",
+        gridTemplateColumns: "minmax(0,1.6fr) 100px minmax(0,1.2fr) 80px minmax(0,2fr)",
         padding: "6px 16px 6px 20px",
         gap: 8,
       }}>
-        {["Family","Phone","Email","Location","Teacher","Students","Billing"].map(h => (
+        {["Family","Phone","Email","Location","Students & Teachers"].map(h => (
           <span key={h} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{h}</span>
         ))}
       </div>
@@ -266,34 +266,13 @@ export function FamiliesListClient({
             const isMil     = row.is_military === true;
             const isOverdue = (row.billing_status ?? "").toLowerCase() === "overdue";
 
-            // Group students by teacher, sorted by teacher name, then build paired display strings
-            // Students without a teacher go at the end under "—"
-            const teacherGroups: Map<string, string[]> = new Map();
-            for (const s of students) {
-              const tName = s.teacherName ?? "—";
-              if (!teacherGroups.has(tName)) teacherGroups.set(tName, []);
-              teacherGroups.get(tName)!.push(firstName(s.name));
-            }
-            // Sort groups: named teachers alphabetically, "—" last
-            const sortedGroups = [...teacherGroups.entries()].sort((a, b) => {
-              if (a[0] === "—") return 1;
-              if (b[0] === "—") return -1;
-              return a[0].localeCompare(b[0]);
-            });
-            // Build paired arrays (teacher display, student display) — max 4 students shown
-            const pairedTeachers: string[] = [];
-            const pairedStudents: string[] = [];
-            let shown = 0;
-            for (const [tName, sNames] of sortedGroups) {
-              if (shown >= 4) break;
-              const available = sNames.slice(0, 4 - shown);
-              pairedTeachers.push(tName === "—" ? "—" : tName);
-              pairedStudents.push(available.join(" & "));
-              shown += available.length;
-            }
-            const firstNames = pairedStudents; // used in Col 6
-            const teacherDisplay = pairedTeachers.filter(t => t !== "—").join(", ") || null;
-            const extraCount = students.length > 4 ? students.length - 4 : 0;
+            // Build nested student lines: "Name • Instrument • Teacher"
+            const studentLines = students.slice(0, 5).map(s => ({
+              name: firstName(s.name),
+              instrument: s.instrument ? normInst(s.instrument) : null,
+              teacher: s.teacherName ?? null,
+            }));
+            const extraCount = students.length > 5 ? students.length - 5 : 0;
 
             return (
               <div key={row.id}>
@@ -302,7 +281,7 @@ export function FamiliesListClient({
                   style={{
                     position: "relative",
                     display: "grid",
-                    gridTemplateColumns: "minmax(0,1.6fr) 110px minmax(0,1.4fr) 90px minmax(0,1.4fr) minmax(0,1.4fr) 90px",
+                    gridTemplateColumns: "minmax(0,1.6fr) 100px minmax(0,1.2fr) 80px minmax(0,2fr)",
                     alignItems: "center",
                     gap: 8,
                     padding: "8px 16px 8px 0",
@@ -399,52 +378,34 @@ export function FamiliesListClient({
                       background: ls.bg, color: ls.fg, whiteSpace: "nowrap",
                     }}>{locShort}</span>
                   </div>
-                  {/* Col 5: Teacher — paired with students */}
-                  <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {teacherDisplay ?? <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>}
-                  </div>
-                  {/* Col 6: Students — first names as inline pills */}
-                  <div style={{ display: "flex", flexWrap: "nowrap", gap: 3, overflow: "hidden", alignItems: "center" }}>
-                    {firstNames.length > 0 ? (
+                  {/* Col 5: Students & Teachers — stacked "Name • Instrument • Teacher" lines */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 1, overflow: "hidden" }}>
+                    {studentLines.length > 0 ? (
                       <>
-                        {firstNames.map((fn, i) => (
-                          <span key={i} style={{
-                            fontSize: 12, fontWeight: 500, padding: "1px 7px", borderRadius: 20,
-                            background: "var(--z-surface)", color: "var(--z-muted)",
-                            border: "1px solid var(--z-border)", whiteSpace: "nowrap",
-                          }}>{fn}</span>
+                        {studentLines.map((sl, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--z-fg)", flexShrink: 0 }}>{sl.name}</span>
+                            {sl.instrument && (
+                              <>
+                                <span style={{ fontSize: 11, color: "var(--z-border)", flexShrink: 0 }}>•</span>
+                                <span style={{ fontSize: 11, fontWeight: 500, color: "var(--z-muted)", flexShrink: 0 }}>{sl.instrument}</span>
+                              </>
+                            )}
+                            {sl.teacher && (
+                              <>
+                                <span style={{ fontSize: 11, color: "var(--z-border)", flexShrink: 0 }}>•</span>
+                                <span style={{ fontSize: 11, fontWeight: 500, color: "var(--z-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{sl.teacher}</span>
+                              </>
+                            )}
+                          </div>
                         ))}
                         {extraCount > 0 && (
-                          <span style={{
-                            fontSize: 12, fontWeight: 500, padding: "1px 7px", borderRadius: 20,
-                            background: "var(--z-surface)", color: "var(--z-muted)",
-                            border: "1px solid var(--z-border)", whiteSpace: "nowrap",
-                          }}>+{extraCount}</span>
+                          <span style={{ fontSize: 10, color: "var(--z-border)", fontWeight: 500 }}>+{extraCount} more</span>
                         )}
                       </>
                     ) : (
                       <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>
                     )}
-                  </div>
-
-                  {/* Col 7: Billing */}
-                  <div>
-                    {(() => {
-                      const bs = (row.billing_status ?? "").toLowerCase();
-                      let bg = "rgba(107,114,128,0.1)", fg = "#6b7280";
-                      if (bs === "current" || bs === "paid")          { bg = "rgba(16,185,129,0.12)"; fg = "#059669"; }
-                      else if (bs === "overdue" || bs === "past_due") { bg = "rgba(185,28,28,0.1)";   fg = "#b91c1c"; }
-                      else if (bs === "paused")                       { bg = "rgba(37,99,235,0.12)";  fg = "#2563eb"; }
-                      return (
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
-                          background: bg, color: fg, textTransform: "uppercase",
-                          letterSpacing: "0.04em", whiteSpace: "nowrap",
-                        }}>
-                          {(row.billing_status ?? "—").replace(/_/g, " ")}
-                        </span>
-                      );
-                    })()}
                   </div>
                 </div>
 

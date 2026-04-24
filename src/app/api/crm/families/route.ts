@@ -27,19 +27,38 @@ export async function GET(req: NextRequest) {
     if (data.length > 0) {
       const supabase = clientFor(tenantId);
       const familyIds = data.map((f) => f.id);
+      // Fetch students with teacher join for the nested Students & Teachers column
       const { data: students } = await supabase
         .from("students")
-        .select("id, family_id, instrument, status")
+        .select("id, family_id, first_name, last_name, instrument, status, teacher_id, teachers(first_name, last_name, display_name)")
         .eq("tenant_id", tenantId)
         .in("family_id", familyIds);
 
       const countMap: Record<string, number> = {};
-      const studentsMap: Record<string, { instrument?: string | null; status?: string | null }[]> = {};
+      const studentsMap: Record<string, {
+        id: string;
+        first_name?: string | null;
+        last_name?: string | null;
+        instrument?: string | null;
+        status?: string | null;
+        teacher_name?: string | null;
+      }[]> = {};
       for (const s of students ?? []) {
         if (!s.family_id) continue;
         countMap[s.family_id] = (countMap[s.family_id] ?? 0) + 1;
         if (!studentsMap[s.family_id]) studentsMap[s.family_id] = [];
-        studentsMap[s.family_id].push({ instrument: s.instrument, status: s.status });
+        const t = s.teachers as { first_name?: string | null; last_name?: string | null; display_name?: string | null } | null;
+        const teacherName = t
+          ? (t.display_name ?? [t.first_name, t.last_name].filter(Boolean).join(" ") ?? null)
+          : null;
+        studentsMap[s.family_id].push({
+          id: s.id,
+          first_name: s.first_name,
+          last_name: s.last_name,
+          instrument: s.instrument,
+          status: s.status,
+          teacher_name: teacherName,
+        });
       }
 
       const enriched = data.map((f) => {
