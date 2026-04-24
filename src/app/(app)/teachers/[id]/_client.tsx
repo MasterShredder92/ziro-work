@@ -738,7 +738,22 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
 // ─── Availability Tab ────────────────────────────────────────────────────────
 const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as const;
 type DayKey = typeof DAYS[number];
-const DAY_LABELS: Record<DayKey, string> = { monday:"Mon", tuesday:"Tue", wednesday:"Wed", thursday:"Thu", friday:"Fri", saturday:"Sat", sunday:"Sun" };
+const DAY_LABELS: Record<DayKey, string> = { monday:"Monday", tuesday:"Tuesday", wednesday:"Wednesday", thursday:"Thursday", friday:"Friday", saturday:"Saturday", sunday:"Sunday" };
+
+// Studio operating constraints — hardcoded, never editable via UI
+// Friday: closed globally at all locations
+// Sunday: closed at Gretna and Elkhorn only
+const FRIDAY_LOCKED = true;
+const SUNDAY_LOCKED_LOCATION_IDS = [
+  "40c67ffc-91b5-46a9-94bd-6ddffdfb7638", // Gretna Music Lessons
+  "cebd97d4-c241-4de2-8ade-49e5cc0070d5", // Elkhorn Music Lessons
+];
+
+function isDayLocked(day: DayKey, locationId: string): boolean {
+  if (day === "friday" && FRIDAY_LOCKED) return true;
+  if (day === "sunday" && SUNDAY_LOCKED_LOCATION_IDS.includes(locationId)) return true;
+  return false;
+}
 
 type LocAssignment = {
   location_id: string;
@@ -749,14 +764,41 @@ type LocAssignment = {
 type TimeBlock = { start_time: string; end_time: string };
 type DaySlots = Record<DayKey, TimeBlock[]>;
 type LocSchedule = Record<string, DaySlots>; // keyed by location_id
+// Master toggle state: true = schedule editor open, false = dormant/grayed
+type MasterToggles = Record<string, boolean>;
 
 function emptyDaySlots(): DaySlots {
   return { monday:[], tuesday:[], wednesday:[], thursday:[], friday:[], saturday:[], sunday:[] };
 }
 
+// Toggle switch component (Google-style)
+function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${
+        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+      } ${
+        checked ? "bg-[#00ff88]" : "bg-[#2a2a2e]"
+      }`}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-[18px]" : "translate-x-[3px]"
+        }`}
+      />
+    </button>
+  );
+}
+
 function AvailabilityTab({ teacherId }: { teacherId: string }) {
   const [assignments, setAssignments] = React.useState<LocAssignment[]>([]);
   const [schedule, setSchedule] = React.useState<LocSchedule>({});
+  const [masterToggles, setMasterToggles] = React.useState<MasterToggles>({});
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"idle"|"success"|"error">("idle");
@@ -782,7 +824,6 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
       for (const slot of rawSlots) {
         const locId = slot.locationId ?? "";
         const dayRaw = String(slot.dayOfWeek);
-        // Handle both numeric (0=Sun) and string enum values
         const dayStr: DayKey | undefined = DAYS.includes(dayRaw as DayKey)
           ? (dayRaw as DayKey)
           : (["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as DayKey[])[Number(dayRaw)];
@@ -791,6 +832,13 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
         sched[locId][dayStr].push({ start_time: slot.startTime?.slice(0,5) ?? "", end_time: slot.endTime?.slice(0,5) ?? "" });
       }
       setSchedule(sched);
+      // Auto-open master toggle for locations that have existing availability data
+      const toggles: MasterToggles = {};
+      for (const loc of locs) {
+        const hasData = rawSlots.some(s => s.locationId === loc.location_id);
+        toggles[loc.location_id] = hasData || loc.is_regular || loc.can_sub;
+      }
+      setMasterToggles(toggles);
     }).finally(() => setLoading(false));
   }, [teacherId]);
 
@@ -803,17 +851,33 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
         body: JSON.stringify({ location_id: locationId, [field]: value }),
       });
       setAssignments(prev => prev.map(a => a.location_id === locationId ? { ...a, [field]: value } : a));
-      // Ensure schedule entry exists
       if (value && !schedule[locationId]) {
         setSchedule(prev => ({ ...prev, [locationId]: emptyDaySlots() }));
       }
     } finally { setPatchingLoc(null); }
   }
 
+  function toggleMaster(locId: string, value: boolean) {
+    setMasterToggles(prev => ({ ...prev, [locId]: value }));
+    if (value && !schedule[locId]) {
+      setSchedule(prev => ({ ...prev, [locId]: emptyDaySlots() }));
+    }
+  }
+
+  function toggleDay(locId: string, day: DayKey, checked: boolean) {
+    setSchedule(prev => ({
+      ...prev,
+      [locId]: {
+        ...prev[locId],
+        [day]: checked ? [{ start_time: "15:00", end_time: "21:00" }] : [],
+      },
+    }));
+  }
+
   function addBlock(locId: string, day: DayKey) {
     setSchedule(prev => ({
       ...prev,
-      [locId]: { ...prev[locId], [day]: [...(prev[locId]?.[day] ?? []), { start_time: "09:00", end_time: "17:00" }] },
+      [locId]: { ...prev[locId], [day]: [...(prev[locId]?.[day] ?? []), { start_time: "15:00", end_time: "21:00" }] },
     }));
   }
 
@@ -837,7 +901,11 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
     try {
       const slots: Array<{ dayOfWeek: string; startTime: string; endTime: string; locationId: string }> = [];
       for (const [locId, dayMap] of Object.entries(schedule)) {
+        // Only save slots for locations with master toggle ON
+        if (!masterToggles[locId]) continue;
         for (const day of DAYS) {
+          // Never persist locked days
+          if (isDayLocked(day, locId)) continue;
           for (const block of (dayMap[day] ?? [])) {
             if (block.start_time && block.end_time) {
               slots.push({ dayOfWeek: day, startTime: block.start_time, endTime: block.end_time, locationId: locId });
@@ -864,85 +932,108 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
   if (loading) return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />)}</div>;
   if (assignments.length === 0) return <div className="text-sm text-[#505055]">No locations assigned to this teacher. Add locations in the Profile tab first.</div>;
 
-  const activeAssignments = assignments.filter(a => a.is_regular || a.can_sub);
-
   return (
     <div className="space-y-4">
-      {/* Location assignment toggles */}
-      <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Location Assignments</div>
-        <div className="space-y-3">
-          {assignments.map(a => {
-            const locName = a.location?.name ?? a.location_id;
-            const locColor = a.location?.color ?? "#00ff88";
-            const isActive = patchingLoc === a.location_id;
-            return (
-              <div key={a.location_id} className="rounded-xl border border-[#1c1c1e] bg-[#111113] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: locColor }} />
-                    <span className="text-sm font-semibold text-white">{locName}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="checkbox" disabled={isActive} checked={a.is_regular} onChange={e => void patchLocToggle(a.location_id, "is_regular", e.target.checked)} className="h-3.5 w-3.5 accent-[#00ff88]" />
-                      <span className="text-xs text-[#909098]">Regular</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="checkbox" disabled={isActive} checked={a.can_sub} onChange={e => void patchLocToggle(a.location_id, "can_sub", e.target.checked)} className="h-3.5 w-3.5 accent-[#00ff88]" />
-                      <span className="text-xs text-[#909098]">Can Sub</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Schedule editor — only for active locations */}
-      {activeAssignments.length === 0 && (
-        <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4 text-sm text-[#505055]">
-          Enable Regular or Can Sub for at least one location to set a weekly schedule.
-        </div>
-      )}
-      {activeAssignments.map(a => {
+      {/* Google-style location cards with master toggle + day matrix */}
+      {assignments.map(a => {
         const locName = a.location?.name ?? a.location_id;
         const locColor = a.location?.color ?? "#00ff88";
+        const isPatching = patchingLoc === a.location_id;
+        const masterOn = masterToggles[a.location_id] ?? false;
         const dayMap = schedule[a.location_id] ?? emptyDaySlots();
         return (
-          <div key={a.location_id} className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#1c1c1e]">
+          <div
+            key={a.location_id}
+            className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] overflow-hidden"
+            style={{ borderLeftColor: locColor, borderLeftWidth: 3 }}
+          >
+            {/* Card header: location name + master toggle + is_regular/can_sub */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#1c1c1e]">
               <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: locColor }} />
-              <span className="text-xs font-bold uppercase tracking-widest text-white">{locName}</span>
-              <span className="ml-auto text-xs text-[#505055]">
-                {a.is_regular && <span className="mr-2 rounded-full bg-[#00ff88]/10 px-2 py-0.5 text-[#00ff88]">Regular</span>}
-                {a.can_sub && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-400">Sub</span>}
-              </span>
+              <span className="text-sm font-bold text-white flex-1">{locName}</span>
+              {/* is_regular / can_sub micro-toggles */}
+              <div className="flex items-center gap-3 mr-4">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" disabled={isPatching} checked={a.is_regular}
+                    onChange={e => void patchLocToggle(a.location_id, "is_regular", e.target.checked)}
+                    className="h-3.5 w-3.5 accent-[#00ff88]" />
+                  <span className="text-xs text-[#909098]">Regular</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" disabled={isPatching} checked={a.can_sub}
+                    onChange={e => void patchLocToggle(a.location_id, "can_sub", e.target.checked)}
+                    className="h-3.5 w-3.5 accent-[#00ff88]" />
+                  <span className="text-xs text-[#909098]">Can Sub</span>
+                </label>
+              </div>
+              {/* Master toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#505055]">{masterOn ? "Schedule Active" : "Dormant"}</span>
+                <ToggleSwitch checked={masterOn} onChange={v => toggleMaster(a.location_id, v)} />
+              </div>
             </div>
-            <div className="divide-y divide-[#1c1c1e]">
+
+            {/* Schedule matrix — grayed out when master toggle is OFF */}
+            <div className={`divide-y divide-[#1c1c1e] transition-opacity ${masterOn ? "opacity-100" : "opacity-30 pointer-events-none"}`}>
               {DAYS.map(day => {
+                const locked = isDayLocked(day, a.location_id);
                 const blocks = dayMap[day] ?? [];
+                const dayOn = blocks.length > 0;
                 return (
-                  <div key={day} className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-[#505055] w-10">{DAY_LABELS[day]}</span>
-                      <button type="button" onClick={() => addBlock(a.location_id, day)}
-                        className="text-xs text-[#00ff88] hover:text-[#00ff88]/70 font-semibold">+ Add Block</button>
+                  <div key={day} className={`px-4 py-3 flex items-start gap-4 ${locked ? "opacity-40" : ""}`}>
+                    {/* Day checkbox */}
+                    <div className="flex items-center gap-2 w-32 shrink-0 pt-0.5">
+                      <input
+                        type="checkbox"
+                        disabled={locked}
+                        checked={dayOn}
+                        onChange={e => !locked && toggleDay(a.location_id, day, e.target.checked)}
+                        className="h-3.5 w-3.5 accent-[#00ff88] cursor-pointer"
+                      />
+                      <span className={`text-sm font-medium ${
+                        locked ? "text-[#303035]" : dayOn ? "text-white" : "text-[#505055]"
+                      }`}>{DAY_LABELS[day]}</span>
+                      {locked && (
+                        <span className="ml-1 text-[10px] uppercase tracking-wider text-[#303035] font-bold">Closed</span>
+                      )}
                     </div>
-                    {blocks.length === 0 && <div className="text-xs text-[#303035] italic">No blocks — off this day</div>}
-                    <div className="space-y-2">
-                      {blocks.map((block, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <input type="time" value={block.start_time} onChange={e => updateBlock(a.location_id, day, idx, "start_time", e.target.value)}
-                            className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none" />
-                          <span className="text-xs text-[#505055]">to</span>
-                          <input type="time" value={block.end_time} onChange={e => updateBlock(a.location_id, day, idx, "end_time", e.target.value)}
-                            className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none" />
-                          <button type="button" onClick={() => removeBlock(a.location_id, day, idx)}
-                            className="ml-auto text-xs text-[#505055] hover:text-red-400">✕</button>
+
+                    {/* Time blocks or Closed label */}
+                    <div className="flex-1">
+                      {!dayOn && !locked && (
+                        <span className="text-sm text-[#303035] italic">Closed</span>
+                      )}
+                      {dayOn && (
+                        <div className="space-y-2">
+                          {blocks.map((block, idx) => (
+                            <div key={idx} className="flex items-center gap-2 flex-wrap">
+                              <input
+                                type="time"
+                                value={block.start_time}
+                                onChange={e => updateBlock(a.location_id, day, idx, "start_time", e.target.value)}
+                                className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none"
+                              />
+                              <span className="text-xs text-[#505055]">to</span>
+                              <input
+                                type="time"
+                                value={block.end_time}
+                                onChange={e => updateBlock(a.location_id, day, idx, "end_time", e.target.value)}
+                                className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeBlock(a.location_id, day, idx)}
+                                className="text-xs text-[#505055] hover:text-red-400 px-1"
+                              >✕</button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addBlock(a.location_id, day)}
+                            className="text-xs text-[#00ff88] hover:text-[#00ff88]/70 font-semibold mt-1"
+                          >+ Add Hours</button>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 );
@@ -953,16 +1044,14 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
       })}
 
       {/* Save button */}
-      {activeAssignments.length > 0 && (
-        <>
-          {saveStatus === "success" && <p className="text-sm text-[#00ff88]">Schedule saved.</p>}
-          {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
-          <button onClick={() => void handleSave()} disabled={saving}
-            className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
-            {saving ? "Saving…" : "Save Schedule"}
-          </button>
-        </>
-      )}
+      <>
+        {saveStatus === "success" && <p className="text-sm text-[#00ff88]">Schedule saved.</p>}
+        {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
+        <button onClick={() => void handleSave()} disabled={saving}
+          className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
+          {saving ? "Saving…" : "Save Schedule"}
+        </button>
+      </>
     </div>
   );
 }
