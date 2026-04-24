@@ -316,7 +316,6 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
       const patch = {
         first_name: firstName || null, last_name: lastName || null,
         display_name: displayName || null,
-        name: displayName || [firstName, lastName].filter(Boolean).join(" ") || null,
         email: email || null, phone: phone || null, status: status || null,
         teacher_role: teacherRole || null, hire_date: hireDate || null,
         rate_per_block: ratePerBlock ? parseFloat(ratePerBlock) : undefined,
@@ -334,7 +333,9 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         best_match_students: bestMatchStudents || null,
       };
       const res = await fetch(`/api/crm/teachers/${teacher.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-tenant-id": teacher.tenant_id },
+        body: JSON.stringify(patch),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { message?: string; error?: string };

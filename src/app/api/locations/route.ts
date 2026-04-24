@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const db = getServiceClient();
     const { data, error } = await db
       .from("locations")
-      .select("id, name, address, city, state, zip, phone, email, is_active, color, timezone")
+      .select("id, name, address, city, state, zip, phone, email, is_active, color")
       .eq("tenant_id", tenantId)
       .order("name", { ascending: true });
 
