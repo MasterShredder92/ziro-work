@@ -905,29 +905,34 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
       setAssignmentMap(aMap);
 
       // Build schedule map — seed all global locations
-      const rawSlots: Array<{ dayOfWeek: string|number; startTime: string; endTime: string; locationId?: string|null }> =
-        Array.isArray(availRes.data?.slots) ? availRes.data.slots :
-        Array.isArray(availRes.data) ? availRes.data : [];
+      // The GET response shape: { data: { teacherId, tenantId, slots: TeacherAvailability[] } }
+      // TeacherAvailability has no locationId field — locationId is piggybacked in the `notes` field
+      type RawSlot = { dayOfWeek: string|number; startTime: string; endTime: string; locationId?: string|null; notes?: string|null };
+      const rawSlots: RawSlot[] =
+        Array.isArray(availRes.data?.slots) ? (availRes.data.slots as RawSlot[]) :
+        Array.isArray(availRes.data) ? (availRes.data as RawSlot[]) : [];
       const sched: LocSchedule = {};
       for (const loc of globals) { sched[loc.id] = emptyDaySlots(); }
       for (const slot of rawSlots) {
-        const locId = slot.locationId ?? "";
+        // locationId may come as slot.locationId (POST response) or slot.notes (GET response via rowTo piggybacking)
+        const locId = slot.locationId ?? slot.notes ?? "";
         const dayRaw = String(slot.dayOfWeek);
         const dayStr: DayKey | undefined = DAYS.includes(dayRaw as DayKey)
           ? (dayRaw as DayKey)
           : (["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as DayKey[])[Number(dayRaw)];
-        if (!dayStr) continue;
+        if (!dayStr || !locId) continue;
         if (!sched[locId]) sched[locId] = emptyDaySlots();
         sched[locId][dayStr].push({ start_time: slot.startTime?.slice(0,5) ?? "", end_time: slot.endTime?.slice(0,5) ?? "" });
       }
       setSchedule(sched);
 
-      // Master toggle: ON if teacher is assigned + has data or is_regular/can_sub
+      // Master toggle: ON if teacher has saved availability data for that location (with or without assignment row)
       const toggles: MasterToggles = {};
       for (const loc of globals) {
         const a = aMap[loc.id];
-        const hasData = rawSlots.some(s => s.locationId === loc.id);
-        toggles[loc.id] = !!(a && (hasData || a.is_regular || a.can_sub));
+        // Check both locationId and notes fields since GET uses notes to carry locationId
+        const hasData = rawSlots.some(s => (s.locationId ?? s.notes) === loc.id);
+        toggles[loc.id] = !!(hasData || (a && (a.is_regular || a.can_sub)));
       }
       setMasterToggles(toggles);
     }).finally(() => setLoading(false));
