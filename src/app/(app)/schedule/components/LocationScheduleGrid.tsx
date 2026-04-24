@@ -2,6 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
+import { ScheduleBlockModal, type ScheduleBlockModalData } from "./ScheduleBlockModal";
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
@@ -131,6 +132,9 @@ export function LocationScheduleGrid({
 }: Props) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
+
+  // ── Context Modal state ─────────────────────────────────────────────────────
+  const [modalData, setModalData] = React.useState<ScheduleBlockModalData | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -420,12 +424,15 @@ export function LocationScheduleGrid({
                         key={block.id}
                         type="button"
                         onClick={() => {
-                          setSelectedBlockId(block.id);
-                          setSessionType(block.block_type);
-                          setBookingStudentId(null);
-                          setBookingStudentQuery("");
-                          setBookingFirstDay(null);
-                          setBookingStudentHasBlocks(null);
+                          // Open context modal first — lightweight nav hub
+                          const blockStudent = block.student_id ? studentsById.get(block.student_id) : null;
+                          const blockTeacher = block.teacher_id ? teachers.find(tt => tt.id === block.teacher_id) : null;
+                          setModalData({
+                            block: block as unknown as ScheduleBlock,
+                            student: blockStudent ?? null,
+                            teacher: blockTeacher ?? null,
+                            locationName,
+                          });
                         }}
                         className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left transition-all hover:scale-[1.02] hover:z-20 ${
                           isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : ""
@@ -786,6 +793,22 @@ export function LocationScheduleGrid({
           </div>
         </div>
       )}
+
+      {/* ── Context Modal ── */}
+      <ScheduleBlockModal
+        data={modalData}
+        onClose={() => setModalData(null)}
+        onOpenEditPanel={() => {
+          if (modalData) {
+            setSelectedBlockId(modalData.block.id);
+            setSessionType(modalData.block.block_type);
+            setBookingStudentId(null);
+            setBookingStudentQuery("");
+            setBookingFirstDay(null);
+            setBookingStudentHasBlocks(null);
+          }
+        }}
+      />
     </div>
   );
 }
