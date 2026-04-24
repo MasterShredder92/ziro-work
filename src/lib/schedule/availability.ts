@@ -36,7 +36,7 @@ export async function setTeacherAvailability(
   tenantId: string,
   teacherId: string,
   slots: Array<
-    Omit<TeacherAvailabilityInsert, "tenantId" | "teacherId">
+    Omit<TeacherAvailabilityInsert, "tenantId" | "teacherId"> & { locationId?: string }
   >,
 ): Promise<TeacherAvailability[]> {
   const existing = await listTeacherAvailability(tenantId, {

@@ -12,21 +12,37 @@ import type {
 
 const TABLE = "teacher_availability";
 
+// DB day_of_week is a string ENUM: monday|tuesday|wednesday|thursday|friday|saturday|sunday
+// The TeacherAvailability type uses dayOfWeek: number (0=Sun..6=Sat) — we bridge here.
+const DAY_ENUM = [
+  "sunday",   // 0
+  "monday",   // 1
+  "tuesday",  // 2
+  "wednesday",// 3
+  "thursday", // 4
+  "friday",   // 5
+  "saturday", // 6
+] as const;
+type DayEnum = typeof DAY_ENUM[number];
+function intToDay(n: number): DayEnum { return DAY_ENUM[n] ?? "monday"; }
+function dayToInt(d: string): number { const i = (DAY_ENUM as readonly string[]).indexOf(d); return i >= 0 ? i : 1; }
+
 export type TeacherAvailabilityFilter = {
   teacher_id?: string;
-  day_of_week?: number;
+  location_id?: string;
+  day_of_week?: number; // integer 0-6
 };
 
+// Exact DB row shape — matches actual Supabase schema
 type Row = {
   id: string;
   tenant_id: string;
   teacher_id: string;
-  day_of_week: number;
+  location_id: string;
+  day_of_week: DayEnum;
   start_time: string;
   end_time: string;
-  effective_from: string | null;
-  effective_until: string | null;
-  notes: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -46,29 +62,31 @@ function rowTo(r: Row): TeacherAvailability {
     id: r.id,
     tenantId: r.tenant_id,
     teacherId: r.teacher_id,
-    dayOfWeek: r.day_of_week,
+    dayOfWeek: dayToInt(r.day_of_week),
     startTime: r.start_time,
     endTime: r.end_time,
-    effectiveFrom: r.effective_from,
-    effectiveUntil: r.effective_until,
-    notes: r.notes,
+    // DB has no effectiveFrom/effectiveUntil — use notes to carry locationId for consumers
+    effectiveFrom: null,
+    effectiveUntil: null,
+    notes: r.location_id, // locationId piggybacked into notes field
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
 
-function toRow(tenantId: string, input: TeacherAvailabilityInsert): Row {
+function toRow(tenantId: string, input: TeacherAvailabilityInsert & { locationId?: string }): Row {
   const now = new Date().toISOString();
+  // locationId may come directly or piggybacked in notes
+  const locationId = (input as { locationId?: string }).locationId ?? input.notes ?? "";
   return {
     id: input.id ?? `avl_${Math.random().toString(36).slice(2, 10)}`,
     tenant_id: tenantId,
     teacher_id: input.teacherId,
-    day_of_week: input.dayOfWeek,
+    location_id: locationId,
+    day_of_week: intToDay(input.dayOfWeek),
     start_time: input.startTime,
     end_time: input.endTime,
-    effective_from: input.effectiveFrom ?? null,
-    effective_until: input.effectiveUntil ?? null,
-    notes: input.notes ?? null,
+    is_active: true,
     created_at: now,
     updated_at: now,
   };
@@ -84,8 +102,9 @@ export async function listTeacherAvailability(
       const supabase = clientFor(tenantId);
       let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.teacher_id) q = q.eq("teacher_id", filter.teacher_id);
+      if (filter?.location_id) q = q.eq("location_id", filter.location_id);
       if (typeof filter?.day_of_week === "number")
-        q = q.eq("day_of_week", filter.day_of_week);
+        q = q.eq("day_of_week", intToDay(filter.day_of_week));
       const ordered = applyListOptions(q, {
         orderBy: opts?.orderBy ?? "day_of_week",
         ascending: opts?.ascending ?? true,
@@ -105,16 +124,17 @@ export async function listTeacherAvailability(
     .filter((r) => {
       if (r.tenant_id !== tenantId) return false;
       if (filter?.teacher_id && r.teacher_id !== filter.teacher_id) return false;
+      if (filter?.location_id && r.location_id !== filter.location_id) return false;
       if (
         typeof filter?.day_of_week === "number" &&
-        r.day_of_week !== filter.day_of_week
+        r.day_of_week !== intToDay(filter.day_of_week)
       )
         return false;
       return true;
     })
     .sort(
       (a, b) =>
-        a.day_of_week - b.day_of_week ||
+        (DAY_ENUM as readonly string[]).indexOf(a.day_of_week) - (DAY_ENUM as readonly string[]).indexOf(b.day_of_week) ||
         (a.start_time < b.start_time ? -1 : 1),
     )
     .map(rowTo);
@@ -148,7 +168,7 @@ export async function getTeacherAvailabilityById(
 
 export async function createTeacherAvailability(
   tenantId: string,
-  input: TeacherAvailabilityInsert,
+  input: TeacherAvailabilityInsert & { locationId?: string },
 ): Promise<TeacherAvailability> {
   const row = toRow(tenantId, input);
   if (!tableMissing(TABLE)) {
@@ -179,14 +199,11 @@ export async function updateTeacherAvailability(
   const now = new Date().toISOString();
   const update: Record<string, unknown> = { updated_at: now };
   if (patch.teacherId !== undefined) update.teacher_id = patch.teacherId;
-  if (patch.dayOfWeek !== undefined) update.day_of_week = patch.dayOfWeek;
+  if (patch.dayOfWeek !== undefined) update.day_of_week = intToDay(patch.dayOfWeek);
   if (patch.startTime !== undefined) update.start_time = patch.startTime;
   if (patch.endTime !== undefined) update.end_time = patch.endTime;
-  if (patch.effectiveFrom !== undefined)
-    update.effective_from = patch.effectiveFrom;
-  if (patch.effectiveUntil !== undefined)
-    update.effective_until = patch.effectiveUntil;
-  if (patch.notes !== undefined) update.notes = patch.notes;
+  // notes field carries locationId for our consumers
+  if (patch.notes !== undefined) update.location_id = patch.notes;
 
   if (!tableMissing(TABLE)) {
     try {
