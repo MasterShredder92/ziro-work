@@ -51,7 +51,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
 /* ── POST /api/crm/students/[id]/notes ────────────────────
    Creates a new note for a student.
-   Body: { body: string }
+   Body: { body: string; note_type?: string }
 ──────────────────────────────────────────────────────────── */
 export async function POST(req: NextRequest, ctx: RouteContext) {
   const resolved = await resolveCRMContext(req, {
@@ -79,6 +79,8 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     if (!body?.body || typeof body.body !== "string" || !body.body.trim()) {
       return badRequest("Note body is required");
     }
+    const VALID_NOTE_TYPES = ["internal_studio", "teacher_lesson", "parent_comm"];
+    const noteType: string = VALID_NOTE_TYPES.includes(body.note_type) ? body.note_type : "internal_studio";
 
     // Resolve author name from profiles
     const authorId = (session as { userId?: string }).userId ?? null;
@@ -105,6 +107,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
         author_name: authorName,
         author_role: authorRole,
         body: body.body.trim(),
+        note_type: noteType,
       })
       .select("*")
       .single();

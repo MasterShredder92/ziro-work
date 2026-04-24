@@ -4,6 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
+/* ─── Theme tokens (mirrors Family page) ─────────────────── */
+const T = {
+  bg:       "var(--z-bg, var(--z-surface))",
+  surface:  "var(--z-surface)",
+  surface2: "var(--z-surface-2, var(--z-surface))",
+  border:   "var(--z-border)",
+  fg:       "var(--z-fg)",
+  muted:    "var(--z-muted)",
+  label:    "var(--z-muted)",
+  shadow:   "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
+};
+
+const BRAND = "#00D16C"; // Ziro Green
+
 /* ─── Types ──────────────────────────────────────────────── */
 type StudentOverview = {
   id: string;
@@ -20,12 +34,16 @@ type StudentOverview = {
   experience_level: string | null;
   status: string | null;
 };
+
+type NoteType = "internal_studio" | "teacher_lesson" | "parent_comm";
+
 type StudentNote = {
   id: string;
   student_id: string;
   author_id: string | null;
   author_name: string | null;
   author_role: string | null;
+  note_type: NoteType;
   body: string;
   created_at: string;
   updated_at: string;
@@ -51,35 +69,161 @@ type StudentFile = {
 
 type Tab = "overview" | "files" | "notes" | "timeline";
 
+/* ─── Note type config ───────────────────────────────────── */
+const NOTE_TYPES: { value: NoteType; label: string; color: string; bg: string }[] = [
+  { value: "internal_studio", label: "Internal",    color: "#6b7280", bg: "rgba(107,114,128,0.10)" },
+  { value: "teacher_lesson",  label: "Lesson Note", color: "#2563eb", bg: "rgba(37,99,235,0.10)"   },
+  { value: "parent_comm",     label: "Parent Comm", color: "#d97706", bg: "rgba(217,119,6,0.10)"   },
+];
+function getNoteTypeConfig(t: NoteType) {
+  return NOTE_TYPES.find(n => n.value === t) ?? NOTE_TYPES[0];
+}
+
 /* ─── Helpers ────────────────────────────────────────────── */
 function resolveTeacherName(t: TeacherName): string {
   if (t.display_name) return t.display_name;
   const parts = [t.first_name, t.last_name].filter(Boolean);
   return parts.length > 0 ? parts.join(" ") : "—";
 }
-
-function formatCurrency(val: number | null): string {
-  if (val === null || val === undefined) return "—";
-  return `$${Number(val).toFixed(2)}`;
-}
-
 function formatFileSize(bytes: number | null): string {
   if (bytes === null || bytes === undefined || bytes === 0) return "—";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch { return iso; }
+}
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  } catch { return iso; }
+}
+
+/* ─── Fading Brand Border Card ───────────────────────────────
+   Mirrors BrandCard on /crm/families/[id].
+   3px left gradient stripe: BRAND → transparent at 50%.
+*/
+function BrandCard({
+  children,
+  style,
+  className,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        position: "relative",
+        background: T.surface,
+        borderRadius: 12,
+        border: `1px solid ${T.border}`,
+        borderLeft: "none",
+        boxShadow: T.shadow,
+        overflow: "hidden",
+        ...style,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 3,
+          background: `linear-gradient(to bottom, ${BRAND} 0%, ${BRAND}00 50%)`,
+          borderRadius: "12px 0 0 12px",
+          pointerEvents: "none",
+        }}
+      />
+      {children}
+    </div>
+  );
+}
+
+/* ─── Card header row ────────────────────────────────────── */
+function CardHeader({ title, action }: { title: string; action?: React.ReactNode }) {
+  return (
+    <div
+      className="flex items-center justify-between px-5 py-4"
+      style={{ borderBottom: `1px solid ${T.border}` }}
+    >
+      <h2 className="text-sm font-semibold" style={{ color: T.fg }}>{title}</h2>
+      {action}
+    </div>
+  );
+}
+
+/* ─── Brand input ────────────────────────────────────────── */
+function BrandInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: "100%", padding: "6px 10px", borderRadius: 8,
+        border: `1px solid ${focused ? BRAND : T.border}`,
+        boxShadow: focused ? `0 0 0 3px ${BRAND}22` : "none",
+        background: T.bg, color: T.fg, fontSize: 14, outline: "none",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    />
+  );
+}
+
+/* ─── Brand textarea ─────────────────────────────────────── */
+function BrandTextarea({ value, onChange, placeholder, rows = 3 }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <textarea
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: "100%", padding: "6px 10px", borderRadius: 8,
+        border: `1px solid ${focused ? BRAND : T.border}`,
+        boxShadow: focused ? `0 0 0 3px ${BRAND}22` : "none",
+        background: T.bg, color: T.fg, fontSize: 14, outline: "none", resize: "none",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    />
+  );
+}
+
+/* ─── Brand select ───────────────────────────────────────── */
+function BrandSelect({ value, onChange, children }: { value: string; onChange: (v: string) => void; children: React.ReactNode }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        padding: "6px 10px", borderRadius: 8,
+        border: `1px solid ${focused ? BRAND : T.border}`,
+        boxShadow: focused ? `0 0 0 3px ${BRAND}22` : "none",
+        background: T.bg, color: T.fg, fontSize: 13, outline: "none", cursor: "pointer",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    >
+      {children}
+    </select>
+  );
 }
 
 /* ─── Tab nav ────────────────────────────────────────────── */
@@ -90,15 +234,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "timeline",  label: "Timeline"  },
 ];
 
-function TabNav({
-  active,
-  onChange,
-}: {
-  active: Tab;
-  onChange: (t: Tab) => void;
-}) {
+function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <div className="border-b border-zinc-200 dark:border-zinc-800">
+    <div style={{ borderBottom: `1px solid ${T.border}` }}>
       <nav className="-mb-px flex gap-0" aria-label="Student tabs">
         {TABS.map((tab) => {
           const isActive = tab.id === active;
@@ -106,14 +244,19 @@ function TabNav({
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={[
-                "px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
-                isActive
-                  ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
-                  : "border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:border-zinc-600",
-              ].join(" ")}
-              aria-selected={isActive}
               role="tab"
+              aria-selected={isActive}
+              style={{
+                padding: "12px 16px", fontSize: 14,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? T.fg : T.muted,
+                background: "transparent",
+                border: "none",
+                borderBottom: `2px solid ${isActive ? BRAND : "transparent"}`,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "color 0.15s, border-color 0.15s",
+              }}
             >
               {tab.label}
             </button>
@@ -124,41 +267,13 @@ function TabNav({
   );
 }
 
-/* ─── Card wrapper ───────────────────────────────────────── */
-function Card({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          {title}
-        </h2>
-        {action}
-      </div>
-      <div className="px-5 py-4">{children}</div>
-    </div>
-  );
-}
-
-/* ─── Edit button placeholder ────────────────────────────── */
-/* EditButton removed - LearningProfileCard now manages its own edit state */
-
 /* ─── Field row ──────────────────────────────────────────── */
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-        {label}
-      </dt>
-      <dd className="text-sm text-zinc-700 dark:text-zinc-300">
-        {value && value.trim() ? value : <span className="text-zinc-400 dark:text-zinc-600">—</span>}
+      <dt className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>{label}</dt>
+      <dd className="text-sm" style={{ color: T.fg }}>
+        {value && value.trim() ? value : <span style={{ color: T.label }}>—</span>}
       </dd>
     </div>
   );
@@ -168,6 +283,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 function LearningProfileCard({ student, onSaved }: { student: StudentOverview; onSaved: (updated: Partial<StudentOverview>) => void }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [draftInstrument, setDraftInstrument] = useState(student.instrument ?? "");
   const [draftBio, setDraftBio] = useState(student.bio ?? "");
@@ -179,8 +295,9 @@ function LearningProfileCard({ student, onSaved }: { student: StudentOverview; o
     setDraftBio(student.bio ?? "");
     setDraftGoals(student.goals ?? "");
     setDraftStyle(student.learning_style ?? "");
-    setSaveError(null);
     setEditing(false);
+    setSaveError(null);
+    setSaveState("idle");
   }
 
   async function handleSave() {
@@ -191,9 +308,9 @@ function LearningProfileCard({ student, onSaved }: { student: StudentOverview; o
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
         body: JSON.stringify({
-          instrument: draftInstrument.trim() || null,
-          bio: draftBio.trim() || null,
-          goals: draftGoals.trim() || null,
+          instrument:     draftInstrument.trim() || null,
+          bio:            draftBio.trim() || null,
+          goals:          draftGoals.trim() || null,
           learning_style: draftStyle.trim() || null,
         }),
       });
@@ -203,72 +320,84 @@ function LearningProfileCard({ student, onSaved }: { student: StudentOverview; o
       }
       const j = await res.json();
       onSaved({
-        instrument: j.data?.instrument ?? (draftInstrument.trim() || null),
-        bio: j.data?.bio ?? (draftBio.trim() || null),
-        goals: j.data?.goals ?? (draftGoals.trim() || null),
+        instrument:     j.data?.instrument     ?? (draftInstrument.trim() || null),
+        bio:            j.data?.bio            ?? (draftBio.trim() || null),
+        goals:          j.data?.goals          ?? (draftGoals.trim() || null),
         learning_style: j.data?.learning_style ?? (draftStyle.trim() || null),
       });
+      setSaveState("saved");
       setEditing(false);
+      setTimeout(() => setSaveState("idle"), 2500);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed");
+      setSaveState("error");
     } finally {
       setSaving(false);
     }
   }
 
   const action = editing ? (
-    <div className="flex gap-2">
+    <div className="flex items-center gap-2">
+      {saving && <span className="text-xs" style={{ color: T.muted }}>Saving…</span>}
+      {saveState === "error" && !saving && (
+        <span className="text-xs" style={{ color: "#b91c1c" }} title={saveError ?? undefined}>Error</span>
+      )}
       <button onClick={handleCancel} disabled={saving}
-        className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200 dark:text-zinc-400 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
+        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-70 disabled:opacity-50"
+        style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}` }}>
         Cancel
       </button>
       <button onClick={handleSave} disabled={saving}
-        className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50">
-        {saving ? "Saving..." : "Save"}
+        className="rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity disabled:opacity-50"
+        style={{ background: T.fg, color: T.bg }}>
+        {saving ? "Saving…" : "Save"}
       </button>
     </div>
   ) : (
-    <button onClick={() => setEditing(true)}
-      className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200 dark:text-zinc-400 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-      Edit
-    </button>
+    <div className="flex items-center gap-2">
+      {saveState === "saved" && <span className="text-xs" style={{ color: "#059669" }}>✓ Saved</span>}
+      <button onClick={() => setEditing(true)}
+        className="rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
+        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>
+        Edit
+      </button>
+    </div>
   );
 
   return (
-    <Card title="Learning Profile" action={action}>
-      {saveError && <p className="mb-3 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500">{saveError}</p>}
-      {editing ? (
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Instrument</label>
-            <input value={draftInstrument} onChange={e => setDraftInstrument(e.target.value)} placeholder="e.g. Guitar, Drums, Piano"
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
+    <BrandCard>
+      <CardHeader title="Learning Profile" action={action} />
+      <div className="px-5 py-4">
+        {saveError && <p className="mb-3 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500">{saveError}</p>}
+        {editing ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Instrument</label>
+              <BrandInput value={draftInstrument} onChange={setDraftInstrument} placeholder="e.g. Guitar, Drums, Piano" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Bio</label>
+              <BrandTextarea value={draftBio} onChange={setDraftBio} placeholder="Brief background about the student..." rows={3} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Goals</label>
+              <BrandTextarea value={draftGoals} onChange={setDraftGoals} placeholder="What does the student want to achieve?" rows={3} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Learning Style</label>
+              <BrandInput value={draftStyle} onChange={setDraftStyle} placeholder="e.g. Visual, Auditory, Hands-on" />
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Bio</label>
-            <textarea value={draftBio} onChange={e => setDraftBio(e.target.value)} rows={3} placeholder="Brief background about the student..."
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none resize-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Goals</label>
-            <textarea value={draftGoals} onChange={e => setDraftGoals(e.target.value)} rows={3} placeholder="What does the student want to achieve?"
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none resize-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Learning Style</label>
-            <input value={draftStyle} onChange={e => setDraftStyle(e.target.value)} placeholder="e.g. Visual, Auditory, Hands-on"
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
-          </div>
-        </div>
-      ) : (
-        <dl className="flex flex-col gap-4">
-          <Field label="Instrument"     value={student.instrument} />
-          <Field label="Bio"            value={student.bio} />
-          <Field label="Goals"          value={student.goals} />
-          <Field label="Learning Style" value={student.learning_style} />
-        </dl>
-      )}
-    </Card>
+        ) : (
+          <dl className="flex flex-col gap-4">
+            <Field label="Instrument"     value={student.instrument} />
+            <Field label="Bio"            value={student.bio} />
+            <Field label="Goals"          value={student.goals} />
+            <Field label="Learning Style" value={student.learning_style} />
+          </dl>
+        )}
+      </div>
+    </BrandCard>
   );
 }
 
@@ -283,18 +412,18 @@ function EnrollmentDetailsCard({
   teacherLoading: boolean;
 }) {
   return (
-    <Card title="Enrollment Details">
-      <dl className="flex flex-col gap-4">
-        <Field label="Teacher" value={teacherLoading ? "Loading…" : teacherName ?? "—"} />
-        <Field label="Lesson Day" value={student.lesson_day_of_week} />
-        <Field
-          label="Blocks / Week"
-          value={student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : null}
-        />
-        <Field label="Experience"    value={student.experience_level} />
-        <Field label="Status"        value={student.status} />
-      </dl>
-    </Card>
+    <BrandCard>
+      <CardHeader title="Enrollment Details" />
+      <div className="px-5 py-4">
+        <dl className="flex flex-col gap-4">
+          <Field label="Teacher"       value={teacherLoading ? "Loading…" : teacherName ?? "—"} />
+          <Field label="Lesson Day"    value={student.lesson_day_of_week} />
+          <Field label="Blocks / Week" value={student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : null} />
+          <Field label="Experience"    value={student.experience_level} />
+          <Field label="Status"        value={student.status} />
+        </dl>
+      </div>
+    </BrandCard>
   );
 }
 
@@ -347,12 +476,11 @@ function OverviewTab({ studentId }: { studentId: string }) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 animate-pulse">
         {[0, 1].map((i) => (
-          <div key={i} className="h-52 rounded-xl bg-zinc-100 dark:bg-zinc-800" />
+          <div key={i} className="h-52 rounded-xl" style={{ background: T.surface }} />
         ))}
       </div>
     );
   }
-
   if (error || !student) {
     return (
       <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -360,7 +488,6 @@ function OverviewTab({ studentId }: { studentId: string }) {
       </div>
     );
   }
-
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <LearningProfileCard student={student} onSaved={(updated) => setStudent((prev) => prev ? { ...prev, ...updated } : prev)} />
@@ -370,13 +497,7 @@ function OverviewTab({ studentId }: { studentId: string }) {
 }
 
 /* ─── Upload Zone ────────────────────────────────────────── */
-function UploadZone({
-  studentId,
-  onUploaded,
-}: {
-  studentId: string;
-  onUploaded: (file: StudentFile) => void;
-}) {
+function UploadZone({ studentId, onUploaded }: { studentId: string; onUploaded: (file: StudentFile) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -398,13 +519,8 @@ function UploadZone({
         body: form,
       });
       const json = await res.json();
-      if (!res.ok) {
-        showToast("error", json?.error ?? "Upload failed");
-        console.log("[Files] Upload error:", json);
-        return;
-      }
+      if (!res.ok) { showToast("error", json?.error ?? "Upload failed"); return; }
       showToast("success", `"${file.name}" uploaded`);
-      console.log("[Files] Uploaded:", json.data);
       onUploaded(json.data as StudentFile);
     } catch (err) {
       showToast("error", err instanceof Error ? err.message : "Upload failed");
@@ -415,100 +531,66 @@ function UploadZone({
 
   function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    // Upload first file only for now
     uploadFile(files[0]);
   }
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const onDragLeave = useCallback(() => setIsDragging(false), []);
-
-  const onDrop = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     handleFiles(e.dataTransfer.files);
-  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId]);
 
   return (
-    <div className="relative">
-      {/* Toast */}
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        border: `2px dashed ${isDragging ? BRAND : T.border}`,
+        borderRadius: 12,
+        background: isDragging ? T.surface2 : "transparent",
+        padding: "24px 16px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        transition: "border-color 0.15s, background 0.15s",
+        cursor: uploading ? "not-allowed" : "pointer",
+      }}
+      onClick={() => !uploading && inputRef.current?.click()}
+    >
       {toast && (
-        <div
-          className={[
-            "absolute -top-10 left-0 right-0 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all",
-            toast.type === "success"
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-              : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20",
-          ].join(" ")}
-        >
-          {toast.type === "success" ? "✓" : "✕"} {toast.message}
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 9999,
+          padding: "10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 500,
+          background: toast.type === "success" ? "rgba(5,150,105,0.12)" : "rgba(185,28,28,0.12)",
+          color: toast.type === "success" ? "#059669" : "#b91c1c",
+          border: `1px solid ${toast.type === "success" ? "rgba(5,150,105,0.3)" : "rgba(185,28,28,0.3)"}`,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+        }}>
+          {toast.message}
         </div>
       )}
-
-      {/* Drop zone */}
-      <div
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onClick={() => !uploading && inputRef.current?.click()}
-        className={[
-          "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors select-none",
-          isDragging
-            ? "border-zinc-400 bg-zinc-50 dark:border-zinc-500 dark:bg-zinc-800/60"
-            : "border-zinc-200 bg-zinc-50/50 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/40 dark:hover:border-zinc-600",
-          uploading ? "opacity-60 cursor-not-allowed" : "",
-        ].join(" ")}
-      >
-        {/* Folder icon */}
-        <svg
-          className="h-10 w-10 text-zinc-300 dark:text-zinc-600"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.2}
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
-          />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v4m0 0l-2-2m2 2l2-2" />
-        </svg>
-
-        <div className="text-center">
-          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-            {uploading ? "Uploading…" : isDragging ? "Drop to upload" : "Drag & drop a file here"}
-          </p>
-          <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-600">
-            or
-          </p>
-        </div>
-
-        <button
-          type="button"
-          disabled={uploading}
-          onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
-          className="rounded-md bg-white px-4 py-2 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Select File
-        </button>
-
-        <p className="text-xs text-zinc-400 dark:text-zinc-600">
-          PDF, images, audio, or any document
-        </p>
-      </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        className="sr-only"
-        onChange={(e) => handleFiles(e.target.files)}
+      <svg className="h-8 w-8" style={{ color: T.muted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+      </svg>
+      <p className="text-sm font-medium" style={{ color: T.muted }}>
+        {uploading ? "Uploading…" : isDragging ? "Drop to upload" : "Drag & drop a file here"}
+      </p>
+      <button
+        type="button"
         disabled={uploading}
-      />
+        onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+        className="rounded-lg px-4 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}
+      >
+        Select File
+      </button>
+      <p className="text-xs" style={{ color: T.label }}>PDF, images, audio, or any document</p>
+      <input ref={inputRef} type="file" className="sr-only" onChange={(e) => handleFiles(e.target.files)} disabled={uploading} />
     </div>
   );
 }
@@ -518,11 +600,11 @@ function FileRow({ file, studentId, onDeleted }: { file: StudentFile; studentId:
   function getFileIcon(name: string) {
     const ext = name.split(".").pop()?.toLowerCase() ?? "";
     if (["pdf"].includes(ext)) return "📄";
-    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) return "🖼️";
-    if (["mp3", "wav", "m4a", "ogg"].includes(ext)) return "🎵";
-    if (["mp4", "mov", "avi", "webm"].includes(ext)) return "🎬";
-    if (["doc", "docx"].includes(ext)) return "📝";
-    if (["xls", "xlsx", "csv"].includes(ext)) return "📊";
+    if (["jpg","jpeg","png","gif","webp","svg"].includes(ext)) return "🖼️";
+    if (["mp3","wav","m4a","ogg"].includes(ext)) return "🎵";
+    if (["mp4","mov","avi","webm"].includes(ext)) return "🎬";
+    if (["doc","docx"].includes(ext)) return "📝";
+    if (["xls","xlsx","csv"].includes(ext)) return "📊";
     return "📎";
   }
   async function handleDelete() {
@@ -534,72 +616,37 @@ function FileRow({ file, studentId, onDeleted }: { file: StudentFile; studentId:
     if (res.ok) onDeleted(file.id);
     else alert("Delete failed. Please try again.");
   }
-
   return (
-    <li className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60">
-      {/* Icon */}
-      <span className="text-xl leading-none shrink-0" aria-hidden>
-        {getFileIcon(file.file_name)}
-      </span>
-
-      {/* File info */}
+    <li
+      className="flex items-center gap-3 px-4 py-3 transition-colors"
+      style={{ borderBottom: `1px solid ${T.border}` }}
+      onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+    >
+      <span className="text-xl leading-none shrink-0" aria-hidden>{getFileIcon(file.file_name)}</span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          {file.file_name}
-        </p>
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
-          {formatFileSize(file.file_size)}
-          {" · "}
-          {formatDate(file.created_at)}
-          {file.folder && file.folder !== "general" && (
-            <> · <span className="capitalize">{file.folder}</span></>
-          )}
+        <p className="truncate text-sm font-medium" style={{ color: T.fg }}>{file.file_name}</p>
+        <p className="text-xs" style={{ color: T.muted }}>
+          {formatFileSize(file.file_size)} · {formatDate(file.created_at)}
+          {file.uploaded_by_role && <> · <span className="capitalize">{file.uploaded_by_role}</span></>}
         </p>
       </div>
-
       <div className="flex items-center gap-1.5 shrink-0">
         {file.file_url ? (
           <a href={file.file_url} target="_blank" rel="noopener noreferrer"
-            className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-100 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700 transition-colors">
+            className="rounded-lg px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80"
+            style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>
             View
           </a>
         ) : (
-          <span className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-400 ring-1 ring-zinc-200 opacity-50 dark:text-zinc-600 dark:ring-zinc-700 cursor-default">Unavailable</span>
+          <span className="rounded-lg px-2.5 py-1 text-xs font-medium opacity-40" style={{ color: T.muted, border: `1px solid ${T.border}` }}>Unavailable</span>
         )}
         <button onClick={handleDelete}
-          className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+          className="rounded-lg px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80"
           style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
           title="Delete file">🗑</button>
       </div>
     </li>
-  );
-}
-
-/* ─── Empty state ────────────────────────────────────────── */
-function FilesEmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-      <svg
-        className="h-12 w-12 text-zinc-200 dark:text-zinc-700"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1}
-        aria-hidden
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
-        />
-      </svg>
-      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-600">
-        No files uploaded for this student yet
-      </p>
-      <p className="text-xs text-zinc-300 dark:text-zinc-700">
-        Use the upload zone above to add files
-      </p>
-    </div>
   );
 }
 
@@ -630,207 +677,63 @@ function FilesTab({ studentId }: { studentId: string }) {
     load();
   }, [studentId]);
 
-  function handleUploaded(file: StudentFile) {
-    setFiles((prev) => [file, ...prev]);
-  }
-
   return (
     <div className="flex flex-col gap-5">
-      {/* Upload zone */}
-      <UploadZone studentId={studentId} onUploaded={handleUploaded} />
-
-      {/* File feed */}
-      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Uploaded Files
-            {!loading && files.length > 0 && (
-              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+      <UploadZone studentId={studentId} onUploaded={(file) => setFiles((prev) => [file, ...prev])} />
+      <BrandCard>
+        <CardHeader
+          title="Uploaded Files"
+          action={
+            !loading && files.length > 0 ? (
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
                 {files.length}
               </span>
-            )}
-          </h2>
-        </div>
-
-        <div className="px-2 py-2">
-          {loading ? (
-            <div className="flex flex-col gap-2 animate-pulse px-3 py-2">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800" />
-              ))}
-            </div>
-          ) : error ? (
-            <div className="px-3 py-3 text-sm text-red-400">{error}</div>
-          ) : files.length === 0 ? (
-            <FilesEmptyState />
-          ) : (
-            <ul className="flex flex-col">
-              {files.map((file) => (
-                <FileRow key={file.id} file={file} studentId={studentId} onDeleted={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))} />
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+            ) : undefined
+          }
+        />
+        {loading ? (
+          <div className="flex flex-col gap-2 animate-pulse px-5 py-4">
+            {[0,1,2].map((i) => <div key={i} className="h-10 rounded-lg" style={{ background: T.surface2 }} />)}
+          </div>
+        ) : error ? (
+          <div className="px-5 py-4 text-sm text-red-400">{error}</div>
+        ) : files.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <svg className="h-10 w-10" style={{ color: T.border }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+            </svg>
+            <p className="text-sm font-medium" style={{ color: T.muted }}>No files uploaded for this student yet</p>
+            <p className="text-xs" style={{ color: T.label }}>Use the upload zone above to add files</p>
+          </div>
+        ) : (
+          <ul className="flex flex-col">
+            {files.map((file) => (
+              <FileRow key={file.id} file={file} studentId={studentId} onDeleted={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))} />
+            ))}
+          </ul>
+        )}
+      </BrandCard>
     </div>
   );
 }
 
-/* ─── Session log types ─────────────────────────────────── */
-type SessionLog = {
-  id: string;
-  block_date: string;
-  status: string;
-  notes: string | null;
-  teacher_note: string | null;
-  lesson_notes: string | null;
-  engagement_level: number | null;
-  progress_indicator: string | null;
-  instrument: string | null;
-  worked_on: string[] | null;
-  created_at: string;
-};
-
-/* ─── Status badge for session log ──────────────────────── */
-function SessionStatusBadge({ status }: { status: string }) {
-  const s = status.toLowerCase();
-  let cls = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ";
-  if (s === "attended" || s === "completed") {
-    cls += "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400";
-  } else if (s === "canceled" || s === "cancelled") {
-    cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  } else if (s === "no_show" || s === "no-show") {
-    cls += "bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400";
-  } else if (s === "rescheduled") {
-    cls += "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400";
-  } else {
-    cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  }
-  return <span className={cls}>{status.replace(/_/g, " ")}</span>;
-}
-
-/* ─── Detail pill ────────────────────────────────────────── */
-function Pill({ label, value }: { label: string; value: string | number }) {
+/* ─── Note type badge ────────────────────────────────────── */
+function NoteTypeBadge({ type }: { type: NoteType }) {
+  const cfg = getNoteTypeConfig(type);
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-      <span className="font-medium text-zinc-400 dark:text-zinc-500">{label}</span>
-      {String(value)}
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: cfg.bg, color: cfg.color }}>
+      {cfg.label}
     </span>
   );
 }
 
-/* ─── Single timeline entry ──────────────────────────────── */
-function TimelineEntry({ log, isLast }: { log: SessionLog; isLast: boolean }) {
-  const hasNotes = log.notes || log.teacher_note || log.lesson_notes;
-  const hasWorkedOn = log.worked_on && log.worked_on.length > 0;
-
-  return (
-    <li className="relative flex gap-4">
-      {/* Vertical line */}
-      {!isLast && (
-        <div
-          className="absolute left-[11px] top-6 bottom-0 w-px bg-zinc-200 dark:bg-zinc-800"
-          aria-hidden
-        />
-      )}
-
-      {/* Dot */}
-      <div className="relative z-10 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500" />
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 pb-6">
-        {/* Header row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <time className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-            {formatDate(log.block_date)}
-          </time>
-          <SessionStatusBadge status={log.status} />
-          {log.instrument && (
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">{log.instrument}</span>
-          )}
-        </div>
-
-        {/* Notes */}
-        {hasNotes && (
-          <div className="mt-2 flex flex-col gap-1.5">
-            {log.lesson_notes && (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{log.lesson_notes}</p>
-            )}
-            {log.notes && !log.lesson_notes && (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{log.notes}</p>
-            )}
-            {log.teacher_note && (
-              <p className="text-xs italic text-zinc-400 dark:text-zinc-500">
-                Teacher: {log.teacher_note}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Worked on */}
-        {hasWorkedOn && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {log.worked_on!.map((item, i) => (
-              <span
-                key={i}
-                className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Detail pills */}
-        {(log.engagement_level !== null || log.progress_indicator) && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {log.engagement_level !== null && (
-              <Pill label="Engagement" value={`${log.engagement_level}/5`} />
-            )}
-            {log.progress_indicator && (
-              <Pill label="Progress" value={log.progress_indicator} />
-            )}
-          </div>
-        )}
-      </div>
-    </li>
-  );
-}
-
-/* ─── Timeline empty state ───────────────────────────────── */
-function TimelineEmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
-      <svg
-        className="h-12 w-12 text-zinc-200 dark:text-zinc-700"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1}
-        aria-hidden
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-        />
-      </svg>
-      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-600">
-        No session logs recorded for this student yet
-      </p>
-    </div>
-  );
-}
-
-/* ─── Timeline tab ───────────────────────────────────────── */
 /* ─── Notes tab ──────────────────────────────────────────── */
 function NotesTab({ studentId }: { studentId: string }) {
   const [notes, setNotes] = useState<StudentNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [noteType, setNoteType] = useState<NoteType>("internal_studio");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -863,12 +766,13 @@ function NotesTab({ studentId }: { studentId: string }) {
       const res = await fetch(`/api/crm/students/${studentId}/notes`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
-        body: JSON.stringify({ body: draft.trim() }),
+        body: JSON.stringify({ body: draft.trim(), note_type: noteType }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to save note");
       setNotes((prev) => [json.data, ...prev]);
       setDraft("");
+      setNoteType("internal_studio");
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to save note");
     } finally {
@@ -886,95 +790,171 @@ function NotesTab({ studentId }: { studentId: string }) {
     else alert("Delete failed. Please try again.");
   }
 
-  function formatDateTime(iso: string | null): string {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-    } catch { return iso; }
-  }
-
   return (
     <div className="flex flex-col gap-5">
       {/* Compose */}
-      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Add Note</h2>
-        </div>
+      <BrandCard>
+        <CardHeader title="Add Note" />
         <div className="px-5 py-4 flex flex-col gap-3">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={3}
-            placeholder="Write a note about this student..."
-            className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none resize-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          />
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider shrink-0" style={{ color: T.label }}>Type</label>
+            <BrandSelect value={noteType} onChange={(v) => setNoteType(v as NoteType)}>
+              {NOTE_TYPES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
+            </BrandSelect>
+          </div>
+          <BrandTextarea value={draft} onChange={setDraft} placeholder="Write a note about this student..." rows={3} />
           {submitError && <p className="text-xs text-red-500">{submitError}</p>}
           <div className="flex justify-end">
             <button
               onClick={handleSubmit}
               disabled={submitting || !draft.trim()}
-              className="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: T.fg, color: T.bg }}
             >
-              {submitting ? "Saving..." : "Save Note"}
+              {submitting ? "Saving…" : "Save Note"}
             </button>
           </div>
         </div>
-      </div>
+      </BrandCard>
+
       {/* Feed */}
-      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Note History
-            {!loading && notes.length > 0 && (
-              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                {notes.length}
-              </span>
-            )}
-          </h2>
-        </div>
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {loading ? (
-            <div className="flex flex-col gap-3 animate-pulse px-5 py-4">
-              {[0, 1, 2].map((i) => <div key={i} className="h-14 rounded-lg bg-zinc-100 dark:bg-zinc-800" />)}
-            </div>
-          ) : error ? (
-            <div className="px-5 py-4 text-sm text-red-400">{error}</div>
-          ) : notes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-              <p className="text-sm font-medium text-zinc-400 dark:text-zinc-600">No notes yet for this student</p>
-            </div>
-          ) : (
-            notes.map((note) => (
-              <div key={note.id} className="px-5 py-4 flex flex-col gap-1.5">
+      <BrandCard>
+        <CardHeader
+          title="Note History"
+          action={
+            !loading && notes.length > 0 ? (
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>{notes.length}</span>
+            ) : undefined
+          }
+        />
+        {loading ? (
+          <div className="flex flex-col gap-3 animate-pulse px-5 py-4">
+            {[0,1,2].map((i) => <div key={i} className="h-14 rounded-lg" style={{ background: T.surface2 }} />)}
+          </div>
+        ) : error ? (
+          <div className="px-5 py-4 text-sm text-red-400">{error}</div>
+        ) : notes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+            <p className="text-sm font-medium" style={{ color: T.muted }}>No notes yet for this student</p>
+          </div>
+        ) : (
+          <div>
+            {notes.map((note) => (
+              <div key={note.id} className="px-5 py-4 flex flex-col gap-1.5" style={{ borderBottom: `1px solid ${T.border}` }}>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                      {note.author_name ?? "Unknown"}
-                    </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold" style={{ color: T.fg }}>{note.author_name ?? "Unknown"}</span>
                     {note.author_role && (
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium capitalize text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: T.surface2, color: T.muted }}>
                         {note.author_role}
                       </span>
                     )}
+                    <NoteTypeBadge type={note.note_type ?? "internal_studio"} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-400 dark:text-zinc-600">{formatDateTime(note.created_at)}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs" style={{ color: T.muted }}>{formatDateTime(note.created_at)}</span>
                     <button
                       onClick={() => handleDeleteNote(note.id)}
-                      className="rounded px-1.5 py-0.5 text-xs transition-colors"
+                      className="rounded-lg px-1.5 py-0.5 text-xs transition-opacity hover:opacity-80"
                       style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
                       title="Delete note"
-                    >
-                      🗑
-                    </button>
+                    >🗑</button>
                   </div>
                 </div>
-                <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{note.body}</p>
+                <p className="text-sm whitespace-pre-wrap" style={{ color: T.fg }}>{note.body}</p>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+      </BrandCard>
+    </div>
+  );
+}
+
+/* ─── Session log types ─────────────────────────────────── */
+type SessionLog = {
+  id: string;
+  block_date: string;
+  status: string;
+  notes: string | null;
+  teacher_note: string | null;
+  lesson_notes: string | null;
+  engagement_level: number | null;
+  progress_indicator: string | null;
+  instrument: string | null;
+  worked_on: string[] | null;
+  created_at: string;
+};
+
+function SessionStatusBadge({ status }: { status: string }) {
+  const s = status.toLowerCase();
+  let cls = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ";
+  if (s === "attended" || s === "completed")        cls += "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400";
+  else if (s === "canceled" || s === "cancelled")   cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
+  else if (s === "no_show" || s === "no-show")      cls += "bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400";
+  else if (s === "rescheduled")                     cls += "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400";
+  else                                              cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
+  return <span className={cls}>{status.replace(/_/g, " ")}</span>;
+}
+
+function Pill({ label, value }: { label: string; value: string | number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs" style={{ background: T.surface2, color: T.muted }}>
+      <span className="font-medium" style={{ color: T.label }}>{label}</span>
+      {String(value)}
+    </span>
+  );
+}
+
+function TimelineEntry({ log, isLast }: { log: SessionLog; isLast: boolean }) {
+  const hasNotes = log.notes || log.teacher_note || log.lesson_notes;
+  const hasWorkedOn = log.worked_on && log.worked_on.length > 0;
+  return (
+    <li className="relative flex gap-4">
+      {!isLast && (
+        <div className="absolute left-[11px] top-6 bottom-0 w-px" style={{ background: T.border }} aria-hidden />
+      )}
+      <div className="relative z-10 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: T.border, background: T.bg }}>
+        <div className="h-2 w-2 rounded-full" style={{ background: T.muted }} />
       </div>
+      <div className="flex-1 pb-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <time className="text-sm font-semibold" style={{ color: T.fg }}>{formatDate(log.block_date)}</time>
+          <SessionStatusBadge status={log.status} />
+          {log.instrument && <span className="text-xs" style={{ color: T.muted }}>{log.instrument}</span>}
+        </div>
+        {hasNotes && (
+          <div className="mt-2 flex flex-col gap-1.5">
+            {log.lesson_notes && <p className="text-sm" style={{ color: T.muted }}>{log.lesson_notes}</p>}
+            {log.notes && !log.lesson_notes && <p className="text-sm" style={{ color: T.muted }}>{log.notes}</p>}
+            {log.teacher_note && <p className="text-xs italic" style={{ color: T.label }}>Teacher: {log.teacher_note}</p>}
+          </div>
+        )}
+        {hasWorkedOn && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {log.worked_on!.map((item, i) => (
+              <span key={i} className="rounded-md px-2 py-0.5 text-xs" style={{ background: T.surface2, color: T.muted }}>{item}</span>
+            ))}
+          </div>
+        )}
+        {(log.engagement_level !== null || log.progress_indicator) && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {log.engagement_level !== null && <Pill label="Engagement" value={`${log.engagement_level}/5`} />}
+            {log.progress_indicator && <Pill label="Progress" value={log.progress_indicator} />}
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function TimelineEmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+      <svg className="h-12 w-12" style={{ color: T.border }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <p className="text-sm font-medium" style={{ color: T.muted }}>No session logs recorded for this student yet</p>
     </div>
   );
 }
@@ -1008,30 +988,25 @@ function TimelineTab({ studentId }: { studentId: string }) {
   if (loading) {
     return (
       <div className="flex flex-col gap-4 animate-pulse">
-        {[0, 1, 2, 3].map((i) => (
+        {[0,1,2,3].map((i) => (
           <div key={i} className="flex gap-4">
-            <div className="h-6 w-6 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800" />
+            <div className="h-6 w-6 shrink-0 rounded-full" style={{ background: T.surface2 }} />
             <div className="flex-1 space-y-2 pb-6">
-              <div className="h-4 w-32 rounded bg-zinc-100 dark:bg-zinc-800" />
-              <div className="h-3 w-full rounded bg-zinc-100 dark:bg-zinc-800" />
-              <div className="h-3 w-3/4 rounded bg-zinc-100 dark:bg-zinc-800" />
+              <div className="h-4 w-32 rounded" style={{ background: T.surface2 }} />
+              <div className="h-3 w-full rounded" style={{ background: T.surface2 }} />
+              <div className="h-3 w-3/4 rounded" style={{ background: T.surface2 }} />
             </div>
           </div>
         ))}
       </div>
     );
   }
-
   if (error) {
     return (
-      <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {error}
-      </div>
+      <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
     );
   }
-
   if (logs.length === 0) return <TimelineEmptyState />;
-
   return (
     <ul className="flex flex-col" role="list">
       {logs.map((log, i) => (
@@ -1045,9 +1020,7 @@ function TimelineTab({ studentId }: { studentId: string }) {
 export function StudentOverviewContent() {
   const params = useParams<{ id: string }>();
   const studentId = params?.id ?? "";
-
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-
   return (
     <div className="flex flex-col gap-0">
       <TabNav active={activeTab} onChange={setActiveTab} />

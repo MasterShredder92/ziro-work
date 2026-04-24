@@ -67,7 +67,7 @@ type FamilyDetail = {
   primary_location_id: string | null;
 };
 
-type Tab = "overview" | "students" | "billing" | "documents";
+type Tab = "overview" | "billing" | "docs_notes";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function formatAddress(f: FamilyDetail): string | null {
@@ -134,10 +134,9 @@ function BrandCard({
 
 /* ─── Tab nav ────────────────────────────────────────────── */
 const TABS: { id: Tab; label: string }[] = [
-  { id: "overview",  label: "Overview"  },
-  { id: "students",  label: "Students"  },
-  { id: "billing",   label: "Billing"   },
-  { id: "documents", label: "Documents" },
+  { id: "overview",   label: "Overview"    },
+  { id: "billing",    label: "Billing"     },
+  { id: "docs_notes", label: "Docs & Notes" },
 ];
 
 function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: Tab) => void; brandColor: string }) {
@@ -808,10 +807,12 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
-      <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
-      <FamilyNotesCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
+    <div className="flex flex-col gap-4">
+      <StudentsTabInline familyId={familyId} brandColor={brandColor} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
+        <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
+      </div>
     </div>
   );
 }
@@ -873,7 +874,10 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
   );
 }
 
-/* ─── Students tab ───────────────────────────────────────── */
+/* ─── Students tab (inline on Overview + standalone) ────── */
+function StudentsTabInline({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+  return <StudentsTab familyId={familyId} brandColor={brandColor} />;
+}
 function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [students, setStudents] = useState<(FamilyStudent & { teacherName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1397,7 +1401,39 @@ function UploadDropzone({ onUpload, uploading, brandColor }: { onUpload: (file: 
   );
 }
 
-/* ─── Documents tab ───────────────────────────────────────── */
+/* ─── Docs & Notes tab (Documents + Family Notes merged) ── */
+function DocsNotesTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+  const [family, setFamily] = useState<FamilyDetail | null>(null);
+
+  useEffect(() => {
+    if (!familyId) return;
+    async function load() {
+      try {
+        const res = await fetch(`/api/crm/families/${familyId}`, {
+          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        setFamily(json.data ?? json);
+      } catch { /* non-blocking */ }
+    }
+    load();
+  }, [familyId]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <DocumentsTab familyId={familyId} brandColor={brandColor} />
+      {family && (
+        <FamilyNotesCard
+          family={family}
+          familyId={familyId}
+          brandColor={brandColor}
+          onUpdate={(patch) => setFamily(f => f ? { ...f, ...patch } : f)}
+        />
+      )}
+    </div>
+  );
+}
 function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [familyFiles, setFamilyFiles] = useState<FamilyFile[]>([]);
   const [studentFiles, setStudentFiles] = useState<StudentFile[]>([]);
@@ -1625,10 +1661,9 @@ export function FamilyAccountContent() {
     <div className="flex flex-col gap-0">
       <TabNav active={activeTab} onChange={setActiveTab} brandColor={brandColor} />
       <div className="pt-5">
-        {activeTab === "overview"  && <OverviewTab  familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "students"  && <StudentsTab  familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "billing"   && <BillingTab   familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "documents" && <DocumentsTab familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "docs_notes" && <DocsNotesTab  familyId={familyId} brandColor={brandColor} />}
       </div>
     </div>
   );
