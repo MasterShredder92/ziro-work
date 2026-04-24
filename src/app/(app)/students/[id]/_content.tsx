@@ -45,6 +45,13 @@ type StudentNote = {
   author_role: string | null;
   note_type: NoteType;
   body: string;
+  is_lesson_card: boolean;
+  prompt_context: string | null;
+  prompt_assignment: string | null;
+  prompt_focus: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -67,7 +74,7 @@ type StudentFile = {
   uploaded_by_role: string | null;
 };
 
-type Tab = "overview" | "files" | "notes" | "timeline";
+type Tab = "overview" | "notes_files" | "timeline";
 
 /* ─── Note type config ───────────────────────────────────── */
 const NOTE_TYPES: { value: NoteType; label: string; color: string; bg: string }[] = [
@@ -228,10 +235,9 @@ function BrandSelect({ value, onChange, children }: { value: string; onChange: (
 
 /* ─── Tab nav ────────────────────────────────────────────── */
 const TABS: { id: Tab; label: string }[] = [
-  { id: "overview",  label: "Overview"  },
-  { id: "files",     label: "Files"     },
-  { id: "notes",     label: "Notes"     },
-  { id: "timeline",  label: "Timeline"  },
+  { id: "overview",    label: "Overview"      },
+  { id: "notes_files", label: "Notes & Files" },
+  { id: "timeline",    label: "Timeline"      },
 ];
 
 function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
@@ -496,11 +502,26 @@ function OverviewTab({ studentId }: { studentId: string }) {
   );
 }
 
-/* ─── Upload Zone ────────────────────────────────────────── */
-function UploadZone({ studentId, onUploaded }: { studentId: string; onUploaded: (file: StudentFile) => void }) {
+/* ─── Lesson Material Upload ────────────────────────────────
+   Unified upload component. When a file is dropped/selected,
+   3 required textareas are revealed. Save is locked until all
+   3 prompts are filled. Submits as multipart/form-data.
+──────────────────────────────────────────────────────────── */
+function LessonMaterialUpload({
+  studentId,
+  onSaved,
+}: {
+  studentId: string;
+  onSaved: (note: StudentNote) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [promptContext,    setPromptContext]    = useState("");
+  const [promptAssignment, setPromptAssignment] = useState("");
+  const [promptFocus,      setPromptFocus]      = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   function showToast(type: "success" | "error", message: string) {
@@ -508,60 +529,58 @@ function UploadZone({ studentId, onUploaded }: { studentId: string; onUploaded: 
     setTimeout(() => setToast(null), 3500);
   }
 
-  async function uploadFile(file: File) {
-    setUploading(true);
+  function handleFileSelect(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setFile(files[0]);
+    setSubmitError(null);
+  }
+
+  const handleDragOver  = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
+  const handleDrop      = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const promptsFilled = promptContext.trim() && promptAssignment.trim() && promptFocus.trim();
+  const canSave = promptsFilled && !submitting;
+
+  async function handleSubmit() {
+    if (!canSave) return;
+    setSubmitting(true);
+    setSubmitError(null);
     try {
       const form = new FormData();
-      form.append("file", file);
-      const res = await fetch(`/api/crm/students/${studentId}/files`, {
+      if (file) form.append("file", file);
+      form.append("prompt_context",    promptContext.trim());
+      form.append("prompt_assignment", promptAssignment.trim());
+      form.append("prompt_focus",      promptFocus.trim());
+      const res = await fetch(`/api/crm/students/${studentId}/notes`, {
         method: "POST",
         headers: { "x-tenant-id": DEFAULT_TENANT_ID },
         body: form,
       });
       const json = await res.json();
-      if (!res.ok) { showToast("error", json?.error ?? "Upload failed"); return; }
-      showToast("success", `"${file.name}" uploaded`);
-      onUploaded(json.data as StudentFile);
+      if (!res.ok) throw new Error(json?.error ?? "Save failed");
+      showToast("success", file ? `"${file.name}" saved as lesson card` : "Lesson card saved");
+      onSaved(json.data as StudentNote);
+      // Reset form
+      setFile(null);
+      setPromptContext("");
+      setPromptAssignment("");
+      setPromptFocus("");
+      if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Upload failed");
+      setSubmitError(err instanceof Error ? err.message : "Save failed");
     } finally {
-      setUploading(false);
+      setSubmitting(false);
     }
   }
 
-  function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    uploadFile(files[0]);
-  }
-
-  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
-  const handleDragLeave = useCallback(() => setIsDragging(false), []);
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleFiles(e.dataTransfer.files);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId]);
-
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      style={{
-        border: `2px dashed ${isDragging ? BRAND : T.border}`,
-        borderRadius: 12,
-        background: isDragging ? T.surface2 : "transparent",
-        padding: "24px 16px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        transition: "border-color 0.15s, background 0.15s",
-        cursor: uploading ? "not-allowed" : "pointer",
-      }}
-      onClick={() => !uploading && inputRef.current?.click()}
-    >
+    <BrandCard>
       {toast && (
         <div style={{
           position: "fixed", bottom: 24, right: 24, zIndex: 9999,
@@ -574,168 +593,269 @@ function UploadZone({ studentId, onUploaded }: { studentId: string; onUploaded: 
           {toast.message}
         </div>
       )}
-      <svg className="h-8 w-8" style={{ color: T.muted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-      </svg>
-      <p className="text-sm font-medium" style={{ color: T.muted }}>
-        {uploading ? "Uploading…" : isDragging ? "Drop to upload" : "Drag & drop a file here"}
-      </p>
-      <button
-        type="button"
-        disabled={uploading}
-        onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
-        className="rounded-lg px-4 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}
-      >
-        Select File
-      </button>
-      <p className="text-xs" style={{ color: T.label }}>PDF, images, audio, or any document</p>
-      <input ref={inputRef} type="file" className="sr-only" onChange={(e) => handleFiles(e.target.files)} disabled={uploading} />
-    </div>
+      <CardHeader title="Add Lesson Material" />
+      <div className="px-5 py-4 flex flex-col gap-4">
+        {/* Drop zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !submitting && inputRef.current?.click()}
+          style={{
+            border: `2px dashed ${isDragging ? BRAND : file ? BRAND : T.border}`,
+            borderRadius: 10,
+            background: isDragging ? "rgba(0,209,108,0.04)" : file ? "rgba(0,209,108,0.03)" : "transparent",
+            padding: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            cursor: submitting ? "not-allowed" : "pointer",
+            transition: "border-color 0.15s, background 0.15s",
+          }}
+        >
+          <svg className="h-7 w-7 shrink-0" style={{ color: file ? BRAND : T.muted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            {file ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: BRAND }}>{file.name}</p>
+                  <p className="text-xs" style={{ color: T.muted }}>{formatFileSize(file.size)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFile(null); if (inputRef.current) inputRef.current.value = ""; }}
+                  className="shrink-0 rounded-lg px-2 py-1 text-xs transition-opacity hover:opacity-80"
+                  style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
+                >Remove</button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-medium" style={{ color: T.muted }}>
+                  {isDragging ? "Drop to attach" : "Drag & drop a file, or click to select"}
+                </p>
+                <p className="text-xs" style={{ color: T.label }}>PDF, images, audio, or any document (optional)</p>
+              </div>
+            )}
+          </div>
+          <input ref={inputRef} type="file" className="sr-only" onChange={(e) => handleFileSelect(e.target.files)} disabled={submitting} />
+        </div>
+
+        {/* 3 Required Prompts — always visible, required to save */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1" style={{ color: T.label }}>
+              What is in this file?
+              <span style={{ color: "#b91c1c" }}>*</span>
+            </label>
+            <BrandTextarea
+              value={promptContext}
+              onChange={setPromptContext}
+              placeholder="Describe the content — scales, chord charts, backing track, sheet music, etc."
+              rows={2}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1" style={{ color: T.label }}>
+              What is the practice assignment?
+              <span style={{ color: "#b91c1c" }}>*</span>
+            </label>
+            <BrandTextarea
+              value={promptAssignment}
+              onChange={setPromptAssignment}
+              placeholder="Specific tasks for the student to complete before next lesson."
+              rows={2}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1" style={{ color: T.label }}>
+              Pro-tips & focus areas
+              <span style={{ color: "#b91c1c" }}>*</span>
+            </label>
+            <BrandTextarea
+              value={promptFocus}
+              onChange={setPromptFocus}
+              placeholder="Key techniques, common mistakes to avoid, specific areas to focus on."
+              rows={2}
+            />
+          </div>
+        </div>
+
+        {submitError && <p className="text-xs text-red-500">{submitError}</p>}
+
+        {/* Save button — locked until all 3 prompts filled */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs" style={{ color: T.muted }}>
+            {!promptsFilled ? "Fill all 3 fields to unlock Save" : "Ready to save"}
+          </p>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSave}
+            className="rounded-lg px-5 py-2 text-xs font-semibold transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: canSave ? BRAND : T.surface2,
+              color: canSave ? "#000" : T.muted,
+              border: `1px solid ${canSave ? BRAND : T.border}`,
+            }}
+          >
+            {submitting ? "Saving…" : "Save Lesson Card"}
+          </button>
+        </div>
+      </div>
+    </BrandCard>
   );
 }
 
-/* ─── File row ───────────────────────────────────────────── */
-function FileRow({ file, studentId, onDeleted }: { file: StudentFile; studentId: string; onDeleted: (id: string) => void }) {
-  function getFileIcon(name: string) {
-    const ext = name.split(".").pop()?.toLowerCase() ?? "";
-    if (["pdf"].includes(ext)) return "📄";
-    if (["jpg","jpeg","png","gif","webp","svg"].includes(ext)) return "🖼️";
-    if (["mp3","wav","m4a","ogg"].includes(ext)) return "🎵";
-    if (["mp4","mov","avi","webm"].includes(ext)) return "🎬";
-    if (["doc","docx"].includes(ext)) return "📝";
-    if (["xls","xlsx","csv"].includes(ext)) return "📊";
-    return "📎";
-  }
+/* ─── Lesson Card display ─────────────────────────────────── */
+function LessonCard({ note, studentId, onDeleted }: { note: StudentNote; studentId: string; onDeleted: (id: string) => void }) {
   async function handleDelete() {
-    if (!window.confirm(`Delete "${file.file_name}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/crm/students/${studentId}/files?fileId=${file.id}`, {
+    if (!window.confirm("Delete this lesson card? This cannot be undone.")) return;
+    const res = await fetch(`/api/crm/students/${studentId}/notes?noteId=${note.id}`, {
       method: "DELETE",
       headers: { "x-tenant-id": DEFAULT_TENANT_ID },
     });
-    if (res.ok) onDeleted(file.id);
+    if (res.ok) onDeleted(note.id);
     else alert("Delete failed. Please try again.");
   }
+
   return (
-    <li
-      className="flex items-center gap-3 px-4 py-3 transition-colors"
+    <div
+      className="px-5 py-4 flex flex-col gap-3"
       style={{ borderBottom: `1px solid ${T.border}` }}
-      onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
-      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
     >
-      <span className="text-xl leading-none shrink-0" aria-hidden>{getFileIcon(file.file_name)}</span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium" style={{ color: T.fg }}>{file.file_name}</p>
-        <p className="text-xs" style={{ color: T.muted }}>
-          {formatFileSize(file.file_size)} · {formatDate(file.created_at)}
-          {file.uploaded_by_role && <> · <span className="capitalize">{file.uploaded_by_role}</span></>}
-        </p>
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold" style={{ color: T.fg }}>{note.author_name ?? "Unknown"}</span>
+          {note.author_role && (
+            <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: T.surface2, color: T.muted }}>
+              {note.author_role}
+            </span>
+          )}
+          <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(0,209,108,0.10)", color: BRAND }}>
+            Lesson Card
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs" style={{ color: T.muted }}>{formatDateTime(note.created_at)}</span>
+          <button
+            onClick={handleDelete}
+            className="rounded-lg px-1.5 py-0.5 text-xs transition-opacity hover:opacity-80"
+            style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
+            title="Delete lesson card"
+          >🗑</button>
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {file.file_url ? (
-          <a href={file.file_url} target="_blank" rel="noopener noreferrer"
-            className="rounded-lg px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80"
-            style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>
-            View
-          </a>
-        ) : (
-          <span className="rounded-lg px-2.5 py-1 text-xs font-medium opacity-40" style={{ color: T.muted, border: `1px solid ${T.border}` }}>Unavailable</span>
+
+      {/* File attachment */}
+      {note.file_name && (
+        <div
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5"
+          style={{ background: T.surface2, border: `1px solid ${T.border}` }}
+        >
+          <span className="text-lg shrink-0" aria-hidden>📎</span>
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-medium" style={{ color: T.fg }}>{note.file_name}</p>
+            {note.file_size && <p className="text-xs" style={{ color: T.muted }}>{formatFileSize(note.file_size)}</p>}
+          </div>
+          {note.file_url ? (
+            <a
+              href={note.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-lg px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80"
+              style={{ background: "rgba(0,209,108,0.10)", color: BRAND, border: `1px solid rgba(0,209,108,0.3)` }}
+            >
+              View / Download
+            </a>
+          ) : (
+            <span className="shrink-0 rounded-lg px-3 py-1 text-xs font-medium opacity-40" style={{ color: T.muted, border: `1px solid ${T.border}` }}>Unavailable</span>
+          )}
+        </div>
+      )}
+
+      {/* 3 Prompts */}
+      <div className="flex flex-col gap-2">
+        {note.prompt_context && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Context</span>
+            <p className="text-sm whitespace-pre-wrap" style={{ color: T.fg }}>{note.prompt_context}</p>
+          </div>
         )}
-        <button onClick={handleDelete}
-          className="rounded-lg px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80"
-          style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
-          title="Delete file">🗑</button>
+        {note.prompt_assignment && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Assignment</span>
+            <p className="text-sm whitespace-pre-wrap" style={{ color: T.fg }}>{note.prompt_assignment}</p>
+          </div>
+        )}
+        {note.prompt_focus && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Focus</span>
+            <p className="text-sm whitespace-pre-wrap" style={{ color: T.fg }}>{note.prompt_focus}</p>
+          </div>
+        )}
       </div>
-    </li>
-  );
-}
-
-/* ─── Files tab ──────────────────────────────────────────── */
-function FilesTab({ studentId }: { studentId: string }) {
-  const [files, setFiles] = useState<StudentFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!studentId) return;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/crm/students/${studentId}/files`, {
-          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
-        });
-        if (!res.ok) throw new Error(`Failed to load files (${res.status})`);
-        const json = await res.json();
-        setFiles(json.data ?? []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load files");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [studentId]);
-
-  return (
-    <div className="flex flex-col gap-5">
-      <UploadZone studentId={studentId} onUploaded={(file) => setFiles((prev) => [file, ...prev])} />
-      <BrandCard>
-        <CardHeader
-          title="Uploaded Files"
-          action={
-            !loading && files.length > 0 ? (
-              <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
-                {files.length}
-              </span>
-            ) : undefined
-          }
-        />
-        {loading ? (
-          <div className="flex flex-col gap-2 animate-pulse px-5 py-4">
-            {[0,1,2].map((i) => <div key={i} className="h-10 rounded-lg" style={{ background: T.surface2 }} />)}
-          </div>
-        ) : error ? (
-          <div className="px-5 py-4 text-sm text-red-400">{error}</div>
-        ) : files.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-            <svg className="h-10 w-10" style={{ color: T.border }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-            </svg>
-            <p className="text-sm font-medium" style={{ color: T.muted }}>No files uploaded for this student yet</p>
-            <p className="text-xs" style={{ color: T.label }}>Use the upload zone above to add files</p>
-          </div>
-        ) : (
-          <ul className="flex flex-col">
-            {files.map((file) => (
-              <FileRow key={file.id} file={file} studentId={studentId} onDeleted={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))} />
-            ))}
-          </ul>
-        )}
-      </BrandCard>
     </div>
   );
 }
 
-/* ─── Note type badge ────────────────────────────────────── */
-function NoteTypeBadge({ type }: { type: NoteType }) {
-  const cfg = getNoteTypeConfig(type);
+/* ─── Plain note card ─────────────────────────────────────── */
+function PlainNoteCard({ note, studentId, onDeleted }: { note: StudentNote; studentId: string; onDeleted: (id: string) => void }) {
+  const NOTE_TYPE_CFG: Record<NoteType, { label: string; bg: string; color: string }> = {
+    internal_studio: { label: "Internal",     bg: "rgba(107,114,128,0.10)", color: "#6b7280" },
+    teacher_lesson:  { label: "Lesson Note",  bg: "rgba(37,99,235,0.10)",   color: "#2563eb" },
+    parent_comm:     { label: "Parent Comm",  bg: "rgba(245,158,11,0.10)",  color: "#d97706" },
+  };
+  const cfg = NOTE_TYPE_CFG[note.note_type] ?? NOTE_TYPE_CFG.internal_studio;
+
+  async function handleDelete() {
+    if (!window.confirm("Delete this note? This cannot be undone.")) return;
+    const res = await fetch(`/api/crm/students/${studentId}/notes?noteId=${note.id}`, {
+      method: "DELETE",
+      headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+    });
+    if (res.ok) onDeleted(note.id);
+    else alert("Delete failed. Please try again.");
+  }
+
   return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: cfg.bg, color: cfg.color }}>
-      {cfg.label}
-    </span>
+    <div className="px-5 py-4 flex flex-col gap-1.5" style={{ borderBottom: `1px solid ${T.border}` }}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold" style={{ color: T.fg }}>{note.author_name ?? "Unknown"}</span>
+          {note.author_role && (
+            <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: T.surface2, color: T.muted }}>
+              {note.author_role}
+            </span>
+          )}
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: cfg.bg, color: cfg.color }}>
+            {cfg.label}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs" style={{ color: T.muted }}>{formatDateTime(note.created_at)}</span>
+          <button
+            onClick={handleDelete}
+            className="rounded-lg px-1.5 py-0.5 text-xs transition-opacity hover:opacity-80"
+            style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
+            title="Delete note"
+          >🗑</button>
+        </div>
+      </div>
+      <p className="text-sm whitespace-pre-wrap" style={{ color: T.fg }}>{note.body}</p>
+    </div>
   );
 }
 
-/* ─── Notes tab ──────────────────────────────────────────── */
-function NotesTab({ studentId }: { studentId: string }) {
+/* ─── Notes & Files tab ──────────────────────────────────────
+   Unified tab: LessonMaterialUpload at top, then unified feed
+   of lesson cards + plain notes in one chronological list.
+──────────────────────────────────────────────────────────── */
+function NotesFilesTab({ studentId }: { studentId: string }) {
   const [notes, setNotes] = useState<StudentNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [noteType, setNoteType] = useState<NoteType>("internal_studio");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!studentId) return;
@@ -750,7 +870,7 @@ function NotesTab({ studentId }: { studentId: string }) {
         const json = await res.json();
         setNotes(json.data ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load notes");
+        setError(err instanceof Error ? err.message : "Failed to load");
       } finally {
         setLoading(false);
       }
@@ -758,112 +878,56 @@ function NotesTab({ studentId }: { studentId: string }) {
     load();
   }, [studentId]);
 
-  async function handleSubmit() {
-    if (!draft.trim()) return;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const res = await fetch(`/api/crm/students/${studentId}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
-        body: JSON.stringify({ body: draft.trim(), note_type: noteType }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to save note");
-      setNotes((prev) => [json.data, ...prev]);
-      setDraft("");
-      setNoteType("internal_studio");
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to save note");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleDeleteNote(noteId: string) {
-    if (!window.confirm("Delete this note? This cannot be undone.")) return;
-    const res = await fetch(`/api/crm/students/${studentId}/notes?noteId=${noteId}`, {
-      method: "DELETE",
-      headers: { "x-tenant-id": DEFAULT_TENANT_ID },
-    });
-    if (res.ok) setNotes((prev) => prev.filter((n) => n.id !== noteId));
-    else alert("Delete failed. Please try again.");
-  }
-
   return (
     <div className="flex flex-col gap-5">
-      {/* Compose */}
-      <BrandCard>
-        <CardHeader title="Add Note" />
-        <div className="px-5 py-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider shrink-0" style={{ color: T.label }}>Type</label>
-            <BrandSelect value={noteType} onChange={(v) => setNoteType(v as NoteType)}>
-              {NOTE_TYPES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
-            </BrandSelect>
-          </div>
-          <BrandTextarea value={draft} onChange={setDraft} placeholder="Write a note about this student..." rows={3} />
-          {submitError && <p className="text-xs text-red-500">{submitError}</p>}
-          <div className="flex justify-end">
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !draft.trim()}
-              className="rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: T.fg, color: T.bg }}
-            >
-              {submitting ? "Saving…" : "Save Note"}
-            </button>
-          </div>
-        </div>
-      </BrandCard>
-
-      {/* Feed */}
+      <LessonMaterialUpload
+        studentId={studentId}
+        onSaved={(note) => setNotes((prev) => [note, ...prev])}
+      />
       <BrandCard>
         <CardHeader
-          title="Note History"
+          title="Lesson History"
           action={
             !loading && notes.length > 0 ? (
-              <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>{notes.length}</span>
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
+                {notes.length}
+              </span>
             ) : undefined
           }
         />
         {loading ? (
           <div className="flex flex-col gap-3 animate-pulse px-5 py-4">
-            {[0,1,2].map((i) => <div key={i} className="h-14 rounded-lg" style={{ background: T.surface2 }} />)}
+            {[0,1,2].map((i) => <div key={i} className="h-20 rounded-lg" style={{ background: T.surface2 }} />)}
           </div>
         ) : error ? (
           <div className="px-5 py-4 text-sm text-red-400">{error}</div>
         ) : notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-            <p className="text-sm font-medium" style={{ color: T.muted }}>No notes yet for this student</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <svg className="h-10 w-10" style={{ color: T.border }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p className="text-sm font-medium" style={{ color: T.muted }}>No lesson cards or notes yet</p>
+            <p className="text-xs" style={{ color: T.label }}>Use the form above to add the first lesson card</p>
           </div>
         ) : (
           <div>
-            {notes.map((note) => (
-              <div key={note.id} className="px-5 py-4 flex flex-col gap-1.5" style={{ borderBottom: `1px solid ${T.border}` }}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold" style={{ color: T.fg }}>{note.author_name ?? "Unknown"}</span>
-                    {note.author_role && (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: T.surface2, color: T.muted }}>
-                        {note.author_role}
-                      </span>
-                    )}
-                    <NoteTypeBadge type={note.note_type ?? "internal_studio"} />
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs" style={{ color: T.muted }}>{formatDateTime(note.created_at)}</span>
-                    <button
-                      onClick={() => handleDeleteNote(note.id)}
-                      className="rounded-lg px-1.5 py-0.5 text-xs transition-opacity hover:opacity-80"
-                      style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
-                      title="Delete note"
-                    >🗑</button>
-                  </div>
-                </div>
-                <p className="text-sm whitespace-pre-wrap" style={{ color: T.fg }}>{note.body}</p>
-              </div>
-            ))}
+            {notes.map((note) =>
+              note.is_lesson_card ? (
+                <LessonCard
+                  key={note.id}
+                  note={note}
+                  studentId={studentId}
+                  onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
+                />
+              ) : (
+                <PlainNoteCard
+                  key={note.id}
+                  note={note}
+                  studentId={studentId}
+                  onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
+                />
+              )
+            )}
           </div>
         )}
       </BrandCard>
@@ -1053,10 +1117,9 @@ export function StudentOverviewContent() {
     <div className="flex flex-col gap-0">
       <TabNav active={activeTab} onChange={setActiveTab} />
       <div className="pt-5">
-        {activeTab === "overview"  && <OverviewTab  studentId={studentId} />}
-        {activeTab === "files"     && <FilesTab     studentId={studentId} />}
-        {activeTab === "notes"     && <NotesTab     studentId={studentId} />}
-        {activeTab === "timeline"  && <TimelineTab  studentId={studentId} />}
+        {activeTab === "overview"    && <OverviewTab    studentId={studentId} />}
+        {activeTab === "notes_files" && <NotesFilesTab  studentId={studentId} />}
+        {activeTab === "timeline"    && <TimelineTab    studentId={studentId} />}
       </div>
     </div>
   );
