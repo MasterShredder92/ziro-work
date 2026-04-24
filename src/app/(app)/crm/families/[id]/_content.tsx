@@ -692,7 +692,7 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/crm/students?family_id=${familyId}&page_size=50`, {
+        const res = await fetch(`/api/crm/students?familyId=${familyId}&page_size=50`, {
           headers: { "x-tenant-id": DEFAULT_TENANT_ID },
         });
         if (!res.ok) throw new Error(`Failed to load students (${res.status})`);
