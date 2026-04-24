@@ -349,20 +349,35 @@ function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [name,  setName]  = useState(family.primary_contact_name ?? "");
-  const [email, setEmail] = useState(family.primary_email ?? "");
-  const [phone, setPhone] = useState(family.primary_phone ?? "");
+  const [name,    setName]    = useState(family.primary_contact_name ?? "");
+  const [email,   setEmail]   = useState(family.primary_email ?? "");
+  const [phone,   setPhone]   = useState(family.primary_phone ?? "");
+  const [addr1,   setAddr1]   = useState(family.address_line1 ?? "");
+  const [addr2,   setAddr2]   = useState(family.address_line2 ?? "");
+  const [city,    setCity]    = useState(family.city ?? "");
+  const [state,   setState]   = useState(family.state ?? "");
+  const [postal,  setPostal]  = useState(family.postal_code ?? "");
 
   useEffect(() => {
     setName(family.primary_contact_name ?? "");
     setEmail(family.primary_email ?? "");
     setPhone(family.primary_phone ?? "");
-  }, [family.primary_contact_name, family.primary_email, family.primary_phone]);
+    setAddr1(family.address_line1 ?? "");
+    setAddr2(family.address_line2 ?? "");
+    setCity(family.city ?? "");
+    setState(family.state ?? "");
+    setPostal(family.postal_code ?? "");
+  }, [family.primary_contact_name, family.primary_email, family.primary_phone, family.address_line1, family.address_line2, family.city, family.state, family.postal_code]);
 
   function handleCancel() {
     setName(family.primary_contact_name ?? "");
     setEmail(family.primary_email ?? "");
     setPhone(family.primary_phone ?? "");
+    setAddr1(family.address_line1 ?? "");
+    setAddr2(family.address_line2 ?? "");
+    setCity(family.city ?? "");
+    setState(family.state ?? "");
+    setPostal(family.postal_code ?? "");
     setEditing(false);
     setSaveState("idle");
   }
@@ -375,13 +390,31 @@ function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
       const res = await fetch(`/api/crm/families/${familyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
-        body: JSON.stringify({ primary_contact_name: name || null, primary_email: email || null, primary_phone: phone || null }),
+        body: JSON.stringify({
+          primary_contact_name: name || null,
+          primary_email: email || null,
+          primary_phone: phone || null,
+          address_line1: addr1 || null,
+          address_line2: addr2 || null,
+          city: city || null,
+          state: state || null,
+          postal_code: postal || null,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Save failed (${res.status})`);
       }
-      onUpdate({ primary_contact_name: name || null, primary_email: email || null, primary_phone: phone || null });
+      onUpdate({
+        primary_contact_name: name || null,
+        primary_email: email || null,
+        primary_phone: phone || null,
+        address_line1: addr1 || null,
+        address_line2: addr2 || null,
+        city: city || null,
+        state: state || null,
+        postal_code: postal || null,
+      });
       setSaveState("saved");
       setEditing(false);
       setTimeout(() => setSaveState("idle"), 2500);
@@ -420,6 +453,28 @@ function PrimaryContactCard({ family, familyId, brandColor, onUpdate }: {
                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Phone</label>
                 <BrandInput brandColor={brandColor} type="tel" value={phone} onChange={setPhone} placeholder="(555) 000-0000" />
               </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Address Line 1</label>
+                <BrandInput brandColor={brandColor} value={addr1} onChange={setAddr1} placeholder="123 Main St" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Address Line 2</label>
+                <BrandInput brandColor={brandColor} value={addr2} onChange={setAddr2} placeholder="Apt, Suite, etc." />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col gap-1 col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>City</label>
+                  <BrandInput brandColor={brandColor} value={city} onChange={setCity} placeholder="Omaha" />
+                </div>
+                <div className="flex flex-col gap-1 col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>State</label>
+                  <BrandInput brandColor={brandColor} value={state} onChange={setState} placeholder="NE" />
+                </div>
+                <div className="flex flex-col gap-1 col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Zip</label>
+                  <BrandInput brandColor={brandColor} value={postal} onChange={setPostal} placeholder="68102" />
+                </div>
+              </div>
             </>
           ) : (
             <>
@@ -456,17 +511,32 @@ function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [draftStatus,   setDraftStatus]   = useState(family.status ?? "active");
-  const [draftMilitary, setDraftMilitary] = useState(family.is_military ?? false);
+  const [draftStatus,        setDraftStatus]        = useState(family.status ?? "active");
+  const [draftMilitary,      setDraftMilitary]      = useState(family.is_military ?? false);
+  const [draftAutopay,       setDraftAutopay]       = useState(family.autopay_enabled ?? false);
+  const [draftBillingDay,    setDraftBillingDay]    = useState(String(family.billing_day ?? ""));
+  const [draftBillingStatus, setDraftBillingStatus] = useState(family.billing_status ?? "current");
+  // rate_tier stored in cents — display/edit in dollars
+  const [draftRate,          setDraftRate]          = useState(
+    family.rate_tier ? String((family.rate_tier / 100).toFixed(2)) : ""
+  );
 
   useEffect(() => {
     setDraftStatus(family.status ?? "active");
     setDraftMilitary(family.is_military ?? false);
-  }, [family.status, family.is_military]);
+    setDraftAutopay(family.autopay_enabled ?? false);
+    setDraftBillingDay(String(family.billing_day ?? ""));
+    setDraftBillingStatus(family.billing_status ?? "current");
+    setDraftRate(family.rate_tier ? String((family.rate_tier / 100).toFixed(2)) : "");
+  }, [family.status, family.is_military, family.autopay_enabled, family.billing_day, family.billing_status, family.rate_tier]);
 
   function handleCancel() {
     setDraftStatus(family.status ?? "active");
     setDraftMilitary(family.is_military ?? false);
+    setDraftAutopay(family.autopay_enabled ?? false);
+    setDraftBillingDay(String(family.billing_day ?? ""));
+    setDraftBillingStatus(family.billing_status ?? "current");
+    setDraftRate(family.rate_tier ? String((family.rate_tier / 100).toFixed(2)) : "");
     setEditing(false);
     setSaveState("idle");
   }
@@ -475,17 +545,33 @@ function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
     setSaving(true);
     setSaveState("idle");
     setSaveError(null);
+    // Convert dollars back to cents for storage
+    const rateInCents = draftRate ? Math.round(parseFloat(draftRate) * 100) : null;
     try {
       const res = await fetch(`/api/crm/families/${familyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
-        body: JSON.stringify({ status: draftStatus, is_military: draftMilitary }),
+        body: JSON.stringify({
+          status: draftStatus,
+          is_military: draftMilitary,
+          autopay_enabled: draftAutopay,
+          billing_day: draftBillingDay ? parseInt(draftBillingDay, 10) : null,
+          billing_status: draftBillingStatus,
+          rate_tier: rateInCents,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `Save failed (${res.status})`);
       }
-      onUpdate({ status: draftStatus, is_military: draftMilitary });
+      onUpdate({
+        status: draftStatus,
+        is_military: draftMilitary,
+        autopay_enabled: draftAutopay,
+        billing_day: draftBillingDay ? parseInt(draftBillingDay, 10) : null,
+        billing_status: draftBillingStatus,
+        rate_tier: rateInCents ?? 0,
+      });
       setSaveState("saved");
       setEditing(false);
       router.refresh();
@@ -522,17 +608,38 @@ function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
               </div>
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Military Discount</label>
-                <button
-                  type="button"
-                  onClick={() => setDraftMilitary(v => !v)}
+                <button type="button" onClick={() => setDraftMilitary(v => !v)}
                   className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                   style={{ background: draftMilitary ? brandColor : "rgba(107,114,128,0.3)" }}>
                   <span className="inline-block h-4 w-4 transform rounded-full shadow transition-transform"
-                    style={{
-                      background: "var(--z-fg, #fff)",
-                      transform: draftMilitary ? "translateX(22px)" : "translateX(2px)",
-                    }} />
+                    style={{ background: "var(--z-fg, #fff)", transform: draftMilitary ? "translateX(22px)" : "translateX(2px)" }} />
                 </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Auto-pay</label>
+                <button type="button" onClick={() => setDraftAutopay(v => !v)}
+                  className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                  style={{ background: draftAutopay ? brandColor : "rgba(107,114,128,0.3)" }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full shadow transition-transform"
+                    style={{ background: "var(--z-fg, #fff)", transform: draftAutopay ? "translateX(22px)" : "translateX(2px)" }} />
+                </button>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Billing Day (1–31)</label>
+                <BrandInput brandColor={brandColor} type="number" value={draftBillingDay} onChange={setDraftBillingDay} placeholder="1" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Billing Status</label>
+                <BrandSelect brandColor={brandColor} value={draftBillingStatus} onChange={setDraftBillingStatus}>
+                  <option value="current">Current</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="paused">Paused</option>
+                  <option value="past_due">Past Due</option>
+                </BrandSelect>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>Rate / Session ($)</label>
+                <BrandInput brandColor={brandColor} type="number" value={draftRate} onChange={setDraftRate} placeholder="45.00" />
               </div>
             </>
           ) : (
@@ -548,21 +655,106 @@ function AccountSettingsCard({ family, familyId, brandColor, onUpdate }: {
                 </span>
               } />
               <Field label="Military Discount" value={<BoolBadge value={family.is_military} trueLabel="Yes — ★ MIL" falseLabel="No" />} />
+              <Field label="Autopay"        value={<BoolBadge value={family.autopay_enabled} trueLabel="Enabled" falseLabel="Disabled" />} />
+              <Field label="Billing Day"    value={family.billing_day !== null ? `Day ${family.billing_day} of month` : null} />
+              <Field label="Billing Status" value={<BillingStatusBadge status={family.billing_status} />} />
+              <Field label="Rate / Session" value={family.rate_tier ? formatCurrency(family.rate_tier / 100) : null} />
+              {family.rate_tier_override && (
+                <Field label="Rate Override" value={
+                  <span className="text-xs" style={{ color: T.muted }}>{family.rate_tier_reason ?? "Manual override applied"}</span>
+                } />
+              )}
             </>
           )}
-
-          {/* Always-visible read-only fields */}
-          <Field label="Autopay"        value={<BoolBadge value={family.autopay_enabled} trueLabel="Enabled" falseLabel="Disabled" />} />
-          <Field label="Billing Day"    value={family.billing_day !== null ? `Day ${family.billing_day} of month` : null} />
-          <Field label="Billing Status" value={<BillingStatusBadge status={family.billing_status} />} />
-          <Field label="Rate / Session" value={family.rate_tier ? formatCurrency(family.rate_tier) : null} />
-          {family.rate_tier_override && (
-            <Field label="Rate Override" value={
-              <span className="text-xs" style={{ color: T.muted }}>{family.rate_tier_reason ?? "Manual override applied"}</span>
-            } />
-          )}
-          <Field label="Notes" value={family.notes ?? family.billing_notes} />
         </dl>
+      </div>
+    </BrandCard>
+  );
+}
+
+/* ─── Family Notes Card ─────────────────────────────────── */
+function FamilyNotesCard({ family, familyId, brandColor, onUpdate }: {
+  family: FamilyDetail;
+  familyId: string;
+  brandColor: string;
+  onUpdate: (patch: Partial<FamilyDetail>) => void;
+}) {
+  const [editing, setEditing]     = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [draftNotes, setDraftNotes] = useState(family.notes ?? "");
+
+  useEffect(() => { setDraftNotes(family.notes ?? ""); }, [family.notes]);
+
+  function handleCancel() {
+    setDraftNotes(family.notes ?? "");
+    setEditing(false);
+    setSaveState("idle");
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveState("idle");
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/crm/families/${familyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
+        body: JSON.stringify({ notes: draftNotes || null }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Save failed (${res.status})`);
+      }
+      onUpdate({ notes: draftNotes || null });
+      setSaveState("saved");
+      setEditing(false);
+      setTimeout(() => setSaveState("idle"), 2500);
+    } catch (err) {
+      setSaveState("error");
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <BrandCard brandColor={brandColor} style={{ gridColumn: "1 / -1" }}>
+      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+        <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Family Notes</h2>
+        <CardActions
+          editing={editing} saving={saving} saveState={saveState} saveError={saveError}
+          onEdit={() => setEditing(true)} onCancel={handleCancel} onSave={handleSave}
+        />
+      </div>
+      <div className="px-5 py-4">
+        {editing ? (
+          <textarea
+            value={draftNotes}
+            onChange={e => setDraftNotes(e.target.value)}
+            placeholder="Add notes about this family…"
+            rows={5}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: `1px solid ${T.border}`,
+              background: T.bg,
+              color: T.fg,
+              fontSize: 14,
+              resize: "vertical",
+              outline: "none",
+              lineHeight: 1.6,
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = brandColor; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}22`; }}
+            onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }}
+          />
+        ) : (
+          <p className="text-sm whitespace-pre-wrap" style={{ color: family.notes ? T.fg : T.muted, lineHeight: 1.7 }}>
+            {family.notes || "No notes yet. Click Edit to add notes about this family."}
+          </p>
+        )}
       </div>
     </BrandCard>
   );
@@ -619,6 +811,7 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
     <div className="grid gap-4 sm:grid-cols-2">
       <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
       <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
+      <FamilyNotesCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
     </div>
   );
 }
