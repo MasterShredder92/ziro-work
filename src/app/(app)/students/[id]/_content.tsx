@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 /* ─── Theme tokens (mirrors Family page) ─────────────────── */
@@ -29,6 +30,7 @@ type StudentOverview = {
   goals: string | null;
   learning_style: string | null;
   teacher_id: string | null;
+  family_id: string | null;
   lesson_day_of_week: string | null;
   blocks_per_week: number | null;
   experience_level: string | null;
@@ -274,12 +276,12 @@ function TabNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 }
 
 /* ─── Field row ──────────────────────────────────────────── */
-function Field({ label, value }: { label: string; value: string | null | undefined }) {
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.label }}>{label}</dt>
       <dd className="text-sm" style={{ color: T.fg }}>
-        {value && value.trim() ? value : <span style={{ color: T.label }}>—</span>}
+        {value !== null && value !== undefined && value !== "" ? value : <span style={{ color: T.label }}>—</span>}
       </dd>
     </div>
   );
@@ -412,17 +414,36 @@ function EnrollmentDetailsCard({
   student,
   teacherName,
   teacherLoading,
+  familyId,
 }: {
   student: StudentOverview;
   teacherName: string | null;
   teacherLoading: boolean;
+  familyId: string | null;
 }) {
   return (
     <BrandCard>
       <CardHeader title="Enrollment Details" />
       <div className="px-5 py-4">
         <dl className="flex flex-col gap-4">
-          <Field label="Teacher"       value={teacherLoading ? "Loading…" : teacherName ?? "—"} />
+          <Field
+            label="Teacher"
+            value={
+              teacherLoading ? (
+                <span style={{ color: T.muted }}>Loading…</span>
+              ) : teacherName && familyId ? (
+                <Link
+                  href={`/crm/families/${familyId}#meet-teachers`}
+                  className="font-medium underline-offset-2 hover:underline"
+                  style={{ color: BRAND }}
+                >
+                  {teacherName}
+                </Link>
+              ) : (
+                teacherName ?? "—"
+              )
+            }
+          />
           <Field label="Lesson Day"    value={student.lesson_day_of_week} />
           <Field label="Blocks / Week" value={student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : null} />
           <Field label="Experience"    value={student.experience_level} />
@@ -497,7 +518,7 @@ function OverviewTab({ studentId }: { studentId: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <LearningProfileCard student={student} onSaved={(updated) => setStudent((prev) => prev ? { ...prev, ...updated } : prev)} />
-      <EnrollmentDetailsCard student={student} teacherName={teacherName} teacherLoading={teacherLoading} />
+      <EnrollmentDetailsCard student={student} teacherName={teacherName} teacherLoading={teacherLoading} familyId={student.family_id ?? null} />
     </div>
   );
 }

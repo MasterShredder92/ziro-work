@@ -93,14 +93,17 @@ function BrandCard({
   children,
   style,
   className,
+  id,
 }: {
   brandColor: string;
   children: React.ReactNode;
   style?: React.CSSProperties;
   className?: string;
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={className}
       style={{
         position: "relative",
@@ -760,6 +763,133 @@ function FamilyNotesCard({ family, familyId, brandColor, onUpdate }: {
 }
 
 /* ─── Overview tab ───────────────────────────────────────── */
+
+/* ─── Teacher profile type ───────────────────────────────── */
+type TeacherProfile = {
+  id: string;
+  full_name: string;
+  bio: string | null;
+  photo_url: string | null;
+  teacher_role: string;
+  instruments: string[];
+  lesson_style: string | null;
+  teaches_students: string[];
+};
+/* ─── Teacher avatar ─────────────────────────────────────── */
+function TeacherAvatar({ teacher, size = 56 }: { teacher: TeacherProfile; size?: number }) {
+  const initials = teacher.full_name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  if (teacher.photo_url) {
+    return (
+      <img
+        src={teacher.photo_url}
+        alt={teacher.full_name}
+        width={size}
+        height={size}
+        className="rounded-full object-cover shrink-0"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full text-sm font-bold"
+      style={{ width: size, height: size, background: "rgba(0,255,0,0.08)", color: "#00ff00", border: "1px solid rgba(0,255,0,0.18)" }}
+    >
+      {initials}
+    </div>
+  );
+}
+/* ─── Meet Your Teacher(s) card ──────────────────────────── */
+function MeetTeachersCard({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+  const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!familyId) return;
+    async function load() {
+      try {
+        const res = await fetch(`/api/crm/families/${familyId}/teachers`, {
+          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        setTeachers(json.data ?? []);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [familyId]);
+
+  if (!loading && teachers.length === 0) return null;
+
+  return (
+    <BrandCard brandColor={brandColor} id="meet-teachers">
+      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+        <h3 className="text-sm font-semibold uppercase tracking-widest" style={{ color: T.label }}>
+          Meet Your Teacher{teachers.length !== 1 ? "s" : ""}
+        </h3>
+        {!loading && (
+          <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
+            {teachers.length}
+          </span>
+        )}
+      </div>
+      {loading ? (
+        <div className="flex flex-col gap-3 animate-pulse px-5 pb-4">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full" style={{ background: T.surface2 }} />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 rounded" style={{ background: T.surface2 }} />
+                <div className="h-3 w-48 rounded" style={{ background: T.surface2 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ul className="flex flex-col divide-y" style={{ borderColor: T.border }}>
+          {teachers.map((teacher) => (
+            <li key={teacher.id} className="flex items-start gap-4 px-5 py-4">
+              <TeacherAvatar teacher={teacher} size={52} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold" style={{ color: T.fg }}>{teacher.full_name}</p>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
+                    {teacher.teacher_role}
+                  </span>
+                </div>
+                {teacher.teaches_students.length > 0 && (
+                  <p className="mt-0.5 text-xs" style={{ color: T.muted }}>
+                    Teacher for {teacher.teaches_students.join(" & ")}
+                  </p>
+                )}
+                {teacher.bio && (
+                  <p className="mt-2 text-xs leading-relaxed" style={{ color: T.label }}>
+                    {teacher.bio}
+                  </p>
+                )}
+                {teacher.instruments && teacher.instruments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {teacher.instruments.map((inst: string) => (
+                      <span key={inst} className="rounded-full px-2 py-0.5 text-xs" style={{ background: "rgba(0,255,0,0.06)", color: "#00cc00" }}>
+                        {inst}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </BrandCard>
+  );
+}
 function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -813,6 +943,7 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
         <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
         <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
       </div>
+      <MeetTeachersCard familyId={familyId} brandColor={brandColor} />
     </div>
   );
 }
