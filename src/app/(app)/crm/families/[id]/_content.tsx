@@ -995,11 +995,44 @@ function MetricCard({ label, value, valueColor, brandColor }: { label: string; v
 
 /* ─── Billing tab ─────────────────────────────────────────── */
 function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
-  const [family, setFamily] = useState<BillingFamily | null>(null);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // ── types ──────────────────────────────────────────────────────────────
+  type FamilySummary = {
+    balance: number;
+    overdue_balance_cents: number;
+    lifetime_paid_cents: number;
+    square_customer_id: string | null;
+  };
+  type SquareInvoiceRow = {
+    id: string;
+    invoice_number: string | null;
+    title: string | null;
+    status: string;
+    amount_cents: number | null;
+    requested_amount: number | null;
+    amount_paid: number | null;
+    due_date: string | null;
+    paid_at: string | null;
+    square_created_at: string | null;
+    customer_name: string | null;
+  };
 
+  // ── state ──────────────────────────────────────────────────────────────
+  const [family,   setFamily]   = useState<FamilySummary | null>(null);
+  const [invoices, setInvoices] = useState<SquareInvoiceRow[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
+
+  // modal state
+  const [showModal,   setShowModal]   = useState(false);
+  const [modalType,   setModalType]   = useState<"single" | "recurring" | null>(null);
+  const [mAmount,     setMAmount]     = useState("");
+  const [mDate,       setMDate]       = useState("");
+  const [mDesc,       setMDesc]       = useState("");
+  const [mSubmitting, setMSubmitting] = useState(false);
+  const [mError,      setMError]      = useState<string | null>(null);
+  const [mSuccess,    setMSuccess]    = useState(false);
+
+  // ── load data ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!familyId) return;
     async function load() {
@@ -1008,15 +1041,20 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
       try {
         const [famRes, invRes] = await Promise.all([
           fetch(`/api/crm/families/${familyId}`, { headers: { "x-tenant-id": DEFAULT_TENANT_ID } }),
-          fetch(`/api/billing/invoices?family_id=${familyId}&page_size=10&sort=created_at:desc`, { headers: { "x-tenant-id": DEFAULT_TENANT_ID } }),
+          fetch(`/api/crm/families/${familyId}/square-invoices`, { headers: { "x-tenant-id": DEFAULT_TENANT_ID } }),
         ]);
         if (!famRes.ok) throw new Error(`Failed to load family (${famRes.status})`);
         const famJson = await famRes.json();
         const f = famJson.data ?? famJson;
-        setFamily({ balance: f.balance ?? 0, overdue_balance_cents: f.overdue_balance_cents ?? 0, lifetime_paid_cents: f.lifetime_paid_cents ?? 0 });
+        setFamily({
+          balance: f.balance ?? 0,
+          overdue_balance_cents: f.overdue_balance_cents ?? 0,
+          lifetime_paid_cents: f.lifetime_paid_cents ?? 0,
+          square_customer_id: f.square_customer_id ?? null,
+        });
         if (invRes.ok) {
           const invJson = await invRes.json();
-          const list = invJson.data?.items ?? invJson.data ?? invJson.items ?? [];
+          const list = invJson.data ?? [];
           setInvoices(Array.isArray(list) ? list : []);
         }
       } catch (err) {
@@ -1028,6 +1066,74 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
     load();
   }, [familyId]);
 
+  // ── helpers ────────────────────────────────────────────────────────────
+  function fmtShortDate(iso: string | null): string {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}/${d.getDate()}/${String(d.getFullYear()).slice(2)}`;
+  }
+  function squareCents(val: number | null): string {
+    if (val == null) return "—";
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val / 100);
+  }
+  function SquareStatusBadge({ status }: { status: string }) {
+    const s = (status ?? "").toUpperCase();
+    let bg = "rgba(107,114,128,0.1)", color = "#6b7280";
+    if (s === "PAID")                                    { bg = "rgba(5,150,105,0.12)";  color = "#059669"; }
+    else if (s === "UNPAID" || s === "PAYMENT_PENDING")  { bg = "rgba(245,158,11,0.12)"; color = "#d97706"; }
+    else if (s === "OVERDUE")                            { bg = "rgba(185,28,28,0.1)";   color = "#b91c1c"; }
+    else if (s === "CANCELLED" || s === "CANCELED")      { bg = "rgba(107,114,128,0.1)"; color = "#6b7280"; }
+    else if (s === "DRAFT")                              { bg = "rgba(99,102,241,0.1)";  color = "#6366f1"; }
+    return (
+      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
+        style={{ background: bg, color }}>
+        {s === "PAYMENT_PENDING" ? "PENDING" : s}
+      </span>
+    );
+  }
+
+  // ── create invoice ─────────────────────────────────────────────────────
+  async function handleCreateInvoice() {
+    if (!mAmount || !mDate || !mDesc) { setMError("All fields are required."); return; }
+    const amountCents = Math.round(parseFloat(mAmount) * 100);
+    if (isNaN(amountCents) || amountCents <= 0) { setMError("Enter a valid dollar amount."); return; }
+    setMSubmitting(true);
+    setMError(null);
+    try {
+      const res = await fetch("/api/billing/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
+        body: JSON.stringify({
+          family_id: familyId,
+          status: "draft",
+          due_at: new Date(mDate).toISOString(),
+          issued_at: new Date().toISOString(),
+          description: mDesc,
+          lineItems: [{ description: mDesc, amount_cents: amountCents }],
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string })?.error ?? `Failed to create invoice (${res.status})`);
+      }
+      setMSuccess(true);
+      setTimeout(() => {
+        setShowModal(false); setModalType(null);
+        setMAmount(""); setMDate(""); setMDesc(""); setMSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setMError(err instanceof Error ? err.message : "Failed to create invoice");
+    } finally {
+      setMSubmitting(false);
+    }
+  }
+
+  function closeModal() {
+    setShowModal(false); setModalType(null);
+    setMAmount(""); setMDate(""); setMDesc(""); setMError(null); setMSuccess(false);
+  }
+
+  // ── render ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex flex-col gap-4 animate-pulse">
@@ -1042,31 +1148,56 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
     return <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>;
   }
 
+  // No Square profile
+  if (!family?.square_customer_id) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
+        <svg className="h-10 w-10" style={{ color: T.muted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+        <p className="text-sm font-semibold" style={{ color: T.fg }}>No Square Profile Linked</p>
+        <p className="text-xs max-w-xs" style={{ color: T.muted }}>This family does not have a Square customer ID. Sync Square to link their billing history.</p>
+      </div>
+    );
+  }
+
   const balColor = (family?.balance ?? 0) > 0 ? "#b91c1c" : (family?.balance ?? 0) < 0 ? "#059669" : T.fg;
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Metric cards */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <MetricCard label="Current Balance" value={dollars(family?.balance ?? 0)} valueColor={balColor} brandColor={brandColor} />
-        <MetricCard label="Overdue" value={cents(family?.overdue_balance_cents ?? 0)} valueColor={(family?.overdue_balance_cents ?? 0) > 0 ? "#b91c1c" : T.fg} brandColor={brandColor} />
-        <MetricCard label="Lifetime Paid" value={cents(family?.lifetime_paid_cents ?? 0)} valueColor="#059669" brandColor={brandColor} />
+        <MetricCard label="Current Balance" value={squareCents(family?.balance ?? 0)} valueColor={balColor} brandColor={brandColor} />
+        <MetricCard label="Overdue" value={squareCents(family?.overdue_balance_cents ?? 0)} valueColor={(family?.overdue_balance_cents ?? 0) > 0 ? "#b91c1c" : T.fg} brandColor={brandColor} />
+        <MetricCard label="Lifetime Paid" value={squareCents(family?.lifetime_paid_cents ?? 0)} valueColor="#059669" brandColor={brandColor} />
       </div>
 
-      {invoices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-14 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
-          <p className="text-sm font-medium" style={{ color: T.muted }}>No invoices found for this family</p>
-        </div>
-      ) : (
-        <BrandCard brandColor={brandColor}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
-            <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Recent Invoices</h2>
-            <span className="text-xs" style={{ color: T.muted }}>{invoices.length} shown</span>
+      {/* Square invoice ledger */}
+      <BrandCard brandColor={brandColor}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+          <div>
+            <h2 className="text-sm font-semibold" style={{ color: T.fg }}>Square Invoice Ledger</h2>
+            <p className="text-xs mt-0.5" style={{ color: T.muted }}>Last 12 months · {invoices.length} records</p>
           </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ border: "1.5px solid #00D16C", color: "#00D16C", background: "rgba(0,209,108,0.06)" }}>
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Create Invoice
+          </button>
+        </div>
+
+        {invoices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <p className="text-sm" style={{ color: T.muted }}>No Square invoices found in the last 12 months</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  {["Invoice", "Due Date", "Total", "Paid", "Balance", "Status", ""].map(h => (
+                  {["Date", "Invoice #", "Description", "Amount", "Status"].map(h => (
                     <th key={h} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: T.label }}>{h}</th>
                   ))}
                 </tr>
@@ -1077,25 +1208,122 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
                     style={{ borderBottom: `1px solid ${T.border}` }}
                     onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                    <td className="px-5 py-3 font-mono text-xs" style={{ color: T.muted }}>{inv.number ?? inv.id.slice(0, 8).toUpperCase()}</td>
-                    <td className="px-5 py-3" style={{ color: T.fg }}>{inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
-                    <td className="px-5 py-3 font-medium" style={{ color: T.fg }}>{cents(inv.total_cents)}</td>
-                    <td className="px-5 py-3" style={{ color: "#059669" }}>{cents(inv.amount_paid_cents)}</td>
-                    <td className="px-5 py-3 font-medium" style={{ color: inv.balance_cents > 0 ? "#b91c1c" : T.muted }}>{cents(inv.balance_cents)}</td>
-                    <td className="px-5 py-3"><InvoiceStatusBadge status={inv.status} /></td>
-                    <td className="px-5 py-3">
-                      <a href={`/billing/invoices/${inv.id}`}
-                        className="rounded-lg px-2.5 py-1 text-xs font-medium hover:opacity-80 transition-opacity"
-                        style={{ background: T.surface2, color: T.fg, border: `1px solid ${T.border}` }}>
-                        View
-                      </a>
-                    </td>
+                    <td className="px-5 py-2.5 text-xs" style={{ color: T.muted }}>{fmtShortDate(inv.square_created_at)}</td>
+                    <td className="px-5 py-2.5 font-mono text-xs" style={{ color: T.muted }}>{inv.invoice_number ?? "—"}</td>
+                    <td className="px-5 py-2.5 text-xs max-w-[200px] truncate" style={{ color: T.fg }}>{inv.title || "Lesson Invoice"}</td>
+                    <td className="px-5 py-2.5 text-xs font-semibold" style={{ color: T.fg }}>{squareCents(inv.amount_cents)}</td>
+                    <td className="px-5 py-2.5"><SquareStatusBadge status={inv.status} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </BrandCard>
+        )}
+      </BrandCard>
+
+      {/* Create Invoice Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
+          <div className="w-full max-w-md rounded-2xl shadow-2xl" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: `1px solid ${T.border}` }}>
+              <h3 className="text-base font-semibold" style={{ color: T.fg }}>Create Invoice</h3>
+              <button onClick={closeModal} className="rounded-lg p-1 hover:opacity-60 transition-opacity" style={{ color: T.muted }}>✕</button>
+            </div>
+
+            {/* Invoice type selector */}
+            {!modalType ? (
+              <div className="flex flex-col gap-3 px-6 py-6">
+                <p className="text-sm" style={{ color: T.muted }}>Choose invoice type:</p>
+                <button
+                  onClick={() => setModalType("single")}
+                  className="flex items-center gap-3 rounded-xl px-4 py-4 text-left transition-all hover:opacity-80"
+                  style={{ border: `1.5px solid ${T.border}`, background: T.bg }}>
+                  <span className="text-xl">📄</span>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: T.fg }}>Single Invoice</p>
+                    <p className="text-xs" style={{ color: T.muted }}>One-time charge for a specific service or date</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setModalType("recurring")}
+                  className="flex items-center gap-3 rounded-xl px-4 py-4 text-left transition-all hover:opacity-80"
+                  style={{ border: `1.5px solid ${T.border}`, background: T.bg }}>
+                  <span className="text-xl">🔄</span>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: T.fg }}>Recurring Invoice</p>
+                    <p className="text-xs" style={{ color: T.muted }}>Auto-generate monthly invoices on a schedule</p>
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 px-6 py-6">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: T.muted }}>
+                  {modalType === "single" ? "Single Invoice" : "Recurring Invoice"}
+                </p>
+
+                {/* Amount */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium" style={{ color: T.label }}>Amount ($)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: T.muted }}>$</span>
+                    <input
+                      type="number" min="0" step="0.01" placeholder="45.00"
+                      value={mAmount} onChange={e => setMAmount(e.target.value)}
+                      className="w-full rounded-lg pl-7 pr-3 py-2 text-sm"
+                      style={{ border: `1px solid ${T.border}`, background: T.bg, color: T.fg, outline: "none" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = brandColor; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}22`; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }}
+                    />
+                  </div>
+                </div>
+
+                {/* Service date */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium" style={{ color: T.label }}>Service Date</label>
+                  <input
+                    type="date" value={mDate} onChange={e => setMDate(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ border: `1px solid ${T.border}`, background: T.bg, color: T.fg, outline: "none" }}
+                    onFocus={e => { e.currentTarget.style.borderColor = brandColor; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}22`; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }}
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium" style={{ color: T.label }}>Description</label>
+                  <input
+                    type="text" placeholder="e.g. Guitar lessons — April"
+                    value={mDesc} onChange={e => setMDesc(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ border: `1px solid ${T.border}`, background: T.bg, color: T.fg, outline: "none" }}
+                    onFocus={e => { e.currentTarget.style.borderColor = brandColor; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}22`; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }}
+                  />
+                </div>
+
+                {mError && <p className="text-xs" style={{ color: "#b91c1c" }}>{mError}</p>}
+                {mSuccess && <p className="text-xs font-semibold" style={{ color: "#059669" }}>✓ Invoice created as Draft</p>}
+
+                <div className="flex items-center gap-3 pt-1">
+                  <button onClick={() => setModalType(null)}
+                    className="flex-1 rounded-lg py-2 text-sm font-medium hover:opacity-70 transition-opacity"
+                    style={{ border: `1px solid ${T.border}`, color: T.muted, background: T.bg }}
+                    disabled={mSubmitting}>Back</button>
+                  <button onClick={handleCreateInvoice}
+                    className="flex-1 rounded-lg py-2 text-sm font-semibold hover:opacity-80 transition-opacity"
+                    style={{ background: brandColor, color: "#fff" }}
+                    disabled={mSubmitting || mSuccess}>
+                    {mSubmitting ? "Sending…" : "Send Invoice"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
