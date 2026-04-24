@@ -35,7 +35,7 @@ type TeacherRaw = {
   internal_match_notes?: string | null;
 };
 type Location = { id: string; name: string };
-type Tab = "profile" | "contract_w9" | "students";
+type Tab = "profile" | "contract_w9" | "students" | "availability";
 type AvailabilitySlot = { start_time: string; end_time: string; is_active?: boolean };
 type W9Record = {
   id: string; legal_name: string; business_name?: string | null;
@@ -735,6 +735,238 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
   );
 }
 
+// ─── Availability Tab ────────────────────────────────────────────────────────
+const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as const;
+type DayKey = typeof DAYS[number];
+const DAY_LABELS: Record<DayKey, string> = { monday:"Mon", tuesday:"Tue", wednesday:"Wed", thursday:"Thu", friday:"Fri", saturday:"Sat", sunday:"Sun" };
+
+type LocAssignment = {
+  location_id: string;
+  is_regular: boolean;
+  can_sub: boolean;
+  location: { id: string; name: string; color?: string | null } | null;
+};
+type TimeBlock = { start_time: string; end_time: string };
+type DaySlots = Record<DayKey, TimeBlock[]>;
+type LocSchedule = Record<string, DaySlots>; // keyed by location_id
+
+function emptyDaySlots(): DaySlots {
+  return { monday:[], tuesday:[], wednesday:[], thursday:[], friday:[], saturday:[], sunday:[] };
+}
+
+function AvailabilityTab({ teacherId }: { teacherId: string }) {
+  const [assignments, setAssignments] = React.useState<LocAssignment[]>([]);
+  const [schedule, setSchedule] = React.useState<LocSchedule>({});
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<"idle"|"success"|"error">("idle");
+  const [saveError, setSaveError] = React.useState<string|null>(null);
+  const [patchingLoc, setPatchingLoc] = React.useState<string|null>(null);
+
+  React.useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch(`/api/crm/teachers/${teacherId}/locations`).then(r => r.json()).catch(() => ({ data: [] })),
+      fetch(`/api/crm/teachers/${teacherId}/availability`).then(r => r.json()).catch(() => ({ data: { slots: [] } })),
+    ]).then(([locRes, availRes]) => {
+      const locs: LocAssignment[] = Array.isArray(locRes.data) ? locRes.data : [];
+      setAssignments(locs);
+      // Build schedule map from existing slots
+      const rawSlots: Array<{ dayOfWeek: string|number; startTime: string; endTime: string; locationId?: string|null }> =
+        Array.isArray(availRes.data?.slots) ? availRes.data.slots :
+        Array.isArray(availRes.data) ? availRes.data : [];
+      const sched: LocSchedule = {};
+      for (const loc of locs) {
+        sched[loc.location_id] = emptyDaySlots();
+      }
+      for (const slot of rawSlots) {
+        const locId = slot.locationId ?? "";
+        const dayRaw = String(slot.dayOfWeek);
+        // Handle both numeric (0=Sun) and string enum values
+        const dayStr: DayKey | undefined = DAYS.includes(dayRaw as DayKey)
+          ? (dayRaw as DayKey)
+          : (["sunday","monday","tuesday","wednesday","thursday","friday","saturday"] as DayKey[])[Number(dayRaw)];
+        if (!dayStr) continue;
+        if (!sched[locId]) sched[locId] = emptyDaySlots();
+        sched[locId][dayStr].push({ start_time: slot.startTime?.slice(0,5) ?? "", end_time: slot.endTime?.slice(0,5) ?? "" });
+      }
+      setSchedule(sched);
+    }).finally(() => setLoading(false));
+  }, [teacherId]);
+
+  async function patchLocToggle(locationId: string, field: "is_regular"|"can_sub", value: boolean) {
+    setPatchingLoc(locationId);
+    try {
+      await fetch(`/api/crm/teachers/${teacherId}/locations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location_id: locationId, [field]: value }),
+      });
+      setAssignments(prev => prev.map(a => a.location_id === locationId ? { ...a, [field]: value } : a));
+      // Ensure schedule entry exists
+      if (value && !schedule[locationId]) {
+        setSchedule(prev => ({ ...prev, [locationId]: emptyDaySlots() }));
+      }
+    } finally { setPatchingLoc(null); }
+  }
+
+  function addBlock(locId: string, day: DayKey) {
+    setSchedule(prev => ({
+      ...prev,
+      [locId]: { ...prev[locId], [day]: [...(prev[locId]?.[day] ?? []), { start_time: "09:00", end_time: "17:00" }] },
+    }));
+  }
+
+  function removeBlock(locId: string, day: DayKey, idx: number) {
+    setSchedule(prev => ({
+      ...prev,
+      [locId]: { ...prev[locId], [day]: prev[locId][day].filter((_,i) => i !== idx) },
+    }));
+  }
+
+  function updateBlock(locId: string, day: DayKey, idx: number, field: "start_time"|"end_time", val: string) {
+    setSchedule(prev => {
+      const blocks = [...(prev[locId]?.[day] ?? [])];
+      blocks[idx] = { ...blocks[idx], [field]: val };
+      return { ...prev, [locId]: { ...prev[locId], [day]: blocks } };
+    });
+  }
+
+  async function handleSave() {
+    setSaving(true); setSaveStatus("idle"); setSaveError(null);
+    try {
+      const slots: Array<{ dayOfWeek: string; startTime: string; endTime: string; locationId: string }> = [];
+      for (const [locId, dayMap] of Object.entries(schedule)) {
+        for (const day of DAYS) {
+          for (const block of (dayMap[day] ?? [])) {
+            if (block.start_time && block.end_time) {
+              slots.push({ dayOfWeek: day, startTime: block.start_time, endTime: block.end_time, locationId: locId });
+            }
+          }
+        }
+      }
+      const res = await fetch(`/api/crm/teachers/${teacherId}/availability`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slots }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string; error?: string };
+        throw new Error(body.message ?? body.error ?? `HTTP ${res.status}`);
+      }
+      setSaveStatus("success");
+      setTimeout(() => setSaveStatus("idle"), 2500);
+    } catch (err) {
+      setSaveStatus("error"); setSaveError(err instanceof Error ? err.message : "Save failed");
+    } finally { setSaving(false); }
+  }
+
+  if (loading) return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />)}</div>;
+  if (assignments.length === 0) return <div className="text-sm text-[#505055]">No locations assigned to this teacher. Add locations in the Profile tab first.</div>;
+
+  const activeAssignments = assignments.filter(a => a.is_regular || a.can_sub);
+
+  return (
+    <div className="space-y-4">
+      {/* Location assignment toggles */}
+      <div className={sectionCls}>
+        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Location Assignments</div>
+        <div className="space-y-3">
+          {assignments.map(a => {
+            const locName = a.location?.name ?? a.location_id;
+            const locColor = a.location?.color ?? "#00ff88";
+            const isActive = patchingLoc === a.location_id;
+            return (
+              <div key={a.location_id} className="rounded-xl border border-[#1c1c1e] bg-[#111113] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: locColor }} />
+                    <span className="text-sm font-semibold text-white">{locName}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" disabled={isActive} checked={a.is_regular} onChange={e => void patchLocToggle(a.location_id, "is_regular", e.target.checked)} className="h-3.5 w-3.5 accent-[#00ff88]" />
+                      <span className="text-xs text-[#909098]">Regular</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" disabled={isActive} checked={a.can_sub} onChange={e => void patchLocToggle(a.location_id, "can_sub", e.target.checked)} className="h-3.5 w-3.5 accent-[#00ff88]" />
+                      <span className="text-xs text-[#909098]">Can Sub</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Schedule editor — only for active locations */}
+      {activeAssignments.length === 0 && (
+        <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4 text-sm text-[#505055]">
+          Enable Regular or Can Sub for at least one location to set a weekly schedule.
+        </div>
+      )}
+      {activeAssignments.map(a => {
+        const locName = a.location?.name ?? a.location_id;
+        const locColor = a.location?.color ?? "#00ff88";
+        const dayMap = schedule[a.location_id] ?? emptyDaySlots();
+        return (
+          <div key={a.location_id} className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#1c1c1e]">
+              <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: locColor }} />
+              <span className="text-xs font-bold uppercase tracking-widest text-white">{locName}</span>
+              <span className="ml-auto text-xs text-[#505055]">
+                {a.is_regular && <span className="mr-2 rounded-full bg-[#00ff88]/10 px-2 py-0.5 text-[#00ff88]">Regular</span>}
+                {a.can_sub && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-400">Sub</span>}
+              </span>
+            </div>
+            <div className="divide-y divide-[#1c1c1e]">
+              {DAYS.map(day => {
+                const blocks = dayMap[day] ?? [];
+                return (
+                  <div key={day} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[#505055] w-10">{DAY_LABELS[day]}</span>
+                      <button type="button" onClick={() => addBlock(a.location_id, day)}
+                        className="text-xs text-[#00ff88] hover:text-[#00ff88]/70 font-semibold">+ Add Block</button>
+                    </div>
+                    {blocks.length === 0 && <div className="text-xs text-[#303035] italic">No blocks — off this day</div>}
+                    <div className="space-y-2">
+                      {blocks.map((block, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input type="time" value={block.start_time} onChange={e => updateBlock(a.location_id, day, idx, "start_time", e.target.value)}
+                            className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none" />
+                          <span className="text-xs text-[#505055]">to</span>
+                          <input type="time" value={block.end_time} onChange={e => updateBlock(a.location_id, day, idx, "end_time", e.target.value)}
+                            className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none" />
+                          <button type="button" onClick={() => removeBlock(a.location_id, day, idx)}
+                            className="ml-auto text-xs text-[#505055] hover:text-red-400">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Save button */}
+      {activeAssignments.length > 0 && (
+        <>
+          {saveStatus === "success" && <p className="text-sm text-[#00ff88]">Schedule saved.</p>}
+          {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
+          <button onClick={() => void handleSave()} disabled={saving}
+            className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
+            {saving ? "Saving…" : "Save Schedule"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Profile tab: shows TeacherProfileView with an inline Edit toggle */
 function ProfileTabWithEdit({
   teacher, allLocations, assignedLocationIds, capacitySlots, studentCount, onSaved,
@@ -824,6 +1056,7 @@ export function TeacherDetailClient() {
     { id: "profile", label: "Profile" },
     { id: "contract_w9", label: "Contract & W9" },
     { id: "students", label: "Students" },
+    { id: "availability", label: "Availability" },
   ];
 
   const displayName = teacher
@@ -872,6 +1105,7 @@ export function TeacherDetailClient() {
                 </div>
               )}
               {tab === "students" && <TeacherStudentsTab teacherId={id} />}
+              {tab === "availability" && <AvailabilityTab teacherId={id} />}
             </>
           )}
         </div>
