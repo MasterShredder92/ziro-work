@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const familyId = params.id;
+    const { id: familyId } = await params;
     if (!familyId) {
       return NextResponse.json({ error: "Missing family id" }, { status: 400 });
     }
