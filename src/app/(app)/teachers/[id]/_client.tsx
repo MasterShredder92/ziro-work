@@ -1303,16 +1303,22 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
 
 /** Profile tab: shows TeacherProfileView with an inline Edit toggle */
 function ProfileTabWithEdit({
-  teacher, allLocations, assignedLocationIds, capacitySlots, studentCount, onSaved,
+  teacher, allLocations, assignedLocationIds, activeAvailabilityLocationIds, capacitySlots, studentCount, onSaved,
 }: {
   teacher: TeacherRaw;
   allLocations: Location[];
   assignedLocationIds: string[];
+  activeAvailabilityLocationIds: string[];
   capacitySlots: number | null;
   studentCount: number | null;
   onSaved: () => void;
 }) {
   const [editing, setEditing] = React.useState(false);
+  // Header pills: show only locations with at least one active availability row.
+  // Fall back to assignedLocationIds if no availability data exists yet.
+  const headerLocations = activeAvailabilityLocationIds.length > 0
+    ? allLocations.filter(l => activeAvailabilityLocationIds.includes(l.id))
+    : allLocations.filter(l => assignedLocationIds.includes(l.id));
   return (
     <div className="space-y-4">
       {/* Edit / Cancel toggle */}
@@ -1338,7 +1344,7 @@ function ProfileTabWithEdit({
       ) : (
         <TeacherProfileView
           teacher={teacher}
-          locations={allLocations.filter(l => assignedLocationIds.includes(l.id))}
+          locations={headerLocations}
           capacitySlots={capacitySlots}
           studentCount={studentCount}
         />
@@ -1354,6 +1360,8 @@ export function TeacherDetailClient() {
   const [allLocations, setAllLocations] = React.useState<Location[]>([]);
   const [assignedLocationIds, setAssignedLocationIds] = React.useState<string[]>([]);
   const [availabilitySlots, setAvailabilitySlots] = React.useState<AvailabilitySlot[]>([]);
+  // Location IDs that have at least one active availability row (drives header pills)
+  const [activeAvailabilityLocationIds, setActiveAvailabilityLocationIds] = React.useState<string[]>([]);
   const [studentCount, setStudentCount] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState<string | null>(null);
@@ -1375,6 +1383,12 @@ export function TeacherDetailClient() {
       setAssignedLocationIds(assigned.map((a: { location_id?: string; id?: string }) => a.location_id ?? a.id ?? "").filter(Boolean));
       const avail = Array.isArray(availRes.data) ? availRes.data : [];
       setAvailabilitySlots(avail);
+      // Extract unique location IDs from availability slots (locationId piggybacked in `notes` field from rowTo)
+      type RawAvailSlot = { locationId?: string | null; notes?: string | null };
+      const availLocIds = [...new Set(
+        (avail as RawAvailSlot[]).map(s => s.locationId ?? s.notes ?? "").filter(Boolean)
+      )];
+      setActiveAvailabilityLocationIds(availLocIds);
       const studsRaw: { id: string }[] = Array.isArray(studentsRes.data) ? studentsRes.data : Array.isArray(studentsRes) ? studentsRes : [];
       const uniqueStudentIds = new Set(studsRaw.map((s: { id: string }) => s.id));
       setStudentCount(uniqueStudentIds.size);
@@ -1426,6 +1440,7 @@ export function TeacherDetailClient() {
                   teacher={teacher}
                   allLocations={allLocations}
                   assignedLocationIds={assignedLocationIds}
+                  activeAvailabilityLocationIds={activeAvailabilityLocationIds}
                   capacitySlots={capacitySlots}
                   studentCount={studentCount}
                   onSaved={() => void load()}
