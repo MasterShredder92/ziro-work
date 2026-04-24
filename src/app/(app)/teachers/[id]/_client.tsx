@@ -755,11 +755,15 @@ function isDayLocked(day: DayKey, locationId: string): boolean {
   return false;
 }
 
+// Ghost location ID from Square API sync — never render this
+const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
+
+type GlobalLocation = { id: string; name: string; color?: string | null };
 type LocAssignment = {
   location_id: string;
   is_regular: boolean;
   can_sub: boolean;
-  location: { id: string; name: string; color?: string | null } | null;
+  location: GlobalLocation | null;
 };
 type TimeBlock = { start_time: string; end_time: string };
 type DaySlots = Record<DayKey, TimeBlock[]>;
@@ -796,7 +800,10 @@ function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onCha
 }
 
 function AvailabilityTab({ teacherId }: { teacherId: string }) {
-  const [assignments, setAssignments] = React.useState<LocAssignment[]>([]);
+  // allLocations = global company locations (always 4, ghost filtered)
+  const [allLocations, setAllLocations] = React.useState<GlobalLocation[]>([]);
+  // assignmentMap = teacher's actual teacher_locations rows, keyed by location_id
+  const [assignmentMap, setAssignmentMap] = React.useState<Record<string, LocAssignment>>({});
   const [schedule, setSchedule] = React.useState<LocSchedule>({});
   const [masterToggles, setMasterToggles] = React.useState<MasterToggles>({});
   const [loading, setLoading] = React.useState(true);
@@ -808,19 +815,30 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
   React.useEffect(() => {
     setLoading(true);
     Promise.all([
+      // Step 1: global company locations (source of truth for rendering)
+      fetch(`/api/locations?tenantId=00000000-0000-0000-0000-000000000001`).then(r => r.json()).catch(() => ({ data: [] })),
+      // Step 2: teacher's specific assignments
       fetch(`/api/crm/teachers/${teacherId}/locations`).then(r => r.json()).catch(() => ({ data: [] })),
+      // Step 3: existing availability slots
       fetch(`/api/crm/teachers/${teacherId}/availability`).then(r => r.json()).catch(() => ({ data: { slots: [] } })),
-    ]).then(([locRes, availRes]) => {
-      const locs: LocAssignment[] = Array.isArray(locRes.data) ? locRes.data : [];
-      setAssignments(locs);
-      // Build schedule map from existing slots
+    ]).then(([globalRes, assignedRes, availRes]) => {
+      // Filter ghost and build global location list
+      const globals: GlobalLocation[] = (Array.isArray(globalRes.data) ? globalRes.data : [])
+        .filter((l: GlobalLocation) => l.id !== GHOST_LOCATION_ID);
+      setAllLocations(globals);
+
+      // Build assignment map keyed by location_id
+      const assigned: LocAssignment[] = Array.isArray(assignedRes.data) ? assignedRes.data : [];
+      const aMap: Record<string, LocAssignment> = {};
+      for (const a of assigned) { aMap[a.location_id] = a; }
+      setAssignmentMap(aMap);
+
+      // Build schedule map — seed all global locations
       const rawSlots: Array<{ dayOfWeek: string|number; startTime: string; endTime: string; locationId?: string|null }> =
         Array.isArray(availRes.data?.slots) ? availRes.data.slots :
         Array.isArray(availRes.data) ? availRes.data : [];
       const sched: LocSchedule = {};
-      for (const loc of locs) {
-        sched[loc.location_id] = emptyDaySlots();
-      }
+      for (const loc of globals) { sched[loc.id] = emptyDaySlots(); }
       for (const slot of rawSlots) {
         const locId = slot.locationId ?? "";
         const dayRaw = String(slot.dayOfWeek);
@@ -832,11 +850,13 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
         sched[locId][dayStr].push({ start_time: slot.startTime?.slice(0,5) ?? "", end_time: slot.endTime?.slice(0,5) ?? "" });
       }
       setSchedule(sched);
-      // Auto-open master toggle for locations that have existing availability data
+
+      // Master toggle: ON if teacher is assigned + has data or is_regular/can_sub
       const toggles: MasterToggles = {};
-      for (const loc of locs) {
-        const hasData = rawSlots.some(s => s.locationId === loc.location_id);
-        toggles[loc.location_id] = hasData || loc.is_regular || loc.can_sub;
+      for (const loc of globals) {
+        const a = aMap[loc.id];
+        const hasData = rawSlots.some(s => s.locationId === loc.id);
+        toggles[loc.id] = !!(a && (hasData || a.is_regular || a.can_sub));
       }
       setMasterToggles(toggles);
     }).finally(() => setLoading(false));
@@ -845,22 +865,57 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
   async function patchLocToggle(locationId: string, field: "is_regular"|"can_sub", value: boolean) {
     setPatchingLoc(locationId);
     try {
-      await fetch(`/api/crm/teachers/${teacherId}/locations`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location_id: locationId, [field]: value }),
-      });
-      setAssignments(prev => prev.map(a => a.location_id === locationId ? { ...a, [field]: value } : a));
+      // If teacher not yet assigned to this location, POST first
+      if (!assignmentMap[locationId]) {
+        const postRes = await fetch(`/api/crm/teachers/${teacherId}/locations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ location_id: locationId, [field]: value }),
+        });
+        if (postRes.ok) {
+          const body = await postRes.json() as { data?: LocAssignment };
+          if (body.data) {
+            setAssignmentMap(prev => ({ ...prev, [locationId]: body.data! }));
+          }
+        }
+      } else {
+        await fetch(`/api/crm/teachers/${teacherId}/locations`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ location_id: locationId, [field]: value }),
+        });
+        setAssignmentMap(prev => ({
+          ...prev,
+          [locationId]: { ...prev[locationId], [field]: value },
+        }));
+      }
       if (value && !schedule[locationId]) {
         setSchedule(prev => ({ ...prev, [locationId]: emptyDaySlots() }));
       }
     } finally { setPatchingLoc(null); }
   }
 
-  function toggleMaster(locId: string, value: boolean) {
+  async function toggleMaster(locId: string, value: boolean) {
     setMasterToggles(prev => ({ ...prev, [locId]: value }));
     if (value && !schedule[locId]) {
       setSchedule(prev => ({ ...prev, [locId]: emptyDaySlots() }));
+    }
+    // If toggling ON a location the teacher isn't assigned to yet, create the assignment
+    if (value && !assignmentMap[locId]) {
+      setPatchingLoc(locId);
+      try {
+        const postRes = await fetch(`/api/crm/teachers/${teacherId}/locations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ location_id: locId, is_regular: false, can_sub: false }),
+        });
+        if (postRes.ok) {
+          const body = await postRes.json() as { data?: LocAssignment };
+          if (body.data) {
+            setAssignmentMap(prev => ({ ...prev, [locId]: body.data! }));
+          }
+        }
+      } finally { setPatchingLoc(null); }
     }
   }
 
@@ -929,21 +984,24 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
     } finally { setSaving(false); }
   }
 
-  if (loading) return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />)}</div>;
-  if (assignments.length === 0) return <div className="text-sm text-[#505055]">No locations assigned to this teacher. Add locations in the Profile tab first.</div>;
+  if (loading) return <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />)}</div>;
+  if (allLocations.length === 0) return <div className="text-sm text-[#505055]">No company locations found.</div>;
 
   return (
     <div className="space-y-4">
-      {/* Google-style location cards with master toggle + day matrix */}
-      {assignments.map(a => {
-        const locName = a.location?.name ?? a.location_id;
-        const locColor = a.location?.color ?? "#00ff88";
-        const isPatching = patchingLoc === a.location_id;
-        const masterOn = masterToggles[a.location_id] ?? false;
-        const dayMap = schedule[a.location_id] ?? emptyDaySlots();
+      {/* Map over ALL global locations — assigned ones active, unassigned dormant */}
+      {allLocations.map(loc => {
+        const assignment = assignmentMap[loc.id];
+        const locName = loc.name;
+        const locColor = loc.color ?? "#00ff88";
+        const isPatching = patchingLoc === loc.id;
+        const masterOn = masterToggles[loc.id] ?? false;
+        const dayMap = schedule[loc.id] ?? emptyDaySlots();
+        const isRegular = assignment?.is_regular ?? false;
+        const canSub = assignment?.can_sub ?? false;
         return (
           <div
-            key={a.location_id}
+            key={loc.id}
             className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] overflow-hidden"
             style={{ borderLeftColor: locColor, borderLeftWidth: 3 }}
           >
@@ -951,17 +1009,17 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[#1c1c1e]">
               <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: locColor }} />
               <span className="text-sm font-bold text-white flex-1">{locName}</span>
-              {/* is_regular / can_sub micro-toggles */}
-              <div className="flex items-center gap-3 mr-4">
+              {/* is_regular / can_sub micro-toggles — only meaningful when assigned */}
+              <div className={`flex items-center gap-3 mr-4 transition-opacity ${masterOn ? "opacity-100" : "opacity-30 pointer-events-none"}`}>
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" disabled={isPatching} checked={a.is_regular}
-                    onChange={e => void patchLocToggle(a.location_id, "is_regular", e.target.checked)}
+                  <input type="checkbox" disabled={isPatching} checked={isRegular}
+                    onChange={e => void patchLocToggle(loc.id, "is_regular", e.target.checked)}
                     className="h-3.5 w-3.5 accent-[#00ff88]" />
                   <span className="text-xs text-[#909098]">Regular</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" disabled={isPatching} checked={a.can_sub}
-                    onChange={e => void patchLocToggle(a.location_id, "can_sub", e.target.checked)}
+                  <input type="checkbox" disabled={isPatching} checked={canSub}
+                    onChange={e => void patchLocToggle(loc.id, "can_sub", e.target.checked)}
                     className="h-3.5 w-3.5 accent-[#00ff88]" />
                   <span className="text-xs text-[#909098]">Can Sub</span>
                 </label>
@@ -969,14 +1027,14 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
               {/* Master toggle */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[#505055]">{masterOn ? "Schedule Active" : "Dormant"}</span>
-                <ToggleSwitch checked={masterOn} onChange={v => toggleMaster(a.location_id, v)} />
+                <ToggleSwitch checked={masterOn} onChange={v => void toggleMaster(loc.id, v)} disabled={isPatching} />
               </div>
             </div>
 
             {/* Schedule matrix — grayed out when master toggle is OFF */}
             <div className={`divide-y divide-[#1c1c1e] transition-opacity ${masterOn ? "opacity-100" : "opacity-30 pointer-events-none"}`}>
               {DAYS.map(day => {
-                const locked = isDayLocked(day, a.location_id);
+                const locked = isDayLocked(day, loc.id);
                 const blocks = dayMap[day] ?? [];
                 const dayOn = blocks.length > 0;
                 return (
@@ -987,7 +1045,7 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
                         type="checkbox"
                         disabled={locked}
                         checked={dayOn}
-                        onChange={e => !locked && toggleDay(a.location_id, day, e.target.checked)}
+                        onChange={e => !locked && toggleDay(loc.id, day, e.target.checked)}
                         className="h-3.5 w-3.5 accent-[#00ff88] cursor-pointer"
                       />
                       <span className={`text-sm font-medium ${
@@ -1010,26 +1068,26 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
                               <input
                                 type="time"
                                 value={block.start_time}
-                                onChange={e => updateBlock(a.location_id, day, idx, "start_time", e.target.value)}
+                                onChange={e => updateBlock(loc.id, day, idx, "start_time", e.target.value)}
                                 className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none"
                               />
                               <span className="text-xs text-[#505055]">to</span>
                               <input
                                 type="time"
                                 value={block.end_time}
-                                onChange={e => updateBlock(a.location_id, day, idx, "end_time", e.target.value)}
+                                onChange={e => updateBlock(loc.id, day, idx, "end_time", e.target.value)}
                                 className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none"
                               />
                               <button
                                 type="button"
-                                onClick={() => removeBlock(a.location_id, day, idx)}
+                                onClick={() => removeBlock(loc.id, day, idx)}
                                 className="text-xs text-[#505055] hover:text-red-400 px-1"
                               >✕</button>
                             </div>
                           ))}
                           <button
                             type="button"
-                            onClick={() => addBlock(a.location_id, day)}
+                            onClick={() => addBlock(loc.id, day)}
                             className="text-xs text-[#00ff88] hover:text-[#00ff88]/70 font-semibold mt-1"
                           >+ Add Hours</button>
                         </div>
