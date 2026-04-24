@@ -44,9 +44,12 @@ type W9Record = {
   signed_at: string; status: string; pdf_url?: string | null;
 };
 
-const inputCls = "w-full rounded-xl border border-[#1c1c1e] bg-[#111113] px-3 py-2.5 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/40 focus:outline-none";
-const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[#505055] mb-1";
-const sectionCls = "rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4 space-y-3";
+const inputCls = "w-full rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] px-3 py-2.5 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/40 focus:outline-none transition-colors";
+const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1";
+const sectionCls = "rounded-xl border border-[var(--z-border)] bg-[var(--z-surface,#101012)] p-4 space-y-3";
+// Premium card with Ziro Green left-edge highlight
+const premiumCardCls = "rounded-xl border border-[var(--z-border)] bg-[var(--z-surface,#101012)] overflow-hidden";
+const premiumCardStyle = { borderLeftColor: "#00ff88", borderLeftWidth: 3 } as React.CSSProperties;
 
 /** Parse "HH:MM:SS" or "HH:MM" into total minutes */
 function timeToMinutes(t: string): number {
@@ -86,62 +89,97 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
   ];
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4">
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#1a1a1e]">
+      {/* Hero card: avatar + name + role + location pills */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16,
+        borderRadius: 12, border: "1px solid var(--z-border)",
+        borderLeft: "3px solid #00ff88",
+        background: "var(--z-surface, #101012)",
+        padding: 16,
+        boxShadow: "0 4px 20px rgba(0,255,136,0.06)",
+      }}>
+        <div style={{
+          position: "relative", width: 64, height: 64, flexShrink: 0,
+          borderRadius: "50%", overflow: "hidden",
+          background: "radial-gradient(circle at 35% 35%, rgba(0,255,136,0.25), rgba(0,255,136,0.08))",
+          border: "1.5px solid rgba(0,255,136,0.3)",
+          boxShadow: "0 2px 12px rgba(0,255,136,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
           {teacher.photo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={teacher.photo_url} alt={displayName} className="h-full w-full object-cover" />
+            <img src={teacher.photo_url} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xl font-bold text-[#00ff88]">{displayName.charAt(0).toUpperCase()}</div>
+            <span style={{ fontSize: 22, fontWeight: 800, color: "#00ff88" }}>{displayName.charAt(0).toUpperCase()}</span>
           )}
         </div>
-        <div>
-          <div className="text-lg font-bold text-white">{displayName}</div>
-          {teacher.teacher_role && <div className="text-sm text-[#505055]">{teacher.teacher_role}</div>}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "var(--z-fg)" }}>{displayName}</div>
+          {teacher.teacher_role && <div style={{ fontSize: 12, color: "var(--z-muted)", marginTop: 2 }}>{teacher.teacher_role}</div>}
           {locations.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {locations.map(l => <span key={l.id} className="rounded-full bg-[#00ff88]/10 px-2 py-0.5 text-xs font-semibold text-[#00ff88]">{l.name}</span>)}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+              {locations.map(l => (
+                <span key={l.id} style={{
+                  fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                  background: "rgba(0,255,136,0.1)", color: "#00ff88",
+                }}>{l.name.replace(/music lessons?/i, "").trim()}</span>
+              ))}
             </div>
           )}
         </div>
       </div>
-      <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] divide-y divide-[#1c1c1e]">
-        {rows.map(({ label, value }) => (
-          <div key={label} className="flex items-center justify-between px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">{label}</span>
-            <span className="text-sm text-white">{value ?? <span className="text-[#303035]">—</span>}</span>
+
+      {/* Data rows */}
+      <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+        {rows.map(({ label, value }, i) => (
+          <div key={label} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 16px",
+            borderBottom: i < rows.length - 1 ? "1px solid var(--z-border)" : "none",
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{label}</span>
+            <span style={{ fontSize: 13, color: value ? "var(--z-fg)" : "var(--z-border)" }}>{value ?? "—"}</span>
           </div>
         ))}
       </div>
+
       {/* Instruments */}
       {(teacher.instruments?.length || teacher.primary_instruments || teacher.secondary_instruments) && (
-        <div className={sectionCls}>
-          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Instruments</div>
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>Instruments</div>
           {(teacher.instruments?.length || teacher.primary_instruments) && (
             <div>
-              <div className="text-xs text-[#505055] mb-1">Primary</div>
+              <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Primary</div>
               <div className="flex flex-wrap gap-2">
-                {(teacher.instruments ?? []).map(inst => <span key={inst} className="rounded-full border border-[#1c1c1e] bg-[#111113] px-3 py-1 text-xs text-white">{inst}</span>)}
-                {teacher.primary_instruments && teacher.primary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#00ff88]/30 bg-[#00ff88]/5 px-3 py-1 text-xs text-[#00ff88]">{i}</span>)}
+                {(teacher.instruments ?? []).map(inst => (
+                  <span key={inst} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.1)", color: "#00ff88" }}>{inst}</span>
+                ))}
+                {teacher.primary_instruments && teacher.primary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => (
+                  <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.08)", color: "#00ff88" }}>{i}</span>
+                ))}
               </div>
             </div>
           )}
           {teacher.secondary_instruments && (
             <div>
-              <div className="text-xs text-[#505055] mb-1">Secondary / Can Cover</div>
+              <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Secondary / Can Cover</div>
               <div className="flex flex-wrap gap-2">
-                {teacher.secondary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-1 text-xs text-[#a0a0aa]">{i}</span>)}
+                {teacher.secondary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => (
+                  <span key={i} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: "var(--z-border)", color: "var(--z-muted)" }}>{i}</span>
+                ))}
               </div>
             </div>
           )}
           {teacher.skill_levels_by_instrument && (
-            <div><div className="text-xs text-[#505055] mb-0.5">Skill Levels</div><div className="text-sm text-white">{teacher.skill_levels_by_instrument}</div></div>
+            <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Skill Levels</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.skill_levels_by_instrument}</div></div>
           )}
           {teacher.style_genre_strengths && (
             <div>
-              <div className="text-xs text-[#505055] mb-1">Style / Genre Strengths</div>
+              <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Style / Genre Strengths</div>
               <div className="flex flex-wrap gap-2">
-                {teacher.style_genre_strengths.split(',').map(s => s.trim()).filter(Boolean).map(s => <span key={s} className="rounded-full border border-[#1c1c1e] bg-[#111113] px-3 py-1 text-xs text-[#a0a0aa]">{s}</span>)}
+                {teacher.style_genre_strengths.split(',').map(s => s.trim()).filter(Boolean).map(s => (
+                  <span key={s} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: "var(--z-border)", color: "var(--z-muted)" }}>{s}</span>
+                ))}
               </div>
             </div>
           )}
@@ -150,34 +188,36 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
 
       {/* Teaching Profile */}
       {(teacher.bio || teacher.personality || teacher.lesson_style || teacher.teaching_strengths || teacher.musical_strengths_background) && (
-        <div className={sectionCls}>
-          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Teaching Profile</div>
-          {teacher.bio && <div><div className="text-xs text-[#505055] mb-0.5">Bio</div><div className="text-sm text-white">{teacher.bio}</div></div>}
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>Teaching Profile</div>
+          {teacher.bio && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Bio</div><div style={{ fontSize: 13, color: "var(--z-fg)", lineHeight: 1.55 }}>{teacher.bio}</div></div>}
           {teacher.personality && (
             <div>
-              <div className="text-xs text-[#505055] mb-1">Personality</div>
+              <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Personality</div>
               <div className="flex flex-wrap gap-2">
-                {teacher.personality.split(',').map(p => p.trim()).filter(Boolean).map(p => <span key={p} className="rounded-full border border-[#505055]/40 bg-[#1a1a1e] px-3 py-1 text-xs text-white">{p}</span>)}
+                {teacher.personality.split(',').map(p => p.trim()).filter(Boolean).map(p => (
+                  <span key={p} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: "var(--z-border)", color: "var(--z-fg)" }}>{p}</span>
+                ))}
               </div>
             </div>
           )}
-          {teacher.lesson_style && <div><div className="text-xs text-[#505055] mb-0.5">Lesson Style</div><div className="text-sm text-white">{teacher.lesson_style}</div></div>}
-          {teacher.teaching_strengths && <div><div className="text-xs text-[#505055] mb-0.5">Teaching Strengths</div><div className="text-sm text-white">{teacher.teaching_strengths}</div></div>}
-          {teacher.musical_strengths_background && <div><div className="text-xs text-[#505055] mb-0.5">Musical Background</div><div className="text-sm text-white">{teacher.musical_strengths_background}</div></div>}
+          {teacher.lesson_style && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Lesson Style</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.lesson_style}</div></div>}
+          {teacher.teaching_strengths && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Teaching Strengths</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.teaching_strengths}</div></div>}
+          {teacher.musical_strengths_background && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Musical Background</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.musical_strengths_background}</div></div>}
         </div>
       )}
 
       {/* Student Matching */}
       {(teacher.preferred_age_range || teacher.acceptable_age_range || teacher.best_first_lesson_fit || teacher.best_match_students || teacher.customer_facing_match_summary) && (
-        <div className={sectionCls}>
-          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Student Matching</div>
-          {teacher.customer_facing_match_summary && <div><div className="text-xs text-[#505055] mb-0.5">Summary</div><div className="text-sm text-white">{teacher.customer_facing_match_summary}</div></div>}
-          {teacher.preferred_age_range && <div><div className="text-xs text-[#505055] mb-0.5">Preferred Age Range</div><div className="text-sm text-white">{teacher.preferred_age_range}</div></div>}
-          {teacher.acceptable_age_range && <div><div className="text-xs text-[#505055] mb-0.5">Acceptable Age Range</div><div className="text-sm text-white">{teacher.acceptable_age_range}</div></div>}
-          {teacher.best_first_lesson_fit && <div><div className="text-xs text-[#505055] mb-0.5">Best First Lesson Fit</div><div className="text-sm text-white">{teacher.best_first_lesson_fit}</div></div>}
-          {teacher.best_match_students && <div><div className="text-xs text-[#505055] mb-0.5">Best Match Students</div><div className="text-sm text-white">{teacher.best_match_students}</div></div>}
-          {teacher.meet_and_greet_fit && <div><div className="text-xs text-[#505055] mb-0.5">Meet &amp; Greet Fit</div><div className="text-sm text-white">{teacher.meet_and_greet_fit}</div></div>}
-          {teacher.substitute_coverage && <div><div className="text-xs text-[#505055] mb-0.5">Substitute Coverage</div><div className="text-sm text-white">{teacher.substitute_coverage}</div></div>}
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>Student Matching</div>
+          {teacher.customer_facing_match_summary && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Summary</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.customer_facing_match_summary}</div></div>}
+          {teacher.preferred_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Preferred Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.preferred_age_range}</div></div>}
+          {teacher.acceptable_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Acceptable Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.acceptable_age_range}</div></div>}
+          {teacher.best_first_lesson_fit && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Best First Lesson Fit</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.best_first_lesson_fit}</div></div>}
+          {teacher.best_match_students && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Best Match Students</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.best_match_students}</div></div>}
+          {teacher.meet_and_greet_fit && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Meet &amp; Greet Fit</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.meet_and_greet_fit}</div></div>}
+          {teacher.substitute_coverage && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Substitute Coverage</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.substitute_coverage}</div></div>}
         </div>
       )}
 
@@ -226,21 +266,21 @@ function ContractModule({ teacher }: { teacher: TeacherRaw }) {
         )}
       </div>
       {/* Info rows */}
-      <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] divide-y divide-[#1c1c1e]">
+      <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
         {[
           { label: "Contract Status", value: teacher.contract_status ?? "Not on file" },
           { label: "Tax Classification", value: "1099 Independent Contractor" },
           { label: "W9 Status", value: teacher.w9_status ?? "Not submitted" },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex items-center justify-between px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">{label}</span>
-            <span className="text-sm text-white">{value}</span>
+        ].map(({ label, value }, i, arr) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: i < arr.length - 1 ? "1px solid var(--z-border)" : "none" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{label}</span>
+            <span style={{ fontSize: 13, color: "var(--z-fg)" }}>{value}</span>
           </div>
         ))}
       </div>
       {!teacher.contract_pdf_url && (
-        <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4">
-          <p className="text-sm text-[#505055]">No contract PDF on file. Upload a signed contract to the teacher&apos;s record to store it here.</p>
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", background: "var(--z-surface, #101012)", padding: 16 }}>
+          <p style={{ fontSize: 13, color: "var(--z-muted)" }}>No contract PDF on file. Upload a signed contract to the teacher&apos;s record to store it here.</p>
         </div>
       )}
     </div>
@@ -385,12 +425,12 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         <div><label className={labelCls}>Hire Date</label><input className={inputCls} type="date" value={hireDate} onChange={e => setHireDate(e.target.value)} /></div>
       </div>
       <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Compensation</div>
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--z-muted)]">Compensation</div>
         <div>
           <label className={labelCls}>Rate / Block ($)</label>
           <input className={inputCls} type="number" min="0" step="0.01" value={ratePerBlock} onChange={e => setRatePerBlock(e.target.value)} placeholder="0.00" />
         </div>
-        <div className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2.5 text-xs text-[#505055]">
+        <div className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] px-3 py-2.5 text-xs text-[var(--z-muted)]">
           All teachers are <span className="font-semibold text-[#00ff88]">1099 independent contractors</span>. Capacity is auto-calculated from their weekly availability schedule.
         </div>
         <label className="flex items-center gap-2 cursor-pointer">
@@ -400,11 +440,11 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
       </div>
       {allLocations.length > 0 && (
         <div className={sectionCls}>
-          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Locations</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-[var(--z-muted)]">Locations</div>
           <div className="flex flex-wrap gap-2">
             {allLocations.map(loc => (
               <button key={loc.id} type="button" onClick={() => toggleLocation(loc.id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${selectedLocations.includes(loc.id) ? "bg-[#00ff88] text-black" : "border border-[#1c1c1e] bg-[#111113] text-[#909098] hover:border-[#00ff88]/30"}`}>
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${selectedLocations.includes(loc.id) ? "bg-[#00ff88] text-black" : "border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] text-[var(--z-muted)] hover:border-[#00ff88]/30"}`}>
                 {loc.name}
               </button>
             ))}
@@ -417,13 +457,13 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         <div><label className={labelCls}>Primary Instruments</label><input className={inputCls} value={primaryInstruments} onChange={e => setPrimaryInstruments(e.target.value)} placeholder="Guitar" /></div>
       </div>
       <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Meet Your Teacher — Family-Facing Profile</div>
-        <p className="text-[10px] text-[#505055] leading-relaxed">This section is shown to families on their profile page. Write it like you&apos;re introducing the teacher to a new parent — warm, personal, confidence-building.</p>
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--z-muted)]">Meet Your Teacher — Family-Facing Profile</div>
+        <p className="text-[10px] text-[var(--z-muted)] leading-relaxed">This section is shown to families on their profile page. Write it like you&apos;re introducing the teacher to a new parent — warm, personal, confidence-building.</p>
         <div>
           <label className={labelCls}>Profile Photo</label>
           {/* Avatar upload zone */}
           <div
-            className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[#1c1c1e] bg-[#0a0a0c] p-5 transition-colors hover:border-[#00ff88]/40 cursor-pointer"
+            className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] p-5 transition-colors hover:border-[#00ff88]/40 cursor-pointer"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -445,8 +485,8 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoUrl} alt="Teacher avatar" className="h-24 w-24 rounded-full object-cover border-2 border-[#00ff88]/40" />
             ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1a1a1e] border-2 border-[#1c1c1e]">
-                <svg className="h-10 w-10 text-[#303035]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--z-surface)] border-2 border-[var(--z-border)]">
+                <svg className="h-10 w-10 text-[var(--z-border-2,#2a2a2e)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
               </div>
@@ -455,8 +495,8 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
               <div className="text-xs text-[#00ff88] animate-pulse">Uploading…</div>
             ) : (
               <div className="text-center">
-                <div className="text-xs font-semibold text-[#505055]">Drag & drop or click to upload</div>
-                <div className="text-[10px] text-[#303035] mt-0.5">JPG, PNG, WebP, GIF · Max 5MB</div>
+                <div className="text-xs font-semibold text-[var(--z-muted)]">Drag & drop or click to upload</div>
+                <div className="text-[10px] text-[var(--z-border-2,#2a2a2e)] mt-0.5">JPG, PNG, WebP, GIF · Max 5MB</div>
               </div>
             )}
           </div>
@@ -473,7 +513,7 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         <div><label className={labelCls}>Musical Background</label><textarea className={inputCls} rows={2} value={musicalBackground} onChange={e => setMusicalBackground(e.target.value)} /></div>
       </div>
       <div className={sectionCls}>
-        <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Director Notes</div>
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--z-muted)]">Director Notes</div>
         <textarea className={inputCls} rows={3} value={directorNotes} onChange={e => setDirectorNotes(e.target.value)} placeholder="Internal notes for directors only…" />
       </div>
       {saveStatus === "success" && <p className="text-sm text-green-500">Teacher profile saved successfully.</p>}
@@ -598,25 +638,23 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
 
       {/* Existing W9 summary (read-only) */}
       {existingW9 && !showForm && (
-        <div className={sectionCls}>
-          <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">W-9 on File</div>
-          <div className="divide-y divide-[#1c1c1e]">
-            {[
-              { label: "Legal Name", value: existingW9.legal_name },
-              { label: "Business Name", value: existingW9.business_name },
-              { label: "Tax Classification", value: taxClassificationLabel[existingW9.tax_classification] ?? existingW9.tax_classification },
-              { label: "Address", value: `${existingW9.address}, ${existingW9.city}, ${existingW9.state} ${existingW9.zip}` },
-              { label: "TIN Type", value: existingW9.tin_type === "ssn" ? "SSN" : "EIN" },
-              { label: "TIN", value: `****${existingW9.tin_last_four}` },
-              { label: "Signed By", value: existingW9.signature_name },
-              { label: "Signed At", value: new Date(existingW9.signed_at).toLocaleDateString() },
-            ].filter(r => r.value).map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between py-2.5">
-                <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">{label}</span>
-                <span className="text-sm text-white">{value}</span>
-              </div>
-            ))}
-          </div>
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--z-border)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>W-9 on File</div>
+          {[
+            { label: "Legal Name", value: existingW9.legal_name },
+            { label: "Business Name", value: existingW9.business_name },
+            { label: "Tax Classification", value: taxClassificationLabel[existingW9.tax_classification] ?? existingW9.tax_classification },
+            { label: "Address", value: `${existingW9.address}, ${existingW9.city}, ${existingW9.state} ${existingW9.zip}` },
+            { label: "TIN Type", value: existingW9.tin_type === "ssn" ? "SSN" : "EIN" },
+            { label: "TIN", value: `****${existingW9.tin_last_four}` },
+            { label: "Signed By", value: existingW9.signature_name },
+            { label: "Signed At", value: new Date(existingW9.signed_at).toLocaleDateString() },
+          ].filter(r => r.value).map(({ label, value }, i, arr) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: i < arr.length - 1 ? "1px solid var(--z-border)" : "none" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{label}</span>
+              <span style={{ fontSize: 13, color: "var(--z-fg)" }}>{value}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -660,23 +698,23 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
             <div>
               <label className={labelCls}>{tinType === "ssn" ? "SSN" : "EIN"} *</label>
               <input className={inputCls} type="password" value={tin} onChange={e => setTin(e.target.value)} placeholder={tinType === "ssn" ? "XXX-XX-XXXX" : "XX-XXXXXXX"} autoComplete="off" />
-              <p className="mt-1 text-xs text-[#505055]">Encrypted and stored securely. Never displayed in plain text.</p>
+              <p className="mt-1 text-xs text-[var(--z-muted)]">Encrypted and stored securely. Never displayed in plain text.</p>
             </div>
           </div>
           <div className={sectionCls}>
-            <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Certification & Signature</div>
-            <p className="text-xs text-[#505055]">Under penalties of perjury, I certify that the TIN shown is my correct taxpayer identification number, I am not subject to backup withholding, and I am a U.S. citizen or other U.S. person.</p>
+            <div className="text-xs font-bold uppercase tracking-widest text-[var(--z-muted)]">Certification & Signature</div>
+            <p className="text-xs text-[var(--z-muted)]">Under penalties of perjury, I certify that the TIN shown is my correct taxpayer identification number, I am not subject to backup withholding, and I am a U.S. citizen or other U.S. person.</p>
             <div><label className={labelCls}>Signature (type full legal name) *</label><input className={inputCls} value={signatureName} onChange={e => setSignatureName(e.target.value)} placeholder="Type your full legal name to sign" /></div>
             <label className="flex items-start gap-2 cursor-pointer">
               <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#00ff88]" />
-              <span className="text-xs text-[#909098]">I certify under penalties of perjury that the information provided is true, correct, and complete.</span>
+              <span className="text-xs text-[var(--z-muted)]">I certify under penalties of perjury that the information provided is true, correct, and complete.</span>
             </label>
           </div>
           {saveStatus === "success" && <p className="text-sm text-green-500">W9 submitted successfully.</p>}
           {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
           <div className="flex gap-3">
             {existingW9 && (
-              <button onClick={() => { setShowForm(false); setSaveStatus("idle"); setSaveError(null); }} className="flex-1 rounded-xl border border-[#1c1c1e] py-3 text-sm font-semibold text-[#909098] hover:text-white">
+              <button onClick={() => { setShowForm(false); setSaveStatus("idle"); setSaveError(null); }} className="flex-1 rounded-xl border border-[var(--z-border)] py-3 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]">
                 Cancel
               </button>
             )}
@@ -721,13 +759,24 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
       <div className="text-xs text-[#505055] mb-2">{students.length} student{students.length !== 1 ? "s" : ""} assigned</div>
       {students.map(s => {
         const displayName = s.display_name ?? [s.first_name, s.last_name].filter(Boolean).join(" ") ?? "—";
+        const isActive = s.status?.toLowerCase() === "active" || s.status?.toLowerCase() === "enrolled";
         return (
-          <div key={s.id} className="flex items-center justify-between rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] px-4 py-3">
-            <div>
-              <div className="text-sm font-medium text-white">{displayName}</div>
-              {s.instrument && <div className="text-xs text-[#505055]">{s.instrument}</div>}
+          <div
+            key={s.id}
+            className={premiumCardCls}
+            style={premiumCardStyle}
+          >
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <div className="text-sm font-semibold text-[var(--z-fg)]">{displayName}</div>
+                {s.instrument && <div className="text-xs text-[var(--z-muted)] mt-0.5">{s.instrument}</div>}
+              </div>
+              {s.status && (
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  isActive ? "bg-[#00ff88]/10 text-[#00ff88]" : "bg-white/5 text-[var(--z-muted)]"
+                }`}>{s.status}</span>
+              )}
             </div>
-            {s.status && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status?.toLowerCase() === "active" || s.status?.toLowerCase() === "enrolled" ? "bg-[#00ff88]/10 text-[#00ff88]" : "bg-white/5 text-[#909098]"}`}>{s.status}</span>}
           </div>
         );
       })}
@@ -775,7 +824,7 @@ function emptyDaySlots(): DaySlots {
   return { monday:[], tuesday:[], wednesday:[], thursday:[], friday:[], saturday:[], sunday:[] };
 }
 
-// Toggle switch component (Google-style)
+// Premium toggle switch — smooth, no native browser chrome
 function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
@@ -784,16 +833,38 @@ function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onCha
       aria-checked={checked}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${
-        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-      } ${
-        checked ? "bg-[#00ff88]" : "bg-[#2a2a2e]"
-      }`}
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        border: "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        background: checked
+          ? "linear-gradient(135deg, #00ff88, #00cc6e)"
+          : "var(--z-border-2, #2a2a2e)",
+        boxShadow: checked ? "0 0 12px rgba(0,255,136,0.35)" : "none",
+        transition: "background 0.2s ease, box-shadow 0.2s ease",
+        flexShrink: 0,
+        outline: "none",
+        padding: 0,
+      }}
     >
       <span
-        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-[18px]" : "translate-x-[3px]"
-        }`}
+        style={{
+          position: "absolute",
+          top: 3,
+          left: checked ? 23 : 3,
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: checked ? "#001a0a" : "#909098",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+          transition: "left 0.2s ease, background 0.2s ease",
+        }}
       />
     </button>
   );
@@ -984,12 +1055,23 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
     } finally { setSaving(false); }
   }
 
-  if (loading) return <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />)}</div>;
-  if (allLocations.length === 0) return <div className="text-sm text-[#505055]">No company locations found.</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      {[1,2,3,4].map(i => (
+        <div key={i} style={{
+          height: 56, borderRadius: 12,
+          background: "linear-gradient(90deg, var(--z-surface) 25%, rgba(255,255,255,0.04) 50%, var(--z-surface) 75%)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.5s infinite",
+        }} />
+      ))}
+    </div>
+  );
+  if (allLocations.length === 0) return <div className="text-sm" style={{ color: "var(--z-muted)" }}>No company locations found.</div>;
 
   return (
-    <div className="space-y-4">
-      {/* Map over ALL global locations — assigned ones active, unassigned dormant */}
+    <div className="space-y-3">
+      {/* Map over ALL global locations — assigned ones expanded, unassigned collapsed/dormant */}
       {allLocations.map(loc => {
         const assignment = assignmentMap[loc.id];
         const locName = loc.name;
@@ -999,104 +1081,187 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
         const dayMap = schedule[loc.id] ?? emptyDaySlots();
         const isRegular = assignment?.is_regular ?? false;
         const canSub = assignment?.can_sub ?? false;
+        // Short location label for dormant state
+        const shortName = locName.replace(/music lessons?/i, "").trim();
         return (
           <div
             key={loc.id}
-            className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] overflow-hidden"
-            style={{ borderLeftColor: locColor, borderLeftWidth: 3 }}
+            style={{
+              borderRadius: 12,
+              border: masterOn ? `1px solid var(--z-border)` : `1px solid var(--z-border-2, #2a2a2e)`,
+              borderLeft: `3px solid ${masterOn ? locColor : "var(--z-border-2, #2a2a2e)"}`,
+              background: masterOn ? "var(--z-surface, #101012)" : "transparent",
+              overflow: "hidden",
+              opacity: masterOn ? 1 : 0.5,
+              transition: "box-shadow 0.2s ease, opacity 0.25s ease, background 0.25s ease, border-color 0.25s ease",
+              boxShadow: masterOn ? `0 4px 20px ${locColor}18` : "none",
+            }}
           >
-            {/* Card header: location name + master toggle + is_regular/can_sub */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#1c1c1e]">
-              <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: locColor }} />
-              <span className="text-sm font-bold text-white flex-1">{locName}</span>
-              {/* is_regular / can_sub micro-toggles — only meaningful when assigned */}
-              <div className={`flex items-center gap-3 mr-4 transition-opacity ${masterOn ? "opacity-100" : "opacity-30 pointer-events-none"}`}>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" disabled={isPatching} checked={isRegular}
-                    onChange={e => void patchLocToggle(loc.id, "is_regular", e.target.checked)}
-                    className="h-3.5 w-3.5 accent-[#00ff88]" />
-                  <span className="text-xs text-[#909098]">Regular</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" disabled={isPatching} checked={canSub}
-                    onChange={e => void patchLocToggle(loc.id, "can_sub", e.target.checked)}
-                    className="h-3.5 w-3.5 accent-[#00ff88]" />
-                  <span className="text-xs text-[#909098]">Can Sub</span>
-                </label>
+            {/* Card header: always visible */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "12px 16px",
+              borderBottom: masterOn ? `1px solid var(--z-border)` : "none",
+            }}>
+              {/* Location dot */}
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: locColor, flexShrink: 0 }} />
+              {/* Name + dormant badge */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--z-fg)" }}>{shortName}</span>
+                {!masterOn && (
+                  <span style={{
+                    marginLeft: 8, fontSize: 10, fontWeight: 600, padding: "1px 7px",
+                    borderRadius: 20, background: "var(--z-border)", color: "var(--z-muted)",
+                    letterSpacing: "0.05em", textTransform: "uppercase",
+                  }}>Dormant</span>
+                )}
               </div>
+              {/* is_regular / can_sub — only when active */}
+              {masterOn && (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginRight: 8 }}>
+                  {/* Premium checkbox: Regular */}
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: isPatching ? "not-allowed" : "pointer" }}>
+                    <span
+                      onClick={() => !isPatching && void patchLocToggle(loc.id, "is_regular", !isRegular)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                        border: `1.5px solid ${isRegular ? "#00ff88" : "var(--z-border-2, #2a2a2e)"}`,
+                        background: isRegular ? "#00ff88" : "transparent",
+                        transition: "all 0.15s ease",
+                        cursor: isPatching ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {isRegular && <span style={{ fontSize: 10, color: "#001a0a", fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500 }}>Regular</span>
+                  </label>
+                  {/* Premium checkbox: Can Sub */}
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: isPatching ? "not-allowed" : "pointer" }}>
+                    <span
+                      onClick={() => !isPatching && void patchLocToggle(loc.id, "can_sub", !canSub)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                        border: `1.5px solid ${canSub ? "#00ff88" : "var(--z-border-2, #2a2a2e)"}`,
+                        background: canSub ? "#00ff88" : "transparent",
+                        transition: "all 0.15s ease",
+                        cursor: isPatching ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {canSub && <span style={{ fontSize: 10, color: "#001a0a", fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500 }}>Can Sub</span>
+                  </label>
+                </div>
+              )}
               {/* Master toggle */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#505055]">{masterOn ? "Schedule Active" : "Dormant"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {isPatching && <span style={{ fontSize: 10, color: "var(--z-muted)" }}>Saving…</span>}
                 <ToggleSwitch checked={masterOn} onChange={v => void toggleMaster(loc.id, v)} disabled={isPatching} />
               </div>
             </div>
 
-            {/* Schedule matrix — grayed out when master toggle is OFF */}
-            <div className={`divide-y divide-[#1c1c1e] transition-opacity ${masterOn ? "opacity-100" : "opacity-30 pointer-events-none"}`}>
-              {DAYS.map(day => {
-                const locked = isDayLocked(day, loc.id);
-                const blocks = dayMap[day] ?? [];
-                const dayOn = blocks.length > 0;
-                return (
-                  <div key={day} className={`px-4 py-3 flex items-start gap-4 ${locked ? "opacity-40" : ""}`}>
-                    {/* Day checkbox */}
-                    <div className="flex items-center gap-2 w-32 shrink-0 pt-0.5">
-                      <input
-                        type="checkbox"
-                        disabled={locked}
-                        checked={dayOn}
-                        onChange={e => !locked && toggleDay(loc.id, day, e.target.checked)}
-                        className="h-3.5 w-3.5 accent-[#00ff88] cursor-pointer"
-                      />
-                      <span className={`text-sm font-medium ${
-                        locked ? "text-[#303035]" : dayOn ? "text-white" : "text-[#505055]"
-                      }`}>{DAY_LABELS[day]}</span>
-                      {locked && (
-                        <span className="ml-1 text-[10px] uppercase tracking-wider text-[#303035] font-bold">Closed</span>
-                      )}
-                    </div>
+            {/* Schedule matrix — only rendered when master toggle is ON (collapsed when dormant) */}
+            {masterOn && (
+              <div>
+                {DAYS.map((day, dayIdx) => {
+                  const locked = isDayLocked(day, loc.id);
+                  const blocks = dayMap[day] ?? [];
+                  const dayOn = blocks.length > 0;
+                  const isLast = dayIdx === DAYS.length - 1;
+                  return (
+                    <div
+                      key={day}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 16,
+                        padding: "10px 16px",
+                        borderBottom: isLast ? "none" : `1px solid var(--z-border)`,
+                        opacity: locked ? 0.35 : 1,
+                      }}
+                    >
+                      {/* Premium day checkbox */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, width: 128, flexShrink: 0, paddingTop: 2 }}>
+                        <span
+                          onClick={() => !locked && toggleDay(loc.id, day, !dayOn)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                            border: `1.5px solid ${dayOn && !locked ? "#00ff88" : "var(--z-border-2, #2a2a2e)"}`,
+                            background: dayOn && !locked ? "#00ff88" : "transparent",
+                            transition: "all 0.15s ease",
+                            cursor: locked ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {dayOn && !locked && <span style={{ fontSize: 10, color: "#001a0a", fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                        </span>
+                        <span style={{
+                          fontSize: 13, fontWeight: 500,
+                          color: locked ? "var(--z-border)" : dayOn ? "var(--z-fg)" : "var(--z-muted)",
+                        }}>{DAY_LABELS[day]}</span>
+                        {locked && (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: "var(--z-border)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Closed</span>
+                        )}
+                      </div>
 
-                    {/* Time blocks or Closed label */}
-                    <div className="flex-1">
-                      {!dayOn && !locked && (
-                        <span className="text-sm text-[#303035] italic">Closed</span>
-                      )}
-                      {dayOn && (
-                        <div className="space-y-2">
-                          {blocks.map((block, idx) => (
-                            <div key={idx} className="flex items-center gap-2 flex-wrap">
-                              <input
-                                type="time"
-                                value={block.start_time}
-                                onChange={e => updateBlock(loc.id, day, idx, "start_time", e.target.value)}
-                                className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none"
-                              />
-                              <span className="text-xs text-[#505055]">to</span>
-                              <input
-                                type="time"
-                                value={block.end_time}
-                                onChange={e => updateBlock(loc.id, day, idx, "end_time", e.target.value)}
-                                className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-2 py-1.5 text-xs text-white focus:border-[#00ff88]/40 focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeBlock(loc.id, day, idx)}
-                                className="text-xs text-[#505055] hover:text-red-400 px-1"
-                              >✕</button>
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => addBlock(loc.id, day)}
-                            className="text-xs text-[#00ff88] hover:text-[#00ff88]/70 font-semibold mt-1"
-                          >+ Add Hours</button>
-                        </div>
-                      )}
+                      {/* Time blocks or Closed label */}
+                      <div style={{ flex: 1 }}>
+                        {!dayOn && !locked && (
+                          <span style={{ fontSize: 12, color: "var(--z-border)", fontStyle: "italic" }}>Closed</span>
+                        )}
+                        {dayOn && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {blocks.map((block, idx) => (
+                              <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <input
+                                  type="time"
+                                  value={block.start_time}
+                                  onChange={e => updateBlock(loc.id, day, idx, "start_time", e.target.value)}
+                                  style={{
+                                    borderRadius: 8, border: "1px solid var(--z-border)",
+                                    background: "var(--z-surface-2, #0a0a0c)",
+                                    padding: "5px 10px", fontSize: 12,
+                                    color: "var(--z-fg)", outline: "none",
+                                  }}
+                                />
+                                <span style={{ fontSize: 11, color: "var(--z-muted)" }}>to</span>
+                                <input
+                                  type="time"
+                                  value={block.end_time}
+                                  onChange={e => updateBlock(loc.id, day, idx, "end_time", e.target.value)}
+                                  style={{
+                                    borderRadius: 8, border: "1px solid var(--z-border)",
+                                    background: "var(--z-surface-2, #0a0a0c)",
+                                    padding: "5px 10px", fontSize: 12,
+                                    color: "var(--z-fg)", outline: "none",
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeBlock(loc.id, day, idx)}
+                                  style={{ fontSize: 12, color: "var(--z-muted)", background: "none", border: "none", cursor: "pointer", padding: "0 4px" }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = "#ff3b6b")}
+                                  onMouseLeave={e => (e.currentTarget.style.color = "var(--z-muted)")}
+                                >✕</button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => addBlock(loc.id, day)}
+                              style={{ fontSize: 11, color: "#00ff88", background: "none", border: "none", cursor: "pointer", fontWeight: 700, textAlign: "left", padding: 0, marginTop: 2 }}
+                            >+ Add Hours</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}
@@ -1134,7 +1299,7 @@ function ProfileTabWithEdit({
           onClick={() => setEditing(e => !e)}
           className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
             editing
-              ? "border border-[#1c1c1e] text-[#909098] hover:text-white"
+              ? "border border-[var(--z-border)] text-[var(--z-muted)] hover:text-[var(--z-fg)]"
               : "bg-[#00ff88]/10 text-[#00ff88] hover:bg-[#00ff88]/20"
           }`}
         >
@@ -1216,16 +1381,16 @@ export function TeacherDetailClient() {
     <div className="h-full overflow-y-auto overflow-x-hidden p-[var(--z-space-6)]">
       <PageTransition>
         <div className="mx-auto max-w-6xl space-y-4">
-          {loading && <div className="text-sm text-[#505055]">Loading…</div>}
+          {loading && <div className="text-sm text-[var(--z-muted)]">Loading…</div>}
           {err && <div className="text-sm text-red-400">{err}</div>}
           {teacher && (
             <>
               <PageHeader title={displayName} subtitle={teacher.status ?? (teacher.is_active ? "active" : "inactive")} />
               {/* Tab Nav */}
-              <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">
+              <div className="flex gap-1 border-b border-[var(--z-border)] overflow-x-auto">
                 {TABS.map(t => (
                   <button key={t.id} onClick={() => setTab(t.id as Tab)}
-                    className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${tab === t.id ? "border-b-2 border-[#00ff88] text-[#00ff88]" : "text-[#505055] hover:text-[#909098]"}`}>
+                    className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${tab === t.id ? "border-b-2 border-[#00ff88] text-[#00ff88]" : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"}`}>
                     {t.label}
                     {t.id === "contract_w9" && teacher.w9_status !== "complete" && teacher.w9_status !== "signed" && (
                       <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-400 align-middle" />
