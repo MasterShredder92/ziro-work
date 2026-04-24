@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   }
 }
 
-const UpdateSchema = z.object({}).passthrough();
+const UpdateSchema = z.record(z.string(), z.unknown());
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
   const resolved = await resolveCRMContext(req, {
@@ -51,7 +51,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (!parsed.success) {
       return badRequest("Invalid update payload", parsed.error.flatten());
     }
-    const data = await updateStudent(id, resolved.context.tenantId, parsed.data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await updateStudent(id, resolved.context.tenantId, parsed.data as any);
     return ok({ data });
   } catch (err) {
     return serverError(err);

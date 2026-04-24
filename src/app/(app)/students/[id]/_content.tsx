@@ -7,13 +7,28 @@ import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 /* ─── Types ──────────────────────────────────────────────── */
 type StudentOverview = {
   id: string;
+  name: string;
+  first_name: string | null;
+  last_name: string | null;
+  instrument: string | null;
   bio: string | null;
   goals: string | null;
   learning_style: string | null;
   teacher_id: string | null;
   lesson_day_of_week: string | null;
   blocks_per_week: number | null;
-  rate_per_session: number | null;
+  experience_level: string | null;
+  status: string | null;
+};
+type StudentNote = {
+  id: string;
+  student_id: string;
+  author_id: string | null;
+  author_name: string | null;
+  author_role: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type TeacherName = {
@@ -26,14 +41,15 @@ type StudentFile = {
   id: string;
   file_name: string;
   file_size: number | null;
-  file_url: string;
+  file_url: string | null;
+  storage_path: string | null;
   folder: string;
   created_at: string;
   uploaded_by: string | null;
   uploaded_by_role: string | null;
 };
 
-type Tab = "overview" | "files" | "timeline";
+type Tab = "overview" | "files" | "notes" | "timeline";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function resolveTeacherName(t: TeacherName): string {
@@ -68,9 +84,10 @@ function formatDate(iso: string): string {
 
 /* ─── Tab nav ────────────────────────────────────────────── */
 const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "files", label: "Files" },
-  { id: "timeline", label: "Timeline" },
+  { id: "overview",  label: "Overview"  },
+  { id: "files",     label: "Files"     },
+  { id: "notes",     label: "Notes"     },
+  { id: "timeline",  label: "Timeline"  },
 ];
 
 function TabNav({
@@ -131,17 +148,7 @@ function Card({
 }
 
 /* ─── Edit button placeholder ────────────────────────────── */
-function EditButton() {
-  return (
-    <button
-      disabled
-      className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200 dark:text-zinc-400 dark:ring-zinc-700 transition-colors cursor-not-allowed opacity-60"
-      title="Edit — coming soon"
-    >
-      Edit
-    </button>
-  );
-}
+/* EditButton removed - LearningProfileCard now manages its own edit state */
 
 /* ─── Field row ──────────────────────────────────────────── */
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
@@ -158,14 +165,109 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 }
 
 /* ─── Learning Profile card ──────────────────────────────── */
-function LearningProfileCard({ student }: { student: StudentOverview }) {
+function LearningProfileCard({ student, onSaved }: { student: StudentOverview; onSaved: (updated: Partial<StudentOverview>) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [draftInstrument, setDraftInstrument] = useState(student.instrument ?? "");
+  const [draftBio, setDraftBio] = useState(student.bio ?? "");
+  const [draftGoals, setDraftGoals] = useState(student.goals ?? "");
+  const [draftStyle, setDraftStyle] = useState(student.learning_style ?? "");
+
+  function handleCancel() {
+    setDraftInstrument(student.instrument ?? "");
+    setDraftBio(student.bio ?? "");
+    setDraftGoals(student.goals ?? "");
+    setDraftStyle(student.learning_style ?? "");
+    setSaveError(null);
+    setEditing(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/crm/students/${student.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
+        body: JSON.stringify({
+          instrument: draftInstrument.trim() || null,
+          bio: draftBio.trim() || null,
+          goals: draftGoals.trim() || null,
+          learning_style: draftStyle.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? `Save failed (${res.status})`);
+      }
+      const j = await res.json();
+      onSaved({
+        instrument: j.data?.instrument ?? (draftInstrument.trim() || null),
+        bio: j.data?.bio ?? (draftBio.trim() || null),
+        goals: j.data?.goals ?? (draftGoals.trim() || null),
+        learning_style: j.data?.learning_style ?? (draftStyle.trim() || null),
+      });
+      setEditing(false);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const action = editing ? (
+    <div className="flex gap-2">
+      <button onClick={handleCancel} disabled={saving}
+        className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200 dark:text-zinc-400 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
+        Cancel
+      </button>
+      <button onClick={handleSave} disabled={saving}
+        className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50">
+        {saving ? "Saving..." : "Save"}
+      </button>
+    </div>
+  ) : (
+    <button onClick={() => setEditing(true)}
+      className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200 dark:text-zinc-400 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+      Edit
+    </button>
+  );
+
   return (
-    <Card title="Learning Profile" action={<EditButton />}>
-      <dl className="flex flex-col gap-4">
-        <Field label="Bio" value={student.bio} />
-        <Field label="Goals" value={student.goals} />
-        <Field label="Learning Style" value={student.learning_style} />
-      </dl>
+    <Card title="Learning Profile" action={action}>
+      {saveError && <p className="mb-3 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500">{saveError}</p>}
+      {editing ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Instrument</label>
+            <input value={draftInstrument} onChange={e => setDraftInstrument(e.target.value)} placeholder="e.g. Guitar, Drums, Piano"
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Bio</label>
+            <textarea value={draftBio} onChange={e => setDraftBio(e.target.value)} rows={3} placeholder="Brief background about the student..."
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none resize-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Goals</label>
+            <textarea value={draftGoals} onChange={e => setDraftGoals(e.target.value)} rows={3} placeholder="What does the student want to achieve?"
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none resize-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Learning Style</label>
+            <input value={draftStyle} onChange={e => setDraftStyle(e.target.value)} placeholder="e.g. Visual, Auditory, Hands-on"
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" />
+          </div>
+        </div>
+      ) : (
+        <dl className="flex flex-col gap-4">
+          <Field label="Instrument"     value={student.instrument} />
+          <Field label="Bio"            value={student.bio} />
+          <Field label="Goals"          value={student.goals} />
+          <Field label="Learning Style" value={student.learning_style} />
+        </dl>
+      )}
     </Card>
   );
 }
@@ -189,10 +291,8 @@ function EnrollmentDetailsCard({
           label="Blocks / Week"
           value={student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : null}
         />
-        <Field
-          label="Rate / Session"
-          value={student.rate_per_session !== null && student.rate_per_session !== undefined ? formatCurrency(student.rate_per_session) : null}
-        />
+        <Field label="Experience"    value={student.experience_level} />
+        <Field label="Status"        value={student.status} />
       </dl>
     </Card>
   );
@@ -263,7 +363,7 @@ function OverviewTab({ studentId }: { studentId: string }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <LearningProfileCard student={student} />
+      <LearningProfileCard student={student} onSaved={(updated) => setStudent((prev) => prev ? { ...prev, ...updated } : prev)} />
       <EnrollmentDetailsCard student={student} teacherName={teacherName} teacherLoading={teacherLoading} />
     </div>
   );
@@ -414,7 +514,7 @@ function UploadZone({
 }
 
 /* ─── File row ───────────────────────────────────────────── */
-function FileRow({ file }: { file: StudentFile }) {
+function FileRow({ file, studentId, onDeleted }: { file: StudentFile; studentId: string; onDeleted: (id: string) => void }) {
   function getFileIcon(name: string) {
     const ext = name.split(".").pop()?.toLowerCase() ?? "";
     if (["pdf"].includes(ext)) return "📄";
@@ -424,6 +524,15 @@ function FileRow({ file }: { file: StudentFile }) {
     if (["doc", "docx"].includes(ext)) return "📝";
     if (["xls", "xlsx", "csv"].includes(ext)) return "📊";
     return "📎";
+  }
+  async function handleDelete() {
+    if (!window.confirm(`Delete "${file.file_name}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/crm/students/${studentId}/files?fileId=${file.id}`, {
+      method: "DELETE",
+      headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+    });
+    if (res.ok) onDeleted(file.id);
+    else alert("Delete failed. Please try again.");
   }
 
   return (
@@ -448,26 +557,20 @@ function FileRow({ file }: { file: StudentFile }) {
         </p>
       </div>
 
-      {/* Action button */}
-      <a
-        href={file.file_url === "#stub" ? undefined : file.file_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Download ${file.file_name}`}
-        onClick={file.file_url === "#stub" ? (e) => e.preventDefault() : undefined}
-        className={[
-          "shrink-0 rounded-md p-1.5 transition-colors",
-          file.file_url === "#stub"
-            ? "cursor-not-allowed text-zinc-300 dark:text-zinc-700"
-            : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-700",
-        ].join(" ")}
-        title={file.file_url === "#stub" ? "Storage not yet wired" : "Download / View"}
-      >
-        {/* Download icon */}
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
-        </svg>
-      </a>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {file.file_url ? (
+          <a href={file.file_url} target="_blank" rel="noopener noreferrer"
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-100 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700 transition-colors">
+            View
+          </a>
+        ) : (
+          <span className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-400 ring-1 ring-zinc-200 opacity-50 dark:text-zinc-600 dark:ring-zinc-700 cursor-default">Unavailable</span>
+        )}
+        <button onClick={handleDelete}
+          className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+          style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
+          title="Delete file">🗑</button>
+      </div>
     </li>
   );
 }
@@ -563,7 +666,7 @@ function FilesTab({ studentId }: { studentId: string }) {
           ) : (
             <ul className="flex flex-col">
               {files.map((file) => (
-                <FileRow key={file.id} file={file} />
+                <FileRow key={file.id} file={file} studentId={studentId} onDeleted={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))} />
               ))}
             </ul>
           )}
@@ -722,6 +825,160 @@ function TimelineEmptyState() {
 }
 
 /* ─── Timeline tab ───────────────────────────────────────── */
+/* ─── Notes tab ──────────────────────────────────────────── */
+function NotesTab({ studentId }: { studentId: string }) {
+  const [notes, setNotes] = useState<StudentNote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!studentId) return;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/crm/students/${studentId}/notes`, {
+          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+        });
+        if (!res.ok) throw new Error(`Failed to load notes (${res.status})`);
+        const json = await res.json();
+        setNotes(json.data ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load notes");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [studentId]);
+
+  async function handleSubmit() {
+    if (!draft.trim()) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch(`/api/crm/students/${studentId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
+        body: JSON.stringify({ body: draft.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to save note");
+      setNotes((prev) => [json.data, ...prev]);
+      setDraft("");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to save note");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    if (!window.confirm("Delete this note? This cannot be undone.")) return;
+    const res = await fetch(`/api/crm/students/${studentId}/notes?noteId=${noteId}`, {
+      method: "DELETE",
+      headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+    });
+    if (res.ok) setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    else alert("Delete failed. Please try again.");
+  }
+
+  function formatDateTime(iso: string | null): string {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+    } catch { return iso; }
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Compose */}
+      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Add Note</h2>
+        </div>
+        <div className="px-5 py-4 flex flex-col gap-3">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            placeholder="Write a note about this student..."
+            className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none resize-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+          {submitError && <p className="text-xs text-red-500">{submitError}</p>}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !draft.trim()}
+              className="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? "Saving..." : "Save Note"}
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* Feed */}
+      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Note History
+            {!loading && notes.length > 0 && (
+              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                {notes.length}
+              </span>
+            )}
+          </h2>
+        </div>
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {loading ? (
+            <div className="flex flex-col gap-3 animate-pulse px-5 py-4">
+              {[0, 1, 2].map((i) => <div key={i} className="h-14 rounded-lg bg-zinc-100 dark:bg-zinc-800" />)}
+            </div>
+          ) : error ? (
+            <div className="px-5 py-4 text-sm text-red-400">{error}</div>
+          ) : notes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <p className="text-sm font-medium text-zinc-400 dark:text-zinc-600">No notes yet for this student</p>
+            </div>
+          ) : (
+            notes.map((note) => (
+              <div key={note.id} className="px-5 py-4 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      {note.author_name ?? "Unknown"}
+                    </span>
+                    {note.author_role && (
+                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium capitalize text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        {note.author_role}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-400 dark:text-zinc-600">{formatDateTime(note.created_at)}</span>
+                    <button
+                      onClick={() => handleDeleteNote(note.id)}
+                      className="rounded px-1.5 py-0.5 text-xs transition-colors"
+                      style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}
+                      title="Delete note"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{note.body}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TimelineTab({ studentId }: { studentId: string }) {
   const [logs, setLogs] = useState<SessionLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -795,9 +1052,10 @@ export function StudentOverviewContent() {
     <div className="flex flex-col gap-0">
       <TabNav active={activeTab} onChange={setActiveTab} />
       <div className="pt-5">
-        {activeTab === "overview" && <OverviewTab studentId={studentId} />}
-        {activeTab === "files" && <FilesTab studentId={studentId} />}
-        {activeTab === "timeline" && <TimelineTab studentId={studentId} />}
+        {activeTab === "overview"  && <OverviewTab  studentId={studentId} />}
+        {activeTab === "files"     && <FilesTab     studentId={studentId} />}
+        {activeTab === "notes"     && <NotesTab     studentId={studentId} />}
+        {activeTab === "timeline"  && <TimelineTab  studentId={studentId} />}
       </div>
     </div>
   );
