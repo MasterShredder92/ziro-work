@@ -3,9 +3,12 @@ import { EmptyState } from "@/components/system/SurfaceStates";
 import { weekWindowFromToday } from "@/lib/schedule/window";
 import { loadWindowedScheduleData } from "@/lib/schedule/windowedData";
 import { MultiLocationScheduleClient } from "./components/MultiLocationScheduleClient";
-import { resolveUserLocationAccess } from "@/lib/auth/locationAccess";
+import { getServiceClient } from "@/lib/supabase";
+import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const dynamic = "force-dynamic";
+
+const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
 
 export default async function ScheduleDashboardPage() {
   let ctx;
@@ -20,18 +23,28 @@ export default async function ScheduleDashboardPage() {
     );
   }
 
-  const access = await resolveUserLocationAccess({
-    session: ctx.session,
-    preferredLocationId: null,
-    autoRepairProfileLocation: true,
-  }).catch(() => ({
-    tenantId: ctx.tenantId,
-    profileId: ctx.session.profileId || ctx.session.userId,
-    locations: [],
-    selectedLocationId: null,
-  }));
+  // Log current session for debugging
+  console.log(
+    "CURRENT DEV SESSION ROLE:",
+    (ctx.session as Record<string, unknown>).role ?? "unknown",
+    (ctx.session as Record<string, unknown>).email ?? ctx.session.userId,
+  );
 
-  const locations = access.locations;
+  // Direct query — all active locations, ghost excluded, no profile_locations filter
+  const supabase = getServiceClient();
+  const tenantId = ctx.tenantId || DEFAULT_TENANT_ID;
+  const { data: rawLocations } = await supabase
+    .from("locations")
+    .select("id,name")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .neq("id", GHOST_LOCATION_ID)
+    .order("name", { ascending: true });
+
+  const locations = (rawLocations ?? []).map((l) => ({
+    id: String(l.id),
+    name: String(l.name ?? l.id),
+  }));
 
   if (locations.length === 0) {
     return (
@@ -48,7 +61,7 @@ export default async function ScheduleDashboardPage() {
   const locationDataEntries = await Promise.all(
     locations.map(async (loc) => {
       const data = await loadWindowedScheduleData({
-        tenantId: ctx.tenantId,
+        tenantId,
         locationId: loc.id,
         start: window.start,
         end: window.end,
