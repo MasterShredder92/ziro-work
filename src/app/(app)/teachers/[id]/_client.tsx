@@ -1314,11 +1314,10 @@ function ProfileTabWithEdit({
   onSaved: () => void;
 }) {
   const [editing, setEditing] = React.useState(false);
-  // Header pills: show only locations with at least one active availability row.
-  // Fall back to assignedLocationIds if no availability data exists yet.
-  const headerLocations = activeAvailabilityLocationIds.length > 0
-    ? allLocations.filter(l => activeAvailabilityLocationIds.includes(l.id))
-    : allLocations.filter(l => assignedLocationIds.includes(l.id));
+  // Header pills: strictly driven by teacher_availability SSOT.
+  // Only show a location if it has at least one active availability row.
+  // No fallback — if availability is empty, no pills render (prevents false positives).
+  const headerLocations = allLocations.filter(l => activeAvailabilityLocationIds.includes(l.id));
   return (
     <div className="space-y-4">
       {/* Edit / Cancel toggle */}
@@ -1381,12 +1380,17 @@ export function TeacherDetailClient() {
       setAllLocations(Array.isArray(locationsRes.data) ? locationsRes.data : []);
       const assigned = Array.isArray(assignedRes.data) ? assignedRes.data : [];
       setAssignedLocationIds(assigned.map((a: { location_id?: string; id?: string }) => a.location_id ?? a.id ?? "").filter(Boolean));
-      const avail = Array.isArray(availRes.data) ? availRes.data : [];
-      setAvailabilitySlots(avail);
-      // Extract unique location IDs from availability slots (locationId piggybacked in `notes` field from rowTo)
+      // GET /availability returns { data: { teacherId, tenantId, slots: [...] } } — must read .data.slots not .data
+      const availSlots: AvailabilitySlot[] = Array.isArray(availRes.data?.slots)
+        ? availRes.data.slots
+        : Array.isArray(availRes.data)
+          ? availRes.data
+          : [];
+      setAvailabilitySlots(availSlots);
+      // Extract unique location IDs — locationId is piggybacked in the `notes` field by rowTo()
       type RawAvailSlot = { locationId?: string | null; notes?: string | null };
       const availLocIds = [...new Set(
-        (avail as RawAvailSlot[]).map(s => s.locationId ?? s.notes ?? "").filter(Boolean)
+        (availSlots as RawAvailSlot[]).map(s => s.locationId ?? s.notes ?? "").filter(Boolean)
       )];
       setActiveAvailabilityLocationIds(availLocIds);
       const studsRaw: { id: string }[] = Array.isArray(studentsRes.data) ? studentsRes.data : Array.isArray(studentsRes) ? studentsRes : [];
