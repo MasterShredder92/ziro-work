@@ -242,6 +242,52 @@ export async function updateTeacherAvailability(
   return rowTo(next);
 }
 
+/**
+ * Replace All: atomically delete all rows for a teacher+location pair, then bulk-insert fresh slots.
+ * This is the correct write pattern — prevents duplicate stacking.
+ */
+export async function replaceTeacherAvailabilityForLocation(
+  tenantId: string,
+  teacherId: string,
+  locationId: string,
+  slots: Array<TeacherAvailabilityInsert & { locationId?: string }>,
+): Promise<TeacherAvailability[]> {
+  const supabase = clientFor(tenantId);
+
+  // Step A: DELETE all existing rows for this teacher+location
+  const { error: delError } = await supabase
+    .from(TABLE)
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("teacher_id", teacherId)
+    .eq("location_id", locationId);
+
+  if (delError) {
+    console.error("[teacher_availability] REPLACE DELETE error:", JSON.stringify(delError));
+    throw delError;
+  }
+
+  // Step B: INSERT fresh slots (empty array = clear all, which is valid)
+  if (slots.length === 0) return [];
+
+  const insertRows = slots.map((s) => toInsertRow(tenantId, { ...s, locationId }));
+  const { data, error: insError } = await supabase
+    .from(TABLE)
+    .insert(insertRows)
+    .select("*");
+
+  if (insError) {
+    console.error("[teacher_availability] REPLACE INSERT error:", JSON.stringify(insError));
+    throw insError;
+  }
+
+  console.log(
+    `[teacher_availability] REPLACE: deleted all for teacher=${teacherId} location=${locationId}, inserted ${insertRows.length} rows`,
+  );
+
+  return ((data as Row[]) ?? []).map(rowTo);
+}
+
 export async function deleteTeacherAvailability(
   id: string,
   tenantId: string,

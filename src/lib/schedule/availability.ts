@@ -2,6 +2,7 @@ import {
   createTeacherAvailability,
   deleteTeacherAvailability,
   listTeacherAvailability,
+  replaceTeacherAvailabilityForLocation,
   updateTeacherAvailability,
 } from "@data/teacherAvailability";
 import { listLessonEvents } from "@data/lessonEvents";
@@ -39,20 +40,33 @@ export async function setTeacherAvailability(
     Omit<TeacherAvailabilityInsert, "tenantId" | "teacherId"> & { locationId?: string }
   >,
 ): Promise<TeacherAvailability[]> {
-  const existing = await listTeacherAvailability(tenantId, {
-    teacher_id: teacherId,
-  });
-  for (const e of existing) {
-    await deleteTeacherAvailability(e.id, tenantId);
-  }
-  const created: TeacherAvailability[] = [];
+  // Group slots by locationId so we do a scoped Replace All per location.
+  // This prevents cross-location data loss when saving one location at a time.
+  const byLocation = new Map<string, typeof slots>();
   for (const slot of slots) {
-    const row = await createTeacherAvailability(tenantId, {
-      ...slot,
+    const locId = slot.locationId ?? (slot.notes ?? "");
+    if (!byLocation.has(locId)) byLocation.set(locId, []);
+    byLocation.get(locId)!.push(slot);
+  }
+
+  const created: TeacherAvailability[] = [];
+  for (const [locationId, locSlots] of byLocation.entries()) {
+    if (!locationId) {
+      // Fallback: no locationId — use legacy create path
+      for (const slot of locSlots) {
+        const row = await createTeacherAvailability(tenantId, { ...slot, tenantId, teacherId });
+        created.push(row);
+      }
+      continue;
+    }
+    // Replace All: delete existing for this teacher+location, then bulk insert fresh
+    const rows = await replaceTeacherAvailabilityForLocation(
       tenantId,
       teacherId,
-    });
-    created.push(row);
+      locationId,
+      locSlots.map((s) => ({ ...s, tenantId, teacherId })),
+    );
+    created.push(...rows);
   }
   return created;
 }
