@@ -27,12 +27,24 @@ export async function GET(req: NextRequest) {
     if (data.length > 0) {
       const supabase = clientFor(tenantId);
       const familyIds = data.map((f) => f.id);
-      // Fetch students with teacher join for the nested Students & Teachers column
-      const { data: students } = await supabase
-        .from("students")
-        .select("id, family_id, first_name, last_name, instrument, status, teacher_id, teachers(first_name, last_name, display_name)")
+      const GHOST_LOC = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
+      // Pull from schedules SSOT — join students + teachers for Name • Instrument • Teacher display
+      const { data: scheduleRows } = await supabase
+        .from("schedules")
+        .select(`
+          id,
+          instrument,
+          location_id,
+          student:students!schedules_student_id_fkey (
+            id, family_id, first_name, last_name, display_name
+          ),
+          teacher:teachers!schedules_teacher_id_fkey (
+            first_name, last_name, display_name
+          )
+        `)
         .eq("tenant_id", tenantId)
-        .in("family_id", familyIds);
+        .eq("status", "active")
+        .neq("location_id", GHOST_LOC);
 
       const countMap: Record<string, number> = {};
       const studentsMap: Record<string, {
@@ -43,11 +55,17 @@ export async function GET(req: NextRequest) {
         status?: string | null;
         teacher_name?: string | null;
       }[]> = {};
-      for (const s of students ?? []) {
-        if (!s.family_id) continue;
+      const seenStudents = new Set<string>();
+      for (const row of scheduleRows ?? []) {
+        const s = Array.isArray(row.student) ? row.student[0] : row.student as { id: string; family_id?: string | null; first_name?: string | null; last_name?: string | null; display_name?: string | null } | null;
+        if (!s?.family_id || !familyIds.includes(s.family_id)) continue;
+        // Deduplicate by student per family
+        const key = `${s.family_id}:${s.id}`;
+        if (seenStudents.has(key)) continue;
+        seenStudents.add(key);
         countMap[s.family_id] = (countMap[s.family_id] ?? 0) + 1;
         if (!studentsMap[s.family_id]) studentsMap[s.family_id] = [];
-        const t = s.teachers as { first_name?: string | null; last_name?: string | null; display_name?: string | null } | null;
+        const t = Array.isArray(row.teacher) ? row.teacher[0] : row.teacher as { first_name?: string | null; last_name?: string | null; display_name?: string | null } | null;
         const teacherName = t
           ? (t.display_name ?? [t.first_name, t.last_name].filter(Boolean).join(" ") ?? null)
           : null;
@@ -55,8 +73,8 @@ export async function GET(req: NextRequest) {
           id: s.id,
           first_name: s.first_name,
           last_name: s.last_name,
-          instrument: s.instrument,
-          status: s.status,
+          instrument: row.instrument ?? null,
+          status: "active",
           teacher_name: teacherName,
         });
       }
