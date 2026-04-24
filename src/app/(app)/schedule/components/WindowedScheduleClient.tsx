@@ -100,21 +100,20 @@ function dayOfWeekToIndex(value: string): number {
   }
 }
 
-function teacherName(teacher: Teacher): string {
+function teacherName(teacher: Teacher | undefined | null): string {
+  if (!teacher) return "Staff";
   const t = teacher as unknown as Record<string, unknown>;
   const explicit = typeof t.name === "string" ? t.name.trim() : "";
   if (explicit) return explicit;
   const first = typeof t.first_name === "string" ? t.first_name.trim() : "";
   const last = typeof t.last_name === "string" ? t.last_name.trim() : "";
-  return `${first} ${last}`.trim() || "Teacher";
+  return `${first} ${last}`.trim() || "Staff";
 }
-
-function safeTeacherName(teacher: Teacher | undefined): string {
-  if (!teacher) return "Unknown teacher";
+function safeTeacherName(teacher: Teacher | undefined | null): string {
   return teacherName(teacher);
 }
-
-function studentName(student: Student): string {
+function studentName(student: Student | undefined | null): string {
+  if (!student) return "Student";
   const s = student as unknown as Record<string, unknown>;
   const explicit = typeof s.name === "string" ? s.name.trim() : "";
   if (explicit) return explicit;
@@ -1043,7 +1042,7 @@ export function WindowedScheduleClient({
                 ) : null}
                 {selectedBlock.student_id &&
                 (() => {
-                  const student = studentsById.get(selectedBlock.student_id!);
+                  const student = studentsById.get(selectedBlock.student_id ?? "");
                   const familyId = (student as unknown as Record<string, unknown> | undefined)?.family_id;
                   const family =
                     typeof familyId === "string" && familyId.trim()

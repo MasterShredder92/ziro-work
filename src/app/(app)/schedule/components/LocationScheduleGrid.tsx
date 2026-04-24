@@ -83,14 +83,16 @@ function minuteToLabel(value: number): string {
   return `${hour}:${m.toString().padStart(2, "0")} ${suffix}`;
 }
 
-function teacherName(teacher: Teacher): string {
+function teacherName(teacher: Teacher | undefined | null): string {
+  if (!teacher) return "Staff";
   const t = teacher as unknown as Record<string, unknown>;
   const first = typeof t.first_name === "string" ? t.first_name.trim() : "";
   const last = typeof t.last_name === "string" ? t.last_name.trim() : "";
-  return `${first} ${last}`.trim() || "Teacher";
+  return `${first} ${last}`.trim() || "Staff";
 }
 
-function studentName(student: Student): string {
+function studentName(student: Student | undefined | null): string {
+  if (!student) return "Student";
   const s = student as unknown as Record<string, unknown>;
   const first = typeof s.first_name === "string" ? s.first_name.trim() : "";
   const last = typeof s.last_name === "string" ? s.last_name.trim() : "";
@@ -437,7 +439,7 @@ export function LocationScheduleGrid({
                       >
                         <div className="flex items-start justify-between gap-1">
                           <span className="truncate text-[10px] font-black leading-tight" style={{ color: display.text }}>
-                            {block.student_id ? studentName(studentsById.get(block.student_id)!) : display.label}
+                            {block.student_id ? studentName(studentsById.get(block.student_id)) : display.label}
                           </span>
                           {block.is_virtual && (
                             <span className="text-[10px]">🌐</span>
@@ -714,7 +716,7 @@ export function LocationScheduleGrid({
           >
             <h3 className="text-base font-bold text-white">Cancel Session</h3>
             <p className="text-xs text-[#909098]">
-              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)!) : "Session"} — {cancelTarget.start_time} – {cancelTarget.end_time}
+              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)) : "Session"} — {cancelTarget.start_time} – {cancelTarget.end_time}
             </p>
 
             {/* Single vs Recurring choice */}
