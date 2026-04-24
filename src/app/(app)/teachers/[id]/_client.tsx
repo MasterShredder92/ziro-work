@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PageTransition } from "@/components/system/PageTransition";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -736,15 +737,24 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
 }
 
 function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
-  type StudentRow = { id: string; first_name?: string | null; last_name?: string | null; display_name?: string | null; instrument?: string | null; status?: string | null };
+  // Day-of-week label map (0=Sunday … 6=Saturday)
+  const DOW_LABELS = ["Sundays","Mondays","Tuesdays","Wednesdays","Thursdays","Fridays","Saturdays"];
+  type StudentRow = {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    display_name?: string | null;
+    instrument?: string | null;
+    status?: string | null;
+    lesson_day_of_week?: number | null;
+    location_id?: string | null;
+  };
   const [students, setStudents] = React.useState<StudentRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
-    // Use teacher_id (snake_case) — the correct param name — and request up to 500 to avoid the default 200 cap
-    fetch(`/api/students?teacher_id=${teacherId}&limit=500`).then(r => r.json())
+    fetch(`/api/students?teacher_id=${teacherId}&limit=500&status=active`).then(r => r.json())
       .then(res => {
         const raw: StudentRow[] = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : [];
-        // Deduplicate by student id (a student assigned to this teacher is one student regardless of how many blocks they have)
         const seen = new Set<string>();
         const unique = raw.filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
         setStudents(unique);
@@ -753,23 +763,29 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
       .catch(() => setLoading(false));
   }, [teacherId]);
   if (loading) return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />)}</div>;
-  if (students.length === 0) return <div className="text-sm text-[#505055]">No students currently assigned to this teacher.</div>;
+  if (students.length === 0) return <div className="text-sm text-[var(--z-muted)]">No active students currently assigned to this teacher.</div>;
   return (
     <div className="space-y-2">
-      <div className="text-xs text-[#505055] mb-2">{students.length} student{students.length !== 1 ? "s" : ""} assigned</div>
+      <div className="text-xs text-[var(--z-muted)] mb-2">{students.length} active student{students.length !== 1 ? "s" : ""}</div>
       {students.map(s => {
         const displayName = s.display_name ?? [s.first_name, s.last_name].filter(Boolean).join(" ") ?? "—";
         const isActive = s.status?.toLowerCase() === "active" || s.status?.toLowerCase() === "enrolled";
+        const dayLabel = typeof s.lesson_day_of_week === "number" ? DOW_LABELS[s.lesson_day_of_week] : null;
         return (
-          <div
+          <Link
             key={s.id}
-            className={premiumCardCls}
+            href={`/crm/students/${s.id}`}
+            className={`block transition-colors hover:bg-[var(--z-surface-2)] ${premiumCardCls}`}
             style={premiumCardStyle}
           >
             <div className="flex items-center justify-between px-4 py-3">
               <div>
                 <div className="text-sm font-semibold text-[var(--z-fg)]">{displayName}</div>
-                {s.instrument && <div className="text-xs text-[var(--z-muted)] mt-0.5">{s.instrument}</div>}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {s.instrument && <span className="text-xs text-[var(--z-muted)]">{s.instrument}</span>}
+                  {s.instrument && dayLabel && <span className="text-xs text-[var(--z-muted)]">·</span>}
+                  {dayLabel && <span className="text-xs text-[var(--z-muted)]">{dayLabel}</span>}
+                </div>
               </div>
               {s.status && (
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
@@ -777,7 +793,7 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
                 }`}>{s.status}</span>
               )}
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>
