@@ -270,6 +270,8 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
   const [isSubAvailable, setIsSubAvailable] = React.useState(teacher.is_sub_available ?? teacher.sub_available ?? false);
   const [bio, setBio] = React.useState(teacher.bio ?? "");
   const [photoUrl, setPhotoUrl] = React.useState(teacher.photo_url ?? "");
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
   const [personality, setPersonality] = React.useState(teacher.personality ?? "");
   const [customerFacingSummary, setCustomerFacingSummary] = React.useState(teacher.customer_facing_match_summary ?? "");
   const [bestMatchStudents, setBestMatchStudents] = React.useState(teacher.best_match_students ?? "");
@@ -283,6 +285,29 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
 
   function toggleLocation(locId: string) {
     setSelectedLocations(prev => prev.includes(locId) ? prev.filter(l => l !== locId) : [...prev, locId]);
+  }
+
+  async function handleAvatarUpload(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/crm/teachers/${teacher.id}/avatar`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string; error?: string };
+        throw new Error(body.message ?? body.error ?? `Upload failed (${res.status})`);
+      }
+      const json = await res.json() as { data: { photo_url: string } };
+      setPhotoUrl(json.data.photo_url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -389,9 +414,49 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
         <div className="text-xs font-bold uppercase tracking-widest text-[#303035]">Meet Your Teacher — Family-Facing Profile</div>
         <p className="text-[10px] text-[#505055] leading-relaxed">This section is shown to families on their profile page. Write it like you&apos;re introducing the teacher to a new parent — warm, personal, confidence-building.</p>
         <div>
-          <label className={labelCls}>Headshot Photo URL</label>
-          <input className={inputCls} value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://… (paste Supabase storage URL)" />
-          {photoUrl && <img src={photoUrl} alt="Preview" className="mt-2 h-24 w-24 rounded-full object-cover border border-[#1c1c1e]" />}
+          <label className={labelCls}>Profile Photo</label>
+          {/* Avatar upload zone */}
+          <div
+            className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[#1c1c1e] bg-[#0a0a0c] p-5 transition-colors hover:border-[#00ff88]/40 cursor-pointer"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const file = e.dataTransfer.files[0];
+              if (file) handleAvatarUpload(file);
+            }}
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/jpeg,image/png,image/webp,image/gif";
+              input.onchange = (ev) => {
+                const f = (ev.target as HTMLInputElement).files?.[0];
+                if (f) handleAvatarUpload(f);
+              };
+              input.click();
+            }}
+          >
+            {photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt="Teacher avatar" className="h-24 w-24 rounded-full object-cover border-2 border-[#00ff88]/40" />
+            ) : (
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1a1a1e] border-2 border-[#1c1c1e]">
+                <svg className="h-10 w-10 text-[#303035]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+            )}
+            {uploading ? (
+              <div className="text-xs text-[#00ff88] animate-pulse">Uploading…</div>
+            ) : (
+              <div className="text-center">
+                <div className="text-xs font-semibold text-[#505055]">Drag & drop or click to upload</div>
+                <div className="text-[10px] text-[#303035] mt-0.5">JPG, PNG, WebP, GIF · Max 5MB</div>
+              </div>
+            )}
+          </div>
+          {uploadError && <p className="mt-1 text-xs text-red-400">{uploadError}</p>}
+          {/* Keep URL field as fallback for existing URLs */}
+          <input className={inputCls + " mt-2"} value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="Or paste a direct image URL…" />
         </div>
         <div><label className={labelCls}>Bio (visible to families)</label><textarea className={inputCls} rows={4} value={bio} onChange={e => setBio(e.target.value)} placeholder="e.g. Meet Alex — a customer favorite and rising guitar pro! Alex has quickly become one of our most-requested teachers. His sharp ear, patient approach, and genuine love for music make every lesson an adventure…" /></div>
         <div><label className={labelCls}>Customer-Facing Summary</label><textarea className={inputCls} rows={2} value={customerFacingSummary} onChange={e => setCustomerFacingSummary(e.target.value)} placeholder="One-liner shown on the family profile card…" /></div>
