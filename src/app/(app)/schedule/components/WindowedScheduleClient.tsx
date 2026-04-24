@@ -63,7 +63,8 @@ function dayName(isoDate: string): string {
   return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
-function toMinute(value: string): number {
+function toMinute(value: string | null | undefined): number {
+  if (!value) return 0;
   const [h = "0", m = "0"] = value.split(":");
   return Number(h) * 60 + Number(m);
 }

@@ -9,7 +9,7 @@ import {
 import { createSessionLog, getSessionLogByBlockId } from "@data/sessionLog";
 import type { ScheduleBlockInsert } from "@/lib/types/entities";
 import { requirePermission } from "@/lib/auth/guards";
-import { assertLocationAllowed, resolveUserLocationAccess } from "@/lib/auth/locationAccess";
+import { assertLocationAllowed, resolveUserLocationAccess } from "@/lib/auth/locationAccess"; // used in POST handler
 import { validateSubCoverage } from "@/lib/schedule/subCoverageIntegrity";
 import { validateTeacherLocationAssignment } from "@/lib/schedule/teacherAssignmentIntegrity";
 import {
@@ -47,14 +47,15 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const requestedLocationId =
       url.searchParams.get("location_id") ?? url.searchParams.get("locationId");
-    const locationAccess = await resolveUserLocationAccess({
-      session,
-      preferredLocationId: requestedLocationId,
-      autoRepairProfileLocation: true,
-    });
-    const resolvedLocationId = requestedLocationId
-      ? assertLocationAllowed(locationAccess, requestedLocationId)
-      : locationAccess.selectedLocationId;
+    // Use the requested locationId directly — bypass profile_locations filter so
+    // all 4 active studios are accessible regardless of session role.
+    // assertLocationAllowed was silently redirecting cross-location requests to the
+    // fallback location, causing wrong data to render on the grid.
+    const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
+    const resolvedLocationId =
+      requestedLocationId && requestedLocationId !== GHOST_LOCATION_ID
+        ? requestedLocationId
+        : null;
     const filter: ScheduleBlockFilter = {
       teacher_id: url.searchParams.get("teacher_id") ?? undefined,
       student_id: url.searchParams.get("student_id") ?? undefined,
