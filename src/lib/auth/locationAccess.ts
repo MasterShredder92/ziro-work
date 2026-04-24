@@ -15,6 +15,9 @@ export type UserLocationAccess = {
   selectedLocationId: string | null;
 };
 
+// Ghost location from Square API sync — must never appear in any UI
+const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
+
 function normalizeId(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -96,6 +99,7 @@ async function listActiveTenantLocations(tenantId: string): Promise<AccessibleLo
       .select("id,name")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
+      .neq("id", GHOST_LOCATION_ID)
       .order("name", { ascending: true });
 
     const normalizedByIsActive = (byIsActive ?? []).map((row) => ({
@@ -112,6 +116,7 @@ async function listActiveTenantLocations(tenantId: string): Promise<AccessibleLo
       .select("id,name")
       .eq("tenant_id", tenantId)
       .eq("active", true)
+      .neq("id", GHOST_LOCATION_ID)
       .order("name", { ascending: true });
 
     return dedupeLocations(
@@ -145,6 +150,21 @@ async function listMembershipFilteredLocations(
   const profileLocationIds = await listProfileLocationIds(profileId);
   if (profileLocationIds.length === 0) return [];
   return activeLocations.filter((location) => profileLocationIds.includes(location.id));
+}
+
+async function getProfileRole(profileId: string): Promise<string | null> {
+  try {
+    const supabase = getServiceClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", profileId)
+      .limit(1)
+      .single();
+    return (data as { role?: string } | null)?.role ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function ensureProfileLocation(profileId: string, locationId: string): Promise<boolean> {
@@ -188,6 +208,17 @@ export async function resolveUserLocationAccess(input: {
       tenantId,
       profileId,
       locations: [],
+      preferredLocationId: input.preferredLocationId,
+    });
+  }
+
+  // Admins always see all active locations — no profile_locations filter
+  const role = await getProfileRole(profileId);
+  if (role === "admin") {
+    return buildAccess({
+      tenantId,
+      profileId,
+      locations: activeLocations,
       preferredLocationId: input.preferredLocationId,
     });
   }
