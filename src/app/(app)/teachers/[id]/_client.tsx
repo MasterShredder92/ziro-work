@@ -53,7 +53,8 @@ const premiumCardCls = "rounded-xl border border-[var(--z-border)] bg-[var(--z-s
 const premiumCardStyle = { borderLeftColor: "#00ff88", borderLeftWidth: 3 } as React.CSSProperties;
 
 /** Parse "HH:MM:SS" or "HH:MM" into total minutes */
-function timeToMinutes(t: string): number {
+function timeToMinutes(t: string | null | undefined): number {
+  if (!t) return 0;
   const parts = t.split(":").map(Number);
   return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
 }

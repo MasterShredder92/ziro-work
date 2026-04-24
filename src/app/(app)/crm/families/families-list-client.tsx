@@ -88,15 +88,18 @@ const AV_COLORS: [string, string][] = [
   ["rgba(37,99,235,0.18)",  "#2563eb"],
   ["rgba(16,185,129,0.18)", "#10b981"],
 ];
-function avColor(name: string): [string, string] {
+function avColor(name: string | null | undefined): [string, string] {
+  if (!name) return AV_COLORS[0] as [string, string];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return AV_COLORS[h % AV_COLORS.length] as [string, string];
 }
-function initials(name: string): string {
+function initials(name: string | null | undefined): string {
+  if (!name) return "?";
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
 }
-function firstName(fullName: string): string {
+function firstName(fullName: string | null | undefined): string {
+  if (!fullName) return "";
   return fullName.split(/\s+/)[0] ?? fullName;
 }
 
@@ -145,7 +148,7 @@ export function FamiliesListClient({
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(r => {
-        if (r.name.toLowerCase().includes(q)) return true;
+        if ((r.name ?? '').toLowerCase().includes(q)) return true;
         if ((r.primary_email ?? "").toLowerCase().includes(q)) return true;
         if ((locationNameById[r.primary_location_id ?? ""] ?? "").toLowerCase().includes(q)) return true;
         const studs = studentsByFamily[r.id] ?? [];
@@ -322,7 +325,7 @@ export function FamiliesListClient({
                           fontSize: 13, fontWeight: 700, color: "var(--z-fg)",
                           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 200,
                         }}>
-                          {row.name.replace(/\s+family$/i, "").trim()}
+                          {(row.name ?? '').replace(/\s+family$/i, "").trim()}
                         </span>
                         {isMil && (
                           <span style={{
