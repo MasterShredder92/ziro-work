@@ -745,19 +745,19 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
     last_name?: string | null;
     display_name?: string | null;
     instrument?: string | null;
-    status?: string | null;
-    lesson_day_of_week?: number | null;
+    student_status?: string | null;
+    day_of_week?: number | null;
+    start_time?: string | null;
     location_id?: string | null;
   };
   const [students, setStudents] = React.useState<StudentRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
-    fetch(`/api/students?teacher_id=${teacherId}&limit=500&status=active`).then(r => r.json())
+    // Pull from schedules SSOT via dedicated teacher/students route
+    fetch(`/api/crm/teachers/${teacherId}/students`).then(r => r.json())
       .then(res => {
-        const raw: StudentRow[] = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : [];
-        const seen = new Set<string>();
-        const unique = raw.filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
-        setStudents(unique);
+        const raw: StudentRow[] = Array.isArray(res.data) ? res.data : [];
+        setStudents(raw);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -769,8 +769,9 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
       <div className="text-xs text-[var(--z-muted)] mb-2">{students.length} active student{students.length !== 1 ? "s" : ""}</div>
       {students.map(s => {
         const displayName = s.display_name ?? [s.first_name, s.last_name].filter(Boolean).join(" ") ?? "—";
-        const isActive = s.status?.toLowerCase() === "active" || s.status?.toLowerCase() === "enrolled";
-        const dayLabel = typeof s.lesson_day_of_week === "number" ? DOW_LABELS[s.lesson_day_of_week] : null;
+        const isActive = s.student_status?.toLowerCase() === "active" || s.student_status?.toLowerCase() === "enrolled";
+        // day_of_week from schedules (0=Sun…6=Sat)
+        const dayLabel = typeof s.day_of_week === "number" ? DOW_LABELS[s.day_of_week] : null;
         return (
           <Link
             key={s.id}
@@ -787,10 +788,10 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
                   {dayLabel && <span className="text-xs text-[var(--z-muted)]">{dayLabel}</span>}
                 </div>
               </div>
-              {s.status && (
+              {s.student_status && (
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                   isActive ? "bg-[#00ff88]/10 text-[#00ff88]" : "bg-white/5 text-[var(--z-muted)]"
-                }`}>{s.status}</span>
+                }`}>{s.student_status}</span>
               )}
             </div>
           </Link>
