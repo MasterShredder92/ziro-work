@@ -103,11 +103,11 @@ type ToolModal = "sub" | "callout" | "virtual" | null;
 export function MultiLocationScheduleClient({ locations, locationDataMap, initialWindow }: Props) {
   const [window, setWindow] = React.useState<ScheduleWindow>(initialWindow);
   const [activeLocationId, setActiveLocationId] = React.useState<string>(locations[0]?.id ?? "");
-  const [selectedDates, setSelectedDates] = React.useState<Record<string, string>>(() => {
+  // Single shared date — persists across location tab switches
+  const [selectedDate, setSelectedDate] = React.useState<string>(() => {
     const today = new Date().toISOString().slice(0, 10);
     const weekDays = eachDayInclusive(initialWindow.start, initialWindow.end);
-    const defaultDay = weekDays.includes(today) ? today : weekDays[0] ?? today;
-    return Object.fromEntries(locations.map((l) => [l.id, defaultDay]));
+    return weekDays.includes(today) ? today : weekDays[0] ?? today;
   });
   const [blocksByLocationWindow, setBlocksByLocationWindow] = React.useState<
     Record<string, Record<string, ScheduleBlock[]>>
@@ -126,7 +126,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   // Sync state to Supabase
   useOperatorSession({
     activeLocationId,
-    activeDate: selectedDates[activeLocationId] ?? null,
+    activeDate: selectedDate ?? null,
     activeView,
     activeModal: activeModal ?? "none",
     focusedBlockId,
@@ -180,12 +180,12 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   const windowKey = `${window.start}_${window.end}`;
   const activeData = locationDataMap[activeLocationId];
   const activeBlocks = blocksByLocationWindow[activeLocationId]?.[windowKey] ?? activeData?.blocks ?? [];
-  const activeSelectedDate = selectedDates[activeLocationId] ?? window.start;
+  // activeSelectedDate is now just selectedDate — shared across all locations
 
   // Utilization for active location on selected date
   const utilization = React.useMemo(() => {
     const dayBlocks = activeBlocks.filter(
-      (b) => b.block_date === activeSelectedDate && b.block_type !== "not_bookable",
+      (b) => b.block_date === selectedDate && b.block_type !== "not_bookable",
     );
     const booked = dayBlocks.filter(
       (b) => b.student_id && b.block_type !== "open_time",
@@ -196,7 +196,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     const countable = booked + open;
     const pct = countable > 0 ? Math.round((booked / countable) * 100) : 0;
     return { total: countable, booked, open, pct };
-  }, [activeBlocks, activeSelectedDate]);
+  }, [activeBlocks, selectedDate]);
 
   const handleBlocksChange = (newBlocks: ScheduleBlock[]) => {
     setBlocksByLocationWindow((prev) => ({
@@ -222,7 +222,10 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               <button
                 key={loc.id}
                 type="button"
-                onClick={() => { setActiveLocationId(loc.id); setActiveView("schedule"); }}
+                onClick={() => {
+                  setActiveLocationId(loc.id);
+                  setActiveView("schedule");
+                }}
                 style={isActive ? {
                   borderColor: cfg?.border ?? "transparent",
                   backgroundColor: cfg?.accent ?? "transparent",
@@ -311,14 +314,14 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             {weekDays.map((day) => {
               const hours = activeData.locationHours ?? {};
               const { label, sub, isClosed } = formatDayTab(day, hours);
-              const isSelected = selectedDates[activeLocationId] === day;
+              const isSelected = selectedDate === day;
               const isToday = day === new Date().toISOString().slice(0, 10);
               return (
                 <button
                   key={day}
                   type="button"
                   disabled={isClosed}
-                  onClick={() => setSelectedDates((prev) => ({ ...prev, [activeLocationId]: day }))}
+                  onClick={() => setSelectedDate(day)}
                   className={`flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1.5 transition-all ${
                     isSelected
                       ? "bg-[var(--z-accent)] text-black"
@@ -389,8 +392,8 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           <LocationScheduleGrid
             locationId={activeLocationId}
             locationName={activeLocConfig?.name ?? "Studio"}
-            selectedDate={activeSelectedDate}
-            blocks={activeBlocks.filter((b) => b.block_date === activeSelectedDate)}
+            selectedDate={selectedDate}
+            blocks={activeBlocks.filter((b) => b.block_date === selectedDate)}
             teachers={activeData?.teachers ?? []}
             students={activeData?.students ?? []}
             families={activeData?.families ?? []}
@@ -413,7 +416,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
       {activeModal === "sub" && (
         <SubModal
           locationId={activeLocationId}
-          selectedDate={activeSelectedDate}
+          selectedDate={selectedDate}
           teachers={activeData?.teachers ?? []}
           blocks={activeBlocks}
           onClose={() => setActiveModal(null)}
@@ -423,7 +426,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
       {activeModal === "callout" && (
         <CallOutModal
           locationId={activeLocationId}
-          selectedDate={activeSelectedDate}
+          selectedDate={selectedDate}
           teachers={activeData?.teachers ?? []}
           students={activeData?.students ?? []}
           blocks={activeBlocks}
@@ -434,7 +437,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
       {activeModal === "virtual" && (
         <GoVirtualModal
           locationId={activeLocationId}
-          selectedDate={activeSelectedDate}
+          selectedDate={selectedDate}
           teachers={activeData?.teachers ?? []}
           students={activeData?.students ?? []}
           blocks={activeBlocks}

@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
-import { ScheduleBlockModal, type ScheduleBlockModalData } from "./ScheduleBlockModal";
+
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
@@ -133,8 +133,6 @@ export function LocationScheduleGrid({
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
 
-  // ── Context Modal state ─────────────────────────────────────────────────────
-  const [modalData, setModalData] = React.useState<ScheduleBlockModalData | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -196,7 +194,7 @@ export function LocationScheduleGrid({
   // ── Cancel session modal state ───────────────────────────────────────────────────────
   const [cancelTarget, setCancelTarget] = React.useState<ProjectedBlock | null>(null);
   const [cancelReason, setCancelReason] = React.useState("");
-  const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("recurring");
+  const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("single");
   const [cancelSaving, setCancelSaving] = React.useState(false);
 
   async function confirmCancel() {
@@ -424,15 +422,13 @@ export function LocationScheduleGrid({
                         key={block.id}
                         type="button"
                         onClick={() => {
-                          // Open context modal first — lightweight nav hub
-                          const blockStudent = block.student_id ? studentsById.get(block.student_id) : null;
-                          const blockTeacher = block.teacher_id ? teachers.find(tt => tt.id === block.teacher_id) : null;
-                          setModalData({
-                            block: block as unknown as ScheduleBlock,
-                            student: blockStudent ?? null,
-                            teacher: blockTeacher ?? null,
-                            locationName,
-                          });
+                          // Open Session Detail panel directly — no intermediate modal
+                          setSelectedBlockId(block.id);
+                          setSessionType(block.block_type);
+                          setBookingStudentId(null);
+                          setBookingStudentQuery("");
+                          setBookingFirstDay(null);
+                          setBookingStudentHasBlocks(null);
                         }}
                         className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left transition-all hover:scale-[1.02] hover:z-20 ${
                           isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : ""
@@ -501,8 +497,20 @@ export function LocationScheduleGrid({
                   <div className="text-xl font-black text-[var(--z-fg)]">
                     {selectedBlock.start_time} – {selectedBlock.end_time}
                   </div>
-                  <div className="text-xs font-bold text-[var(--z-muted)] uppercase tracking-wider">
-                    {teacher ? teacherName(teacher) : "Unknown Teacher"} · {locationName}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {teacher ? (
+                      <Link
+                        href={`/teachers/${selectedBlock.teacher_id}`}
+                        className="text-xs font-bold text-[var(--z-muted)] uppercase tracking-wider hover:text-[var(--z-accent)] hover:underline transition-colors"
+                        onClick={() => setSelectedBlockId(null)}
+                      >
+                        {teacherName(teacher)}
+                      </Link>
+                    ) : (
+                      <span className="text-xs font-bold text-[var(--z-muted)] uppercase tracking-wider">Unknown Teacher</span>
+                    )}
+                    <span className="text-xs text-[var(--z-muted)] opacity-50">·</span>
+                    <span className="text-xs font-bold text-[var(--z-muted)] uppercase tracking-wider">{locationName}</span>
                   </div>
                 </div>
 
@@ -611,7 +619,13 @@ export function LocationScheduleGrid({
                     {/* Student / family info */}
                     {student && (
                       <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
-                        <div className="font-semibold text-[var(--z-fg)] text-sm">{studentName(student)}</div>
+                        <Link
+                          href={`/students/${selectedBlock.student_id}`}
+                          className="block font-semibold text-[var(--z-fg)] text-sm hover:text-[var(--z-accent)] hover:underline transition-colors"
+                          onClick={() => setSelectedBlockId(null)}
+                        >
+                          {studentName(student)}
+                        </Link>
                         {family && (
                           <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
                         )}
@@ -776,7 +790,7 @@ export function LocationScheduleGrid({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => { setCancelTarget(null); setCancelReason(""); setCancelScope("recurring"); }}
+                onClick={() => { setCancelTarget(null); setCancelReason(""); setCancelScope("single"); }}
                 className="flex-1 rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2.5 text-sm font-semibold text-[#909098] hover:text-white transition-colors"
               >
                 Back
@@ -794,21 +808,7 @@ export function LocationScheduleGrid({
         </div>
       )}
 
-      {/* ── Context Modal ── */}
-      <ScheduleBlockModal
-        data={modalData}
-        onClose={() => setModalData(null)}
-        onOpenEditPanel={() => {
-          if (modalData) {
-            setSelectedBlockId(modalData.block.id);
-            setSessionType(modalData.block.block_type);
-            setBookingStudentId(null);
-            setBookingStudentQuery("");
-            setBookingFirstDay(null);
-            setBookingStudentHasBlocks(null);
-          }
-        }}
-      />
+
     </div>
   );
 }
