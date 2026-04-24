@@ -478,20 +478,48 @@ export function LocationScheduleGrid({
 
         return (
           <>
-            <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] lg:hidden" onClick={() => setSelectedBlockId(null)} />
-            <div className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[80vh] flex-col border-t border-[var(--z-border)] bg-[var(--z-bg)] p-4 shadow-2xl lg:relative lg:z-0 lg:w-80 lg:max-h-full lg:border-l lg:border-t-0">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-black uppercase tracking-widest text-[var(--z-fg)]">Session Detail</h3>
-                <button
-                  type="button"
-                  onClick={() => setSelectedBlockId(null)}
-                  className="rounded-full p-1 text-[var(--z-muted)] hover:bg-white/5 hover:text-[var(--z-fg)]"
-                >
-                  ✕
-                </button>
-              </div>
+            {/* ── Centered Modal Backdrop ── */}
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={() => setSelectedBlockId(null)}
+            >
+              {/* Blur backdrop */}
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-              <div className="flex-1 overflow-y-auto space-y-5 scrollbar-none pb-6">
+              {/* Modal card — stop propagation so inner clicks don't close */}
+              <div
+                className="relative z-10 w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, #0f1a14 0%, #0a0a0c 60%, #0a0a0c 100%)",
+                  border: "1px solid rgba(0,255,136,0.18)",
+                  boxShadow: "0 0 0 1px rgba(0,255,136,0.08), 0 25px 60px rgba(0,0,0,0.7), 0 0 80px rgba(0,255,136,0.04)",
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Green half-fade top accent bar */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl"
+                  style={{ background: "linear-gradient(90deg, #00ff88 0%, rgba(0,255,136,0.3) 50%, transparent 100%)" }}
+                />
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#00ff88] shadow-[0_0_6px_#00ff88]" />
+                    <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[var(--z-fg)]">Session Detail</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBlockId(null)}
+                    className="rounded-full p-1.5 text-[var(--z-muted)] hover:bg-white/8 hover:text-[var(--z-fg)] transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+
+              <div className="flex-1 overflow-y-auto space-y-4 scrollbar-none px-5 pb-5">
                 {/* Time & Teacher context */}
                 <div className="space-y-1">
                   <div className="text-xl font-black text-[var(--z-fg)]">
@@ -722,7 +750,8 @@ export function LocationScheduleGrid({
                   </>
                 )}
               </div>
-            </div>
+              </div>{/* end modal card */}
+            </div>{/* end backdrop */}
           </>
         );
       })()}
