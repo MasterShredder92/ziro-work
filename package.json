@@ -38,6 +38,7 @@
     "@xyflow/react": "^12.10.2",
     "ai": "^6.0.168",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.4.2",
     "html2canvas": "^1.4.1",
