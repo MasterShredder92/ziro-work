@@ -52,7 +52,7 @@ export function demoListStudents(params: {
   page: PageParams;
   search?: string;
 }): FacadeResult<ListResult<Student>> {
-  let list = [...DEMO_STUDENTS];
+  let list = [...DEMO_STUDENTS] as Student[];
   const s = params.search?.trim();
   if (s) {
     list = list.filter((row) =>

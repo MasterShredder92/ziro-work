@@ -23,7 +23,7 @@ const teacher: Teacher = {
   archived_at: null,
 };
 
-const students: Student[] = [
+const students = [
   {
     id: "demo-student-a",
     tenant_id: DEFAULT_TENANT_ID,
@@ -86,7 +86,7 @@ export default function SandboxTeacherPage() {
         payrollImpact={payrollImpact}
         rosterCount={rosterCount}
       />
-      <TeacherStudentList students={students} />
+      <TeacherStudentList students={students as Student[]} />
     </div>
   );
 }

@@ -39,7 +39,7 @@ export const DEMO_TEACHERS: Teacher[] = [
   },
 ];
 
-export const DEMO_STUDENTS: Student[] = [
+export const DEMO_STUDENTS = [
   {
     id: DEMO_PRIMARY_STUDENT_ID,
     tenant_id: TENANT,

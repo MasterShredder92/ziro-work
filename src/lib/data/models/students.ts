@@ -13,6 +13,8 @@ export interface Student {
   name: string;
   first_name: string | null;
   last_name: string | null;
+  email?: string | null;
+  phone?: string | null;
   instrument: string | null;
   date_of_birth: string | null; // YYYY-MM-DD
   // Learning profile
