@@ -871,96 +871,108 @@ function NotesTab({ studentId }: { studentId: string }) {
   );
 }
 
-/* ─── Session log types ─────────────────────────────────── */
-type SessionLog = {
+/* ─── Timeline types ─────────────────────────────────────── */
+type EventType = "attendance" | "upload" | "note" | "system_update";
+type TimelineEvent = {
   id: string;
-  block_date: string;
-  status: string;
-  notes: string | null;
-  teacher_note: string | null;
-  lesson_notes: string | null;
-  engagement_level: number | null;
-  progress_indicator: string | null;
-  instrument: string | null;
-  worked_on: string[] | null;
+  event_type: EventType;
+  description: string;
+  source_id: string | null;
   created_at: string;
+  created_by_name: string | null;
+  created_by_role: string | null;
 };
 
-function SessionStatusBadge({ status }: { status: string }) {
-  const s = status.toLowerCase();
-  let cls = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ";
-  if (s === "attended" || s === "completed")        cls += "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400";
-  else if (s === "canceled" || s === "cancelled")   cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  else if (s === "no_show" || s === "no-show")      cls += "bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400";
-  else if (s === "rescheduled")                     cls += "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400";
-  else                                              cls += "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
-  return <span className={cls}>{status.replace(/_/g, " ")}</span>;
-}
-
-function Pill({ label, value }: { label: string; value: string | number }) {
+/* ─── Event type pill ─────────────────────────────────────── */
+const EVENT_TYPE_META: Record<EventType, { label: string; bg: string; color: string; dot: string }> = {
+  attendance:    { label: "Attendance",    bg: "rgba(16,185,129,0.10)",  color: "#059669", dot: "#059669" },
+  note:          { label: "Note",          bg: "rgba(37,99,235,0.10)",   color: "#2563eb", dot: "#2563eb" },
+  upload:        { label: "Upload",        bg: "rgba(245,158,11,0.10)",  color: "#d97706", dot: "#d97706" },
+  system_update: { label: "System Update", bg: "rgba(107,114,128,0.10)", color: "#6b7280", dot: "#6b7280" },
+};
+function EventTypePill({ type }: { type: EventType }) {
+  const m = EVENT_TYPE_META[type] ?? EVENT_TYPE_META.system_update;
   return (
-    <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs" style={{ background: T.surface2, color: T.muted }}>
-      <span className="font-medium" style={{ color: T.label }}>{label}</span>
-      {String(value)}
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+      style={{ background: m.bg, color: m.color }}>
+      {m.label}
     </span>
   );
 }
 
-function TimelineEntry({ log, isLast }: { log: SessionLog; isLast: boolean }) {
-  const hasNotes = log.notes || log.teacher_note || log.lesson_notes;
-  const hasWorkedOn = log.worked_on && log.worked_on.length > 0;
+/* ─── Timeline event row ──────────────────────────────────── */
+function TimelineEventRow({ event, isLast }: { event: TimelineEvent; isLast: boolean }) {
+  const m = EVENT_TYPE_META[event.event_type] ?? EVENT_TYPE_META.system_update;
+  const ts = new Date(event.created_at);
+  const dateStr = ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const timeStr = ts.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return (
-    <li className="relative flex gap-4">
-      {!isLast && (
-        <div className="absolute left-[11px] top-6 bottom-0 w-px" style={{ background: T.border }} aria-hidden />
-      )}
-      <div className="relative z-10 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: T.border, background: T.bg }}>
-        <div className="h-2 w-2 rounded-full" style={{ background: T.muted }} />
+    <li className="relative flex gap-3 py-2.5" style={{ borderBottom: isLast ? "none" : `1px solid ${T.border}` }}>
+      <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+        <div className="h-2 w-2 rounded-full" style={{ background: m.dot }} />
       </div>
-      <div className="flex-1 pb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <time className="text-sm font-semibold" style={{ color: T.fg }}>{formatDate(log.block_date)}</time>
-          <SessionStatusBadge status={log.status} />
-          {log.instrument && <span className="text-xs" style={{ color: T.muted }}>{log.instrument}</span>}
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+          <EventTypePill type={event.event_type} />
+          <time className="text-xs" style={{ color: T.muted }}>{dateStr} · {timeStr}</time>
+          {event.created_by_name && (
+            <span className="text-xs" style={{ color: T.muted }}>
+              {event.created_by_name}{event.created_by_role ? ` (${event.created_by_role})` : ""}
+            </span>
+          )}
         </div>
-        {hasNotes && (
-          <div className="mt-2 flex flex-col gap-1.5">
-            {log.lesson_notes && <p className="text-sm" style={{ color: T.muted }}>{log.lesson_notes}</p>}
-            {log.notes && !log.lesson_notes && <p className="text-sm" style={{ color: T.muted }}>{log.notes}</p>}
-            {log.teacher_note && <p className="text-xs italic" style={{ color: T.label }}>Teacher: {log.teacher_note}</p>}
-          </div>
-        )}
-        {hasWorkedOn && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {log.worked_on!.map((item, i) => (
-              <span key={i} className="rounded-md px-2 py-0.5 text-xs" style={{ background: T.surface2, color: T.muted }}>{item}</span>
-            ))}
-          </div>
-        )}
-        {(log.engagement_level !== null || log.progress_indicator) && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {log.engagement_level !== null && <Pill label="Engagement" value={`${log.engagement_level}/5`} />}
-            {log.progress_indicator && <Pill label="Progress" value={log.progress_indicator} />}
-          </div>
-        )}
+        <p className="text-sm" style={{ color: T.fg }}>{event.description}</p>
       </div>
     </li>
   );
 }
 
-function TimelineEmptyState() {
+/* ─── Timeline empty state ────────────────────────────────── */
+function TimelineEmptyState({ filtered }: { filtered?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
-      <svg className="h-12 w-12" style={{ color: T.border }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      <svg className="h-10 w-10" style={{ color: T.border }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
       </svg>
-      <p className="text-sm font-medium" style={{ color: T.muted }}>No session logs recorded for this student yet</p>
+      <p className="text-sm font-medium" style={{ color: T.muted }}>
+        {filtered ? "No events match this filter" : "No events recorded yet"}
+      </p>
+    </div>
+  );
+}
+
+/* ─── Filter chips ────────────────────────────────────────── */
+const FILTER_OPTIONS: { id: EventType | "all"; label: string }[] = [
+  { id: "all",           label: "All Events"  },
+  { id: "attendance",    label: "Attendance"  },
+  { id: "note",          label: "Notes"       },
+  { id: "upload",        label: "Uploads"     },
+  { id: "system_update", label: "System"      },
+];
+function FilterChips({ active, onChange }: { active: EventType | "all"; onChange: (v: EventType | "all") => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {FILTER_OPTIONS.map((opt) => {
+        const isActive = opt.id === active;
+        return (
+          <button key={opt.id} onClick={() => onChange(opt.id)}
+            className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            style={{
+              background: isActive ? "rgba(0,209,108,0.12)" : T.surface2,
+              color: isActive ? "#00D16C" : T.muted,
+              border: `1px solid ${isActive ? "#00D16C" : T.border}`,
+            }}>
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 function TimelineTab({ studentId }: { studentId: string }) {
-  const [logs, setLogs] = useState<SessionLog[]>([]);
+  const [allEvents, setAllEvents] = useState<TimelineEvent[]>([]);
+  const [filter, setFilter] = useState<EventType | "all">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -970,12 +982,12 @@ function TimelineTab({ studentId }: { studentId: string }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/crm/students/${studentId}/timeline`, {
+        const res = await fetch(`/api/crm/students/${studentId}/timeline?limit=200`, {
           headers: { "x-tenant-id": DEFAULT_TENANT_ID },
         });
         if (!res.ok) throw new Error(`Failed to load timeline (${res.status})`);
         const json = await res.json();
-        setLogs(json.data ?? []);
+        setAllEvents(json.data ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load timeline");
       } finally {
@@ -985,34 +997,50 @@ function TimelineTab({ studentId }: { studentId: string }) {
     load();
   }, [studentId]);
 
+  const filtered = filter === "all" ? allEvents : allEvents.filter((e) => e.event_type === filter);
+
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 animate-pulse">
+      <div className="flex flex-col gap-3 animate-pulse">
+        <div className="flex gap-1.5">
+          {[0,1,2,3,4].map(i => <div key={i} className="h-7 w-20 rounded-full" style={{ background: T.surface2 }} />)}
+        </div>
         {[0,1,2,3].map((i) => (
-          <div key={i} className="flex gap-4">
-            <div className="h-6 w-6 shrink-0 rounded-full" style={{ background: T.surface2 }} />
-            <div className="flex-1 space-y-2 pb-6">
-              <div className="h-4 w-32 rounded" style={{ background: T.surface2 }} />
+          <div key={i} className="flex gap-3 py-2.5" style={{ borderBottom: `1px solid ${T.border}` }}>
+            <div className="mt-0.5 h-5 w-5 shrink-0 flex items-center justify-center">
+              <div className="h-2 w-2 rounded-full" style={{ background: T.surface2 }} />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-40 rounded" style={{ background: T.surface2 }} />
               <div className="h-3 w-full rounded" style={{ background: T.surface2 }} />
-              <div className="h-3 w-3/4 rounded" style={{ background: T.surface2 }} />
             </div>
           </div>
         ))}
       </div>
     );
   }
+
   if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
-    );
+    return <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>;
   }
-  if (logs.length === 0) return <TimelineEmptyState />;
+
   return (
-    <ul className="flex flex-col" role="list">
-      {logs.map((log, i) => (
-        <TimelineEntry key={log.id} log={log} isLast={i === logs.length - 1} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-4">
+      <FilterChips active={filter} onChange={setFilter} />
+      <p className="text-xs" style={{ color: T.muted }}>
+        {filtered.length} event{filtered.length !== 1 ? "s" : ""}
+        {filter !== "all" ? ` · filtered by ${FILTER_OPTIONS.find(o => o.id === filter)?.label}` : ""}
+      </p>
+      {filtered.length === 0 ? (
+        <TimelineEmptyState filtered={filter !== "all"} />
+      ) : (
+        <ul className="flex flex-col" role="list" style={{ borderTop: `1px solid ${T.border}` }}>
+          {filtered.map((event, i) => (
+            <TimelineEventRow key={event.id} event={event} isLast={i === filtered.length - 1} />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
