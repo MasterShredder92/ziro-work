@@ -15,13 +15,13 @@ const TABLE = "teacher_availability";
 // DB day_of_week is a string ENUM: monday|tuesday|wednesday|thursday|friday|saturday|sunday
 // The TeacherAvailability type uses dayOfWeek: number (0=Sun..6=Sat) — we bridge here.
 const DAY_ENUM = [
-  "sunday",   // 0
-  "monday",   // 1
-  "tuesday",  // 2
-  "wednesday",// 3
-  "thursday", // 4
-  "friday",   // 5
-  "saturday", // 6
+  "sunday",    // 0
+  "monday",    // 1
+  "tuesday",   // 2
+  "wednesday", // 3
+  "thursday",  // 4
+  "friday",    // 5
+  "saturday",  // 6
 ] as const;
 type DayEnum = typeof DAY_ENUM[number];
 function intToDay(n: number): DayEnum { return DAY_ENUM[n] ?? "monday"; }
@@ -46,6 +46,9 @@ type Row = {
   created_at: string;
   updated_at: string;
 };
+
+// Insert shape — id omitted so DB generates a proper UUID via uuid_generate_v4()
+type InsertRow = Omit<Row, "id">;
 
 type GlobalStore = typeof globalThis & {
   __ziro_teacher_availability_store?: Map<string, Row>;
@@ -74,12 +77,12 @@ function rowTo(r: Row): TeacherAvailability {
   };
 }
 
-function toRow(tenantId: string, input: TeacherAvailabilityInsert & { locationId?: string }): Row {
+// Returns an InsertRow (no id) — DB generates the UUID via DEFAULT uuid_generate_v4()
+function toInsertRow(tenantId: string, input: TeacherAvailabilityInsert & { locationId?: string }): InsertRow {
   const now = new Date().toISOString();
   // locationId may come directly or piggybacked in notes
   const locationId = (input as { locationId?: string }).locationId ?? input.notes ?? "";
   return {
-    id: input.id ?? `avl_${Math.random().toString(36).slice(2, 10)}`,
     tenant_id: tenantId,
     teacher_id: input.teacherId,
     location_id: locationId,
@@ -170,25 +173,30 @@ export async function createTeacherAvailability(
   tenantId: string,
   input: TeacherAvailabilityInsert & { locationId?: string },
 ): Promise<TeacherAvailability> {
-  const row = toRow(tenantId, input);
+  const insertRow = toInsertRow(tenantId, input);
   if (!tableMissing(TABLE)) {
     try {
       const supabase = clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
-        .insert(row)
+        .insert(insertRow)  // no id field — DB generates UUID
         .select("*")
         .single();
       if (!error) return rowTo(data as Row);
+      // Log the exact Supabase error for debugging
+      console.error("[teacher_availability] INSERT error:", JSON.stringify(error));
       if (isMissingTableError(error, TABLE)) markTableMissing(TABLE);
       else throw error;
     } catch (err) {
+      console.error("[teacher_availability] INSERT catch:", err);
       if (isMissingTableError(err, TABLE)) markTableMissing(TABLE);
       else throw err;
     }
   }
-  store().set(row.id, row);
-  return rowTo(row);
+  // In-memory fallback — use crypto.randomUUID for a valid UUID
+  const fallbackRow: Row = { ...insertRow, id: crypto.randomUUID() };
+  store().set(fallbackRow.id, fallbackRow);
+  return rowTo(fallbackRow);
 }
 
 export async function updateTeacherAvailability(
@@ -216,9 +224,11 @@ export async function updateTeacherAvailability(
         .select("*")
         .single();
       if (!error) return rowTo(data as Row);
+      console.error("[teacher_availability] UPDATE error:", JSON.stringify(error));
       if (isMissingTableError(error, TABLE)) markTableMissing(TABLE);
       else throw error;
     } catch (err) {
+      console.error("[teacher_availability] UPDATE catch:", err);
       if (isMissingTableError(err, TABLE)) markTableMissing(TABLE);
       else throw err;
     }
@@ -245,9 +255,11 @@ export async function deleteTeacherAvailability(
         .eq("tenant_id", tenantId)
         .eq("id", id);
       if (!error) return;
+      console.error("[teacher_availability] DELETE error:", JSON.stringify(error));
       if (isMissingTableError(error, TABLE)) markTableMissing(TABLE);
       else throw error;
     } catch (err) {
+      console.error("[teacher_availability] DELETE catch:", err);
       if (isMissingTableError(err, TABLE)) markTableMissing(TABLE);
       else throw err;
     }

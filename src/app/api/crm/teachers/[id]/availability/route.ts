@@ -1,9 +1,9 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   getTeacherWeeklyAvailability,
   setTeacherAvailability,
 } from "@/lib/schedule/availability";
-import { badRequest, ok, serverError } from "@/lib/http";
+import { badRequest, ok } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 
 export const runtime = "nodejs";
@@ -36,7 +36,9 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     const data = await getTeacherWeeklyAvailability(resolved.context.tenantId, teacherId);
     return ok({ data });
   } catch (err) {
-    return serverError(err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[availability GET] error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -46,19 +48,24 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     minRole: "director",
   });
   if ("response" in resolved) return resolved.response;
+
+  let body: PostBody | null = null;
+  try {
+    body = (await req.json()) as PostBody;
+  } catch {
+    return badRequest("INVALID_BODY");
+  }
+
+  console.log("[availability POST] payload:", JSON.stringify(body));
+
+  if (!body || !Array.isArray(body.slots)) {
+    return badRequest("INVALID_BODY", { expected: { slots: "array" } });
+  }
+
   try {
     const { id: teacherId } = await ctx.params;
-    let body: PostBody | null = null;
-    try {
-      body = (await req.json()) as PostBody;
-    } catch {
-      return badRequest("INVALID_BODY");
-    }
-    if (!body || !Array.isArray(body.slots)) {
-      return badRequest("INVALID_BODY", { expected: { slots: "array" } });
-    }
 
-    // Normalize slots: convert string day names → integer, pass locationId via notes
+    // Normalize slots: convert string day names → integer, pass locationId through both fields
     const normalizedSlots = body.slots.map((s) => {
       const dayInt =
         typeof s.dayOfWeek === "number"
@@ -68,19 +75,25 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
         dayOfWeek: dayInt,
         startTime: s.startTime,
         endTime: s.endTime,
-        // Pass locationId via notes — our data layer reads it from there
-        notes: s.locationId ?? "",
         locationId: s.locationId ?? "",
+        notes: s.locationId ?? "",
       };
     });
+
+    console.log("[availability POST] normalized:", JSON.stringify(normalizedSlots));
 
     const slots = await setTeacherAvailability(
       resolved.context.tenantId,
       teacherId,
       normalizedSlots,
     );
+
+    console.log("[availability POST] saved:", slots.length, "slots");
     return ok({ data: slots, count: slots.length });
   } catch (err) {
-    return serverError(err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[availability POST] FAILED:", msg, err);
+    // Surface the exact error — not a generic 500
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
