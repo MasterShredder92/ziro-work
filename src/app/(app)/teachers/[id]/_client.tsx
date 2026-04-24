@@ -35,7 +35,7 @@ type TeacherRaw = {
   internal_match_notes?: string | null;
 };
 type Location = { id: string; name: string };
-type Tab = "profile" | "edit" | "w9" | "contract" | "students";
+type Tab = "profile" | "contract_w9" | "students";
 type AvailabilitySlot = { start_time: string; end_time: string; is_active?: boolean };
 type W9Record = {
   id: string; legal_name: string; business_name?: string | null;
@@ -203,12 +203,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
           )}
         </div>
       )}
-      {teacher.contract_pdf_url && (
-        <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] px-4 py-3 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#505055]">Contract PDF</span>
-          <a href={teacher.contract_pdf_url} target="_blank" rel="noopener noreferrer" className="text-sm text-[#00ff88] underline">View Contract →</a>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -375,7 +370,17 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
               <option value="on_leave">On Leave</option><option value="terminated">Terminated</option>
             </select>
           </div>
-          <div><label className={labelCls}>Role</label><input className={inputCls} value={teacherRole} onChange={e => setTeacherRole(e.target.value)} placeholder="Music Teacher, Lead, etc." /></div>
+          <div>
+            <label className={labelCls}>Role</label>
+            <select className={inputCls} value={teacherRole} onChange={e => setTeacherRole(e.target.value)}>
+              <option value="">— Select Role —</option>
+              <option value="admin">Admin</option>
+              <option value="company director">Company Director</option>
+              <option value="studio director">Studio Director</option>
+              <option value="teacher">Teacher</option>
+              <option value="student">Student</option>
+            </select>
+          </div>
         </div>
         <div><label className={labelCls}>Hire Date</label><input className={inputCls} type="date" value={hireDate} onChange={e => setHireDate(e.target.value)} /></div>
       </div>
@@ -730,6 +735,52 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
   );
 }
 
+/** Profile tab: shows TeacherProfileView with an inline Edit toggle */
+function ProfileTabWithEdit({
+  teacher, allLocations, assignedLocationIds, capacitySlots, studentCount, onSaved,
+}: {
+  teacher: TeacherRaw;
+  allLocations: Location[];
+  assignedLocationIds: string[];
+  capacitySlots: number | null;
+  studentCount: number | null;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  return (
+    <div className="space-y-4">
+      {/* Edit / Cancel toggle */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setEditing(e => !e)}
+          className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+            editing
+              ? "border border-[#1c1c1e] text-[#909098] hover:text-white"
+              : "bg-[#00ff88]/10 text-[#00ff88] hover:bg-[#00ff88]/20"
+          }`}
+        >
+          {editing ? "Cancel" : "Edit Profile"}
+        </button>
+      </div>
+      {editing ? (
+        <TeacherEditForm
+          teacher={teacher}
+          allLocations={allLocations}
+          assignedLocationIds={assignedLocationIds}
+          onSaved={() => { setEditing(false); onSaved(); }}
+        />
+      ) : (
+        <TeacherProfileView
+          teacher={teacher}
+          locations={allLocations.filter(l => assignedLocationIds.includes(l.id))}
+          capacitySlots={capacitySlots}
+          studentCount={studentCount}
+        />
+      )}
+    </div>
+  );
+}
+
 export function TeacherDetailClient() {
   const params = useParams();
   const id = String(params?.id ?? "");
@@ -770,8 +821,9 @@ export function TeacherDetailClient() {
   if (!id) return <div className="p-6 text-sm text-[#505055]">Missing teacher id.</div>;
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "profile", label: "Profile" }, { id: "edit", label: "Edit" },
-    { id: "w9", label: "W9" }, { id: "contract", label: "Contract" }, { id: "students", label: "Students" },
+    { id: "profile", label: "Profile" },
+    { id: "contract_w9", label: "Contract & W9" },
+    { id: "students", label: "Students" },
   ];
 
   const displayName = teacher
@@ -789,21 +841,36 @@ export function TeacherDetailClient() {
           {teacher && (
             <>
               <PageHeader title={displayName} subtitle={teacher.status ?? (teacher.is_active ? "active" : "inactive")} />
+              {/* Tab Nav */}
               <div className="flex gap-1 border-b border-[#1c1c1e] overflow-x-auto">
                 {TABS.map(t => (
-                  <button key={t.id} onClick={() => setTab(t.id)}
+                  <button key={t.id} onClick={() => setTab(t.id as Tab)}
                     className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${tab === t.id ? "border-b-2 border-[#00ff88] text-[#00ff88]" : "text-[#505055] hover:text-[#909098]"}`}>
                     {t.label}
-                    {t.id === "w9" && teacher.w9_status !== "complete" && teacher.w9_status !== "signed" && (
+                    {t.id === "contract_w9" && teacher.w9_status !== "complete" && teacher.w9_status !== "signed" && (
                       <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-400 align-middle" />
                     )}
                   </button>
                 ))}
               </div>
-              {tab === "profile" && <TeacherProfileView teacher={teacher} locations={allLocations.filter(l => assignedLocationIds.includes(l.id))} capacitySlots={capacitySlots} studentCount={studentCount} />}
-              {tab === "edit" && <TeacherEditForm teacher={teacher} allLocations={allLocations} assignedLocationIds={assignedLocationIds} onSaved={() => { void load(); setTab("profile"); }} />}
-              {tab === "w9" && <W9Module teacher={teacher} />}
-              {tab === "contract" && <ContractModule teacher={teacher} />}
+              {/* Profile tab: view + inline edit toggle */}
+              {tab === "profile" && (
+                <ProfileTabWithEdit
+                  teacher={teacher}
+                  allLocations={allLocations}
+                  assignedLocationIds={assignedLocationIds}
+                  capacitySlots={capacitySlots}
+                  studentCount={studentCount}
+                  onSaved={() => void load()}
+                />
+              )}
+              {/* Contract & W9 tab: Contract on top, W9 below */}
+              {tab === "contract_w9" && (
+                <div className="space-y-4">
+                  <ContractModule teacher={teacher} />
+                  <W9Module teacher={teacher} />
+                </div>
+              )}
               {tab === "students" && <TeacherStudentsTab teacherId={id} />}
             </>
           )}
