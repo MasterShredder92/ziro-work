@@ -703,7 +703,7 @@ export function LocationScheduleGrid({
               // If a teacher is assigned (via roomAssignments), suppress the placeholder so their availability renders
               const isEmptyRoom = col.isRoom && dayBlocks.length === 0 && !assignedTeacherId;
               return (
-                <div key={col.id} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
+                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
                   {/* Empty Room State */}
                   {isEmptyRoom && (
                     <div
