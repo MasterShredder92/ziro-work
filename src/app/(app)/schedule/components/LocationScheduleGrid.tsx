@@ -977,7 +977,9 @@ export function LocationScheduleGrid({
                           }}
                         >
                           <div className="truncate text-[10px] font-black leading-tight" style={{ color: "#000" }}>
-                            {rlStudentName} {instrumentEmoji(recurringLesson.instrument)}
+                            {recurringLesson.instrument
+                              ? `${instrumentEmoji(recurringLesson.instrument)} ${rlStudentName}`
+                              : `- ${rlStudentName}`}
                           </div>
                           <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: "#000" }}>
                             {formatBlockTime(recurringLesson.start_time)} – {formatBlockTime(recurringLesson.end_time)}
