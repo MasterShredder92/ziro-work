@@ -396,7 +396,7 @@ export function LocationScheduleGrid({
   const startMin = dayHours.openMinute;
   const endMin = dayHours.closeMinute;
   const totalMinutes = endMin - startMin;
-  const timeLabels = [];
+  const timeLabels: number[] = [];
   for (let m = startMin; m < endMin; m += 30) {
     timeLabels.push(m);
   }
@@ -718,124 +718,135 @@ export function LocationScheduleGrid({
                       </span>
                     </div>
                   )}
-                  {/* Hard-Lock: pre-availability overlay */}
-                  {preHeight > 0 && (
-                    <div
-                      className="absolute left-0 right-0 top-0 z-[5] flex items-center justify-center overflow-hidden"
-                      style={{
-                        height: `${preHeight}px`,
-                        background: "repeating-linear-gradient(135deg, rgba(0,255,136,0.03) 0px, rgba(0,255,136,0.03) 2px, transparent 2px, transparent 10px)",
-                        borderBottom: "1px dashed rgba(0,255,136,0.15)",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      {preHeight >= 24 && (
-                        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", userSelect: "none" }}>
-                          Unavailable
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {/* Hard-Lock: post-availability overlay */}
-                  {postHeight > 0 && (
-                    <div
-                      className="absolute left-0 right-0 z-[5] flex items-center justify-center overflow-hidden"
-                      style={{
-                        top: `${postTop}px`,
-                        height: `${postHeight}px`,
-                        background: "repeating-linear-gradient(135deg, rgba(0,255,136,0.03) 0px, rgba(0,255,136,0.03) 2px, transparent 2px, transparent 10px)",
-                        borderTop: "1px dashed rgba(0,255,136,0.15)",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      {postHeight >= 24 && (
-                        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", userSelect: "none" }}>
-                          Unavailable
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {dayBlocks.map((block) => {
-                    const blockStart = toMinute(block.start_time);
-                    const blockEnd = toMinute(block.end_time);
-                    const top = ((blockStart - startMin) / 30) * 48;
-                    const height = ((blockEnd - blockStart) / 30) * 48;
-                    const display = getBlockDisplay(block);
-                    const isSelected = selectedBlockId === block.id;
-                    // Conflict detection: block falls outside teacher's availability window
-                    // isConflict = true if block starts before availStart OR ends after availEnd
-                    // Only flag student_session blocks (not open_time, training, etc.)
-                    const isConflict = hasAvailability &&
-                      block.block_type === "student_session" &&
-                      (blockStart < availStart || blockEnd > availEnd);
+                  {/* ── Capacity Generator ──
+                   * Loop every 30-min slot from studio open to close.
+                   * For each slot:
+                   *   - Outside teacher availability → hatched Unavailable row
+                   *   - Inside availability + has a booked block → render lesson card
+                   *   - Inside availability + no block → render clickable OPEN TIME slot
+                   * When no teacher is assigned (isEmptyRoom), skip the generator entirely.
+                   */}
+                  {!isEmptyRoom && timeLabels.map((slotMin) => {
+                    const slotTop = ((slotMin - startMin) / 30) * 48;
+                    const slotEnd = slotMin + 30;
+                    const inWindow = hasAvailability
+                      ? availWindows.some(w => slotMin >= w.start && slotEnd <= w.end)
+                      : false;
 
+                    // Check if a booked block starts at this slot
+                    const block = dayBlocks.find(b => toMinute(b.start_time) === slotMin);
+
+                    if (!inWindow) {
+                      // ── Hatched Unavailable row ──
+                      return (
+                        <div
+                          key={slotMin}
+                          className="absolute left-0 right-0 flex items-center justify-center overflow-hidden"
+                          style={{
+                            top: `${slotTop}px`,
+                            height: "48px",
+                            background: "repeating-linear-gradient(135deg, rgba(0,255,136,0.03) 0px, rgba(0,255,136,0.03) 2px, transparent 2px, transparent 10px)",
+                            borderBottom: "1px solid rgba(0,255,136,0.06)",
+                            pointerEvents: "none",
+                            zIndex: 2,
+                          }}
+                        >
+                          <span style={{ fontSize: 8, fontWeight: 700, color: "rgba(0,255,136,0.2)", letterSpacing: "0.1em", textTransform: "uppercase", userSelect: "none" }}>
+                            Unavailable
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    if (block) {
+                      // ── Booked lesson card ──
+                      const blockStart = toMinute(block.start_time);
+                      const blockEnd = toMinute(block.end_time);
+                      const blockHeight = ((blockEnd - blockStart) / 30) * 48;
+                      const display = getBlockDisplay(block);
+                      const isSelected = selectedBlockId === block.id;
+                      const isConflict = hasAvailability &&
+                        block.block_type === "student_session" &&
+                        (blockStart < availStart || blockEnd > availEnd);
+                      return (
+                        <button
+                          key={block.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedBlockId(block.id);
+                            setSessionType(block.block_type);
+                            setBookingStudentId(null);
+                            setBookingStudentQuery("");
+                            setBookingFirstDay(null);
+                            setBookingStudentHasBlocks(null);
+                          }}
+                          className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left transition-all hover:scale-[1.02] hover:z-20 ${
+                            isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : "z-10"
+                          }`}
+                          style={{
+                            top: `${slotTop + 2}px`,
+                            height: `${blockHeight - 4}px`,
+                            backgroundColor: display.bg,
+                            borderColor: isConflict ? "#ef4444" : display.border,
+                            boxShadow: isConflict ? "0 0 0 1px #ef4444, 0 0 8px rgba(239,68,68,0.3)" : undefined,
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <span className="truncate text-[10px] font-black leading-tight" style={{ color: display.text }}>
+                              {block.student_id ? (
+                                <>{studentName(studentsById.get(block.student_id))} {instrumentEmoji(studentsById.get(block.student_id)?.instrument)}</>
+                              ) : display.label}
+                            </span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {isConflict && (
+                                <span
+                                  title="Schedule Conflict: outside teacher availability"
+                                  style={{ fontSize: 8, fontWeight: 900, color: "#fff", background: "#ef4444", borderRadius: 3, padding: "0 3px", lineHeight: "13px", letterSpacing: "0.05em", userSelect: "none" }}
+                                >!</span>
+                              )}
+                              {block.is_virtual && <span className="text-[10px]">🌐</span>}
+                            </div>
+                          </div>
+                          <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: display.text }}>
+                            {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
+                          </div>
+                          {isConflict && (
+                            <div className="mt-0.5 text-[8px] font-bold" style={{ color: "#fca5a5" }}>Conflict</div>
+                          )}
+                          {block.notes && (
+                            <div className="mt-1 truncate text-[8px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
+                          )}
+                        </button>
+                      );
+                    }
+
+                    // ── OPEN TIME slot ──
                     return (
                       <button
-                        key={block.id}
+                        key={slotMin}
                         type="button"
                         onClick={() => {
-                          // Open Session Detail panel directly — no intermediate modal
-                          setSelectedBlockId(block.id);
-                          setSessionType(block.block_type);
+                          setSessionType("student_session");
+                          setSelectedBlockId(null);
                           setBookingStudentId(null);
                           setBookingStudentQuery("");
                           setBookingFirstDay(null);
                           setBookingStudentHasBlocks(null);
                         }}
-                        className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left transition-all hover:scale-[1.02] hover:z-20 ${
-                          isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : "z-10"
-                        }`}
+                        className="absolute left-1 right-1 flex items-center justify-center gap-1 rounded border border-dashed transition-all hover:border-[#00ff88] hover:bg-[rgba(0,255,136,0.06)] group"
                         style={{
-                          top: `${top + 2}px`,
-                          height: `${height - 4}px`,
-                          backgroundColor: display.bg,
-                          borderColor: isConflict ? "#ef4444" : display.border,
-                          boxShadow: isConflict ? "0 0 0 1px #ef4444, 0 0 8px rgba(239,68,68,0.3)" : undefined,
+                          top: `${slotTop + 1}px`,
+                          height: "46px",
+                          borderColor: "rgba(0,255,136,0.15)",
+                          zIndex: 1,
                         }}
                       >
-                        <div className="flex items-start justify-between gap-1">
-                          <span className="truncate text-[10px] font-black leading-tight" style={{ color: display.text }}>
-                            {block.student_id ? (
-                              <>{studentName(studentsById.get(block.student_id))} {instrumentEmoji(studentsById.get(block.student_id)?.instrument)}</>
-                            ) : display.label}
-                          </span>
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            {isConflict && (
-                              <span
-                                title="Schedule Conflict: outside teacher availability"
-                                style={{
-                                  fontSize: 8,
-                                  fontWeight: 900,
-                                  color: "#fff",
-                                  background: "#ef4444",
-                                  borderRadius: 3,
-                                  padding: "0 3px",
-                                  lineHeight: "13px",
-                                  letterSpacing: "0.05em",
-                                  userSelect: "none",
-                                }}
-                              >
-                                !
-                              </span>
-                            )}
-                            {block.is_virtual && (
-                              <span className="text-[10px]">🌐</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: display.text }}>
-                          {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
-                        </div>
-                        {isConflict && (
-                          <div className="mt-0.5 text-[8px] font-bold" style={{ color: "#fca5a5" }}>
-                            Conflict
-                          </div>
-                        )}
-                        {block.notes && (
-                          <div className="mt-1 truncate text-[8px] italic opacity-60" style={{ color: display.text }}>
-                            {block.notes}
-                          </div>
-                        )}
+                        <span
+                          style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}
+                          className="group-hover:text-[#00ff88] transition-colors"
+                        >
+                          + Open
+                        </span>
                       </button>
                     );
                   })}
