@@ -11,11 +11,15 @@ const VALID_DAYS = [
 ] as const;
 type DayOfWeek = (typeof VALID_DAYS)[number];
 
+/** Convert "HH:MM:SS" to total minutes */
+function toMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
 /**
  * GET /api/schedule/room-assignments?location_id=...&day_of_week=...
  * Returns recurring room assignments for a location+day (flat, no joins).
- * Root cause of previous 500: PGRST200 from embedded teacher join — no FK exists.
- * Fix: flat select only.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -29,7 +33,6 @@ export async function GET(req: NextRequest) {
 
     const db = clientFor(tenantId);
 
-    // Flat select — no embedded joins (no FK constraints on this table)
     let query = db
       .from("teacher_room_assignments")
       .select("id, teacher_id, room_id, location_id, assignment_date, day_of_week, is_recurring")
@@ -58,9 +61,9 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/schedule/room-assignments
- * Upsert a recurring teacher→room assignment.
- * Enforces: one teacher per room per day, one room per teacher per location per day.
- * Uses DELETE+INSERT to avoid unique constraint conflicts.
+ * Assign a teacher to a room for a recurring day.
+ * Allows multiple teachers per room (shift-splits) but rejects time overlaps.
+ * Enforces: one room per teacher per location per day (teacher can't be in two rooms).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -90,8 +93,8 @@ export async function POST(req: NextRequest) {
     const db = clientFor(tenantId);
 
     if (is_recurring && day_of_week) {
-      // Remove any existing assignment for this teacher on this day at this location
-      // (teacher moving to a different room, or re-assigning same room)
+      // 1. Remove any existing assignment for THIS teacher on this day at this location
+      //    (teacher moving to a different room)
       await db
         .from("teacher_room_assignments")
         .delete()
@@ -101,19 +104,61 @@ export async function POST(req: NextRequest) {
         .eq("day_of_week", day_of_week)
         .eq("is_recurring", true);
 
-      // Remove any existing assignment for this room on this day
-      // (a different teacher was previously in this room)
-      await db
+      // 2. Check if the room already has teachers on this day (shift-split scenario)
+      const { data: existingAssignments } = await db
         .from("teacher_room_assignments")
-        .delete()
+        .select("teacher_id")
         .eq("tenant_id", tenantId)
         .eq("room_id", room_id)
         .eq("location_id", location_id)
         .eq("day_of_week", day_of_week)
         .eq("is_recurring", true);
+
+      if (existingAssignments && existingAssignments.length > 0) {
+        // Room already has teachers — check for time overlap
+        const existingTeacherIds = existingAssignments.map((a) => a.teacher_id);
+
+        // Fetch incoming teacher's availability
+        const { data: incomingAvail } = await db
+          .from("teacher_availability")
+          .select("start_time, end_time")
+          .eq("teacher_id", teacher_id)
+          .eq("location_id", location_id)
+          .eq("day_of_week", day_of_week)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (incomingAvail) {
+          const inStart = toMinutes(incomingAvail.start_time);
+          const inEnd = toMinutes(incomingAvail.end_time);
+
+          // Fetch existing teachers' availability
+          const { data: existingAvails } = await db
+            .from("teacher_availability")
+            .select("teacher_id, start_time, end_time")
+            .in("teacher_id", existingTeacherIds)
+            .eq("location_id", location_id)
+            .eq("day_of_week", day_of_week)
+            .eq("is_active", true);
+
+          if (existingAvails) {
+            for (const avail of existingAvails) {
+              const exStart = toMinutes(avail.start_time);
+              const exEnd = toMinutes(avail.end_time);
+              // Overlap: incoming starts before existing ends AND incoming ends after existing starts
+              if (inStart < exEnd && inEnd > exStart) {
+                return badRequest(
+                  `Time conflict in shared room: incoming teacher's hours (${incomingAvail.start_time}–${incomingAvail.end_time}) overlap with an existing assignment (${avail.start_time}–${avail.end_time})`
+                );
+              }
+            }
+          }
+        }
+        // No overlap detected — allow the shift-split assignment
+      }
     }
 
-    // Insert the new assignment (clean slate after deletes above)
+    // Insert the new assignment
     const { data, error } = await db
       .from("teacher_room_assignments")
       .insert({
@@ -138,14 +183,15 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * DELETE /api/schedule/room-assignments?room_id=...&location_id=...&day_of_week=...
- * Remove a recurring assignment for a specific room+day.
+ * DELETE /api/schedule/room-assignments?room_id=...&teacher_id=...&location_id=...&day_of_week=...
+ * Remove a specific teacher's recurring assignment for a room+day.
  */
 export async function DELETE(req: NextRequest) {
   try {
     const { tenantId } = await withScheduleAccess(req, "schedule.write");
     const url = new URL(req.url);
     const roomId = url.searchParams.get("room_id");
+    const teacherId = url.searchParams.get("teacher_id");
     const locationId = url.searchParams.get("location_id");
     const dayOfWeek = url.searchParams.get("day_of_week");
 
@@ -153,7 +199,8 @@ export async function DELETE(req: NextRequest) {
       return badRequest("room_id, location_id, and day_of_week required");
 
     const db = clientFor(tenantId);
-    const { error } = await db
+
+    let query = db
       .from("teacher_room_assignments")
       .delete()
       .eq("tenant_id", tenantId)
@@ -162,6 +209,12 @@ export async function DELETE(req: NextRequest) {
       .eq("day_of_week", dayOfWeek)
       .eq("is_recurring", true);
 
+    // If teacher_id provided, only delete that teacher's assignment (shift-split aware)
+    if (teacherId) {
+      query = query.eq("teacher_id", teacherId);
+    }
+
+    const { error } = await query;
     if (error) return serverError(error);
 
     return ok({ success: true });

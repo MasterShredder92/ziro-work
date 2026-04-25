@@ -162,7 +162,7 @@ export function LocationScheduleGrid({
   const [error, setError] = React.useState<string | null>(null);
   // ── Room assignments state ──────────────────────────────────────────────────
   // Map: room_id → teacher_id (recurring assignment for the selected day)
-  const [roomAssignments, setRoomAssignments] = React.useState<Map<string, string>>(new Map());
+  const [roomAssignments, setRoomAssignments] = React.useState<Map<string, string[]>>(new Map());
   const [assigningRoomId, setAssigningRoomId] = React.useState<string | null>(null);
   const [assigningSaving, setAssigningSaving] = React.useState(false);
   // Sub assignments: room_ids that are one-time subs for the currently viewed date
@@ -326,8 +326,11 @@ export function LocationScheduleGrid({
       .then(r => r.ok ? r.json() : null)
       .then((data: { data?: Array<{ room_id: string; teacher_id: string }> } | null) => {
         if (!data?.data) return;
-        const map = new Map<string, string>();
-        for (const a of data.data) map.set(a.room_id, a.teacher_id);
+        const map = new Map<string, string[]>();
+        for (const a of data.data) {
+          if (!map.has(a.room_id)) map.set(a.room_id, []);
+          map.get(a.room_id)!.push(a.teacher_id);
+        }
         setRoomAssignments(map);
       })
       .catch(() => {});
@@ -469,6 +472,18 @@ export function LocationScheduleGrid({
     }
   }
 
+  if (selectedDayName === "friday") {
+    return (
+      <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 items-center justify-center bg-[var(--z-bg)]">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-[var(--z-border)] bg-[#111113] px-12 py-10">
+          <span className="text-4xl">🔒</span>
+          <p className="text-xl font-bold text-white">Studio Closed</p>
+          <p className="text-sm text-[var(--z-muted)]">Fridays are not scheduled. No rooms available.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 overflow-hidden bg-[var(--z-bg)]">
       {/* ── Time Column ── */}
@@ -512,8 +527,10 @@ export function LocationScheduleGrid({
                 const booked = dayBlocks.filter(b => b.student_id && b.block_type !== 'open_time').length;
                 const open = dayBlocks.filter(b => b.block_type === 'open_time' && !b.student_id).length;
                 // Teacher from recurring assignment map first, then fall back to block data
-                const assignedTeacherId = roomAssignments.get(room.id) ?? dayBlocks.find(b => b.teacher_id)?.teacher_id;
-                const assignedTeacher = assignedTeacherId ? teachers.find(t => t.id === assignedTeacherId) : null;
+                const assignedTeacherIds = roomAssignments.get(room.id) ?? (dayBlocks.find(b => b.teacher_id)?.teacher_id ? [dayBlocks.find(b => b.teacher_id)!.teacher_id!] : []);
+                const assignedTeacherId = assignedTeacherIds[0] ?? null;
+                const assignedTeachers = assignedTeacherIds.map(id => teachers.find(t => t.id === id)).filter(Boolean) as typeof teachers;
+                const assignedTeacher = assignedTeachers[0] ?? null;
                 const primaryInstrument = (room.primaryInstruments as string[] | undefined)?.[0];
                 const emoji = primaryInstrument ? instrumentEmoji(primaryInstrument) : "🎵";
                 const hasBlocks = dayBlocks.length > 0;
@@ -521,7 +538,7 @@ export function LocationScheduleGrid({
                 // All teachers — show everyone, flag those without availability with ⚠️
                 // GUARDRAIL: exclude teachers already assigned to a DIFFERENT room on this day
                 const availableTeachers = teachers.filter(t => {
-                  const existingRoom = [...roomAssignments.entries()].find(([rid, tid]) => tid === t.id && rid !== room.id);
+                  const existingRoom = [...roomAssignments.entries()].find(([rid, tids]) => tids.includes(t.id) && rid !== room.id);
                   return !existingRoom; // block if already in another room on this day
                 });
                 return (
@@ -536,19 +553,19 @@ export function LocationScheduleGrid({
                         Room {room.name}
                       </span>
                     </div>
-                    {assignedTeacher ? (
+                    {assignedTeachers.length > 0 ? (
                       <button
                         className="mt-0.5 w-full truncate text-[10px] font-semibold text-[var(--z-accent)] hover:opacity-70 transition-opacity"
                         onClick={() => setAssigningRoomId(isAssigning ? null : room.id)}
                         title="Click to reassign teacher"
                       >
-                        {teacherName(assignedTeacher)}
+                        {assignedTeachers.map(t => teacherName(t)).join(" / ")}
                         {subAssignments.has(room.id) ? (
                           <span className="ml-1 inline-flex items-center rounded-full bg-yellow-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400 border border-yellow-500/30">
                             🟡 Sub
                           </span>
                         ) : " ✎"}
-                    </button>
+                      </button>
                     ) : (
                       <button
                         className="mt-0.5 w-full text-[10px] font-semibold text-[var(--z-muted)] hover:text-[var(--z-accent)] transition-colors"
@@ -605,10 +622,15 @@ export function LocationScheduleGrid({
                                     if (res.ok) {
                                       setRoomAssignments(prev => {
                                         const next = new Map(prev);
-                                        for (const [rid, tid] of next.entries()) {
-                                          if (tid === t.id) next.delete(rid);
+                                        // Remove teacher from any other room
+                                        for (const [rid, tids] of next.entries()) {
+                                          if (rid !== room.id && tids.includes(t.id)) {
+                                            next.set(rid, tids.filter(id => id !== t.id));
+                                          }
                                         }
-                                        next.set(room.id, t.id);
+                                        // Add teacher to this room (shift-split: append)
+                                        const existing = next.get(room.id) ?? [];
+                                        if (!existing.includes(t.id)) next.set(room.id, [...existing, t.id]);
                                         return next;
                                       });
                                       // Clear sub badge if assigning as recurring
@@ -642,6 +664,7 @@ export function LocationScheduleGrid({
                                 try {
                                   await fetch(`/api/schedule/room-assignments?room_id=${room.id}&location_id=${locationId}&day_of_week=${selectedDayName}`, { method: "DELETE" });
                                   setRoomAssignments(prev => { const next = new Map(prev); next.delete(room.id); return next; });
+                                  setSubAssignments(prev => { const next = new Set(prev); next.delete(room.id); return next; });
                                 } finally {
                                   setAssigningSaving(false);
                                   setAssigningRoomId(null);
@@ -682,12 +705,14 @@ export function LocationScheduleGrid({
             {/* Columns */}
             {(sortedRooms.length === 0 ? filteredTeachers.map(t => ({ id: t.id, isRoom: false as const, teacher: t })) : sortedRooms.map(r => ({ id: r.id, isRoom: true as const, room: r }))).map((col) => {
               const dayBlocks = col.isRoom ? (roomBlocks.get(col.id) ?? []) : (teacherBlocks.get(col.id) ?? []);
-              // Hard-Lock: compute unavailable zones for the teacher in this column
-              // For room columns: prefer recurring assignment map, fall back to block data
-              const assignedTeacherId = col.isRoom
-                ? (roomAssignments.get(col.id) ?? dayBlocks.find(b => b.teacher_id)?.teacher_id)
-                : col.id;
-              const availRows = assignedTeacherId ? (teacherAvailabilityForDay.get(assignedTeacherId) ?? []) : [];
+              // Hard-Lock: compute unavailable zones for the teacher(s) in this column
+              // For room columns: support shift-splits (multiple teachers per room per day)
+              const assignedTeacherIds = col.isRoom
+                ? (roomAssignments.get(col.id) ?? (dayBlocks.find(b => b.teacher_id)?.teacher_id ? [dayBlocks.find(b => b.teacher_id)!.teacher_id!] : []))
+                : [col.id];
+              const assignedTeacherId = assignedTeacherIds[0] ?? null;
+              // Merge availability windows from ALL assigned teachers (shift-split: union of windows)
+              const availRows = assignedTeacherIds.flatMap(tid => teacherAvailabilityForDay.get(tid) ?? []);
               const availWindows = availRows.map(r => ({
                 start: toMinute(r.start_time),
                 end: toMinute(r.end_time),
@@ -701,7 +726,7 @@ export function LocationScheduleGrid({
               const postHeight = hasAvailability ? Math.max(0, ((endMin - availEnd) / 30) * 48) : 0;
               // Empty room state: room has no blocks today AND no teacher assigned
               // If a teacher is assigned (via roomAssignments), suppress the placeholder so their availability renders
-              const isEmptyRoom = col.isRoom && dayBlocks.length === 0 && !assignedTeacherId;
+              const isEmptyRoom = col.isRoom && dayBlocks.length === 0 && assignedTeacherIds.length === 0;
               return (
                 <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
                   {/* Empty Room State */}
@@ -1282,10 +1307,15 @@ export function LocationScheduleGrid({
                       if (res.ok) {
                         setRoomAssignments(prev => {
                           const next = new Map(prev);
-                          for (const [rid, tid] of next.entries()) {
-                            if (tid === conflictTarget.teacherId) next.delete(rid);
+                          for (const [rid, tids] of next.entries()) {
+                            if (tids.includes(conflictTarget.teacherId)) {
+                              const filtered = tids.filter(t => t !== conflictTarget.teacherId);
+                              if (filtered.length === 0) next.delete(rid);
+                              else next.set(rid, filtered);
+                            }
                           }
-                          next.set(conflictTarget.roomId, conflictTarget.teacherId);
+                          const existing = next.get(conflictTarget.roomId) ?? [];
+                          next.set(conflictTarget.roomId, [...existing, conflictTarget.teacherId]);
                           return next;
                         });
                         setSubAssignments(prev => new Set([...prev, conflictTarget.roomId]));
