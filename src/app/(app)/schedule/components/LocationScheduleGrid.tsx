@@ -141,6 +141,20 @@ const BLOCK_TYPE_OPTIONS: Array<{ value: ScheduleBlock["block_type"]; label: str
   { value: "virtual",         label: "Virtual Session" },
 ];
 
+// ─── Recurring Lesson type (API response shape) ───────────────────────────────
+type RecurringLesson = {
+  id: string;
+  student_id: string;
+  teacher_id: string;
+  location_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  instrument: string | null;
+  student_first_name: string | null;
+  student_last_name: string | null;
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export function LocationScheduleGrid({
   locationId,
@@ -170,6 +184,8 @@ export function LocationScheduleGrid({
   // Conflict modal: triggered when assigning a teacher who has no availability for the day
   const [conflictTarget, setConflictTarget] = React.useState<{ teacherId: string; roomId: string } | null>(null);
   const [conflictSaving, setConflictSaving] = React.useState(false);
+  // Recurring lessons fetched client-side for projection overlay
+  const [clientRecurringLessons, setClientRecurringLessons] = React.useState<RecurringLesson[]>([]);
   // Room assignments fetch effect is placed after selectedDayName declaration below
 
   // ── Current time indicator ──────────────────────────────────────────────────
@@ -319,6 +335,19 @@ export function LocationScheduleGrid({
       })
       .catch(() => {});
   }, [locationId]);
+  // Fetch recurring lessons for projection overlay (client-side, no SSR)
+  React.useEffect(() => {
+    if (!locationId || !selectedDate) return;
+    const d = new Date(selectedDate + "T00:00:00");
+    const dow = d.getDay(); // 0=Sun, 6=Sat
+    void fetch(`/api/schedule/recurring-lessons?location_id=${locationId}&day_of_week=${dow}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((res: { data?: RecurringLesson[] } | null) => {
+        if (res?.data) setClientRecurringLessons(res.data);
+      })
+      .catch(() => {});
+  }, [locationId, selectedDate]);
+
   // Fetch recurring room assignments when location or day changes
   React.useEffect(() => {
     if (!locationId || !selectedDayName) return;
@@ -842,6 +871,46 @@ export function LocationScheduleGrid({
                             <div className="mt-1 truncate text-[8px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
                           )}
                         </button>
+                      );
+                    }
+
+                    // ── Recurring lesson overlay (future dates: no actual block row exists) ──
+                    // Match on teacher_id + start_time for the assigned teacher in this column
+                    const recurringLesson = clientRecurringLessons.find(rl => {
+                      const rlMin = toMinute(rl.start_time);
+                      return assignedTeacherIds.includes(rl.teacher_id) && rlMin === slotMin;
+                    });
+
+                    if (recurringLesson) {
+                      const rlStart = toMinute(recurringLesson.start_time);
+                      const rlEnd = toMinute(recurringLesson.end_time);
+                      const rlHeight = ((rlEnd - rlStart) / 30) * 48;
+                      const rlStudentName = [recurringLesson.student_first_name, recurringLesson.student_last_name]
+                        .filter(Boolean).join(" ") || "Student";
+                      return (
+                        <div
+                          key={`rl-${recurringLesson.id}`}
+                          className="absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5"
+                          style={{
+                            top: `${slotTop + 2}px`,
+                            height: `${rlHeight - 4}px`,
+                            backgroundColor: "rgba(234,179,8,0.7)",
+                            borderColor: "#ca8a04",
+                            zIndex: 8,
+                            opacity: 0.85,
+                          }}
+                          title={`Recurring: ${rlStudentName} (projected)`}
+                        >
+                          <div className="truncate text-[10px] font-black leading-tight" style={{ color: "#000" }}>
+                            {rlStudentName} {instrumentEmoji(recurringLesson.instrument)}
+                          </div>
+                          <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: "#000" }}>
+                            {formatBlockTime(recurringLesson.start_time)} – {formatBlockTime(recurringLesson.end_time)}
+                          </div>
+                          <div className="mt-0.5 text-[8px] font-semibold" style={{ color: "rgba(0,0,0,0.6)" }}>
+                            🔄 Recurring
+                          </div>
+                        </div>
                       );
                     }
 
