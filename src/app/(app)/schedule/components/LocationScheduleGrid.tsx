@@ -942,10 +942,15 @@ export function LocationScheduleGrid({
                     }
 
                     // ── Recurring lesson overlay (future dates: no actual block row exists) ──
-                    // Match on teacher_id + start_time for the assigned teacher in this column
+                    // Match on teacher_id + start_time.
+                    // Primary: use assignedTeacherIds from roomAssignments (populated async).
+                    // Fallback: if roomAssignments hasn't loaded yet, infer teacher from dayBlocks.
+                    const inferredTeacherIds: string[] = assignedTeacherIds.length > 0
+                      ? assignedTeacherIds
+                      : [...new Set(dayBlocks.map(b => b.teacher_id).filter(Boolean) as string[])];
                     const recurringLesson = clientRecurringLessons.find(rl => {
                       const rlMin = toMinute(rl.start_time);
-                      return assignedTeacherIds.includes(rl.teacher_id) && rlMin === slotMin;
+                      return inferredTeacherIds.includes(rl.teacher_id) && rlMin === slotMin;
                     });
 
                     if (recurringLesson) {
