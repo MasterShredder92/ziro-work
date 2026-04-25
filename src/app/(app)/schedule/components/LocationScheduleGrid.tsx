@@ -165,6 +165,11 @@ export function LocationScheduleGrid({
   const [roomAssignments, setRoomAssignments] = React.useState<Map<string, string>>(new Map());
   const [assigningRoomId, setAssigningRoomId] = React.useState<string | null>(null);
   const [assigningSaving, setAssigningSaving] = React.useState(false);
+  // Sub assignments: room_ids that are one-time subs for the currently viewed date
+  const [subAssignments, setSubAssignments] = React.useState<Set<string>>(new Set());
+  // Conflict modal: triggered when assigning a teacher who has no availability for the day
+  const [conflictTarget, setConflictTarget] = React.useState<{ teacherId: string; roomId: string } | null>(null);
+  const [conflictSaving, setConflictSaving] = React.useState(false);
   // Room assignments fetch effect is placed after selectedDayName declaration below
 
   // ── Current time indicator ──────────────────────────────────────────────────
@@ -496,12 +501,11 @@ export function LocationScheduleGrid({
                 const emoji = primaryInstrument ? instrumentEmoji(primaryInstrument) : "🎵";
                 const hasBlocks = dayBlocks.length > 0;
                 const isAssigning = assigningRoomId === room.id;
-                // Teachers available at this location on the selected day (smart filter)
+                // All teachers — show everyone, flag those without availability with ⚠️
                 // GUARDRAIL: exclude teachers already assigned to a DIFFERENT room on this day
                 const availableTeachers = teachers.filter(t => {
-                  if (!teacherAvailabilityForDay.has(t.id)) return false;
                   const existingRoom = [...roomAssignments.entries()].find(([rid, tid]) => tid === t.id && rid !== room.id);
-                  return !existingRoom; // block if already in another room
+                  return !existingRoom; // block if already in another room on this day
                 });
                 return (
                   <div
@@ -521,8 +525,13 @@ export function LocationScheduleGrid({
                         onClick={() => setAssigningRoomId(isAssigning ? null : room.id)}
                         title="Click to reassign teacher"
                       >
-                        {teacherName(assignedTeacher)} ✎
-                      </button>
+                        {teacherName(assignedTeacher)}
+                        {subAssignments.has(room.id) ? (
+                          <span className="ml-1 inline-flex items-center rounded-full bg-yellow-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400 border border-yellow-500/30">
+                            🟡 Sub
+                          </span>
+                        ) : " ✎"}
+                    </button>
                     ) : (
                       <button
                         className="mt-0.5 w-full text-[10px] font-semibold text-[var(--z-muted)] hover:text-[var(--z-accent)] transition-colors"
@@ -557,6 +566,12 @@ export function LocationScheduleGrid({
                                 disabled={assigningSaving}
                                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[11px] font-medium text-[var(--z-fg)] hover:bg-[rgba(0,255,136,0.08)] transition-colors disabled:opacity-50"
                                 onClick={async () => {
+                                  // Conflict check: teacher not scheduled for this day
+                                  if (!teacherAvailabilityForDay.has(t.id)) {
+                                    setConflictTarget({ teacherId: t.id, roomId: room.id });
+                                    setAssigningRoomId(null);
+                                    return;
+                                  }
                                   setAssigningSaving(true);
                                   try {
                                     const res = await fetch("/api/schedule/room-assignments", {
@@ -573,13 +588,14 @@ export function LocationScheduleGrid({
                                     if (res.ok) {
                                       setRoomAssignments(prev => {
                                         const next = new Map(prev);
-                                        // Remove any previous room assignment for this teacher on this day
                                         for (const [rid, tid] of next.entries()) {
                                           if (tid === t.id) next.delete(rid);
                                         }
                                         next.set(room.id, t.id);
                                         return next;
                                       });
+                                      // Clear sub badge if assigning as recurring
+                                      setSubAssignments(prev => { const next = new Set(prev); next.delete(room.id); return next; });
                                     }
                                   } finally {
                                     setAssigningSaving(false);
@@ -591,6 +607,9 @@ export function LocationScheduleGrid({
                                 <span className={t.id === assignedTeacherId ? "text-[var(--z-accent)] font-bold" : ""}>
                                   {teacherName(t)}
                                   {t.id === assignedTeacherId ? " ✓" : ""}
+                                  {!teacherAvailabilityForDay.has(t.id) && (
+                                    <span className="ml-1 text-yellow-400 text-[9px]">⚠️</span>
+                                  )}
                                 </span>
                               </button>
                             ))
@@ -1175,11 +1194,112 @@ export function LocationScheduleGrid({
               </button>
             </div>
           </div>
-        </div>
+         </div>
       )}
 
+      {/* ── Schedule Conflict Modal ─────────────────────────────────────────── */}
+      {conflictTarget && (() => {
+        const conflictTeacher = teachers.find(t => t.id === conflictTarget.teacherId);
+        const conflictRoom = rooms.find(r => r.id === conflictTarget.roomId);
+        return (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setConflictTarget(null)}
+          >
+            <div
+              className="relative w-full max-w-sm rounded-2xl border border-yellow-500/40 bg-[#111115] p-6 shadow-2xl"
+              style={{ boxShadow: "0 0 0 1px rgba(234,179,8,0.2), 0 24px 64px rgba(0,0,0,0.8)" }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-500/10 text-xl">
+                  ⚠️
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Schedule Conflict</h3>
+                  <p className="mt-0.5 text-[11px] text-[#909098]">
+                    <span className="font-semibold text-yellow-400">{conflictTeacher ? teacherName(conflictTeacher) : "This teacher"}</span>
+                    {" "}is not scheduled for{" "}
+                    <span className="font-semibold text-white capitalize">{selectedDayName}s</span>
+                    {conflictRoom ? <> in <span className="font-semibold text-white">Room {conflictRoom.name}</span></> : ""}.
+                  </p>
+                </div>
+              </div>
 
+              {/* Options */}
+              <div className="space-y-2">
+                {/* Add as Sub */}
+                <button
+                  disabled={conflictSaving}
+                  className="flex w-full items-center gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-left transition-all hover:bg-yellow-500/20 disabled:opacity-50"
+                  onClick={async () => {
+                    setConflictSaving(true);
+                    try {
+                      const res = await fetch("/api/schedule/room-assignments", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          teacher_id: conflictTarget.teacherId,
+                          room_id: conflictTarget.roomId,
+                          location_id: locationId,
+                          day_of_week: selectedDayName,
+                          is_recurring: false,
+                          assignment_date: selectedDate,
+                        }),
+                      });
+                      if (res.ok) {
+                        setRoomAssignments(prev => {
+                          const next = new Map(prev);
+                          for (const [rid, tid] of next.entries()) {
+                            if (tid === conflictTarget.teacherId) next.delete(rid);
+                          }
+                          next.set(conflictTarget.roomId, conflictTarget.teacherId);
+                          return next;
+                        });
+                        setSubAssignments(prev => new Set([...prev, conflictTarget.roomId]));
+                      }
+                    } finally {
+                      setConflictSaving(false);
+                      setConflictTarget(null);
+                    }
+                  }}
+                >
+                  <span className="text-lg">🟡</span>
+                  <div>
+                    <div className="text-[11px] font-black text-yellow-400">Add as Sub</div>
+                    <div className="text-[10px] text-[#909098]">One-time override for {selectedDate} only. Does not change their master schedule.</div>
+                  </div>
+                </button>
+
+                {/* Update Master Availability */}
+                <button
+                  className="flex w-full items-center gap-3 rounded-xl border border-[rgba(0,255,136,0.2)] bg-[rgba(0,255,136,0.05)] px-4 py-3 text-left transition-all hover:bg-[rgba(0,255,136,0.1)]"
+                  onClick={() => {
+                    window.open(`/teachers/${conflictTarget.teacherId}?tab=availability`, "_blank");
+                    setConflictTarget(null);
+                  }}
+                >
+                  <span className="text-lg">📅</span>
+                  <div>
+                    <div className="text-[11px] font-black text-[var(--z-accent)]">Update Master Availability</div>
+                    <div className="text-[10px] text-[#909098]">Opens teacher profile in a new tab to add this day permanently.</div>
+                  </div>
+                </button>
+
+                {/* Cancel */}
+                <button
+                  className="w-full rounded-xl px-4 py-2 text-[11px] font-semibold text-[var(--z-muted)] hover:text-white transition-colors"
+                  onClick={() => setConflictTarget(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
-}
+}}
 
