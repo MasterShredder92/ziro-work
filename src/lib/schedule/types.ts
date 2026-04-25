@@ -109,6 +109,10 @@ export interface ScheduleRoom {
   roomType?: string | null;
   bookingRules?: Record<string, unknown> | null;
   isActive: boolean;
+  displayOrder?: number | null;
+  primaryInstruments?: string[] | null;
+  floor?: number | null;
+  color?: string | null;
   createdAt?: ISODateTimeString | null;
   updatedAt?: ISODateTimeString | null;
 }

@@ -75,6 +75,12 @@ function dbRowToRoom(tenantId: string, row: AnyRoom): ScheduleRoom {
     roomType: (row.room_type as string | null | undefined) ?? null,
     bookingRules,
     isActive: row.is_active !== false,
+    displayOrder: (row.display_order as number | null | undefined) ?? null,
+    primaryInstruments: Array.isArray(row.primary_instruments)
+      ? (row.primary_instruments as unknown[]).filter((v): v is string => typeof v === 'string')
+      : null,
+    floor: (row.floor as number | null | undefined) ?? null,
+    color: (row.color as string | null | undefined) ?? null,
     createdAt: (row.created_at as string | null | undefined) ?? null,
     updatedAt: (row.updated_at as string | null | undefined) ?? null,
   };

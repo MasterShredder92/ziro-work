@@ -84,6 +84,32 @@ function minuteToLabel(value: number): string {
   return `${hour}:${m.toString().padStart(2, "0")} ${suffix}`;
 }
 
+function formatBlockTime(value: string | null | undefined): string {
+  if (!value) return "";
+  // Strip seconds: "16:00:00" → "4:00 PM", "16:30" → "4:30 PM"
+  const [h = "0", m = "0"] = value.split(":");
+  const hour24 = Number(h);
+  const min = Number(m);
+  const hour12 = hour24 % 12 || 12;
+  const suffix = hour24 >= 12 ? "PM" : "AM";
+  return `${hour12}:${min.toString().padStart(2, "0")} ${suffix}`;
+}
+
+const INSTRUMENT_EMOJI: Record<string, string> = {
+  piano: "🎹", keyboard: "🎹",
+  guitar: "🎸", bass: "🎸", ukulele: "🎸",
+  drums: "🥁", percussion: "🥁",
+  vocals: "🎤", voice: "🎤", singing: "🎤",
+  violin: "🎻", viola: "🎻", cello: "🎻",
+  trumpet: "🎺", saxophone: "🎷", flute: "🪈",
+  clarinet: "🎵", harp: "🎵",
+};
+
+function instrumentEmoji(instrument: string | null | undefined): string {
+  if (!instrument) return "🎵";
+  return INSTRUMENT_EMOJI[instrument.toLowerCase().trim()] ?? "🎵";
+}
+
 function teacherName(teacher: Teacher | undefined | null): string {
   if (!teacher) return "Staff";
   const t = teacher as unknown as Record<string, unknown>;
@@ -292,6 +318,31 @@ export function LocationScheduleGrid({
     });
   }, [teachers, teacherAvailabilityForDay, teacherBlocks]);
 
+  // ── Room-centric memos ─────────────────────────────────────────────────────
+  // Sort active rooms by displayOrder, then by name
+  const sortedRooms = React.useMemo(() => {
+    return [...rooms]
+      .filter(r => r.isActive)
+      .sort((a, b) => {
+        const ao = a.displayOrder ?? 999;
+        const bo = b.displayOrder ?? 999;
+        if (ao !== bo) return ao - bo;
+        return a.name.localeCompare(b.name);
+      });
+  }, [rooms]);
+
+  // Map: room_id → blocks assigned to that room on the selected day
+  const roomBlocks = React.useMemo(() => {
+    const map = new Map<string, ProjectedBlock[]>();
+    for (const b of projectedBlocks) {
+      const roomId = b.room_id;
+      if (!roomId) continue;
+      if (!map.has(roomId)) map.set(roomId, []);
+      map.get(roomId)!.push(b);
+    }
+    return map;
+  }, [projectedBlocks]);
+
   // ── Render ──────────────────────────────────────────────────────────────────
   const dayHours = getHoursForDate(locationHours, selectedDate);
   if (dayHours.isClosed) {
@@ -395,25 +446,69 @@ export function LocationScheduleGrid({
       {/* ── Grid Content ── */}
       <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--z-border)]">
         <div className="inline-flex min-w-full flex-col">
-          {/* Teacher Headers */}
+          {/* Room Headers */}
           <div className="sticky top-0 z-10 flex border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-            {filteredTeachers.map((t) => {
-              const teacherId = t.id;
-              const dayBlocks = teacherBlocks.get(teacherId) ?? [];
-              const booked = dayBlocks.filter(b => b.student_id && b.block_type !== 'open_time').length;
-              const open = dayBlocks.filter(b => b.block_type === 'open_time' && !b.student_id).length;
-              return (
-                <div key={t.id} className="w-48 shrink-0 border-r border-[var(--z-border)] p-2 text-center">
-                  <div className="truncate text-[11px] font-black uppercase tracking-wider text-[var(--z-fg)]">
-                    {teacherName(t)}
+            {sortedRooms.length === 0 ? (
+              /* Fallback: teacher headers when no rooms are configured */
+              filteredTeachers.map((t) => {
+                const dayBlocks = teacherBlocks.get(t.id) ?? [];
+                const booked = dayBlocks.filter(b => b.student_id && b.block_type !== 'open_time').length;
+                const open = dayBlocks.filter(b => b.block_type === 'open_time' && !b.student_id).length;
+                return (
+                  <div key={t.id} className="w-48 shrink-0 border-r border-[var(--z-border)] p-2 text-center">
+                    <div className="truncate text-[11px] font-black uppercase tracking-wider text-[var(--z-fg)]">
+                      {teacherName(t)}
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] font-bold">
+                      <span className="text-[var(--z-accent)]">{booked} booked</span>
+                      <span className="text-[var(--z-muted)]">{open} open</span>
+                    </div>
                   </div>
-                  <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] font-bold">
-                    <span className="text-[var(--z-accent)]">{booked} booked</span>
-                    <span className="text-[var(--z-muted)]">{open} open</span>
+                );
+              })
+            ) : (
+              sortedRooms.map((room) => {
+                const dayBlocks = roomBlocks.get(room.id) ?? [];
+                const booked = dayBlocks.filter(b => b.student_id && b.block_type !== 'open_time').length;
+                const open = dayBlocks.filter(b => b.block_type === 'open_time' && !b.student_id).length;
+                // Find the teacher assigned to this room (from any block today)
+                const assignedTeacherId = dayBlocks.find(b => b.teacher_id)?.teacher_id;
+                const assignedTeacher = assignedTeacherId ? teachers.find(t => t.id === assignedTeacherId) : null;
+                // Primary instrument emoji from room config, or from first block's student
+                const primaryInstrument = (room.primaryInstruments as string[] | undefined)?.[0];
+                const emoji = primaryInstrument ? instrumentEmoji(primaryInstrument) : "🎵";
+                const hasBlocks = dayBlocks.length > 0;
+                return (
+                  <div
+                    key={room.id}
+                    className="w-48 shrink-0 border-r border-[var(--z-border)] p-2 text-center"
+                    style={hasBlocks ? { borderTop: `2px solid rgba(0,255,136,0.3)` } : {}}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-sm">{emoji}</span>
+                      <span className="truncate text-[11px] font-black uppercase tracking-wider text-[var(--z-fg)]">
+                        {room.name}
+                      </span>
+                    </div>
+                    {assignedTeacher ? (
+                      <div className="mt-0.5 truncate text-[10px] font-semibold text-[var(--z-accent)]">
+                        {teacherName(assignedTeacher)}
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 text-[10px] font-semibold text-[var(--z-muted)]">
+                        No Teacher
+                      </div>
+                    )}
+                    {hasBlocks && (
+                      <div className="mt-0.5 flex items-center justify-center gap-2 text-[10px] font-bold">
+                        <span className="text-[var(--z-accent)]">{booked} booked</span>
+                        <span className="text-[var(--z-muted)]">{open} open</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Main Grid Body */}
@@ -436,29 +531,42 @@ export function LocationScheduleGrid({
             )}
 
             {/* Columns */}
-            {filteredTeachers.map((t) => {
-              const dayBlocks = teacherBlocks.get(t.id) ?? [];
-              // Hard-Lock: compute unavailable zones for this teacher on the selected day
-              const availRows = teacherAvailabilityForDay.get(t.id) ?? [];
-              // Merge availability windows: find earliest start and latest end across all rows
-              // A teacher may have multiple availability rows (e.g., split shift)
+            {(sortedRooms.length === 0 ? filteredTeachers.map(t => ({ id: t.id, isRoom: false as const, teacher: t })) : sortedRooms.map(r => ({ id: r.id, isRoom: true as const, room: r }))).map((col) => {
+              const dayBlocks = col.isRoom ? (roomBlocks.get(col.id) ?? []) : (teacherBlocks.get(col.id) ?? []);
+              // Hard-Lock: compute unavailable zones for the teacher in this column
+              const assignedTeacherId = col.isRoom
+                ? dayBlocks.find(b => b.teacher_id)?.teacher_id
+                : col.id;
+              const availRows = assignedTeacherId ? (teacherAvailabilityForDay.get(assignedTeacherId) ?? []) : [];
               const availWindows = availRows.map(r => ({
                 start: toMinute(r.start_time),
                 end: toMinute(r.end_time),
               }));
-              // Compute locked zones: before first window start and after last window end
-              // If no availability rows, the entire column is locked (legacy data still shows above overlay)
               const hasAvailability = availWindows.length > 0;
               const availStart = hasAvailability ? Math.min(...availWindows.map(w => w.start)) : endMin;
               const availEnd = hasAvailability ? Math.max(...availWindows.map(w => w.end)) : startMin;
               const gridHeight = ((endMin - startMin) / 30) * 48;
-              // Pre-availability zone (top of grid to availStart)
-              const preHeight = hasAvailability ? Math.max(0, ((availStart - startMin) / 30) * 48) : gridHeight;
-              // Post-availability zone (availEnd to bottom of grid)
+              const preHeight = hasAvailability ? Math.max(0, ((availStart - startMin) / 30) * 48) : 0;
               const postTop = hasAvailability ? ((availEnd - startMin) / 30) * 48 : 0;
               const postHeight = hasAvailability ? Math.max(0, ((endMin - availEnd) / 30) * 48) : 0;
+              // Empty room state: room has no blocks today
+              const isEmptyRoom = col.isRoom && dayBlocks.length === 0;
               return (
-                <div key={t.id} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
+                <div key={col.id} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
+                  {/* Empty Room State */}
+                  {isEmptyRoom && (
+                    <div
+                      className="absolute inset-0 z-[3] flex flex-col items-center justify-center gap-1"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(0,255,136,0.2)", letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center", lineHeight: 1.4 }}>
+                        Room Available
+                      </span>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.1)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        No Teacher
+                      </span>
+                    </div>
+                  )}
                   {/* Hard-Lock: pre-availability overlay */}
                   {preHeight > 0 && (
                     <div
@@ -563,7 +671,7 @@ export function LocationScheduleGrid({
                           </div>
                         </div>
                         <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: display.text }}>
-                          {block.start_time} – {block.end_time}
+                          {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
                         </div>
                         {isConflict && (
                           <div className="mt-0.5 text-[8px] font-bold" style={{ color: "#fca5a5" }}>
