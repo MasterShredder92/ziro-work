@@ -864,7 +864,7 @@ export function LocationScheduleGrid({
                 {/* Time & Teacher context */}
                 <div className="space-y-1">
                   <div className="text-xl font-black text-[var(--z-fg)]">
-                    {selectedBlock.start_time} – {selectedBlock.end_time}
+                    {formatBlockTime(selectedBlock.start_time)} – {formatBlockTime(selectedBlock.end_time)}
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {teacher ? (
@@ -1107,7 +1107,7 @@ export function LocationScheduleGrid({
           >
             <h3 className="text-base font-bold text-white">Cancel Session</h3>
             <p className="text-xs text-[#909098]">
-              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)) : "Session"} — {cancelTarget.start_time} – {cancelTarget.end_time}
+              {cancelTarget.student_id ? studentName(studentsById.get(cancelTarget.student_id)) : "Session"} — {formatBlockTime(cancelTarget.start_time)} – {formatBlockTime(cancelTarget.end_time)}
             </p>
 
             {/* Single vs Recurring choice */}
