@@ -261,6 +261,37 @@ export function LocationScheduleGrid({
     return map;
   }, [projectedBlocks]);
 
+  // ── Smart-Filter: derive day name from selectedDate ─────────────────────────
+  // DB day_of_week is a string enum: monday|tuesday|wednesday|thursday|friday|saturday|sunday
+  const selectedDayName = React.useMemo((): string => {
+    if (!selectedDate) return "";
+    const d = new Date(selectedDate + "T00:00:00");
+    return ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][d.getDay()] ?? "";
+  }, [selectedDate]);
+
+  // Build a map: teacher_id → array of availability rows for the selected day at this location
+  // This is used for both Smart-Filter (show/hide teacher) and Hard-Lock (unavailable overlay)
+  const teacherAvailabilityForDay = React.useMemo(() => {
+    const map = new Map<string, typeof availability>();
+    for (const row of availability) {
+      if (String(row.day_of_week) !== selectedDayName) continue;
+      if (!map.has(row.teacher_id)) map.set(row.teacher_id, []);
+      map.get(row.teacher_id)!.push(row);
+    }
+    return map;
+  }, [availability, selectedDayName]);
+
+  // Smart-Filter: only show teachers who have availability data for this day
+  // Teachers with existing blocks but no availability row are still shown (legacy data — visible with conflict overlay)
+  const filteredTeachers = React.useMemo(() => {
+    return teachers.filter((t) => {
+      const hasAvailability = teacherAvailabilityForDay.has(t.id);
+      const hasBlocksToday = (teacherBlocks.get(t.id) ?? []).length > 0;
+      // Show if they have availability for this day OR have existing blocks (legacy data must remain visible)
+      return hasAvailability || hasBlocksToday;
+    });
+  }, [teachers, teacherAvailabilityForDay, teacherBlocks]);
+
   // ── Render ──────────────────────────────────────────────────────────────────
   const dayHours = getHoursForDate(locationHours, selectedDate);
   if (dayHours.isClosed) {
@@ -366,7 +397,7 @@ export function LocationScheduleGrid({
         <div className="inline-flex min-w-full flex-col">
           {/* Teacher Headers */}
           <div className="sticky top-0 z-10 flex border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-            {teachers.map((t) => {
+            {filteredTeachers.map((t) => {
               const teacherId = t.id;
               const dayBlocks = teacherBlocks.get(teacherId) ?? [];
               const booked = dayBlocks.filter(b => b.student_id && b.block_type !== 'open_time').length;
@@ -405,10 +436,66 @@ export function LocationScheduleGrid({
             )}
 
             {/* Columns */}
-            {teachers.map((t) => {
+            {filteredTeachers.map((t) => {
               const dayBlocks = teacherBlocks.get(t.id) ?? [];
+              // Hard-Lock: compute unavailable zones for this teacher on the selected day
+              const availRows = teacherAvailabilityForDay.get(t.id) ?? [];
+              // Merge availability windows: find earliest start and latest end across all rows
+              // A teacher may have multiple availability rows (e.g., split shift)
+              const availWindows = availRows.map(r => ({
+                start: toMinute(r.start_time),
+                end: toMinute(r.end_time),
+              }));
+              // Compute locked zones: before first window start and after last window end
+              // If no availability rows, the entire column is locked (legacy data still shows above overlay)
+              const hasAvailability = availWindows.length > 0;
+              const availStart = hasAvailability ? Math.min(...availWindows.map(w => w.start)) : endMin;
+              const availEnd = hasAvailability ? Math.max(...availWindows.map(w => w.end)) : startMin;
+              const gridHeight = ((endMin - startMin) / 30) * 48;
+              // Pre-availability zone (top of grid to availStart)
+              const preHeight = hasAvailability ? Math.max(0, ((availStart - startMin) / 30) * 48) : gridHeight;
+              // Post-availability zone (availEnd to bottom of grid)
+              const postTop = hasAvailability ? ((availEnd - startMin) / 30) * 48 : 0;
+              const postHeight = hasAvailability ? Math.max(0, ((endMin - availEnd) / 30) * 48) : 0;
               return (
                 <div key={t.id} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
+                  {/* Hard-Lock: pre-availability overlay */}
+                  {preHeight > 0 && (
+                    <div
+                      className="absolute left-0 right-0 top-0 z-[5] flex items-center justify-center overflow-hidden"
+                      style={{
+                        height: `${preHeight}px`,
+                        background: "repeating-linear-gradient(135deg, rgba(0,255,136,0.03) 0px, rgba(0,255,136,0.03) 2px, transparent 2px, transparent 10px)",
+                        borderBottom: "1px dashed rgba(0,255,136,0.15)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {preHeight >= 24 && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", userSelect: "none" }}>
+                          Unavailable
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {/* Hard-Lock: post-availability overlay */}
+                  {postHeight > 0 && (
+                    <div
+                      className="absolute left-0 right-0 z-[5] flex items-center justify-center overflow-hidden"
+                      style={{
+                        top: `${postTop}px`,
+                        height: `${postHeight}px`,
+                        background: "repeating-linear-gradient(135deg, rgba(0,255,136,0.03) 0px, rgba(0,255,136,0.03) 2px, transparent 2px, transparent 10px)",
+                        borderTop: "1px dashed rgba(0,255,136,0.15)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {postHeight >= 24 && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", userSelect: "none" }}>
+                          Unavailable
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {dayBlocks.map((block) => {
                     const blockStart = toMinute(block.start_time);
                     const blockEnd = toMinute(block.end_time);
@@ -416,6 +503,12 @@ export function LocationScheduleGrid({
                     const height = ((blockEnd - blockStart) / 30) * 48;
                     const display = getBlockDisplay(block);
                     const isSelected = selectedBlockId === block.id;
+                    // Conflict detection: block falls outside teacher's availability window
+                    // isConflict = true if block starts before availStart OR ends after availEnd
+                    // Only flag student_session blocks (not open_time, training, etc.)
+                    const isConflict = hasAvailability &&
+                      block.block_type === "student_session" &&
+                      (blockStart < availStart || blockEnd > availEnd);
 
                     return (
                       <button
@@ -431,26 +524,52 @@ export function LocationScheduleGrid({
                           setBookingStudentHasBlocks(null);
                         }}
                         className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left transition-all hover:scale-[1.02] hover:z-20 ${
-                          isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : ""
+                          isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : "z-10"
                         }`}
                         style={{
                           top: `${top + 2}px`,
                           height: `${height - 4}px`,
                           backgroundColor: display.bg,
-                          borderColor: display.border,
+                          borderColor: isConflict ? "#ef4444" : display.border,
+                          boxShadow: isConflict ? "0 0 0 1px #ef4444, 0 0 8px rgba(239,68,68,0.3)" : undefined,
                         }}
                       >
                         <div className="flex items-start justify-between gap-1">
                           <span className="truncate text-[10px] font-black leading-tight" style={{ color: display.text }}>
                             {block.student_id ? studentName(studentsById.get(block.student_id)) : display.label}
                           </span>
-                          {block.is_virtual && (
-                            <span className="text-[10px]">🌐</span>
-                          )}
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            {isConflict && (
+                              <span
+                                title="Schedule Conflict: outside teacher availability"
+                                style={{
+                                  fontSize: 8,
+                                  fontWeight: 900,
+                                  color: "#fff",
+                                  background: "#ef4444",
+                                  borderRadius: 3,
+                                  padding: "0 3px",
+                                  lineHeight: "13px",
+                                  letterSpacing: "0.05em",
+                                  userSelect: "none",
+                                }}
+                              >
+                                !
+                              </span>
+                            )}
+                            {block.is_virtual && (
+                              <span className="text-[10px]">🌐</span>
+                            )}
+                          </div>
                         </div>
                         <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: display.text }}>
                           {block.start_time} – {block.end_time}
                         </div>
+                        {isConflict && (
+                          <div className="mt-0.5 text-[8px] font-bold" style={{ color: "#fca5a5" }}>
+                            Conflict
+                          </div>
+                        )}
                         {block.notes && (
                           <div className="mt-1 truncate text-[8px] italic opacity-60" style={{ color: display.text }}>
                             {block.notes}
