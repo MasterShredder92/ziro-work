@@ -13,8 +13,9 @@ type DayOfWeek = (typeof VALID_DAYS)[number];
 
 /**
  * GET /api/schedule/room-assignments?location_id=...&day_of_week=...
- * Returns recurring room assignments for a location+day.
- * Also returns date-specific assignments for ?date=YYYY-MM-DD
+ * Returns recurring room assignments for a location+day (flat, no joins).
+ * Root cause of previous 500: PGRST200 from embedded teacher join — no FK exists.
+ * Fix: flat select only.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -28,18 +29,14 @@ export async function GET(req: NextRequest) {
 
     const db = clientFor(tenantId);
 
-    // Build query — fetch recurring assignments for this location+day
-    // and any date-specific overrides for the given date
+    // Flat select — no embedded joins (no FK constraints on this table)
     let query = db
       .from("teacher_room_assignments")
-      .select(
-        `id, teacher_id, room_id, location_id, assignment_date, day_of_week, is_recurring,
-         teacher:teacher_id ( id, name, instruments )`,
-      )
-      .eq("location_id", locationId);
+      .select("id, teacher_id, room_id, location_id, assignment_date, day_of_week, is_recurring")
+      .eq("location_id", locationId)
+      .eq("tenant_id", tenantId);
 
     if (dayOfWeek && VALID_DAYS.includes(dayOfWeek as DayOfWeek)) {
-      // Return recurring assignments for this day OR date-specific for the given date
       if (date) {
         query = query.or(
           `and(is_recurring.eq.true,day_of_week.eq.${dayOfWeek}),and(is_recurring.eq.false,assignment_date.eq.${date})`,
@@ -61,8 +58,9 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/schedule/room-assignments
- * Upsert a recurring teacher→room assignment for a location+day.
- * One teacher per room per day. One room per teacher per location per day.
+ * Upsert a recurring teacher→room assignment.
+ * Enforces: one teacher per room per day, one room per teacher per location per day.
+ * Uses DELETE+INSERT to avoid unique constraint conflicts.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -71,7 +69,14 @@ export async function POST(req: NextRequest) {
 
     if (!body) return badRequest("Invalid JSON body");
 
-    const { teacher_id, room_id, location_id, day_of_week, is_recurring = true, assignment_date } = body;
+    const { teacher_id, room_id, location_id, day_of_week, is_recurring = true, assignment_date } = body as {
+      teacher_id?: string;
+      room_id?: string;
+      location_id?: string;
+      day_of_week?: string;
+      is_recurring?: boolean;
+      assignment_date?: string;
+    };
 
     if (!teacher_id || !room_id || !location_id)
       return badRequest("teacher_id, room_id, and location_id are required");
@@ -84,49 +89,31 @@ export async function POST(req: NextRequest) {
 
     const db = clientFor(tenantId);
 
-    // Check: teacher already assigned to a different room on this day at this location
     if (is_recurring && day_of_week) {
-      const { data: existingTeacher } = await db
+      // Remove any existing assignment for this teacher on this day at this location
+      // (teacher moving to a different room, or re-assigning same room)
+      await db
         .from("teacher_room_assignments")
-        .select("id, room_id")
+        .delete()
         .eq("tenant_id", tenantId)
         .eq("teacher_id", teacher_id)
         .eq("location_id", location_id)
         .eq("day_of_week", day_of_week)
-        .eq("is_recurring", true)
-        .neq("room_id", room_id)
-        .limit(1);
+        .eq("is_recurring", true);
 
-      if (existingTeacher && existingTeacher.length > 0) {
-        // Remove old assignment before creating new one (teacher moved rooms)
-        await db
-          .from("teacher_room_assignments")
-          .delete()
-          .eq("id", existingTeacher[0].id);
-      }
-
-      // Upsert: if this room already has a different teacher on this day, replace them
-      const { data: existingRoom } = await db
+      // Remove any existing assignment for this room on this day
+      // (a different teacher was previously in this room)
+      await db
         .from("teacher_room_assignments")
-        .select("id, teacher_id")
+        .delete()
         .eq("tenant_id", tenantId)
         .eq("room_id", room_id)
         .eq("location_id", location_id)
         .eq("day_of_week", day_of_week)
-        .eq("is_recurring", true)
-        .neq("teacher_id", teacher_id)
-        .limit(1);
-
-      if (existingRoom && existingRoom.length > 0) {
-        await db
-          .from("teacher_room_assignments")
-          .delete()
-          .eq("id", existingRoom[0].id);
-      }
+        .eq("is_recurring", true);
     }
 
-    // Insert the new assignment — use DELETE+INSERT pattern to avoid constraint conflicts
-    // (We already cleaned up conflicting rows above)
+    // Insert the new assignment (clean slate after deletes above)
     const { data, error } = await db
       .from("teacher_room_assignments")
       .insert({
@@ -152,7 +139,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/schedule/room-assignments?room_id=...&location_id=...&day_of_week=...
- * Remove a recurring assignment.
+ * Remove a recurring assignment for a specific room+day.
  */
 export async function DELETE(req: NextRequest) {
   try {

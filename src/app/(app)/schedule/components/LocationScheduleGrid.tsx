@@ -337,21 +337,16 @@ export function LocationScheduleGrid({
   }, [teachers, teacherAvailabilityForDay, teacherBlocks]);
 
   // ── Room-centric memos ─────────────────────────────────────────────────────
-  // Sort active rooms by name as integer (pure numeric names from DB)
+  // Sort active rooms numerically — handles "LOCATION_N" and plain "N" formats
   const sortedRooms = React.useMemo(() => {
+    const roomNum = (name: string) => {
+      // Extract trailing integer: "BELLEVUE_10" → 10, "OMAHA_2" → 2, "3" → 3
+      const m = name.match(/(\d+)$/);
+      return m ? parseInt(m[1], 10) : 999;
+    };
     return [...rooms]
       .filter(r => r.isActive)
-      .sort((a, b) => {
-        const an = parseInt(a.name, 10);
-        const bn = parseInt(b.name, 10);
-        // If both parse as numbers, sort numerically
-        if (!isNaN(an) && !isNaN(bn)) return an - bn;
-        // Fall back to displayOrder then localeCompare
-        const ao = a.displayOrder ?? 999;
-        const bo = b.displayOrder ?? 999;
-        if (ao !== bo) return ao - bo;
-        return a.name.localeCompare(b.name, undefined, { numeric: true });
-      });
+      .sort((a, b) => roomNum(a.name) - roomNum(b.name));
   }, [rooms]);
 
   // Map: room_id → blocks assigned to that room on the selected day
