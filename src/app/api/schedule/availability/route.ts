@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase/service";
+import { getServiceClient } from "@/lib/supabase";
 import { ok, serverError, badRequest } from "@/lib/http";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 

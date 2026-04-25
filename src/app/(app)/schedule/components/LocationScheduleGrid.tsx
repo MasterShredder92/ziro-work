@@ -1317,5 +1317,5 @@ export function LocationScheduleGrid({
       })()}
     </div>
   );
-}}
+}
 
