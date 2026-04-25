@@ -304,6 +304,21 @@ export function LocationScheduleGrid({
     const d = new Date(selectedDate + "T00:00:00");
     return ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][d.getDay()] ?? "";
   }, [selectedDate]);
+  // ── Client-side availability fetch ────────────────────────────────────────
+  // The SSR payload is too large (4MB+) and availability is dropped from the serialized props.
+  // We fetch it directly client-side so the grid always has fresh data.
+  const [clientAvailability, setClientAvailability] = React.useState<typeof availability>(availability);
+  React.useEffect(() => {
+    if (!locationId) return;
+    void fetch(`/api/schedule/availability?location_id=${locationId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((res: { data?: typeof availability } | null) => {
+        if (res?.data && res.data.length > 0) {
+          setClientAvailability(res.data);
+        }
+      })
+      .catch(() => {});
+  }, [locationId]);
   // Fetch recurring room assignments when location or day changes
   React.useEffect(() => {
     if (!locationId || !selectedDayName) return;
@@ -319,16 +334,16 @@ export function LocationScheduleGrid({
   }, [locationId, selectedDayName]);
 
   // Build a map: teacher_id → array of availability rows for the selected day at this location
-  // This is used for both Smart-Filter (show/hide teacher) and Hard-Lock (unavailable overlay)
+  // Uses clientAvailability (fetched client-side) to bypass SSR payload size limits
   const teacherAvailabilityForDay = React.useMemo(() => {
     const map = new Map<string, typeof availability>();
-    for (const row of availability) {
+    for (const row of clientAvailability) {
       if (String(row.day_of_week) !== selectedDayName) continue;
       if (!map.has(row.teacher_id)) map.set(row.teacher_id, []);
       map.get(row.teacher_id)!.push(row);
     }
     return map;
-  }, [availability, selectedDayName]);
+  }, [clientAvailability, selectedDayName]);
 
   // Smart-Filter: only show teachers who have availability data for this day
   // Teachers with existing blocks but no availability row are still shown (legacy data — visible with conflict overlay)
