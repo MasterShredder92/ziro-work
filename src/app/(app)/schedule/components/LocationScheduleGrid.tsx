@@ -147,6 +147,7 @@ type RecurringLesson = {
   student_id: string;
   teacher_id: string;
   location_id: string;
+  room_id?: string | null;
   day_of_week: number;
   start_time: string;
   end_time: string;
@@ -301,6 +302,9 @@ export function LocationScheduleGrid({
     startTime: string;
     endTime: string;
   } | null>(null);
+
+  // Synthetic block: created when clicking a recurring overlay (no real DB row for that date)
+  const [syntheticBlock, setSyntheticBlock] = React.useState<ProjectedBlock | null>(null);
 
   // ── Data maps ───────────────────────────────────────────────────────────────
   const studentsById = React.useMemo(() => new Map(students.map(s => [s.id, s])), [students]);
@@ -975,21 +979,51 @@ export function LocationScheduleGrid({
                             zIndex: 8,
                             opacity: 0.85,
                           }}
-                          title={`Recurring: ${rlStudentName} (projected)`}
+                          title={`${rlStudentName} (recurring)`}
                           onClick={() => {
-                            // Open booking modal in open-slot mode so user can manage this recurring slot
-                            setSelectedBlockId(null);
-                            setBookingStudentId(null);
-                            setBookingStudentQuery("");
-                            setBookingFirstDay(null);
-                            setBookingStudentHasBlocks(null);
-                            setOpenSlotContext({
-                              teacherId: recurringLesson.teacher_id,
-                              roomId: col.isRoom ? col.id : null,
-                              date: selectedDate,
-                              startTime: rlStartStr,
-                              endTime: rlEndStr,
-                            });
+                            if (recurringLesson.student_id) {
+                              // Route to Management Modal: build a synthetic ProjectedBlock
+                              const synId = `rl-synthetic-${recurringLesson.id}`;
+                              const synBlock = {
+                                id: synId,
+                                source_block_id: synId,
+                                tenant_id: "00000000-0000-0000-0000-000000000001",
+                                location_id: locationId,
+                                teacher_id: recurringLesson.teacher_id,
+                                student_id: recurringLesson.student_id,
+                                room_id: recurringLesson.room_id ?? null,
+                                block_date: selectedDate,
+                                start_time: recurringLesson.start_time,
+                                end_time: recurringLesson.end_time,
+                                block_type: "student_session",
+                                status: "booked",
+                                checked_in: false,
+                                checked_in_at: null,
+                                callout_reason: null,
+                                teacher_tally: false,
+                                notes: null,
+                                is_recurring: true,
+                                created_at: "",
+                                updated_at: "",
+                              };
+                              setSyntheticBlock(synBlock as ProjectedBlock);
+                              setSelectedBlockId(synId);
+                              setOpenSlotContext(null);
+                            } else {
+                              // No student — open Booking Modal
+                              setSelectedBlockId(null);
+                              setBookingStudentId(null);
+                              setBookingStudentQuery("");
+                              setBookingFirstDay(null);
+                              setBookingStudentHasBlocks(null);
+                              setOpenSlotContext({
+                                teacherId: recurringLesson.teacher_id,
+                                roomId: col.isRoom ? col.id : null,
+                                date: selectedDate,
+                                startTime: rlStartStr,
+                                endTime: rlEndStr,
+                              });
+                            }
                           }}
                         >
                           <div className="truncate text-[10px] font-black leading-tight" style={{ color: "#000" }}>
@@ -1056,7 +1090,8 @@ export function LocationScheduleGrid({
 
       {/* ── Right Panel: Selection Detail ── */}
       {(() => {
-        const selectedBlock = projectedBlocks.find(b => b.id === selectedBlockId);
+        const selectedBlock = projectedBlocks.find(b => b.id === selectedBlockId)
+          ?? (syntheticBlock && syntheticBlock.id === selectedBlockId ? syntheticBlock : null);
         // Show modal if: (a) a block is selected, OR (b) an open slot was clicked
         const isOpenSlotModal = !selectedBlock && !!openSlotContext;
         if (!selectedBlock && !isOpenSlotModal) return null;
@@ -1075,6 +1110,7 @@ export function LocationScheduleGrid({
         function closeModal() {
           setSelectedBlockId(null);
           setOpenSlotContext(null);
+          setSyntheticBlock(null);
           setBookingStudentId(null);
           setBookingStudentQuery("");
           setBookingFirstDay(null);
