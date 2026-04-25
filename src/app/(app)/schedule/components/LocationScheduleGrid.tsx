@@ -343,7 +343,9 @@ export function LocationScheduleGrid({
       map.get(row.teacher_id)!.push(row);
     }
     return map;
-  }, [clientAvailability, selectedDayName]);
+  // NOTE: roomAssignments is included so the memo re-computes the moment a teacher
+  // is assigned to a room — triggering an instant re-render of the hatch zones.
+  }, [clientAvailability, selectedDayName, roomAssignments]);
 
   // Smart-Filter: only show teachers who have availability data for this day
   // Teachers with existing blocks but no availability row are still shown (legacy data — visible with conflict overlay)
@@ -468,7 +470,7 @@ export function LocationScheduleGrid({
   }
 
   return (
-    <div className="flex h-[calc(100vh-8.5rem)] overflow-hidden bg-[var(--z-bg)]">
+    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 overflow-hidden bg-[var(--z-bg)]">
       {/* ── Time Column ── */}
       <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
         <div className="h-10 border-b border-[var(--z-border)]" />
@@ -793,7 +795,9 @@ export function LocationScheduleGrid({
                       >
                         <div className="flex items-start justify-between gap-1">
                           <span className="truncate text-[10px] font-black leading-tight" style={{ color: display.text }}>
-                            {block.student_id ? studentName(studentsById.get(block.student_id)) : display.label}
+                            {block.student_id ? (
+                              <>{studentName(studentsById.get(block.student_id))} {instrumentEmoji(studentsById.get(block.student_id)?.instrument)}</>
+                            ) : display.label}
                           </span>
                           <div className="flex items-center gap-0.5 shrink-0">
                             {isConflict && (
