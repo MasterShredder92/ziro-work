@@ -276,11 +276,13 @@ export function LocationScheduleGrid({
           })
         );
       }
-      const student = cancelTarget.student_id ? studentsById.get(cancelTarget.student_id) : null;
       setCancelTarget(null);
       setCancelReason("");
       setCancelScope("recurring");
+      // Close the management modal too
       setSelectedBlockId(null);
+      setSyntheticBlock(null);
+      setOpenSlotContext(null);
     } finally {
       setCancelSaving(false);
     }
@@ -473,7 +475,9 @@ export function LocationScheduleGrid({
       checked_in_at: !block.checked_in ? new Date().toISOString() : null,
       checked_in_by: !block.checked_in ? "Operator" : null,
     };
-    await patchBlock(block, patch);
+    // Close modal after check-in so the UI reflects the update immediately
+    await patchBlock(block, patch, true);
+    setSyntheticBlock(null);
   }
 
   async function callOut(block: ScheduleBlock | ProjectedBlock) {
@@ -573,8 +577,42 @@ export function LocationScheduleGrid({
     );
   }
 
+  // ── Utilization math: all rooms count toward denominator ─────────────────
+  const totalSlots = sortedRooms.length > 0
+    ? sortedRooms.length * timeLabels.length
+    : filteredTeachers.length * timeLabels.length;
+  const bookedSlots = projectedBlocks.filter(b =>
+    b.student_id && b.block_type !== "open_time"
+  ).length + clientRecurringLessons.filter(rl => {
+    // Count recurring lessons that project onto the selected date
+    const dow = new Date(selectedDate + "T00:00:00").getDay();
+    return rl.day_of_week === dow;
+  }).length;
+  const utilPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
+  const utilColor = utilPct >= 80 ? "#00ff88" : utilPct >= 50 ? "#eab308" : "#ef4444";
+
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 overflow-hidden bg-[var(--z-bg)]">
+    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
+      {/* ── Utilization Bar ── */}
+      <div className="flex shrink-0 items-center gap-4 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Utilization</span>
+          <span className="text-sm font-black" style={{ color: utilColor }}>{utilPct}%</span>
+        </div>
+        <div className="flex-1 h-1.5 rounded-full bg-[var(--z-border)]">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${utilPct}%`, backgroundColor: utilColor }}
+          />
+        </div>
+        <div className="flex items-center gap-3 text-[10px] font-bold">
+          <span style={{ color: "#00ff88" }}>{bookedSlots} booked</span>
+          <span className="text-[var(--z-muted)]">{totalSlots - bookedSlots} open</span>
+          <span className="text-[var(--z-muted)]">{sortedRooms.length} rooms</span>
+        </div>
+      </div>
+      {/* ── Main grid row ── */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* ── Time Column ── */}
       <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
         <div className="h-10 border-b border-[var(--z-border)]" />
@@ -589,7 +627,7 @@ export function LocationScheduleGrid({
 
       {/* ── Grid Content ── */}
       <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--z-border)]">
-        <div className="inline-flex min-w-full flex-col">
+        <div className="flex min-w-full flex-col">
           {/* Room Headers */}
           <div className="sticky top-0 z-10 flex border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
             {sortedRooms.length === 0 ? (
@@ -624,6 +662,7 @@ export function LocationScheduleGrid({
                 const emoji = primaryInstrument ? instrumentEmoji(primaryInstrument) : "🎵";
                 const hasBlocks = dayBlocks.length > 0;
                 const isAssigning = assigningRoomId === room.id;
+                // Stretch: use flex-1 so columns expand to fill the full screen width
                 // All teachers — show everyone, flag those without availability with ⚠️
                 // GUARDRAIL: exclude teachers already assigned to a DIFFERENT room on this day
                 const availableTeachers = teachers.filter(t => {
@@ -633,7 +672,7 @@ export function LocationScheduleGrid({
                 return (
                   <div
                     key={room.id}
-                    className="relative w-48 shrink-0 border-r border-[var(--z-border)] p-2 text-center"
+                    className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)] p-2 text-center"
                     style={hasBlocks || assignedTeacher ? { borderTop: `2px solid rgba(0,255,136,0.3)` } : {}}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -817,7 +856,7 @@ export function LocationScheduleGrid({
               // If a teacher is assigned (via roomAssignments), suppress the placeholder so their availability renders
               const isEmptyRoom = col.isRoom && dayBlocks.length === 0 && assignedTeacherIds.length === 0;
               return (
-                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative w-48 shrink-0 border-r border-[var(--z-border)]/50">
+                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)]/50">
                   {/* Empty Room State */}
                   {isEmptyRoom && (
                     <div
@@ -838,8 +877,45 @@ export function LocationScheduleGrid({
                    *   - Outside teacher availability → hatched Unavailable row
                    *   - Inside availability + has a booked block → render lesson card
                    *   - Inside availability + no block → render clickable OPEN TIME slot
-                   * When no teacher is assigned (isEmptyRoom), skip the generator entirely.
+                   * For empty rooms (no teacher assigned): generate bookable "+ Room Available" slots
+                   *   for the full studio hours so they count toward utilization denominator.
                    */}
+                  {isEmptyRoom && timeLabels.map((slotMin) => {
+                    const slotTop = ((slotMin - startMin) / 30) * 48;
+                    return (
+                      <button
+                        key={`empty-${slotMin}`}
+                        type="button"
+                        className="absolute left-1 right-1 flex items-center justify-center overflow-hidden rounded-md border transition-all hover:border-[rgba(0,255,136,0.4)] hover:bg-[rgba(0,255,136,0.06)]"
+                        style={{
+                          top: `${slotTop + 2}px`,
+                          height: "44px",
+                          borderColor: "rgba(0,255,136,0.1)",
+                          background: "rgba(0,255,136,0.02)",
+                          zIndex: 2,
+                        }}
+                        onClick={() => {
+                          setSelectedBlockId(null);
+                          setSyntheticBlock(null);
+                          setBookingStudentId(null);
+                          setBookingStudentQuery("");
+                          setBookingFirstDay(null);
+                          setBookingStudentHasBlocks(null);
+                          setOpenSlotContext({
+                            teacherId: "",
+                            roomId: col.isRoom ? col.id : null,
+                            date: selectedDate,
+                            startTime: `${String(Math.floor(slotMin / 60)).padStart(2, "0")}:${String(slotMin % 60).padStart(2, "0")}`,
+                            endTime: `${String(Math.floor((slotMin + 30) / 60)).padStart(2, "0")}:${String((slotMin + 30) % 60).padStart(2, "0")}`,
+                          });
+                        }}
+                      >
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}>
+                          + Room Available
+                        </span>
+                      </button>
+                    );
+                  })}
                   {!isEmptyRoom && timeLabels.map((slotMin) => {
                     const slotTop = ((slotMin - startMin) / 30) * 48;
                     const slotEnd = slotMin + 30;
@@ -932,7 +1008,7 @@ export function LocationScheduleGrid({
                               {block.is_virtual && <span className="text-[10px]">🌐</span>}
                             </div>
                           </div>
-                          <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: display.text }}>
+                          <div className="mt-0.5 text-[9px] font-bold" style={{ color: display.text }}>
                             {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
                           </div>
                           {isConflict && (
@@ -974,10 +1050,10 @@ export function LocationScheduleGrid({
                           style={{
                             top: `${slotTop + 2}px`,
                             height: `${rlHeight - 4}px`,
-                            backgroundColor: "rgba(234,179,8,0.7)",
+                            backgroundColor: "rgba(234,179,8,1.0)",
                             borderColor: "#ca8a04",
                             zIndex: 8,
-                            opacity: 0.85,
+                            opacity: 1,
                           }}
                           title={`${rlStudentName} (recurring)`}
                           onClick={() => {
@@ -1590,6 +1666,7 @@ export function LocationScheduleGrid({
           </div>
         );
       })()}
+      </div>{/* end main grid row */}
     </div>
   );
 }
