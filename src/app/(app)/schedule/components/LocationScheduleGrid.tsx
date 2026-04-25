@@ -1000,9 +1000,6 @@ export function LocationScheduleGrid({
                           <div className="mt-0.5 text-[9px] font-bold opacity-80" style={{ color: "#000" }}>
                             {formatBlockTime(recurringLesson.start_time)} – {formatBlockTime(recurringLesson.end_time)}
                           </div>
-                          <div className="mt-0.5 text-[8px] font-semibold" style={{ color: "rgba(0,0,0,0.6)" }}>
-                            🔄 Recurring
-                          </div>
                         </button>
                       );
                     }
