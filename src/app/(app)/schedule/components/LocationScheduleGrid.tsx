@@ -293,6 +293,14 @@ export function LocationScheduleGrid({
   const [bookingFirstDay, setBookingFirstDay] = React.useState<boolean | null>(null);
   // null = not yet checked; true = existing student; false = new student
   const [bookingStudentHasBlocks, setBookingStudentHasBlocks] = React.useState<boolean | null>(null);
+  // Context for open-slot clicks (no existing DB block row)
+  const [openSlotContext, setOpenSlotContext] = React.useState<{
+    teacherId: string;
+    roomId: string | null;
+    date: string;
+    startTime: string;
+    endTime: string;
+  } | null>(null);
 
   // ── Data maps ───────────────────────────────────────────────────────────────
   const studentsById = React.useMemo(() => new Map(students.map(s => [s.id, s])), [students]);
@@ -472,28 +480,76 @@ export function LocationScheduleGrid({
     await patchBlock(block, patch, true);
   }
 
-  async function bookStudent(block: ProjectedBlock) {
+  async function bookStudent(block: ProjectedBlock | null) {
     if (!bookingStudentId) return;
     setSaving(true);
     setError(null);
     try {
+      // Determine if this is an existing block or a pure open-slot click
+      const isOpenSlot = !block || (!block.student_id && block.block_type === "open_time" && !block.source_block_id);
+      const ctx = openSlotContext;
+
+      const payload: Record<string, unknown> = {
+        student_id: bookingStudentId,
+        is_recurring: bookingRecurring,
+        is_first_lesson: bookingFirstDay,
+      };
+
+      if (block && (block.source_block_id ?? block.id)) {
+        // Existing DB block — update it
+        payload.block_id = block.source_block_id ?? block.id;
+        payload.block_date = block.block_date ?? selectedDate;
+        payload.teacher_id = block.teacher_id;
+        payload.location_id = locationId;
+        payload.room_id = block.room_id ?? null;
+        payload.start_time = block.start_time;
+        payload.end_time = block.end_time;
+      } else if (ctx) {
+        // Pure open-slot (no DB row) — create a new block
+        payload.teacher_id = ctx.teacherId;
+        payload.location_id = locationId;
+        payload.room_id = ctx.roomId;
+        payload.block_date = ctx.date;
+        payload.start_time = ctx.startTime;
+        payload.end_time = ctx.endTime;
+      } else {
+        throw new Error("No block context available");
+      }
+
       const res = await fetch("/api/schedule-blocks/book-session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          block_id: block.source_block_id ?? block.id,
-          block_date: block.block_date ?? selectedDate,
-          student_id: bookingStudentId,
-          is_recurring: bookingRecurring,
-          is_first_lesson: bookingFirstDay,
-        }),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Booking failed");
-      const updated = await res.json() as { data: ScheduleBlock };
-      // If recurring, we might need to update the base block. If single, we might need to update just local projected?
-      // For now, let's assume the API returns the updated base block or new block
-      onBlocksChange(blocks.map(b => b.id === updated.data.id ? updated.data : b));
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(errBody.error ?? "Booking failed");
+      }
+      const result = await res.json() as { data: ScheduleBlock };
+      const newBlock = result.data;
+
+      // Update local blocks state: replace if existing, append if new
+      const exists = blocks.some(b => b.id === newBlock.id);
+      if (exists) {
+        onBlocksChange(blocks.map(b => b.id === newBlock.id ? newBlock : b));
+      } else {
+        onBlocksChange([...blocks, newBlock]);
+      }
+
+      // If recurring, refresh the recurring lessons overlay
+      if (bookingRecurring) {
+        const d = new Date((payload.block_date as string) + "T00:00:00");
+        const dow = d.getDay();
+        void fetch(`/api/schedule/recurring-lessons?location_id=${locationId}&day_of_week=${dow}`)
+          .then(r => r.ok ? r.json() : null)
+          .then((res2: { data?: RecurringLesson[] } | null) => {
+            if (res2?.data) setClientRecurringLessons(res2.data);
+          })
+          .catch(() => {});
+      }
+
       setSelectedBlockId(null);
+      setOpenSlotContext(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Booking failed");
     } finally {
@@ -887,10 +943,14 @@ export function LocationScheduleGrid({
                       const rlHeight = ((rlEnd - rlStart) / 30) * 48;
                       const rlStudentName = [recurringLesson.student_first_name, recurringLesson.student_last_name]
                         .filter(Boolean).join(" ") || "Student";
+                      const rlSlotEndMin = rlEnd;
+                      const rlStartStr = `${String(Math.floor(rlStart / 60)).padStart(2, "0")}:${String(rlStart % 60).padStart(2, "0")}`;
+                      const rlEndStr = `${String(Math.floor(rlSlotEndMin / 60)).padStart(2, "0")}:${String(rlSlotEndMin % 60).padStart(2, "0")}`;
                       return (
-                        <div
+                        <button
                           key={`rl-${recurringLesson.id}`}
-                          className="absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5"
+                          type="button"
+                          className="absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left hover:scale-[1.02] hover:z-20 transition-all"
                           style={{
                             top: `${slotTop + 2}px`,
                             height: `${rlHeight - 4}px`,
@@ -900,6 +960,21 @@ export function LocationScheduleGrid({
                             opacity: 0.85,
                           }}
                           title={`Recurring: ${rlStudentName} (projected)`}
+                          onClick={() => {
+                            // Open booking modal in open-slot mode so user can manage this recurring slot
+                            setSelectedBlockId(null);
+                            setBookingStudentId(null);
+                            setBookingStudentQuery("");
+                            setBookingFirstDay(null);
+                            setBookingStudentHasBlocks(null);
+                            setOpenSlotContext({
+                              teacherId: recurringLesson.teacher_id,
+                              roomId: col.isRoom ? col.id : null,
+                              date: selectedDate,
+                              startTime: rlStartStr,
+                              endTime: rlEndStr,
+                            });
+                          }}
                         >
                           <div className="truncate text-[10px] font-black leading-tight" style={{ color: "#000" }}>
                             {rlStudentName} {instrumentEmoji(recurringLesson.instrument)}
@@ -910,11 +985,17 @@ export function LocationScheduleGrid({
                           <div className="mt-0.5 text-[8px] font-semibold" style={{ color: "rgba(0,0,0,0.6)" }}>
                             🔄 Recurring
                           </div>
-                        </div>
+                        </button>
                       );
                     }
 
                     // ── OPEN TIME slot ──
+                    // Compute the end time for this 30-min slot
+                    const slotEndMin = slotMin + 30;
+                    const slotStartStr = `${String(Math.floor(slotMin / 60)).padStart(2, "0")}:${String(slotMin % 60).padStart(2, "0")}`;
+                    const slotEndStr = `${String(Math.floor(slotEndMin / 60)).padStart(2, "0")}:${String(slotEndMin % 60).padStart(2, "0")}`;
+                    const colTeacherId = col.isRoom ? (assignedTeacherId ?? "") : col.id;
+                    const colRoomId = col.isRoom ? col.id : null;
                     return (
                       <button
                         key={slotMin}
@@ -926,6 +1007,13 @@ export function LocationScheduleGrid({
                           setBookingStudentQuery("");
                           setBookingFirstDay(null);
                           setBookingStudentHasBlocks(null);
+                          setOpenSlotContext({
+                            teacherId: colTeacherId,
+                            roomId: colRoomId,
+                            date: selectedDate,
+                            startTime: slotStartStr,
+                            endTime: slotEndStr,
+                          });
                         }}
                         className="absolute left-1 right-1 flex items-center justify-center gap-1 rounded border border-dashed transition-all hover:border-[#00ff88] hover:bg-[rgba(0,255,136,0.06)] group"
                         style={{
@@ -954,19 +1042,36 @@ export function LocationScheduleGrid({
       {/* ── Right Panel: Selection Detail ── */}
       {(() => {
         const selectedBlock = projectedBlocks.find(b => b.id === selectedBlockId);
-        if (!selectedBlockId || !selectedBlock) return null;
+        // Show modal if: (a) a block is selected, OR (b) an open slot was clicked
+        const isOpenSlotModal = !selectedBlock && !!openSlotContext;
+        if (!selectedBlock && !isOpenSlotModal) return null;
 
-        const student = selectedBlock.student_id ? studentsById.get(selectedBlock.student_id) : null;
+        const student = selectedBlock?.student_id ? studentsById.get(selectedBlock.student_id) : null;
         const family = student?.family_id ? familiesById.get(student.family_id) : null;
-        const teacher = selectedBlock.teacher_id ? teachers.find(t => t.id === selectedBlock.teacher_id) : null;
-        const isUnbooked = !selectedBlock.student_id || selectedBlock.block_type === "open_time";
+        const teacher = selectedBlock?.teacher_id
+          ? teachers.find(t => t.id === selectedBlock.teacher_id)
+          : (openSlotContext?.teacherId ? teachers.find(t => t.id === openSlotContext.teacherId) : null);
+        const isUnbooked = isOpenSlotModal || !selectedBlock?.student_id || selectedBlock.block_type === "open_time";
+
+        // Derived display time for open-slot modal
+        const displayStartTime = selectedBlock?.start_time ?? openSlotContext?.startTime ?? "";
+        const displayEndTime = selectedBlock?.end_time ?? openSlotContext?.endTime ?? "";
+
+        function closeModal() {
+          setSelectedBlockId(null);
+          setOpenSlotContext(null);
+          setBookingStudentId(null);
+          setBookingStudentQuery("");
+          setBookingFirstDay(null);
+          setBookingStudentHasBlocks(null);
+        }
 
         return (
           <>
             {/* ── Centered Modal Backdrop ── */}
             <div
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              onClick={() => setSelectedBlockId(null)}
+              onClick={closeModal}
             >
               {/* Blur backdrop */}
               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -995,7 +1100,7 @@ export function LocationScheduleGrid({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSelectedBlockId(null)}
+                    onClick={closeModal}
                     className="rounded-full p-1.5 text-[var(--z-muted)] hover:bg-white/8 hover:text-[var(--z-fg)] transition-colors"
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -1008,14 +1113,19 @@ export function LocationScheduleGrid({
                 {/* Time & Teacher context */}
                 <div className="space-y-1">
                   <div className="text-xl font-black text-[var(--z-fg)]">
-                    {formatBlockTime(selectedBlock.start_time)} – {formatBlockTime(selectedBlock.end_time)}
+                    {formatBlockTime(displayStartTime)} – {formatBlockTime(displayEndTime)}
                   </div>
+                  {isOpenSlotModal && (
+                    <div className="inline-flex items-center gap-1 rounded-full border border-[#00ff88]/20 bg-[#00ff88]/8 px-2 py-0.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[#00ff88]">Open Slot</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {teacher ? (
                       <Link
-                        href={`/teachers/${selectedBlock.teacher_id}`}
+                        href={`/teachers/${teacher.id}`}
                         className="text-xs font-bold text-[var(--z-muted)] uppercase tracking-wider hover:text-[var(--z-accent)] hover:underline transition-colors"
-                        onClick={() => setSelectedBlockId(null)}
+                        onClick={closeModal}
                       >
                         {teacherName(teacher)}
                       </Link>
@@ -1119,10 +1229,10 @@ export function LocationScheduleGrid({
                       <button
                         type="button"
                         disabled={saving}
-                        onClick={() => bookStudent(selectedBlock)}
+                        onClick={() => bookStudent(isOpenSlotModal ? null : (selectedBlock ?? null))}
                         className="w-full rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-50 hover:bg-[#00ff88]/25 transition-colors"
                       >
-                        {saving ? "Booking…" : bookingFirstDay ? "Book as First Lesson" : "Book Session"}
+                        {saving ? "Booking…" : bookingFirstDay ? "Book as First Lesson" : bookingRecurring ? "🔄 Book Recurring" : "Book Session"}
                       </button>
                     )}
                   </div>
@@ -1133,9 +1243,9 @@ export function LocationScheduleGrid({
                     {student && (
                       <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
                         <Link
-                          href={`/students/${selectedBlock.student_id}`}
+                          href={`/students/${selectedBlock!.student_id}`}
                           className="block font-semibold text-[var(--z-fg)] text-sm hover:text-[var(--z-accent)] hover:underline transition-colors"
-                          onClick={() => setSelectedBlockId(null)}
+                          onClick={closeModal}
                         >
                           {studentName(student)}
                         </Link>
@@ -1147,9 +1257,9 @@ export function LocationScheduleGrid({
                         )}
                         <div className="flex gap-2 pt-1">
                           <Link
-                            href={`/students/${selectedBlock.student_id}`}
+                            href={`/students/${selectedBlock!.student_id}`}
                             className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
-                            onClick={() => setSelectedBlockId(null)}
+                            onClick={closeModal}
                           >
                             Student →
                           </Link>
@@ -1157,7 +1267,7 @@ export function LocationScheduleGrid({
                             <Link
                               href={`/crm?family=${student.family_id}`}
                               className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
-                              onClick={() => setSelectedBlockId(null)}
+                              onClick={closeModal}
                             >
                               Family →
                             </Link>
@@ -1184,11 +1294,11 @@ export function LocationScheduleGrid({
 
                     {/* Actions */}
                     <div className="grid grid-cols-2 gap-2 pt-1">
-                      {selectedBlock.student_id && (
+                      {selectedBlock!.student_id && (
                         <button
                           type="button"
                           disabled={saving}
-                          onClick={() => checkIn(selectedBlock)}
+                          onClick={() => checkIn(selectedBlock!)}
                           className="col-span-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 px-3 py-2.5 text-sm font-semibold text-emerald-100 disabled:opacity-50 hover:bg-emerald-500/30 transition-colors"
                         >
                           {saving ? "Saving..." : "✓ Check In"}
@@ -1197,7 +1307,7 @@ export function LocationScheduleGrid({
                       <button
                         type="button"
                         disabled={saving}
-                        onClick={() => {
+                          onClick={() => {
                           // Build patch: clear flag overrides so color re-derives from block_type
                           const patch: Partial<ScheduleBlock> = {
                             block_type: sessionType,
@@ -1207,7 +1317,7 @@ export function LocationScheduleGrid({
                           if (sessionType !== "call_out") patch.is_family_callout = false;
                           if (sessionType !== "makeup_session") patch.is_makeup_session = false;
                           if (sessionType !== "virtual") patch.is_virtual = false;
-                          patchBlock(selectedBlock, patch, true);
+                          patchBlock(selectedBlock!, patch, true);
                         }}
                         className="rounded-xl border border-yellow-400/60 bg-yellow-400/20 px-3 py-2.5 text-sm font-semibold text-yellow-200 disabled:opacity-50 hover:bg-yellow-400/30 transition-colors"
                       >
@@ -1216,16 +1326,16 @@ export function LocationScheduleGrid({
                       <button
                         type="button"
                         disabled={saving}
-                        onClick={() => callOut(selectedBlock)}
+                        onClick={() => callOut(selectedBlock!)}
                         className="rounded-xl border border-red-400/60 bg-red-500/20 px-3 py-2.5 text-sm font-semibold text-red-200 disabled:opacity-50 hover:bg-red-500/30 transition-colors"
                       >
                         Call Out
                       </button>
-                      {selectedBlock.student_id && (
+                      {selectedBlock!.student_id && (
                         <button
                           type="button"
                           disabled={saving}
-                          onClick={() => { setCancelTarget(selectedBlock); setCancelReason(""); }}
+                          onClick={() => { setCancelTarget(selectedBlock!); setCancelReason(""); }}
                           className="col-span-2 rounded-xl border border-orange-400/60 bg-orange-500/15 px-3 py-2.5 text-sm font-semibold text-orange-200 disabled:opacity-50 hover:bg-orange-500/25 transition-colors"
                         >
                           Cancel Session
