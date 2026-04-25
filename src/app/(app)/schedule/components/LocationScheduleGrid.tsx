@@ -337,11 +337,16 @@ export function LocationScheduleGrid({
   }, [teachers, teacherAvailabilityForDay, teacherBlocks]);
 
   // ── Room-centric memos ─────────────────────────────────────────────────────
-  // Sort active rooms by displayOrder, then by name
+  // Sort active rooms by name as integer (pure numeric names from DB)
   const sortedRooms = React.useMemo(() => {
     return [...rooms]
       .filter(r => r.isActive)
       .sort((a, b) => {
+        const an = parseInt(a.name, 10);
+        const bn = parseInt(b.name, 10);
+        // If both parse as numbers, sort numerically
+        if (!isNaN(an) && !isNaN(bn)) return an - bn;
+        // Fall back to displayOrder then localeCompare
         const ao = a.displayOrder ?? 999;
         const bo = b.displayOrder ?? 999;
         if (ao !== bo) return ao - bo;
@@ -497,7 +502,12 @@ export function LocationScheduleGrid({
                 const hasBlocks = dayBlocks.length > 0;
                 const isAssigning = assigningRoomId === room.id;
                 // Teachers available at this location on the selected day (smart filter)
-                const availableTeachers = teachers.filter(t => teacherAvailabilityForDay.has(t.id));
+                // GUARDRAIL: exclude teachers already assigned to a DIFFERENT room on this day
+                const availableTeachers = teachers.filter(t => {
+                  if (!teacherAvailabilityForDay.has(t.id)) return false;
+                  const existingRoom = [...roomAssignments.entries()].find(([rid, tid]) => tid === t.id && rid !== room.id);
+                  return !existingRoom; // block if already in another room
+                });
                 return (
                   <div
                     key={room.id}
@@ -507,7 +517,7 @@ export function LocationScheduleGrid({
                     <div className="flex items-center justify-center gap-1">
                       <span className="text-sm">{emoji}</span>
                       <span className="truncate text-[11px] font-black uppercase tracking-wider text-[var(--z-fg)]">
-                        {room.name}
+                        Room {room.name}
                       </span>
                     </div>
                     {assignedTeacher ? (

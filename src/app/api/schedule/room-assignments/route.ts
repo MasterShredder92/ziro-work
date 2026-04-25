@@ -125,26 +125,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Insert the new assignment
+    // Insert the new assignment — use DELETE+INSERT pattern to avoid constraint conflicts
+    // (We already cleaned up conflicting rows above)
     const { data, error } = await db
       .from("teacher_room_assignments")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          teacher_id,
-          room_id,
-          location_id,
-          day_of_week: day_of_week ?? null,
-          is_recurring,
-          assignment_date: assignment_date ?? null,
-        },
-        {
-          onConflict: is_recurring && day_of_week
-            ? "tenant_id,location_id,room_id,day_of_week"
-            : "id",
-          ignoreDuplicates: false,
-        },
-      )
+      .insert({
+        tenant_id: tenantId,
+        teacher_id,
+        room_id,
+        location_id,
+        day_of_week: day_of_week ?? null,
+        is_recurring,
+        assignment_date: assignment_date ?? null,
+      })
       .select()
       .single();
 
