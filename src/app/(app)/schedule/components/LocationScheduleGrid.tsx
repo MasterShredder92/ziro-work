@@ -903,9 +903,20 @@ export function LocationScheduleGrid({
                         >
                           <div className="flex items-start justify-between gap-1">
                             <span className="truncate text-[10px] font-black leading-tight" style={{ color: display.text }}>
-                              {block.student_id ? (
-                                <>{studentName(studentsById.get(block.student_id))} {instrumentEmoji(studentsById.get(block.student_id)?.instrument)}</>
-                              ) : display.label}
+                              {block.student_id ? (() => {
+                                const s = studentsById.get(block.student_id);
+                                if (s) {
+                                  const instr = s.instrument as string | null | undefined;
+                                  return <>{instr ? `${instrumentEmoji(instr)} ${studentName(s)}` : `- ${studentName(s)}`}</>;
+                                }
+                                // Fallback: look up from recurring rules (student not in SSR props)
+                                const rl = clientRecurringLessons.find(r => r.student_id === block.student_id);
+                                const rlName = rl ? [rl.student_first_name, rl.student_last_name].filter(Boolean).join(" ") : null;
+                                const rlInstr = rl?.instrument ?? null;
+                                return rlName
+                                  ? <>{rlInstr ? `${instrumentEmoji(rlInstr)} ${rlName}` : `- ${rlName}`}</>
+                                  : <>{display.label}</>;
+                              })() : display.label}
                             </span>
                             <div className="flex items-center gap-0.5 shrink-0">
                               {isConflict && (
