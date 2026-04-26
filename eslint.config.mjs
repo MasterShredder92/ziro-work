@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
       "react/no-unstable-nested-components": "warn",
       "react-hooks/static-components": "warn",
       "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/immutability": "warn",
     },
   },
   globalIgnores([
