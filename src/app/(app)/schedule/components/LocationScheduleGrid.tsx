@@ -198,15 +198,7 @@ export function LocationScheduleGrid({
     const n = new Date();
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
   });
-  // ── Dynamic slot height — fills the full viewport ──────────────────────────
-  const [windowHeight, setWindowHeight] = React.useState<number>(
-    typeof window !== 'undefined' ? window.innerHeight : 800
-  );
-  React.useEffect(() => {
-    const onResize = () => setWindowHeight(window.innerHeight);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+
   React.useEffect(() => {
     const tick = () => {
       const n = new Date();
@@ -475,11 +467,7 @@ export function LocationScheduleGrid({
   for (let m = startMin; m < endMin; m += 30) {
     timeLabels.push(m);
   }
-  // SLOT_H: dynamic row height so all slots fill the full screen vertically.
-  // 112px = approx top nav (56px) + utilization bar (36px) + room header (60px) + scrollbar (4px)
-  const SLOT_H = timeLabels.length > 0
-    ? Math.max(64, Math.floor((windowHeight - 112) / timeLabels.length))
-    : 64;
+  const SLOT_H = 48;
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
@@ -649,10 +637,10 @@ export function LocationScheduleGrid({
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* ── Time Column ── */}
       <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        <div className="border-b border-[var(--z-border)]" style={{ height: '60px' }} />
+        <div className="h-10 border-b border-[var(--z-border)]" />
         <div className="relative">
           {timeLabels.map((m) => (
-            <div key={m} className="flex items-center justify-center text-[10px] font-bold text-[var(--z-muted)]" style={{ height: `${SLOT_H}px` }}>
+            <div key={m} className="flex h-12 items-start justify-center pt-2 text-[10px] font-bold text-[var(--z-muted)]">
               {minuteToLabel(m)}
             </div>
           ))}
@@ -850,7 +838,7 @@ export function LocationScheduleGrid({
             {/* Horizontal lines */}
             <div className="absolute inset-0 pointer-events-none">
               {timeLabels.map((m) => (
-                <div key={m} className="border-b border-[var(--z-border)]/30" style={{ height: `${SLOT_H}px` }} />
+                <div key={m} className="h-12 border-b border-[var(--z-border)]/30" />
               ))}
             </div>
 
@@ -916,7 +904,7 @@ export function LocationScheduleGrid({
               // If a teacher is assigned (via roomAssignments), suppress the placeholder so their availability renders
               const isEmptyRoom = col.isRoom && dayBlocks.length === 0 && assignedTeacherIds.length === 0;
               return (
-                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)]/50" style={{ height: `${gridHeight}px` }}>
+                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)]/50">
                   {/* Empty Room State */}
                   {isEmptyRoom && (
                     <div
