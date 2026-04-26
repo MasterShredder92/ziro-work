@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings 9999",
     "test": "vitest run",
     "test:smoke": "vitest run tests/smoke",
     "test:watch": "vitest",
