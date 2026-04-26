@@ -19,8 +19,11 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "dist/**",
     "next-env.d.ts",
     "src/lib/types/supabase.generated.ts",
+    // One-off migration/utility scripts — not production code
+    "scripts/**",
   ]),
 ]);
 
