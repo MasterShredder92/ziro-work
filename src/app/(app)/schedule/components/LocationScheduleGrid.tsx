@@ -613,6 +613,10 @@ export function LocationScheduleGrid({
 
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
+      {/* ── DEBUG BAR (remove after Sunday fix verified) ── */}
+      <div className="shrink-0 bg-red-900/80 px-4 py-1 text-[10px] font-mono text-white">
+        DBG | date={selectedDate} | closed={String(dayHours.isClosed)} | proj={projectedBlocks.length} | rmBlocks.sz={roomBlocks.size} | rmKeys=[{[...roomBlocks.keys()].join(',').slice(0,100)}] | rooms={sortedRooms.length} | lhSun={JSON.stringify((locationHours as Record<string|number,unknown>)[0])}
+      </div>
       {/* ── Utilization Bar ── */}
       <div className="flex shrink-0 items-center gap-4 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-4 py-2">
         <div className="flex items-center gap-2">
