@@ -637,7 +637,7 @@ export function LocationScheduleGrid({
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* ── Time Column ── */}
       <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        <div className="h-10 border-b border-[var(--z-border)]" />
+        <div className="h-16 border-b border-[var(--z-border)]" />
         <div className="relative">
           {timeLabels.map((m) => (
             <div key={m} className="flex h-12 items-start justify-center pt-2 text-[10px] font-bold text-[var(--z-muted)]">
@@ -651,7 +651,7 @@ export function LocationScheduleGrid({
       <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--z-border)]">
         <div className="flex min-w-full flex-col">
           {/* Room Headers */}
-          <div className="sticky top-0 z-10 flex border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
+          <div className="sticky top-0 z-10 flex h-16 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
             {sortedRooms.length === 0 ? (
               /* Fallback: teacher headers when no rooms are configured */
               filteredTeachers.map((t) => {
