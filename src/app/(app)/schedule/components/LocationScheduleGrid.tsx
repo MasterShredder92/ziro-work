@@ -467,7 +467,11 @@ export function LocationScheduleGrid({
   for (let m = startMin; m < endMin; m += 30) {
     timeLabels.push(m);
   }
-  const SLOT_H = 48;
+  const numSlots = timeLabels.length;
+  // Dynamic slot height: fill viewport minus top nav (~88px) + grid header (64px) + util bar (~40px) = 192px
+  const SLOT_H = typeof window !== "undefined"
+    ? Math.min(80, Math.max(52, Math.floor((window.innerHeight - 192) / Math.max(numSlots, 1))))
+    : 56;
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
@@ -640,7 +644,7 @@ export function LocationScheduleGrid({
         <div className="h-16 border-b border-[var(--z-border)]" />
         <div className="relative">
           {timeLabels.map((m) => (
-            <div key={m} className="flex h-12 items-start justify-center pt-2 text-[10px] font-bold text-[var(--z-muted)]">
+            <div key={m} className="flex items-start justify-center pt-2 text-[10px] font-bold text-[var(--z-muted)]" style={{ height: `${SLOT_H}px` }}>
               {minuteToLabel(m)}
             </div>
           ))}
@@ -838,7 +842,7 @@ export function LocationScheduleGrid({
             {/* Horizontal lines */}
             <div className="absolute inset-0 pointer-events-none">
               {timeLabels.map((m) => (
-                <div key={m} className="h-12 border-b border-[var(--z-border)]/30" />
+                <div key={m} className="border-b border-[var(--z-border)]/30" style={{ height: `${SLOT_H}px` }} />
               ))}
             </div>
 

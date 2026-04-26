@@ -210,11 +210,10 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
 
   return (
     <div className="space-y-0">
-      {/* ── Single compact top bar ── */}
+      {/* Unified compact header */}
       <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Row 1: location tabs | Ruby Toggle | week nav + tools */}
+        {/* Row 1: location pills | view toggle | toolbar actions */}
         <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
-          {/* Location pills */}
           {locations.map((loc) => {
             const cfg = LOCATION_CONFIG[loc.id];
             const isActive = loc.id === activeLocationId;
@@ -241,11 +240,9 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               </button>
             );
           })}
-
-
-
-          {/* Schedule / Rooms view toggle */}
-          <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5 ml-1">
+          <div className="mx-1 h-5 w-[1px] bg-[var(--z-border)] opacity-60 shrink-0" />
+          {/* Schedule / Rooms toggle */}
+          <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5">
             <button
               type="button"
               onClick={() => setActiveView("schedule")}
@@ -269,48 +266,60 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               Rooms
             </button>
           </div>
-
-          {/* Center space */}
           <div className="flex-1" />
-
-          {/* Week nav + date jump */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => goWeek(-1)}
-              className="rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]"
-            >
-              ←
-            </button>
-            <span className="hidden text-[11px] font-semibold text-[var(--z-fg)] sm:inline">
-              {formatWeekLabel(window.start, window.end)}
-            </span>
-            <button
-              type="button"
-              onClick={() => goWeek(1)}
-              className="rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)]"
-            >
-              →
-            </button>
-            <label className="relative cursor-pointer" title="Jump to week">
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm select-none">📅</span>
-              <input
-                type="date"
-                value={window.start}
-                onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
-                className="h-7 w-7 cursor-pointer opacity-0"
-                title="Jump to week"
-              />
-            </label>
-          </div>
+          {/* Toolbar actions (schedule view only) */}
+          {activeView === "schedule" && (
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button type="button" onClick={() => setActiveModal("sub")}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-[var(--z-accent)]/50 hover:bg-[var(--z-accent)]/5 transition-all">
+                + Sub
+              </button>
+              <button type="button" onClick={() => setActiveModal("callout")}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                Call Out
+              </button>
+              <button type="button" onClick={() => setActiveModal("virtual")}
+                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all">
+                Virtual
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Row 2: day tabs + utilization + toolbar (only in schedule view) */}
+        {/* Row 2: week nav inline + day pills + utilization */}
         {activeView === "schedule" && activeLocationId && activeData && (
           <div
             className="flex items-center gap-1 overflow-x-auto px-3 pb-1.5 pt-0.5 scrollbar-none"
             style={{ borderTop: `1px solid ${activeLocConfig?.border ?? "var(--z-border)"}40` }}
           >
+            {/* Week navigator — inline left of day pills */}
+            <button
+              type="button"
+              onClick={() => goWeek(-1)}
+              className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-bold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+              aria-label="Previous week"
+            >&#8249;</button>
+            <span className="shrink-0 text-[11px] font-semibold text-[var(--z-fg)] px-1 whitespace-nowrap">
+              {formatWeekLabel(window.start, window.end)}
+            </span>
+            <button
+              type="button"
+              onClick={() => goWeek(1)}
+              className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-bold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+              aria-label="Next week"
+            >&#8250;</button>
+            {/* Compact date jump */}
+            <label className="relative shrink-0 cursor-pointer" title="Jump to date">
+              <span className="pointer-events-none flex h-7 w-7 items-center justify-center rounded-md border border-[var(--z-border)] text-sm select-none text-[var(--z-muted)]">&#128197;</span>
+              <input
+                type="date"
+                value={window.start}
+                onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                title="Jump to week"
+              />
+            </label>
+            <div className="mx-1.5 h-6 w-[1px] bg-[var(--z-border)] opacity-50 shrink-0" />
+            {/* Day pills */}
             {weekDays.map((day) => {
               const hours = activeData.locationHours ?? {};
               const { label, sub, isClosed } = formatDayTab(day, hours);
@@ -337,57 +346,31 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                 </button>
               );
             })}
-
-            {/* Utilization indicator */}
-            <div className="mx-2 h-8 w-[1px] bg-[var(--z-border)] opacity-50" />
+            {/* Utilization */}
+            <div className="mx-2 h-8 w-[1px] bg-[var(--z-border)] opacity-50 shrink-0" />
             <div className="flex shrink-0 flex-col justify-center px-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Utilization</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Util</span>
                 <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#00ff88]"}`}>
                   {utilization.pct}%
                 </span>
               </div>
               <div className="text-[11px] font-bold text-[var(--z-fg)]">
-                {utilization.booked} <span className="text-[var(--z-muted)] font-medium">booked ·</span> {utilization.open} <span className="text-[var(--z-muted)] font-medium">open</span>
+                {utilization.booked} <span className="text-[var(--z-muted)] font-medium">booked</span>{" "}
+                <span className="text-[var(--z-muted)]">&middot;</span>{" "}
+                {utilization.open} <span className="text-[var(--z-muted)] font-medium">open</span>
               </div>
-            </div>
-
-            {/* Toolbar buttons */}
-            <div className="ml-auto flex items-center gap-1.5 pr-1">
-              <button
-                type="button"
-                onClick={() => setActiveModal("sub")}
-                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-[var(--z-accent)]/50 hover:bg-[var(--z-accent)]/5 transition-all"
-              >
-                + Sub
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveModal("callout")}
-                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-red-500/50 hover:bg-red-500/5 transition-all"
-              >
-                Call Out
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveModal("virtual")}
-                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all"
-              >
-                Virtual
-              </button>
             </div>
           </div>
         )}
       </div>
-
-      {/* ── Main content area ── */}
+      {/* Main content area */}
       <div className="relative">
         {loading && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--z-bg)]/40 backdrop-blur-[1px]">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--z-accent)] border-t-transparent" />
           </div>
         )}
-
         {activeView === "schedule" ? (
           <LocationScheduleGrid
             locationId={activeLocationId}
@@ -411,8 +394,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           />
         )}
       </div>
-
-      {/* ── Modals ── */}
+      {/* Modals */}
       {activeModal === "sub" && (
         <SubModal
           locationId={activeLocationId}
