@@ -36,7 +36,7 @@ type TeacherRaw = {
   internal_match_notes?: string | null;
 };
 type Location = { id: string; name: string };
-type Tab = "profile" | "contract_w9" | "students" | "availability";
+type Tab = "profile" | "contract_w9" | "students" | "availability" | "payroll";
 type AvailabilitySlot = { start_time: string; end_time: string; is_active?: boolean };
 type W9Record = {
   id: string; legal_name: string; business_name?: string | null;
@@ -1302,6 +1302,181 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
   );
 }
 
+// ─── Payroll Tab ─────────────────────────────────────────────────────────────
+type PayrollLocation = {
+  location_id: string;
+  location_name: string;
+  location_color: string;
+  session_count: number;
+  half_hour_blocks: number;
+  earned: number;
+};
+type PayrollData = {
+  teacher_id: string;
+  teacher_name: string;
+  pay_rate_per_half_hour: number;
+  period_start: string;
+  period_end: string;
+  total_sessions: number;
+  total_half_hours: number;
+  total_earned: number;
+  by_location: PayrollLocation[];
+  billable_block_types: string[];
+};
+
+const BILLABLE_LABELS: Record<string, string> = {
+  student_session: "Student Session",
+  makeup_session: "Makeup",
+  first_day: "First Day",
+  last_day: "Last Day",
+  meet_greet: "Meet & Greet",
+  sub: "Sub",
+  virtual: "Virtual",
+};
+
+const NON_BILLABLE_LABELS: Record<string, string> = {
+  call_out: "Call Out",
+  teacher_training: "Training",
+  not_bookable: "Locked",
+  open_time: "Open Time",
+};
+
+function PayrollTab({ teacherId, payRatePerHalfHour }: { teacherId: string; payRatePerHalfHour: number | null }) {
+  const [data, setData] = React.useState<PayrollData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  // Month picker — default to current month
+  const now = new Date();
+  const [year, setYear] = React.useState(now.getFullYear());
+  const [month, setMonth] = React.useState(now.getMonth() + 1); // 1-based
+
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextMonthDate = new Date(year, month, 1);
+  const monthEnd = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+  async function load() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/crm/teachers/${teacherId}/payroll?start=${monthStart}&end=${monthEnd}`);
+      const json = await res.json() as { data?: PayrollData; error?: string };
+      if (!res.ok || !json.data) throw new Error(json.error ?? "Failed to load payroll");
+      setData(json.data);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load payroll");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  React.useEffect(() => { void load(); }, [teacherId, year, month]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  function prevMonth() {
+    if (month === 1) { setYear(y => y - 1); setMonth(12); }
+    else setMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (month === 12) { setYear(y => y + 1); setMonth(1); }
+    else setMonth(m => m + 1);
+  }
+
+  const rate = payRatePerHalfHour ?? data?.pay_rate_per_half_hour ?? 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Month Navigator */}
+      <div className="flex items-center justify-between rounded-xl border border-[var(--z-border)] bg-[#111113] px-4 py-3">
+        <button onClick={prevMonth} className="text-[var(--z-muted)] hover:text-[var(--z-fg)] text-lg font-bold px-2">‹</button>
+        <span className="text-sm font-black uppercase tracking-widest text-[var(--z-fg)]">{MONTHS[month - 1]} {year}</span>
+        <button onClick={nextMonth} className="text-[var(--z-muted)] hover:text-[var(--z-fg)] text-lg font-bold px-2">›</button>
+      </div>
+
+      {loading && <div className="py-8 text-center text-sm text-[var(--z-muted)]">Loading payroll…</div>}
+      {err && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{err}</div>}
+
+      {!loading && data && (
+        <>
+          {/* Summary Card */}
+          <div className="rounded-xl border border-[rgba(0,255,136,0.2)] bg-[#0a0f0d] p-4" style={{ borderLeft: "3px solid #00ff88" }}>
+            <div className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#00ff88]">Month Summary</div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)]">Sessions</div>
+                <div className="mt-1 text-2xl font-black text-[var(--z-fg)]">{data.total_sessions}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)]">Half-Hour Blocks</div>
+                <div className="mt-1 text-2xl font-black text-[var(--z-fg)]">{data.total_half_hours}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)]">Earned</div>
+                <div className="mt-1 text-2xl font-black" style={{ color: "#00ff88" }}>
+                  ${data.total_earned.toFixed(2)}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-[var(--z-muted)]">
+              Rate: <span className="font-bold text-[var(--z-fg)]">${rate}/half-hour</span>
+            </div>
+          </div>
+
+          {/* By Location */}
+          {data.by_location.length > 0 ? (
+            <div className="space-y-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">By Location</div>
+              {data.by_location.map(loc => (
+                <div key={loc.location_id} className="rounded-xl border border-[var(--z-border)] bg-[#111113] p-3"
+                  style={{ borderLeft: `3px solid ${loc.location_color ?? "#00ff88"}` }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-[var(--z-fg)]">{loc.location_name}</span>
+                    <span className="text-sm font-black" style={{ color: "#00ff88" }}>${loc.earned.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-1 flex gap-4 text-[10px] text-[var(--z-muted)]">
+                    <span><span className="font-bold text-[var(--z-fg)]">{loc.session_count}</span> sessions</span>
+                    <span><span className="font-bold text-[var(--z-fg)]">{loc.half_hour_blocks}</span> half-hr blocks</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[var(--z-border)] bg-[#111113] px-4 py-8 text-center text-sm text-[var(--z-muted)]">
+              No checked-in sessions for {MONTHS[month - 1]} {year}
+            </div>
+          )}
+
+          {/* Billable vs Non-Billable reference */}
+          <div className="rounded-xl border border-[var(--z-border)] bg-[#111113] p-4">
+            <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Block Type Reference</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="mb-1 text-[9px] font-black uppercase tracking-widest" style={{ color: "#00ff88" }}>Counts Toward Tally</div>
+                {Object.entries(BILLABLE_LABELS).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-1.5 py-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#00ff88" }} />
+                    <span className="text-[11px] text-[var(--z-fg)]">{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-red-400">Does NOT Count</div>
+                {Object.entries(NON_BILLABLE_LABELS).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-1.5 py-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500/60" />
+                    <span className="text-[11px] text-[var(--z-muted)]">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Profile tab: shows TeacherProfileView with an inline Edit toggle */
 function ProfileTabWithEdit({
   teacher, allLocations, assignedLocationIds, activeAvailabilityLocationIds, capacitySlots, studentCount, onSaved,
@@ -1410,6 +1585,7 @@ export function TeacherDetailClient() {
     { id: "contract_w9", label: "Contract & W9" },
     { id: "students", label: "Students" },
     { id: "availability", label: "Availability" },
+    { id: "payroll", label: "Payroll" },
   ];
 
   const displayName = teacher
@@ -1460,6 +1636,7 @@ export function TeacherDetailClient() {
               )}
               {tab === "students" && <TeacherStudentsTab teacherId={id} />}
               {tab === "availability" && <AvailabilityTab teacherId={id} />}
+              {tab === "payroll" && <PayrollTab teacherId={id} payRatePerHalfHour={teacher?.pay_rate_per_half_hour ?? null} />}
             </>
           )}
         </div>

@@ -495,9 +495,9 @@ export function LocationScheduleGrid({
     const patch: Partial<ScheduleBlock> = {
       checked_in: !block.checked_in,
       checked_in_at: !block.checked_in ? new Date().toISOString() : null,
-      checked_in_by: !block.checked_in ? "Operator" : null,
+      // checked_in_by must be a UUID or null — never send a plain string
+      checked_in_by: null,
     };
-    // Close modal after check-in so the UI reflects the update immediately
     await patchBlock(block, patch, true);
     setSyntheticBlock(null);
   }
@@ -1027,6 +1027,7 @@ export function LocationScheduleGrid({
                             backgroundColor: display.bg,
                             borderColor: isConflict ? "#ef4444" : display.border,
                             boxShadow: isConflict ? "0 0 0 1px #ef4444, 0 0 8px rgba(239,68,68,0.3)" : undefined,
+                            opacity: block.checked_in ? 0.45 : 1,
                           }}
                         >
                           <div className="flex items-start justify-between gap-1">
@@ -1047,6 +1048,12 @@ export function LocationScheduleGrid({
                               })() : display.label}
                             </span>
                             <div className="flex items-center gap-0.5 shrink-0">
+                              {block.checked_in && (
+                                <span
+                                  title="Checked In"
+                                  style={{ fontSize: 8, fontWeight: 900, color: "#000", background: "#22c55e", borderRadius: 3, padding: "0 3px", lineHeight: "13px", userSelect: "none" }}
+                                >✓</span>
+                              )}
                               {isConflict && (
                                 <span
                                   title="Schedule Conflict: outside teacher availability"
