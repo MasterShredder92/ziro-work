@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
       "no-use-before-define": "warn",
       "@typescript-eslint/no-use-before-define": "warn",
       "react/no-unstable-nested-components": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
   globalIgnores([
