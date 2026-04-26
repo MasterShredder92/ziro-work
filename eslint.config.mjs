@@ -12,10 +12,10 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-require-imports": "warn",
       "react/no-unescaped-entities": "warn",
-      "react/no-component-in-render": "warn",
-      "react-hooks/exhaustive-deps": "warn",
       "no-use-before-define": "warn",
       "@typescript-eslint/no-use-before-define": "warn",
+      "react/no-unstable-nested-components": "warn",
+      "react-compiler/react-compiler": "warn",
     },
   },
   globalIgnores([
