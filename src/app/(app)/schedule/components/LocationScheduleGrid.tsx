@@ -198,6 +198,15 @@ export function LocationScheduleGrid({
     const n = new Date();
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
   });
+  // ── Dynamic slot height — fills the full viewport ──────────────────────────
+  const [windowHeight, setWindowHeight] = React.useState<number>(
+    typeof window !== 'undefined' ? window.innerHeight : 800
+  );
+  React.useEffect(() => {
+    const onResize = () => setWindowHeight(window.innerHeight);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   React.useEffect(() => {
     const tick = () => {
       const n = new Date();
@@ -466,6 +475,11 @@ export function LocationScheduleGrid({
   for (let m = startMin; m < endMin; m += 30) {
     timeLabels.push(m);
   }
+  // SLOT_H: dynamic row height so all slots fill the full screen vertically.
+  // 112px = approx top nav (56px) + utilization bar (36px) + room header (60px) + scrollbar (4px)
+  const SLOT_H = timeLabels.length > 0
+    ? Math.max(64, Math.floor((windowHeight - 112) / timeLabels.length))
+    : 64;
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
@@ -635,10 +649,10 @@ export function LocationScheduleGrid({
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* ── Time Column ── */}
       <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        <div className="h-10 border-b border-[var(--z-border)]" />
+        <div className="border-b border-[var(--z-border)]" style={{ height: '60px' }} />
         <div className="relative">
           {timeLabels.map((m) => (
-            <div key={m} className="flex h-12 items-start justify-center pt-2 text-[10px] font-bold text-[var(--z-muted)]">
+            <div key={m} className="flex items-center justify-center text-[10px] font-bold text-[var(--z-muted)]" style={{ height: `${SLOT_H}px` }}>
               {minuteToLabel(m)}
             </div>
           ))}
@@ -836,7 +850,7 @@ export function LocationScheduleGrid({
             {/* Horizontal lines */}
             <div className="absolute inset-0 pointer-events-none">
               {timeLabels.map((m) => (
-                <div key={m} className="h-12 border-b border-[var(--z-border)]/30" />
+                <div key={m} className="border-b border-[var(--z-border)]/30" style={{ height: `${SLOT_H}px` }} />
               ))}
             </div>
 
@@ -844,7 +858,7 @@ export function LocationScheduleGrid({
             {selectedDate === nowDate && nowMinute >= startMin && nowMinute <= endMin && (
               <div
                 className="absolute left-0 right-0 z-10 border-t-2 border-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.4)]"
-                style={{ top: `${((nowMinute - startMin) / 30) * 48}px` }}
+                style={{ top: `${((nowMinute - startMin) / 30) * SLOT_H}px` }}
               >
                 <div className="absolute -left-1 -top-1.5 h-3 w-3 rounded-full bg-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.6)]" />
               </div>
@@ -894,15 +908,15 @@ export function LocationScheduleGrid({
               const hasAvailability = availWindows.length > 0;
               const availStart = hasAvailability ? Math.min(...availWindows.map(w => w.start)) : endMin;
               const availEnd = hasAvailability ? Math.max(...availWindows.map(w => w.end)) : startMin;
-              const gridHeight = ((endMin - startMin) / 30) * 48;
-              const preHeight = hasAvailability ? Math.max(0, ((availStart - startMin) / 30) * 48) : 0;
-              const postTop = hasAvailability ? ((availEnd - startMin) / 30) * 48 : 0;
-              const postHeight = hasAvailability ? Math.max(0, ((endMin - availEnd) / 30) * 48) : 0;
+              const gridHeight = ((endMin - startMin) / 30) * SLOT_H;
+              const preHeight = hasAvailability ? Math.max(0, ((availStart - startMin) / 30) * SLOT_H) : 0;
+              const postTop = hasAvailability ? ((availEnd - startMin) / 30) * SLOT_H : 0;
+              const postHeight = hasAvailability ? Math.max(0, ((endMin - availEnd) / 30) * SLOT_H) : 0;
               // Empty room state: room has no blocks today AND no teacher assigned
               // If a teacher is assigned (via roomAssignments), suppress the placeholder so their availability renders
               const isEmptyRoom = col.isRoom && dayBlocks.length === 0 && assignedTeacherIds.length === 0;
               return (
-                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)]/50">
+                <div key={`${col.id}__${assignedTeacherId ?? "empty"}`} className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)]/50" style={{ height: `${gridHeight}px` }}>
                   {/* Empty Room State */}
                   {isEmptyRoom && (
                     <div
@@ -927,7 +941,7 @@ export function LocationScheduleGrid({
                    *   for the full studio hours so they count toward utilization denominator.
                    */}
                   {isEmptyRoom && timeLabels.map((slotMin) => {
-                    const slotTop = ((slotMin - startMin) / 30) * 48;
+                    const slotTop = ((slotMin - startMin) / 30) * SLOT_H;
                     return (
                       <button
                         key={`empty-${slotMin}`}
@@ -935,7 +949,7 @@ export function LocationScheduleGrid({
                         className="absolute left-1 right-1 flex items-center justify-center overflow-hidden rounded-md border transition-all hover:border-[rgba(0,255,136,0.4)] hover:bg-[rgba(0,255,136,0.06)]"
                         style={{
                           top: `${slotTop + 2}px`,
-                          height: "44px",
+                          height: `${SLOT_H - 4}px`,
                           borderColor: "rgba(0,255,136,0.1)",
                           background: "rgba(0,255,136,0.02)",
                           zIndex: 2,
@@ -963,7 +977,7 @@ export function LocationScheduleGrid({
                     );
                   })}
                   {!isEmptyRoom && timeLabels.map((slotMin) => {
-                    const slotTop = ((slotMin - startMin) / 30) * 48;
+                    const slotTop = ((slotMin - startMin) / 30) * SLOT_H;
                     const slotEnd = slotMin + 30;
                     const inWindow = hasAvailability
                       ? availWindows.some(w => slotMin >= w.start && slotEnd <= w.end)
@@ -980,7 +994,7 @@ export function LocationScheduleGrid({
                           className="absolute left-0 right-0 flex items-center justify-center overflow-hidden"
                           style={{
                             top: `${slotTop}px`,
-                            height: "48px",
+                            height: `${SLOT_H}px`,
                             background: "repeating-linear-gradient(135deg, rgba(0,255,136,0.03) 0px, rgba(0,255,136,0.03) 2px, transparent 2px, transparent 10px)",
                             borderBottom: "1px solid rgba(0,255,136,0.06)",
                             pointerEvents: "none",
@@ -998,7 +1012,7 @@ export function LocationScheduleGrid({
                       // ── Booked lesson card ──
                       const blockStart = toMinute(block.start_time);
                       const blockEnd = toMinute(block.end_time);
-                      const blockHeight = ((blockEnd - blockStart) / 30) * 48;
+                      const blockHeight = ((blockEnd - blockStart) / 30) * SLOT_H;
                       const display = getBlockDisplay(block);
                       const isSelected = selectedBlockId === block.id;
                       const isConflict = hasAvailability &&
@@ -1106,7 +1120,7 @@ export function LocationScheduleGrid({
                     if (recurringLesson) {
                       const rlStart = toMinute(recurringLesson.start_time);
                       const rlEnd = toMinute(recurringLesson.end_time);
-                      const rlHeight = ((rlEnd - rlStart) / 30) * 48;
+                      const rlHeight = ((rlEnd - rlStart) / 30) * SLOT_H;
                       const rlStudentName = [recurringLesson.student_first_name, recurringLesson.student_last_name]
                         .filter(Boolean).join(" ") || "Student";
                       const rlSlotEndMin = rlEnd;
@@ -1213,7 +1227,7 @@ export function LocationScheduleGrid({
                         className="absolute left-1 right-1 flex items-center justify-center gap-1 rounded border border-dashed transition-all hover:border-[#00ff88] hover:bg-[rgba(0,255,136,0.06)] group"
                         style={{
                           top: `${slotTop + 1}px`,
-                          height: "46px",
+                          height: `${SLOT_H - 2}px`,
                           borderColor: "rgba(0,255,136,0.15)",
                           zIndex: 1,
                         }}
