@@ -421,13 +421,33 @@ export function LocationScheduleGrid({
   const roomBlocks = React.useMemo(() => {
     const map = new Map<string, ProjectedBlock[]>();
     for (const b of projectedBlocks) {
-      const roomId = b.room_id;
-      if (!roomId) continue;
-      if (!map.has(roomId)) map.set(roomId, []);
-      map.get(roomId)!.push(b);
+      if (b.room_id) {
+        // Block has explicit room_id — place it directly
+        if (!map.has(b.room_id)) map.set(b.room_id, []);
+        map.get(b.room_id)!.push(b);
+      } else if (b.teacher_id) {
+        // Block has no room_id — find which room this teacher is assigned to
+        // and place it there so it isn't silently dropped
+        let placed = false;
+        for (const [roomId, teacherIds] of roomAssignments.entries()) {
+          if (teacherIds.includes(b.teacher_id)) {
+            if (!map.has(roomId)) map.set(roomId, []);
+            map.get(roomId)!.push(b);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          // Teacher has no room assignment — place in a virtual "unassigned" bucket
+          // keyed by teacher_id so the teacher column can still find it
+          const key = `teacher:${b.teacher_id}`;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push(b);
+        }
+      }
     }
     return map;
-  }, [projectedBlocks]);
+  }, [projectedBlocks, roomAssignments]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   const dayHours = getHoursForDate(locationHours, selectedDate);
@@ -832,7 +852,33 @@ export function LocationScheduleGrid({
 
             {/* Columns */}
             {(sortedRooms.length === 0 ? filteredTeachers.map(t => ({ id: t.id, isRoom: false as const, teacher: t })) : sortedRooms.map(r => ({ id: r.id, isRoom: true as const, room: r }))).map((col) => {
-              const dayBlocks = col.isRoom ? (roomBlocks.get(col.id) ?? []) : (teacherBlocks.get(col.id) ?? []);
+              // For room columns: first try roomBlocks (has explicit room_id or was matched via roomAssignments).
+              // Fallback: if no blocks found via room, check teacher-keyed bucket (null room_id, no room assignment)
+              // This prevents Sunday/weekday blocks with null room_id from being silently dropped.
+              let dayBlocks: ProjectedBlock[];
+              if (col.isRoom) {
+                const roomKeyed = roomBlocks.get(col.id) ?? [];
+                if (roomKeyed.length > 0) {
+                  dayBlocks = roomKeyed;
+                } else {
+                  // Check if any teacher assigned to this room has unassigned blocks
+                  const assignedTids = roomAssignments.get(col.id) ?? [];
+                  const teacherKeyed = assignedTids.flatMap(tid => roomBlocks.get(`teacher:${tid}`) ?? []);
+                  if (teacherKeyed.length > 0) {
+                    dayBlocks = teacherKeyed;
+                  } else {
+                    // Last resort: no room assignments exist at all for this day (e.g. Sunday).
+                    // Distribute teacher-keyed blocks across columns by teacher bucket index.
+                    const allTeacherKeys = [...roomBlocks.keys()].filter(k => k.startsWith("teacher:"));
+                    const colIdx = sortedRooms.findIndex(r => r.id === col.id);
+                    dayBlocks = (colIdx >= 0 && colIdx < allTeacherKeys.length)
+                      ? (roomBlocks.get(allTeacherKeys[colIdx]) ?? [])
+                      : [];
+                  }
+                }
+              } else {
+                dayBlocks = teacherBlocks.get(col.id) ?? [];
+              }
               // Hard-Lock: compute unavailable zones for the teacher(s) in this column
               // For room columns: support shift-splits (multiple teachers per room per day)
               const assignedTeacherIds = col.isRoom
