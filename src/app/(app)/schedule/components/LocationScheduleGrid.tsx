@@ -1023,14 +1023,38 @@ export function LocationScheduleGrid({
 
                     // ── Recurring lesson overlay (future dates: no actual block row exists) ──
                     // Match on teacher_id + start_time.
-                    // Primary: use assignedTeacherIds from roomAssignments (populated async).
-                    // Fallback: if roomAssignments hasn't loaded yet, infer teacher from dayBlocks.
+                    // Priority order:
+                    //   1. assignedTeacherIds from roomAssignments (populated async)
+                    //   2. Infer teacher from dayBlocks (current week)
+                    //   3. Check roomAssignments map directly for this column
+                    //   4. For non-room (teacher) columns: match directly on col.id
+                    //   5. Last resort: if no room assignment exists anywhere for this teacher,
+                    //      render in the first column that claims this teacher (prevents invisible students)
+                    const roomAssignedTeacherIds = col.isRoom ? (roomAssignments.get(col.id) ?? []) : [];
                     const inferredTeacherIds: string[] = assignedTeacherIds.length > 0
                       ? assignedTeacherIds
-                      : [...new Set(dayBlocks.map(b => b.teacher_id).filter(Boolean) as string[])];
+                      : dayBlocks.length > 0
+                        ? [...new Set(dayBlocks.map(b => b.teacher_id).filter(Boolean) as string[])]
+                        : roomAssignedTeacherIds.length > 0
+                          ? roomAssignedTeacherIds
+                          : col.isRoom ? [] : [col.id]; // teacher column: match by col.id directly
+
+                    // For room columns with no assignment at all, check if this recurring lesson's
+                    // teacher has NO room assignment anywhere — if so, render in first room column
+                    const colIndex = (sortedRooms.length > 0 ? sortedRooms : filteredTeachers).findIndex(c => c.id === col.id);
+                    const isFirstColumn = colIndex === 0;
                     const recurringLesson = clientRecurringLessons.find(rl => {
                       const rlMin = toMinute(rl.start_time);
-                      return inferredTeacherIds.includes(rl.teacher_id) && rlMin === slotMin;
+                      if (rlMin !== slotMin) return false;
+                      // Direct teacher match (works for teacher columns and assigned room columns)
+                      if (inferredTeacherIds.includes(rl.teacher_id)) return true;
+                      // Fallback: if this teacher has no room assignment anywhere on this day,
+                      // render them in the first column so they're never invisible
+                      if (col.isRoom && isFirstColumn) {
+                        const teacherHasAnyRoomAssignment = [...roomAssignments.values()].some(tids => tids.includes(rl.teacher_id));
+                        if (!teacherHasAnyRoomAssignment) return true;
+                      }
+                      return false;
                     });
 
                     if (recurringLesson) {
