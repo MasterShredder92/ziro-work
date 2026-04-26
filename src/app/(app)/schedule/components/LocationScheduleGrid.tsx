@@ -331,8 +331,8 @@ export function LocationScheduleGrid({
   // DB day_of_week is a string enum: monday|tuesday|wednesday|thursday|friday|saturday|sunday
   const selectedDayName = React.useMemo((): string => {
     if (!selectedDate) return "";
-    const d = new Date(selectedDate + "T00:00:00");
-    return ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][d.getDay()] ?? "";
+    const d = new Date(selectedDate + "T00:00:00.000Z");
+    return ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][d.getUTCDay()] ?? "";
   }, [selectedDate]);
   // ── Client-side availability fetch ────────────────────────────────────────
   // The SSR payload is too large (4MB+) and availability is dropped from the serialized props.
@@ -352,8 +352,8 @@ export function LocationScheduleGrid({
   // Fetch recurring lessons for projection overlay (client-side, no SSR)
   React.useEffect(() => {
     if (!locationId || !selectedDate) return;
-    const d = new Date(selectedDate + "T00:00:00");
-    const dow = d.getDay(); // 0=Sun, 6=Sat
+    const d = new Date(selectedDate + "T00:00:00.000Z");
+    const dow = d.getUTCDay(); // 0=Sun, 6=Sat
     void fetch(`/api/schedule/recurring-lessons?location_id=${locationId}&day_of_week=${dow}`)
       .then(r => r.ok ? r.json() : null)
       .then((res: { data?: RecurringLesson[] } | null) => {
@@ -566,8 +566,8 @@ export function LocationScheduleGrid({
 
       // If recurring, refresh the recurring lessons overlay
       if (bookingRecurring) {
-        const d = new Date((payload.block_date as string) + "T00:00:00");
-        const dow = d.getDay();
+        const d = new Date((payload.block_date as string) + "T00:00:00.000Z");
+        const dow = d.getUTCDay();
         void fetch(`/api/schedule/recurring-lessons?location_id=${locationId}&day_of_week=${dow}`)
           .then(r => r.ok ? r.json() : null)
           .then((res2: { data?: RecurringLesson[] } | null) => {
@@ -605,7 +605,7 @@ export function LocationScheduleGrid({
     b.student_id && b.block_type !== "open_time"
   ).length + clientRecurringLessons.filter(rl => {
     // Count recurring lessons that project onto the selected date
-    const dow = new Date(selectedDate + "T00:00:00").getDay();
+    const dow = new Date(selectedDate + "T00:00:00.000Z").getUTCDay();
     return rl.day_of_week === dow;
   }).length;
   const utilPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
@@ -613,10 +613,6 @@ export function LocationScheduleGrid({
 
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
-      {/* ── DEBUG BAR (remove after Sunday fix verified) ── */}
-      <div className="shrink-0 bg-red-900/80 px-4 py-1 text-[10px] font-mono text-white">
-        DBG | date={selectedDate} | closed={String(dayHours.isClosed)} | proj={projectedBlocks.length} | rmBlocks.sz={roomBlocks.size} | rmKeys=[{[...roomBlocks.keys()].join(',').slice(0,100)}] | rooms={sortedRooms.length} | lhSun={JSON.stringify((locationHours as Record<string|number,unknown>)[0])}
-      </div>
       {/* ── Utilization Bar ── */}
       <div className="flex shrink-0 items-center gap-4 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-4 py-2">
         <div className="flex items-center gap-2">
