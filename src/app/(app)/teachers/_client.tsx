@@ -77,6 +77,26 @@ export function TeachersClient() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
   const [search, setSearch] = useState("");
   const [showInvite, setShowInvite] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ matched: number; unmatched: number; updated: number; unmatched_list: Array<{ name: string; email: string }> } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  async function handleSquareSync() {
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/square/sync-team?dry_run=false", { method: "POST" });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setSyncResult(data);
+      loadTeachers();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const loadTeachers = useCallback(() => {
     setLoading(true);
@@ -114,6 +134,15 @@ export function TeachersClient() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
             <PageHeader title="Teachers" subtitle="Staff directory, pay rates, and W-9 status" />
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={handleSquareSync}
+                disabled={syncing}
+                style={{ borderRadius: 8, border: `1px solid ${ZIRO_GREEN}40`, padding: "6px 14px", fontSize: 13, fontWeight: 600, color: syncing ? "var(--z-muted)" : ZIRO_GREEN, background: `${ZIRO_GREEN}10`, cursor: syncing ? "not-allowed" : "pointer", opacity: syncing ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
+              >
+                {syncing ? (
+                  <><span style={{ display: "inline-block", width: 12, height: 12, border: `2px solid ${ZIRO_GREEN}40`, borderTop: `2px solid ${ZIRO_GREEN}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Syncing...</>
+                ) : "⟳ Sync Square"}
+              </button>
               <button
                 onClick={() => setShowInvite(true)}
                 style={{ borderRadius: 8, border: "1px solid var(--z-border)", padding: "6px 14px", fontSize: 13, fontWeight: 600, color: "var(--z-muted)", background: "transparent", cursor: "pointer" }}
@@ -355,6 +384,54 @@ export function TeachersClient() {
           onClose={() => setShowInvite(false)}
           onSent={() => { setShowInvite(false); loadTeachers(); }}
         />
+      )}
+      {/* Square Sync Result Modal */}
+      {(syncResult || syncError) && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div style={{ background: "#111113", border: "1px solid #1c1c1e", borderRadius: 12, padding: 28, minWidth: 360, maxWidth: 480, width: "90%" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--z-fg)" }}>
+                {syncError ? "Sync Failed" : "Square Sync Complete"}
+              </span>
+              <button onClick={() => { setSyncResult(null); setSyncError(null); }} style={{ fontSize: 18, color: "var(--z-muted)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+            </div>
+            {syncError ? (
+              <p style={{ color: "#ef4444", fontSize: 13 }}>{syncError}</p>
+            ) : syncResult ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+                  <div style={{ background: "rgba(0,209,108,0.08)", border: "1px solid rgba(0,209,108,0.2)", borderRadius: 8, padding: "12px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "#00D16C" }}>{syncResult.matched}</div>
+                    <div style={{ fontSize: 11, color: "var(--z-muted)", marginTop: 2 }}>Matched</div>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--z-border)", borderRadius: 8, padding: "12px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--z-fg)" }}>{syncResult.updated}</div>
+                    <div style={{ fontSize: 11, color: "var(--z-muted)", marginTop: 2 }}>Updated</div>
+                  </div>
+                  <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, padding: "12px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "#f59e0b" }}>{syncResult.unmatched}</div>
+                    <div style={{ fontSize: 11, color: "var(--z-muted)", marginTop: 2 }}>Unmatched</div>
+                  </div>
+                </div>
+                {syncResult.unmatched_list.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)", marginBottom: 8 }}>Not in ZiroWork</p>
+                    {syncResult.unmatched_list.map((u, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--z-border)", fontSize: 13 }}>
+                        <span style={{ color: "var(--z-fg)" }}>{u.name}</span>
+                        <span style={{ color: "var(--z-muted)", fontSize: 12 }}>{u.email || "no email"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : null}
+            <button
+              onClick={() => { setSyncResult(null); setSyncError(null); }}
+              style={{ marginTop: 20, width: "100%", borderRadius: 8, background: `${ZIRO_GREEN}18`, border: `1px solid ${ZIRO_GREEN}30`, padding: "8px 0", fontSize: 13, fontWeight: 600, color: ZIRO_GREEN, cursor: "pointer" }}
+            >Done</button>
+          </div>
+        </div>
       )}
     </PageTransition>
   );
