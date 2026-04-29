@@ -34,7 +34,7 @@ export function CleanLayout({ children }: { children: ReactNode }) {
           >
             <TopBar onMenuToggle={() => setMobileNavOpen((open) => !open)} />
           </Suspense>
-          <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto relative">
+          <main id="main-content" tabIndex={-1} className={`flex-1 relative ${isSchedulePage ? "overflow-hidden flex flex-col min-h-0" : "overflow-y-auto"}`}>
             <ErrorBoundary>
               <RouteLoadingBoundary>{children}</RouteLoadingBoundary>
             </ErrorBoundary>

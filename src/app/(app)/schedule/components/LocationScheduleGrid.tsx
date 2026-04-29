@@ -209,6 +209,22 @@ export function LocationScheduleGrid({
     return () => clearInterval(id);
   }, []);
 
+  // ── Container height measurement for dynamic SLOT_H ──────────────────────────
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = React.useState<number>(0);
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height ?? 0;
+      if (h > 0) setContainerHeight(h);
+    });
+    ro.observe(el);
+    // Seed with current height immediately
+    setContainerHeight(el.getBoundingClientRect().height);
+    return () => ro.disconnect();
+  }, []);
+
   // ── Auto check-in loop — runs every 60s, only on today's view ───────────────────────────────────────────────────────
   const lastAutoCheckinRef = React.useRef<number>(0);
   React.useEffect(() => {
@@ -454,7 +470,7 @@ export function LocationScheduleGrid({
   const dayHours = getHoursForDate(locationHours, selectedDate);
   if (dayHours.isClosed) {
     return (
-      <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[var(--z-muted)]">
+      <div className="flex h-full min-h-[400px] items-center justify-center text-sm font-semibold text-[var(--z-muted)]">
         Studio is closed on this date.
       </div>
     );
@@ -468,10 +484,13 @@ export function LocationScheduleGrid({
     timeLabels.push(m);
   }
   const numSlots = timeLabels.length;
-  // Dynamic slot height: fill viewport minus top nav (~88px) + grid header (64px) + util bar (~40px) = 192px
-  const SLOT_H = typeof window !== "undefined"
-    ? Math.min(80, Math.max(52, Math.floor((window.innerHeight - 192) / Math.max(numSlots, 1))))
-    : 56;
+  // Dynamic slot height: use measured container height (via ResizeObserver).
+  // Subtract util bar (40px) + grid header row (64px) = 104px from the container.
+  // If container not yet measured, fall back to window.innerHeight estimate.
+  const availableGridHeight = containerHeight > 0
+    ? containerHeight - 104
+    : typeof window !== "undefined" ? window.innerHeight - 192 : 400;
+  const SLOT_H = Math.min(80, Math.max(28, Math.floor(availableGridHeight / Math.max(numSlots, 1))));
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
@@ -593,7 +612,7 @@ export function LocationScheduleGrid({
 
   if (selectedDayName === "friday") {
     return (
-      <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 items-center justify-center bg-[var(--z-bg)]">
+      <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-[var(--z-bg)]">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-[var(--z-border)] bg-[#111113] px-12 py-10">
           <span className="text-4xl">🔒</span>
           <p className="text-xl font-bold text-white">Studio Closed</p>
@@ -618,7 +637,7 @@ export function LocationScheduleGrid({
   const utilColor = utilPct >= 80 ? "#00ff88" : utilPct >= 50 ? "#eab308" : "#ef4444";
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
+    <div ref={containerRef} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
       {/* ── Utilization Bar ── */}
       <div className="flex shrink-0 items-center gap-4 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-4 py-2">
         <div className="flex items-center gap-2">
