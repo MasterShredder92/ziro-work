@@ -473,8 +473,8 @@ export function LocationScheduleGrid({
   // No upper cap — let slots grow to fill the screen naturally.
   // Minimum 44px so text stays readable.
   const SLOT_H = typeof window !== "undefined"
-    ? Math.max(44, Math.floor((window.innerHeight - 193) / Math.max(numSlots, 1) * 0.90))
-    : 50;
+    ? Math.max(44, Math.floor((window.innerHeight - 193) / Math.max(numSlots, 1) * 0.855))
+    : 48;
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
