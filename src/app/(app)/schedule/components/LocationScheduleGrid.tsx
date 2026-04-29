@@ -1038,7 +1038,7 @@ export function LocationScheduleGrid({
                           }}
                         >
                           <div className="flex items-start justify-between gap-1">
-                            <span className="truncate text-[12px] font-black leading-tight" style={{ color: display.text }}>
+                            <span className="truncate text-[14px] font-black leading-tight" style={{ color: display.text }}>
                               {block.student_id ? (() => {
                                 const s = studentsById.get(block.student_id);
                                 if (s) {
@@ -1070,14 +1070,14 @@ export function LocationScheduleGrid({
                               {block.is_virtual && <span className="text-[10px]">🌐</span>}
                             </div>
                           </div>
-                          <div className="mt-0.5 text-[11px] font-bold" style={{ color: display.text }}>
+                          <div className="mt-0.5 text-[13px] font-bold" style={{ color: display.text }}>
                             {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
                           </div>
                           {isConflict && (
-                            <div className="mt-0.5 text-[10px] font-bold" style={{ color: "#fca5a5" }}>Conflict</div>
+                            <div className="mt-0.5 text-[12px] font-bold" style={{ color: "#fca5a5" }}>Conflict</div>
                           )}
                           {block.notes && (
-                            <div className="mt-1 truncate text-[10px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
+                            <div className="mt-1 truncate text-[12px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
                           )}
                         </button>
                       );
@@ -1188,12 +1188,12 @@ export function LocationScheduleGrid({
                             }
                           }}
                         >
-                          <div className="truncate text-[12px] font-black leading-tight" style={{ color: "#000" }}>
+                          <div className="truncate text-[14px] font-black leading-tight" style={{ color: "#000" }}>
                             {recurringLesson.instrument
                               ? `${instrumentEmoji(recurringLesson.instrument)} ${rlStudentName}`
                               : `- ${rlStudentName}`}
                           </div>
-                          <div className="mt-0.5 text-[11px] font-bold opacity-80" style={{ color: "#000" }}>
+                          <div className="mt-0.5 text-[13px] font-bold opacity-80" style={{ color: "#000" }}>
                             {formatBlockTime(recurringLesson.start_time)} – {formatBlockTime(recurringLesson.end_time)}
                           </div>
                         </button>
@@ -1235,7 +1235,7 @@ export function LocationScheduleGrid({
                         }}
                       >
                         <span
-                          style={{ fontSize: 11, fontWeight: 700, color: "rgba(0,255,136,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}
+                          style={{ fontSize: 13, fontWeight: 700, color: "rgba(0,255,136,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}
                           className="group-hover:text-[#00ff88] transition-colors"
                         >
                           + Open
