@@ -473,8 +473,8 @@ export function LocationScheduleGrid({
   // No upper cap — let slots grow to fill the screen naturally.
   // Minimum 44px so text stays readable.
   const SLOT_H = typeof window !== "undefined"
-    ? Math.max(44, Math.floor((window.innerHeight - 193) / Math.max(numSlots, 1)))
-    : 56;
+    ? Math.max(44, Math.floor((window.innerHeight - 193) / Math.max(numSlots, 1) * 0.95))
+    : 53;
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
@@ -658,7 +658,7 @@ export function LocationScheduleGrid({
       <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--z-border)]">
         <div className="flex min-w-full flex-col">
           {/* Room Headers */}
-          <div className="sticky top-0 z-10 flex h-16 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
+          <div className="sticky top-0 z-30 flex h-20 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
             {sortedRooms.length === 0 ? (
               /* Fallback: teacher headers when no rooms are configured */
               filteredTeachers.map((t) => {
@@ -701,7 +701,7 @@ export function LocationScheduleGrid({
                 return (
                   <div
                     key={room.id}
-                    className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)] p-2 text-center"
+                    className="relative flex-1 min-w-[160px] border-r border-[var(--z-border)] p-2 text-center overflow-visible"
                     style={hasBlocks || assignedTeacher ? { borderTop: `2px solid rgba(0,255,136,0.3)` } : {}}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -741,7 +741,7 @@ export function LocationScheduleGrid({
                     {/* Teacher assignment dropdown */}
                     {isAssigning && (
                       <div
-                        className="absolute left-0 top-full z-50 mt-1 w-full min-w-[180px] rounded-xl border border-[rgba(0,255,136,0.2)] bg-[#0f1a14] shadow-2xl"
+                        className="absolute left-0 top-full z-[9999] mt-1 w-full min-w-[180px] rounded-xl border border-[rgba(0,255,136,0.2)] bg-[#0f1a14] shadow-2xl"
                         style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,255,136,0.1)" }}
                       >
                         <div className="border-b border-[rgba(0,255,136,0.1)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--z-accent)]">
