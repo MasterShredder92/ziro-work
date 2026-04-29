@@ -209,7 +209,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="space-y-0">
       {/* Unified compact header */}
       <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
         {/* Row 1: location pills | view toggle | toolbar actions */}
@@ -365,7 +365,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
         )}
       </div>
       {/* Main content area */}
-      <div className="relative flex-1 min-h-0 overflow-hidden">
+      <div className="relative">
         {loading && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--z-bg)]/40 backdrop-blur-[1px]">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--z-accent)] border-t-transparent" />
