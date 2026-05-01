@@ -5,7 +5,8 @@ import type { DirectorLocation } from "@/lib/director/types";
 import { can } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/guards";
 import { getSession } from "@/lib/auth/session";
-import { DirectorSidebar, DIRECTOR_NAV } from "./components/DirectorSidebar";
+import { DirectorSidebar } from "./components/DirectorSidebar";
+import { DIRECTOR_NAV } from "./components/director-nav";
 import { LocationSwitcher } from "./components/LocationSwitcher";
 
 type SearchParams = Record<string, string | string[] | undefined>;
