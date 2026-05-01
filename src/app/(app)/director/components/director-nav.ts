@@ -27,5 +27,5 @@ export const DIRECTOR_NAV: DirectorNavItem[] = [
   { id: "student-messages", label: "Student Messages", href: "#student-messages", description: "Feedback routed to director" },
   { id: "reports", label: "Reports", href: "/reports", description: "Dashboards, KPIs & exports", scope: "reports.read" },
   { id: "crew", label: "Agent Crew", href: "/director/crew", description: "Automation activity & savings" },
-  { id: "outbox", label: "RAVEN Outbox", href: "/director/outbox", description: "Pending messages awaiting approval" },
+  { id: "outbox", label: "RAVEN Outbox", href: "/director/crew/approvals", description: "Pending messages awaiting approval" },
 ];
