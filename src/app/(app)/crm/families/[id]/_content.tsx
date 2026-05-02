@@ -1149,6 +1149,9 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
     paid_at: string | null;
     square_created_at: string | null;
     customer_name: string | null;
+    source?: "square" | "manual";
+    live_url_token?: string | null;
+    pdf_url?: string | null;
   };
 
   // ── state ──────────────────────────────────────────────────────────────
@@ -1332,7 +1335,7 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  {["Date", "Invoice #", "Description", "Amount", "Status"].map(h => (
+                  {["Date", "Invoice #", "Description", "Amount", "Status", ""].map(h => (
                     <th key={h} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: T.label }}>{h}</th>
                   ))}
                 </tr>
@@ -1348,6 +1351,19 @@ function BillingTab({ familyId, brandColor }: { familyId: string; brandColor: st
                     <td className="px-5 py-2.5 text-xs max-w-[200px] truncate" style={{ color: T.fg }}>{inv.title || "Lesson Invoice"}</td>
                     <td className="px-5 py-2.5 text-xs font-semibold" style={{ color: T.fg }}>{squareCents(inv.amount_cents)}</td>
                     <td className="px-5 py-2.5"><SquareStatusBadge status={inv.status} /></td>
+                    <td className="px-5 py-2.5 text-right">
+                      {inv.source === "manual" && (inv.pdf_url || inv.live_url_token) ? (
+                        <a
+                          href={inv.pdf_url ?? `/invoice/${inv.live_url_token}`}
+                          target="_blank"
+                          rel="noopener"
+                          className="text-xs font-semibold hover:underline"
+                          style={{ color: "var(--z-accent)" }}
+                        >
+                          {inv.pdf_url ? "PDF →" : "View →"}
+                        </a>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

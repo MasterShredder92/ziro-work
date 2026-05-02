@@ -659,7 +659,8 @@ function CreateInvoiceModal({
   });
   const [note, setNote] = React.useState("");
   const [lineItems, setLineItems] = React.useState<LineItem[]>([newLineItem()]);
-  const [themePreference, setThemePreference] = React.useState<"dark" | "light">("dark");
+  // Theme is locked to light — single immutable invoice template across all tenants.
+  const themePreference: "light" = "light";
   const [googleReview, setGoogleReview] = React.useState(false);
   // Recurring: set by type picker, not editable inside the builder
   const isRecurring = isRecurringDefault;
@@ -668,6 +669,8 @@ function CreateInvoiceModal({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
+  const [createdToken, setCreatedToken] = React.useState<string | null>(null);
+  const [createdPdfUrl, setCreatedPdfUrl] = React.useState<string | null>(null);
 
   // ── Computed total ──
   const subtotal = lineItems.reduce((sum, item) => {
@@ -822,6 +825,8 @@ function CreateInvoiceModal({
       });
       const j = await res.json();
       if (!res.ok) { setError(j.error ?? "Failed to create invoice"); return; }
+      setCreatedToken(token);
+      setCreatedPdfUrl((j?.data?.pdf_url as string | null) ?? null);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Server error");
@@ -835,6 +840,7 @@ function CreateInvoiceModal({
   const otherServices = services.filter(s => !s.is_core);
 
   if (success) {
+    const familyTarget = returnFamilyId || selectedFamilyId;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
         <div
@@ -846,19 +852,36 @@ function CreateInvoiceModal({
           <div className="text-sm text-[var(--z-muted)]">
             Saved to the family record. {isRecurring && "Recurring billing is active — next invoice generates on the 1st."}
           </div>
+
+          {(createdPdfUrl || createdToken) && (
+            <a
+              href={createdPdfUrl ?? `/invoice/${createdToken}`}
+              target="_blank"
+              rel="noopener"
+              className="block w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
+              style={{ background: "var(--z-accent)", color: "var(--z-on-accent)" }}
+            >
+              {createdPdfUrl ? "View Invoice PDF →" : "View Invoice →"}
+            </a>
+          )}
+
           <button
             onClick={() => {
-              if (returnFamilyId) {
-                router.push(`/crm/families/${returnFamilyId}`);
+              if (familyTarget) {
+                router.push(`/crm/families/${familyTarget}`);
               } else {
                 onClose();
                 router.refresh();
               }
             }}
-            className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
-            style={{ background: "var(--z-accent)", color: "var(--z-on-accent)" }}
+            className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80 border"
+            style={{
+              background: "transparent",
+              borderColor: "var(--z-border)",
+              color: "var(--z-fg)",
+            }}
           >
-            {returnFamilyId ? "Back to Family" : "Done"}
+            {familyTarget ? "Go to Family" : "Done"}
           </button>
         </div>
       </div>
@@ -884,47 +907,25 @@ function CreateInvoiceModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Row 1: Theme + Location */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Invoice Theme</label>
-              <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
-                {(["dark", "light"] as const).map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setThemePreference(t)}
-                    className="flex-1 py-2 capitalize transition-colors"
-                    style={{
-                      background: themePreference === t ? "var(--z-accent)" : "var(--z-bg)",
-                      color: themePreference === t ? "var(--z-on-accent)" : "var(--z-muted)",
-                      fontWeight: themePreference === t ? 700 : 400,
-                    }}
-                  >
-                    {t === "dark" ? "🌙 Dark" : "☀️ Light"}
-                  </button>
-                ))}
+          {/* Row 1: Location (full width) — invoice template is locked white */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Location</label>
+            <select
+              value={locationId}
+              onChange={e => setLocationId(e.target.value)}
+              className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
+            >
+              <option value="">All Locations</option>
+              {LOCATIONS.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+            {locationInfo && (
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: locationInfo.color }}>
+                <span className="inline-block w-2 h-2 rounded-full" style={{ background: locationInfo.color }} />
+                {locationInfo.name}
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">Location</label>
-              <select
-                value={locationId}
-                onChange={e => setLocationId(e.target.value)}
-                className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)]"
-              >
-                <option value="">All Locations</option>
-                {LOCATIONS.map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-              {locationInfo && (
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: locationInfo.color }}>
-                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: locationInfo.color }} />
-                  {locationInfo.name}
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Family search */}

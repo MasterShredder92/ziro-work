@@ -166,7 +166,64 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ data: invoice }, { status: 201 });
+    // ── 3. Generate PDF + upload to storage (non-fatal) ──
+    let pdfUrl: string | null = null;
+    try {
+      const { renderInvoicePdf } = await import("@/lib/invoice/pdf");
+      const { data: tenantRow } = await db
+        .from("tenants")
+        .select("name, logo_url")
+        .eq("id", tenantId)
+        .maybeSingle();
+      let locationRow: { name: string | null; address_line1: string | null; city: string | null; state: string | null; postal_code: string | null } | null = null;
+      if (location_id) {
+        const { data: loc } = await db
+          .from("locations")
+          .select("name, address_line1, city, state, postal_code")
+          .eq("id", location_id)
+          .maybeSingle();
+        locationRow = loc ?? null;
+      }
+      const bytes = await renderInvoicePdf({
+        invoice: {
+          id: invoice.id,
+          number: null,
+          issued_at: new Date().toISOString(),
+          due_date,
+          total_cents,
+          subtotal_cents,
+          balance_cents: total_cents,
+          notes: notes ?? null,
+          google_review_enabled,
+          is_recurring,
+        },
+        customer: { name: customer_name, email: customer_email ?? null },
+        tenant: { name: tenantRow?.name ?? "ZiroWork", logo_url: tenantRow?.logo_url ?? null },
+        location: locationRow,
+        lineItems: line_items.map((li) => ({ description: li.description, quantity: li.quantity, unit_price: li.unit_price })),
+      });
+      const path = `${tenantId}/${invoice.id}.pdf`;
+      const { error: upErr } = await db.storage.from("invoice-pdfs").upload(path, bytes, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+      if (!upErr) {
+        const { data: pub } = db.storage.from("invoice-pdfs").getPublicUrl(path);
+        pdfUrl = pub?.publicUrl ?? null;
+        if (pdfUrl) {
+          await db
+            .from("invoices")
+            .update({ pdf_url: pdfUrl, pdf_generated_at: new Date().toISOString() })
+            .eq("id", invoice.id);
+        }
+      } else {
+        console.warn("[invoices/create] PDF upload failed (non-fatal):", upErr.message);
+      }
+    } catch (e) {
+      console.warn("[invoices/create] PDF generation failed (non-fatal):", e);
+    }
+
+    return NextResponse.json({ data: { ...invoice, pdf_url: pdfUrl } }, { status: 201 });
   } catch (err) {
     console.error("[invoices/create] Error:", err);
     return NextResponse.json(
