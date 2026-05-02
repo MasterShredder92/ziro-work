@@ -662,6 +662,8 @@ function CreateInvoiceModal({
   // Theme is locked to light — single immutable invoice template across all tenants.
   const themePreference: "light" = "light";
   const [googleReview, setGoogleReview] = React.useState(false);
+  // OFF by default. Opt-in per invoice. Square push is dormant until user checks this box.
+  const [pushToSquare, setPushToSquare] = React.useState(false);
   // Recurring: set by type picker, not editable inside the builder
   const isRecurring = isRecurringDefault;
 
@@ -671,6 +673,9 @@ function CreateInvoiceModal({
   const [success, setSuccess] = React.useState(false);
   const [createdToken, setCreatedToken] = React.useState<string | null>(null);
   const [createdPdfUrl, setCreatedPdfUrl] = React.useState<string | null>(null);
+  const [createdSquareUrl, setCreatedSquareUrl] = React.useState<string | null>(null);
+  const [createdAutoCharge, setCreatedAutoCharge] = React.useState<boolean>(false);
+  const [createdSquareError, setCreatedSquareError] = React.useState<string | null>(null);
 
   // ── Computed total ──
   const subtotal = lineItems.reduce((sum, item) => {
@@ -813,6 +818,7 @@ function CreateInvoiceModal({
           live_url_token: token,
           is_recurring: isRecurring,
           recurring_day: 1,
+          push_to_square: pushToSquare,
           line_items: validItems.map(item => ({
             description: item.description,
             quantity: parseFloat(item.quantity) || 1,
@@ -827,6 +833,9 @@ function CreateInvoiceModal({
       if (!res.ok) { setError(j.error ?? "Failed to create invoice"); return; }
       setCreatedToken(token);
       setCreatedPdfUrl((j?.data?.pdf_url as string | null) ?? null);
+      setCreatedSquareUrl((j?.data?.square_public_url as string | null) ?? null);
+      setCreatedAutoCharge(!!j?.data?.square_auto_charge);
+      setCreatedSquareError((j?.data?.square_push_error as string | null) ?? null);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Server error");
@@ -850,8 +859,31 @@ function CreateInvoiceModal({
           <div className="text-4xl">✅</div>
           <div className="text-lg font-bold text-[var(--z-fg)]">Invoice Created</div>
           <div className="text-sm text-[var(--z-muted)]">
-            Saved to the family record. {isRecurring && "Recurring billing is active — next invoice generates on the 1st."}
+            Saved to the family record.
           </div>
+
+          {createdSquareUrl ? (
+            <div className="text-xs rounded-lg p-3 text-left" style={{ background: "#0f1a12", border: "1px solid #1f3a25", color: "#7fffac" }}>
+              <div className="font-bold mb-1">✓ Pushed to Square</div>
+              <div className="text-[var(--z-muted)] leading-snug">
+                {createdAutoCharge
+                  ? "Square will auto-charge the card on file on the due date."
+                  : "Square emailed the family. They’ll save a card on first payment."}
+              </div>
+              <a href={createdSquareUrl} target="_blank" rel="noopener" className="underline text-[var(--z-accent)] mt-1 inline-block">
+                View on Square →
+              </a>
+            </div>
+          ) : createdSquareError ? (
+            <div className="text-xs rounded-lg p-3 text-left" style={{ background: "#1a0f0f", border: "1px solid #3a1f1f", color: "#ff9b9b" }}>
+              <div className="font-bold mb-1">⚠ Square push failed</div>
+              <div className="text-[var(--z-muted)] leading-snug">{createdSquareError}</div>
+            </div>
+          ) : null}
+
+          {isRecurring && (
+            <div className="text-xs text-[var(--z-muted)]">Recurring billing is active — next invoice generates on the 1st.</div>
+          )}
 
           {(createdPdfUrl || createdToken) && (
             <a
@@ -1200,6 +1232,22 @@ function CreateInvoiceModal({
             />
             Include Google Review button on invoice
           </label>
+
+          {/* Square push opt-in — OFF by default to prevent double-billing */}
+          <div className="rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] p-3 space-y-1">
+            <label className="flex items-center gap-2 text-sm text-[var(--z-fg)] cursor-pointer font-semibold">
+              <input
+                type="checkbox"
+                checked={pushToSquare}
+                onChange={e => setPushToSquare(e.target.checked)}
+                className="accent-[var(--z-accent)]"
+              />
+              Send to Square (auto-charge family)
+            </label>
+            <p className="text-xs text-[var(--z-muted)] pl-6 leading-snug">
+              When checked, Square will email the family and auto-charge if a card is on file. Leave OFF to save the invoice in ZiroWork only — useful while you migrate off Square’s own recurring schedules so families aren’t double-billed.
+            </p>
+          </div>
 
           {error && (
             <div className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{error}</div>

@@ -122,6 +122,32 @@ async function handleInvoiceEvent(db: any, tenantId: string, eventType: string, 
   }
 
   await db.from("square_invoices").upsert(row, { onConflict: "square_invoice_id" });
+
+  // Also update our internal invoices table so ZiroWork records reflect real status
+  const internalStatusMap: Record<string, string> = {
+    PAID: "paid",
+    PARTIALLY_PAID: "partially_paid",
+    UNPAID: "open",
+    SCHEDULED: "scheduled",
+    DRAFT: "draft",
+    CANCELLED: "cancelled",
+  };
+  const internalStatus = internalStatusMap[row.status] ?? null;
+  if (internalStatus) {
+    const { error: intErr } = await db
+      .from("invoices")
+      .update({
+        status: internalStatus,
+        balance_cents: Math.max(0, (row.amount_cents ?? 0) - (row.amount_paid ?? 0)),
+        square_public_url: inv.public_url ?? undefined,
+        ...(internalStatus === "paid" ? { paid_at: row.paid_at ?? new Date().toISOString() } : {}),
+      })
+      .eq("square_invoice_id", inv.id);
+    if (intErr) {
+      console.warn(`[Square Webhook] internal invoices update failed for ${inv.id}:`, intErr.message);
+    }
+  }
+
   console.log(`[Square Webhook] Upserted invoice ${inv.id} (${row.status}) family=${familyId ?? "unlinked"}`);
 }
 

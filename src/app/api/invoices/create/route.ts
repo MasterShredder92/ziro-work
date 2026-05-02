@@ -39,6 +39,7 @@ const Schema = z.object({
   live_url_token: z.string().min(8),
   is_recurring: z.boolean().optional().default(true),
   recurring_day: z.number().int().min(1).max(28).optional().default(1),
+  push_to_square: z.boolean().optional().default(false),
   line_items: z.array(LineItemSchema).min(1),
 });
 
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
       live_url_token,
       is_recurring,
       recurring_day,
+      push_to_square,
       line_items,
     } = parsed.data;
 
@@ -238,7 +240,94 @@ export async function POST(req: NextRequest) {
       console.warn("[invoices/create] PDF generation failed (non-fatal):", e);
     }
 
-    return NextResponse.json({ data: { ...invoice, pdf_url: pdfUrl } }, { status: 201 });
+    // ── 4. Push to Square so Square handles charging + emails + retries ──
+    // Gated behind explicit opt-in flag to prevent accidental double-billing
+    // while migrating off Square's native recurring schedules.
+    let squareInvoiceId: string | null = null;
+    let squarePublicUrl: string | null = null;
+    let squarePushError: string | null = null;
+    let autoCharge = false;
+    if (push_to_square && family_id && location_id) {
+      try {
+        const [{ data: famRow }, { data: locRow }] = await Promise.all([
+          db
+            .from("families")
+            .select("id, tenant_id, name, primary_email, primary_phone, square_customer_id, square_card_id")
+            .eq("id", family_id)
+            .maybeSingle(),
+          db
+            .from("locations")
+            .select("square_location_id")
+            .eq("id", location_id)
+            .maybeSingle(),
+        ]);
+
+        if (!locRow?.square_location_id) {
+          squarePushError = "Location has no Square location ID configured.";
+        } else if (!famRow) {
+          squarePushError = "Family record not found.";
+        } else {
+          // Resolve (or create) Square customer for this family
+          const { resolveSquareCustomer } = await import("@/lib/billing/squareCustomerResolver");
+          const resolved = await resolveSquareCustomer({
+            id: famRow.id,
+            tenant_id: famRow.tenant_id ?? tenantId,
+            name: famRow.name ?? null,
+            primary_email: famRow.primary_email ?? null,
+            primary_phone: famRow.primary_phone ?? null,
+            square_customer_id: famRow.square_customer_id ?? null,
+          });
+          const { pushInvoiceToSquare } = await import("@/lib/billing/squarePush");
+          const result = await pushInvoiceToSquare({
+            squareCustomerId: resolved.squareCustomerId,
+            squareLocationId: locRow.square_location_id,
+            squareCardId: famRow.square_card_id ?? null,
+            invoiceTitle: notes?.slice(0, 80) || `Lessons — ${customer_name}`,
+            description: notes ?? null,
+            dueDate: due_date,
+            lineItems: line_items.map((li) => ({
+              name: li.description,
+              quantity: li.quantity,
+              unitPriceCents: Math.round(li.unit_price * 100),
+            })),
+            idempotencyKey: invoice.id,
+          });
+          squareInvoiceId = result.squareInvoiceId;
+          squarePublicUrl = result.publicUrl;
+          autoCharge = result.autoCharge;
+          await db
+            .from("invoices")
+            .update({
+              square_invoice_id: result.squareInvoiceId,
+              square_order_id: result.squareOrderId,
+              square_public_url: result.publicUrl,
+              square_pushed_at: new Date().toISOString(),
+              square_push_error: null,
+            })
+            .eq("id", invoice.id);
+        }
+      } catch (e) {
+        squarePushError = e instanceof Error ? e.message : String(e);
+        console.error("[invoices/create] Square push failed:", squarePushError);
+        await db
+          .from("invoices")
+          .update({ square_push_error: squarePushError })
+          .eq("id", invoice.id);
+      }
+    } else if (push_to_square) {
+      squarePushError = "Skipped Square push: no family_id or location_id.";
+    }
+
+    return NextResponse.json({
+      data: {
+        ...invoice,
+        pdf_url: pdfUrl,
+        square_invoice_id: squareInvoiceId,
+        square_public_url: squarePublicUrl,
+        square_auto_charge: autoCharge,
+        square_push_error: squarePushError,
+      },
+    }, { status: 201 });
   } catch (err) {
     console.error("[invoices/create] Error:", err);
     return NextResponse.json(
