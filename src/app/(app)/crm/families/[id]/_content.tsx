@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
+import { AddStudentModal } from "./add-student-modal";
 
 /* ─── Location Brand Colors ──────────────────────────────────
    Bellevue: Royal Purple | Gretna: Emerald | Omaha: Crimson | Elkhorn: Royal Blue
@@ -1013,6 +1014,21 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
   const [students, setStudents] = useState<(FamilyStudent & { teacherName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [familyLocationId, setFamilyLocationId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Lookup family's primary_location_id once so we can default the new student to it
+  useEffect(() => {
+    if (!familyId) return;
+    fetch(`/api/crm/families/${familyId}`, { headers: { "x-tenant-id": DEFAULT_TENANT_ID } })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        const f = j?.data ?? j;
+        if (f?.primary_location_id) setFamilyLocationId(f.primary_location_id);
+      })
+      .catch(() => {});
+  }, [familyId]);
 
   useEffect(() => {
     if (!familyId) return;
@@ -1047,7 +1063,27 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
       }
     }
     load();
-  }, [familyId]);
+  }, [familyId, reloadKey]);
+
+  const addBtn = (
+    <button
+      onClick={() => setShowAdd(true)}
+      className="rounded-lg px-4 py-2 text-xs font-bold"
+      style={{ background: "#00ff88", color: "#000", border: "none", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,255,136,0.35)" }}
+    >
+      + Add Student
+    </button>
+  );
+
+  const modal = (
+    <AddStudentModal
+      open={showAdd}
+      onClose={() => setShowAdd(false)}
+      onCreated={() => setReloadKey(k => k + 1)}
+      familyId={familyId}
+      defaultLocationId={familyLocationId}
+    />
+  );
 
   if (loading) {
     return (
@@ -1061,21 +1097,25 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
   }
   if (students.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-14 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
-        <p className="text-sm font-medium" style={{ color: T.muted }}>No students enrolled in this family yet</p>
-        <button disabled className="mt-1 rounded-lg px-4 py-2 text-xs font-medium cursor-not-allowed opacity-60"
-          style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}` }}>
-          + Add Student
-        </button>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center gap-3 py-14 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
+          <p className="text-sm font-medium" style={{ color: T.muted }}>No students enrolled in this family yet</p>
+          {addBtn}
+        </div>
+        {modal}
+      </>
     );
   }
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs font-medium" style={{ color: T.muted }}>
-        {students.length} student{students.length !== 1 ? "s" : ""} enrolled
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium" style={{ color: T.muted }}>
+          {students.length} student{students.length !== 1 ? "s" : ""} enrolled
+        </p>
+        {addBtn}
+      </div>
       {students.map(s => <StudentCard key={s.id} student={s} brandColor={brandColor} />)}
+      {modal}
     </div>
   );
 }
