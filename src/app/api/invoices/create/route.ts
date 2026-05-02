@@ -288,8 +288,7 @@ export async function POST(req: NextRequest) {
             square_customer_id: famRow.square_customer_id ?? null,
           });
           const { pushInvoiceToSquare } = await import("@/lib/billing/squarePush");
-          const result = await pushInvoiceToSquare({
-            squareCustomerId: resolved.squareCustomerId,
+          const pushArgs = {
             squareLocationId: locRow.square_location_id,
             squareCardId: famRow.square_card_id ?? null,
             invoiceTitle: notes?.slice(0, 80) || `Lessons — ${customer_name}`,
@@ -301,7 +300,38 @@ export async function POST(req: NextRequest) {
               unitPriceCents: Math.round(li.unit_price * 100),
             })),
             idempotencyKey: invoice.id,
-          });
+          };
+          let result: Awaited<ReturnType<typeof pushInvoiceToSquare>>;
+          try {
+            result = await pushInvoiceToSquare({
+              ...pushArgs,
+              squareCustomerId: resolved.squareCustomerId,
+            });
+          } catch (firstErr) {
+            const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
+            if (msg.includes("[STALE_CUSTOMER]")) {
+              // Cached Square customer was deleted on Square side. Null cache + re-resolve.
+              await db
+                .from("families")
+                .update({ square_customer_id: null, square_card_id: null })
+                .eq("id", famRow.id);
+              const reResolved = await resolveSquareCustomer({
+                id: famRow.id,
+                tenant_id: famRow.tenant_id ?? tenantId,
+                name: famRow.name ?? null,
+                primary_email: famRow.primary_email ?? null,
+                primary_phone: famRow.primary_phone ?? null,
+                square_customer_id: null,
+              });
+              result = await pushInvoiceToSquare({
+                ...pushArgs,
+                squareCustomerId: reResolved.squareCustomerId,
+                idempotencyKey: `${invoice.id}-r1`,
+              });
+            } else {
+              throw firstErr;
+            }
+          }
           squareInvoiceId = result.squareInvoiceId;
           squarePublicUrl = result.publicUrl;
           autoCharge = result.autoCharge;

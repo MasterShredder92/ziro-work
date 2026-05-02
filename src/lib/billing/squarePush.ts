@@ -104,7 +104,9 @@ export async function pushInvoiceToSquare(input: SquarePushInput): Promise<Squar
   );
   if (!orderRes.ok || !orderRes.body.order?.id) {
     const err = orderRes.body.errors?.[0]?.detail || `Order create failed (${orderRes.status})`;
-    throw new Error(`Square Order: ${err}`);
+    const code = orderRes.body.errors?.[0]?.code || "";
+    const tag = code === "NOT_FOUND" || /Customer with id .* was not found/i.test(err) ? " [STALE_CUSTOMER]" : "";
+    throw new Error(`Square Order: ${err}${tag}`);
   }
   const orderId = orderRes.body.order.id;
 
@@ -150,7 +152,9 @@ export async function pushInvoiceToSquare(input: SquarePushInput): Promise<Squar
   );
   if (!invoiceRes.ok || !invoiceRes.body.invoice?.id) {
     const err = invoiceRes.body.errors?.[0]?.detail || `Invoice create failed (${invoiceRes.status})`;
-    throw new Error(`Square Invoice: ${err}`);
+    const code = invoiceRes.body.errors?.[0]?.code || "";
+    const tag = code === "NOT_FOUND" || /Customer with id .* was not found/i.test(err) ? " [STALE_CUSTOMER]" : "";
+    throw new Error(`Square Invoice: ${err}${tag}`);
   }
   const sqInv = invoiceRes.body.invoice;
 
