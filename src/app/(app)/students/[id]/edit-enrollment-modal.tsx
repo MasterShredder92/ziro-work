@@ -9,7 +9,17 @@ const BORDER = "#1c1c1e";
 const TEXT_MUTED = "#7a7a7d";
 const TEXT_LIGHT = "#e5e5e7";
 
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+/* lesson_day_of_week is integer (0=Sun..6=Sat, JS Date.getDay convention) */
+const DAYS: { value: number; label: string }[] = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 0, label: "Sunday" },
+];
+
 const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced"] as const;
 const STATUSES = ["active", "inactive", "trial", "paused"] as const;
 
@@ -18,7 +28,7 @@ type StudentLite = {
   family_id: string | null;
   teacher_id: string | null;
   instrument: string | null;
-  lesson_day_of_week: string | null;
+  lesson_day_of_week: number | null;
   blocks_per_week: number | null;
   experience_level: string | null;
   status: string | null;
@@ -65,7 +75,11 @@ export function EditEnrollmentModal({
   canChangeTeacher: boolean;
   onSaved: (result: EditEnrollmentResult) => void;
 }) {
-  const [lessonDay, setLessonDay] = useState<string>(student.lesson_day_of_week ?? "");
+  const [lessonDay, setLessonDay] = useState<string>(
+    student.lesson_day_of_week !== null && student.lesson_day_of_week !== undefined
+      ? String(student.lesson_day_of_week)
+      : ""
+  );
   const [blocks, setBlocks] = useState<string>(
     student.blocks_per_week !== null && student.blocks_per_week !== undefined
       ? String(student.blocks_per_week)
@@ -75,7 +89,6 @@ export function EditEnrollmentModal({
   const [status, setStatus] = useState<string>(student.status ?? "");
   const [instrument, setInstrument] = useState<string>(student.instrument ?? "");
 
-  // Teacher change sub-state
   const [changeTeacher, setChangeTeacher] = useState(false);
   const [newTeacherId, setNewTeacherId] = useState<string>("");
   const [reason, setReason] = useState<string>("");
@@ -88,11 +101,18 @@ export function EditEnrollmentModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset on open
   useEffect(() => {
     if (open) {
-      setLessonDay(student.lesson_day_of_week ?? "");
-      setBlocks(student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : "");
+      setLessonDay(
+        student.lesson_day_of_week !== null && student.lesson_day_of_week !== undefined
+          ? String(student.lesson_day_of_week)
+          : ""
+      );
+      setBlocks(
+        student.blocks_per_week !== null && student.blocks_per_week !== undefined
+          ? String(student.blocks_per_week)
+          : ""
+      );
       setExperience(student.experience_level ?? "");
       setStatus(student.status ?? "");
       setInstrument(student.instrument ?? "");
@@ -104,7 +124,6 @@ export function EditEnrollmentModal({
     }
   }, [open, student]);
 
-  // Load family + active teachers when modal opens
   useEffect(() => {
     if (!open) return;
     (async () => {
@@ -132,10 +151,9 @@ export function EditEnrollmentModal({
     })();
   }, [open, student.family_id]);
 
-  // Auto-narrow teacher dropdown by family location + chosen instrument
   const filteredTeachers = useMemo(() => {
     return teachers.filter((t) => {
-      if (t.id === student.teacher_id) return false; // can't pick current
+      if (t.id === student.teacher_id) return false;
       if (family?.primary_location_id) {
         const teaches_here = t.teacher_locations?.some(
           (tl) => tl.location_id === family.primary_location_id
@@ -159,32 +177,74 @@ export function EditEnrollmentModal({
     setError(null);
 
     try {
-      // 1. Save basic enrollment fields if any changed
-      const baseChanges: Record<string, unknown> = {};
-      if (lessonDay !== (student.lesson_day_of_week ?? "")) baseChanges.lesson_day_of_week = lessonDay || null;
-      if (blocks !== (student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : "")) {
-        baseChanges.blocks_per_week = blocks ? Number(blocks) : null;
+      // DB schema:
+      //   lesson_day_of_week INT (0..6, nullable)
+      //   blocks_per_week    INT NOT NULL
+      //   experience_level   TEXT (nullable)
+      //   status             TEXT NOT NULL
+      //   instrument         TEXT (nullable)
+      const payload: Record<string, unknown> = {};
+
+      // Lesson day -> int or null
+      const newDay = lessonDay === "" ? null : Number.parseInt(lessonDay, 10);
+      if (newDay !== student.lesson_day_of_week) {
+        if (newDay !== null && (Number.isNaN(newDay) || newDay < 0 || newDay > 6)) {
+          throw new Error("Lesson Day must be 0 (Sun) through 6 (Sat)");
+        }
+        payload.lesson_day_of_week = newDay;
       }
-      if (experience !== (student.experience_level ?? "")) baseChanges.experience_level = experience || null;
-      if (status !== (student.status ?? "")) baseChanges.status = status || null;
-      if (instrument !== (student.instrument ?? "")) baseChanges.instrument = instrument || null;
+
+      // Blocks (NOT NULL): only send if non-empty AND changed
+      if (blocks !== "") {
+        const newBlocks = Number.parseInt(blocks, 10);
+        if (Number.isNaN(newBlocks) || newBlocks < 0 || newBlocks > 10) {
+          throw new Error("Blocks / Week must be 0\u201310");
+        }
+        if (newBlocks !== student.blocks_per_week) {
+          payload.blocks_per_week = newBlocks;
+        }
+      }
+
+      // Experience (nullable)
+      const newExp = experience === "" ? null : experience;
+      if (newExp !== (student.experience_level ?? null)) {
+        payload.experience_level = newExp;
+      }
+
+      // Status (NOT NULL): only send if non-empty AND changed
+      if (status !== "" && status !== student.status) {
+        payload.status = status;
+      }
+
+      // Instrument (nullable)
+      const newInst = instrument.trim() === "" ? null : instrument.trim();
+      if (newInst !== (student.instrument ?? null)) {
+        payload.instrument = newInst;
+      }
 
       let result: EditEnrollmentResult = {};
 
-      if (Object.keys(baseChanges).length > 0) {
+      if (Object.keys(payload).length > 0) {
         const res = await fetch(`/api/students/${student.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "x-tenant-id": DEFAULT_TENANT_ID },
-          body: JSON.stringify(baseChanges),
+          body: JSON.stringify(payload),
         });
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           throw new Error(j.error || `Save failed (${res.status})`);
         }
-        result = { ...result, ...baseChanges };
+        const j = await res.json().catch(() => ({}));
+        const updated = (j?.data ?? {}) as Record<string, unknown>;
+        const echoed: Partial<StudentLite> = {};
+        if ("lesson_day_of_week" in payload) echoed.lesson_day_of_week = (updated.lesson_day_of_week as number | null) ?? null;
+        if ("blocks_per_week" in payload) echoed.blocks_per_week = (updated.blocks_per_week as number | null) ?? null;
+        if ("experience_level" in payload) echoed.experience_level = (updated.experience_level as string | null) ?? null;
+        if ("status" in payload) echoed.status = (updated.status as string | null) ?? null;
+        if ("instrument" in payload) echoed.instrument = (updated.instrument as string | null) ?? null;
+        result = { ...result, ...echoed };
       }
 
-      // 2. If teacher change requested, hit dedicated audit-logged route
       if (changeTeacher) {
         if (!newTeacherId) throw new Error("Choose a new teacher");
         if (reason.trim().length < 10) throw new Error("Reason must be at least 10 characters");
@@ -204,7 +264,7 @@ export function EditEnrollmentModal({
         const j = await res.json();
         result.teacher_id = newTeacherId;
         result.teacher_changed = true;
-        result.new_teacher_name = j.data?.new_teacher_name;
+        result.new_teacher_name = j?.data?.new_teacher_name;
       }
 
       onSaved(result);
@@ -239,7 +299,6 @@ export function EditEnrollmentModal({
         </div>
 
         <div className="px-6 py-5 space-y-5">
-          {/* Basic fields */}
           <Field label="Instrument">
             <input
               value={instrument}
@@ -259,7 +318,7 @@ export function EditEnrollmentModal({
             >
               <option value="">—</option>
               {DAYS.map((d) => (
-                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+                <option key={d.value} value={String(d.value)}>{d.label}</option>
               ))}
             </select>
           </Field>
@@ -304,7 +363,6 @@ export function EditEnrollmentModal({
             </select>
           </Field>
 
-          {/* Teacher section */}
           <div className="pt-3 border-t" style={{ borderColor: BORDER }}>
             <div className="flex items-center justify-between mb-2">
               <div>

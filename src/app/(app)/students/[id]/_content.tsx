@@ -20,6 +20,14 @@ const T = {
 
 const BRAND = "#00D16C"; // Ziro Green
 
+/* lesson_day_of_week is integer 0-6 (0=Sunday, 6=Saturday — JS Date.getDay convention) */
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+function dayLabel(d: number | null | undefined): string | null {
+  if (d === null || d === undefined) return null;
+  if (d < 0 || d > 6) return null;
+  return DAY_NAMES[d];
+}
+
 /* ─── Types ──────────────────────────────────────────────── */
 type StudentOverview = {
   id: string;
@@ -32,7 +40,7 @@ type StudentOverview = {
   learning_style: string | null;
   teacher_id: string | null;
   family_id: string | null;
-  lesson_day_of_week: string | null;
+  lesson_day_of_week: number | null;
   blocks_per_week: number | null;
   experience_level: string | null;
   status: string | null;
@@ -462,7 +470,7 @@ function EnrollmentDetailsCard({
               )
             }
           />
-          <Field label="Lesson Day"    value={student.lesson_day_of_week} />
+          <Field label="Lesson Day"    value={dayLabel(student.lesson_day_of_week)} />
           <Field label="Blocks / Week" value={student.blocks_per_week !== null && student.blocks_per_week !== undefined ? String(student.blocks_per_week) : null} />
           <Field label="Experience"    value={student.experience_level} />
           <Field label="Status"        value={student.status} />

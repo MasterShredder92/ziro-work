@@ -32,7 +32,33 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   }
 }
 
-const StudentUpdateSchema = z.object({}).passthrough();
+/**
+ * Strict whitelist for student PATCH.
+ * Adding a new field? Add it here AND verify the DB column type/null-ability.
+ */
+const StudentUpdateSchema = z
+  .object({
+    // Enrollment basics
+    instrument: z.string().trim().min(1).nullable().optional(),
+    lesson_day_of_week: z.number().int().min(0).max(6).nullable().optional(),
+    blocks_per_week: z.number().int().min(0).max(10).optional(), // NOT NULL in DB
+    sessions_per_month: z.number().int().min(0).max(100).optional(),
+    experience_level: z.string().trim().min(1).nullable().optional(),
+    status: z.enum(["active", "inactive", "trial", "paused", "enrolled", "former"]).optional(), // NOT NULL in DB
+    // Profile
+    first_name: z.string().trim().min(1).optional(),
+    last_name: z.string().trim().min(1).optional(),
+    bio: z.string().nullable().optional(),
+    goals: z.string().nullable().optional(),
+    learning_style: z.string().nullable().optional(),
+    photo_url: z.string().url().nullable().optional(),
+    // Lifecycle
+    start_date: z.string().nullable().optional(),
+    end_date: z.string().nullable().optional(),
+    // Relations
+    location_id: z.string().uuid().nullable().optional(),
+  })
+  .strict();
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
   try {
@@ -43,8 +69,18 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (!parsed.success) {
       return badRequest("Invalid update payload", parsed.error.flatten());
     }
-    const data = await updateStudent(id, tenantId, parsed.data);
-    return ok({ data });
+    if (Object.keys(parsed.data).length === 0) {
+      return badRequest("No fields to update");
+    }
+    try {
+      const data = await updateStudent(id, tenantId, parsed.data);
+      return ok({ data });
+    } catch (dbErr) {
+      // Surface the real Postgres error message to the client so the modal can show it
+      const msg = dbErr instanceof Error ? dbErr.message : "Database update failed";
+      console.error("[students.PATCH]", { id, payload: parsed.data, error: dbErr });
+      return badRequest(msg);
+    }
   } catch (err) {
     return serverError(err);
   }
