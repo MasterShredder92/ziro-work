@@ -7,16 +7,8 @@ import { BillingSummaryBar } from "@/components/billing/BillingSummaryBar";
 import type { BillingMetrics } from "./page";
 
 // ─── Location config ──────────────────────────────────────────────────────────
-const LOCATIONS: { id: string; name: string; color: string }[] = [
-  { id: "f7b52dd5-12ee-437f-9c60-f8adf454ac31", name: "Bellevue", color: "#7C3AED" },
-  { id: "40c67ffc-91b5-46a9-94bd-6ddffdfb7638", name: "Gretna", color: "#16A34A" },
-  { id: "cebd97d4-c241-4de2-8ade-49e5cc0070d5", name: "Elkhorn", color: "#0EA5E9" },
-  { id: "d48229c1-b70a-4d29-893e-5079887dab76", name: "Omaha", color: "#DC2626" },
-];
-
-const LOCATION_MAP: Record<string, { name: string; color: string }> = Object.fromEntries(
-  LOCATIONS.map((l) => [l.id, { name: l.name, color: l.color }])
-);
+// Now driven by SSR (locationsList prop) — kept here only as a no-op fallback.
+export type LocationOption = { id: string; name: string; color: string };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface InvoiceRow {
@@ -51,6 +43,7 @@ interface InvoicesClientProps {
   initialMonthOffset: number;
   viewLabel: string;
   billingMetrics?: BillingMetrics[];
+  locationsList: LocationOption[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -153,7 +146,13 @@ export function InvoicesClient({
   initialMonthOffset,
   viewLabel,
   billingMetrics,
+  locationsList,
 }: InvoicesClientProps) {
+  const LOCATIONS = locationsList;
+  const LOCATION_MAP: Record<string, { name: string; color: string }> = React.useMemo(
+    () => Object.fromEntries(LOCATIONS.map((l) => [l.id, { name: l.name, color: l.color }])),
+    [LOCATIONS]
+  );
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -570,6 +569,7 @@ export function InvoicesClient({
         <CreateInvoiceModal
           isRecurringDefault={invoiceType === "recurring"}
           returnFamilyId={returnFamilyId}
+          locations={LOCATIONS}
           onClose={() => { setShowCreateModal(false); setInvoiceType(null); }}
         />
       )}
@@ -582,7 +582,7 @@ export function InvoicesClient({
 // Google Review toggle, student/family linking, live total calculation.
 
 
-// ─── Line item type ───────────────────────────────────────────────────────────
+// ─── Line item type ────────────────────────────────────────────────────────
 type LineItem = {
   id: string;
   service_id: string | null;
@@ -591,6 +591,9 @@ type LineItem = {
   unit_price: string;
   is_makeup: boolean;
   is_fifth_week: boolean;
+  sessions_estimated?: boolean;
+  rate_missing?: boolean;
+  student_id?: string | null;
 };
 
 type ServiceOption = {
@@ -618,11 +621,14 @@ function CreateInvoiceModal({
   onClose,
   isRecurringDefault = true,
   returnFamilyId = null,
+  locations,
 }: {
   onClose: () => void;
   isRecurringDefault?: boolean;
   returnFamilyId?: string | null;
+  locations: LocationOption[];
 }) {
+  const LOCATIONS = locations;
   const router = useRouter();
 
   // ── Services catalog ──
@@ -684,9 +690,45 @@ function CreateInvoiceModal({
         setCustomerName(f.name ?? "");
         setCustomerEmail(f.primary_email ?? "");
         setSearchQuery(f.name ?? "");
+        applyBillingDefaults(f.id);
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returnFamilyId]);
+
+  // ── Auto-fill location + line items from family billing defaults ──
+  async function applyBillingDefaults(familyId: string) {
+    try {
+      const res = await fetch(`/api/families/${familyId}/billing-defaults`);
+      if (!res.ok) return;
+      const j = await res.json();
+      // Auto-set location
+      if (j.location?.id) setLocationId(j.location.id);
+      // Build prefilled line items, one per active student
+      const items: LineItem[] = (j.line_items ?? []).map((li: {
+        student_id: string;
+        student_name: string;
+        instrument: string;
+        description: string;
+        quantity: number;
+        unit_price: number;
+        sessions_estimated: boolean;
+        rate_missing: boolean;
+      }) => ({
+        id: Math.random().toString(36).slice(2),
+        service_id: null,
+        description: li.description,
+        quantity: String(li.quantity),
+        unit_price: li.unit_price > 0 ? String(li.unit_price) : "",
+        is_makeup: false,
+        is_fifth_week: false,
+        sessions_estimated: li.sessions_estimated,
+        rate_missing: li.rate_missing,
+        student_id: li.student_id,
+      }));
+      if (items.length > 0) setLineItems(items);
+    } catch { /* noop */ }
+  }
   // ── Debounced family search — uses dedicated /api/families/search ──
   React.useEffect(() => {
     if (searchQuery.length < 1) { setSearchResults([]); setShowDropdown(false); return; }
@@ -709,6 +751,7 @@ function CreateInvoiceModal({
     setCustomerEmail(f.primary_email ?? "");
     setSearchQuery(f.name);
     setShowDropdown(false);
+    applyBillingDefaults(f.id);
   }
 
   // ── Line item helpers ──
@@ -1079,6 +1122,29 @@ function CreateInvoiceModal({
                   )}
                 </div>
 
+                {/* Auto-fill warnings */}
+                {(item.sessions_estimated || item.rate_missing) && (
+                  <div className="flex flex-wrap gap-2">
+                    {item.sessions_estimated && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}
+                        title="sessions_per_month not set on student record — defaulted to 4"
+                      >
+                        ⚠ Sessions estimated (4)
+                      </span>
+                    )}
+                    {item.rate_missing && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        style={{ background: "rgba(239,68,68,0.15)", color: "#EF4444" }}
+                        title="rate_tier not set on family — enter unit price manually"
+                      >
+                        ⚠ Family rate missing
+                      </span>
+                    )}
+                  </div>
+                )}
                 {/* Flags */}
                 <div className="flex gap-4">
                   <label className="flex items-center gap-1.5 text-xs text-[var(--z-muted)] cursor-pointer">

@@ -4,15 +4,8 @@ import { InvoicesClient } from "./_client";
 
 export const dynamic = "force-dynamic";
 
-// Square location ID → display info
-const SQ_LOCATION_MAP: Record<string, { id: string; name: string; color: string }> = {};
-
-const LOCATIONS = [
-  { id: "f7b52dd5-12ee-437f-9c60-f8adf454ac31", name: "Bellevue", color: "#7C3AED" },
-  { id: "40c67ffc-91b5-46a9-94bd-6ddffdfb7638", name: "Gretna", color: "#16A34A" },
-  { id: "cebd97d4-c241-4de2-8ade-49e5cc0070d5", name: "Elkhorn", color: "#0EA5E9" },
-  { id: "d48229c1-b70a-4d29-893e-5079887dab76", name: "Omaha", color: "#DC2626" },
-];
+// Static fallback — replaced at runtime by DB-driven list (see InvoicesPage below)
+const LOCATIONS_FALLBACK: { id: string; name: string; color: string }[] = [];
 
 export type BillingMetrics = {
   locationId: string | null;
@@ -220,6 +213,16 @@ export default async function InvoicesPage({
     amount_paid: inv.amount_paid_cents ?? null,
   }));
 
+  // Build locations list for the invoice modal + filter pills
+  const locationsList: { id: string; name: string; color: string }[] = (
+    (locRows ?? []) as { id: string; name: string; color: string | null }[]
+  )
+    .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#909098" }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (locationsList.length === 0) {
+    locationsList.push(...LOCATIONS_FALLBACK);
+  }
+
   return (
     <InvoicesClient
       invoices={mappedInvoices}
@@ -235,6 +238,7 @@ export default async function InvoicesPage({
       initialMonthOffset={monthOffset}
       viewLabel={viewLabel}
       billingMetrics={billingMetrics}
+      locationsList={locationsList}
     />
   );
 }
