@@ -29,13 +29,11 @@ const ChangeTeacherSchema = z.object({
 });
 
 function teacherDisplayName(t: {
-  full_name?: string | null;
-  preferred_name?: string | null;
+  display_name?: string | null;
   first_name?: string | null;
   last_name?: string | null;
 }): string {
-  if (t.full_name) return t.full_name;
-  if (t.preferred_name && t.last_name) return `${t.preferred_name} ${t.last_name}`;
+  if (t.display_name) return t.display_name;
   if (t.first_name && t.last_name) return `${t.first_name} ${t.last_name}`;
   return t.first_name || t.last_name || "Unknown Teacher";
 }
@@ -81,12 +79,12 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const teacherIds = [student.teacher_id, new_teacher_id].filter(
       (v): v is string => Boolean(v)
     );
-    const { data: teachers } = await supabase
+    const { data: teachers, error: tErr } = await supabase
       .from("teachers")
-      .select(
-        "id, full_name, preferred_name, first_name, last_name, is_active, status"
-      )
+      .select("id, display_name, first_name, last_name, is_active, status")
+      .eq("tenant_id", tenantId)
       .in("id", teacherIds);
+    if (tErr) return serverError(tErr);
 
     const oldTeacher = teachers?.find((t) => t.id === student.teacher_id) ?? null;
     const newTeacher = teachers?.find((t) => t.id === new_teacher_id) ?? null;

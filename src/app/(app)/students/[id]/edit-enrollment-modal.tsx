@@ -40,8 +40,7 @@ type FamilyLite = {
 
 type TeacherLite = {
   id: string;
-  full_name: string | null;
-  preferred_name: string | null;
+  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   instruments: string[] | null;
@@ -49,8 +48,7 @@ type TeacherLite = {
 };
 
 function teacherLabel(t: TeacherLite): string {
-  if (t.full_name) return t.full_name;
-  if (t.preferred_name && t.last_name) return `${t.preferred_name} ${t.last_name}`;
+  if (t.display_name) return t.display_name;
   if (t.first_name && t.last_name) return `${t.first_name} ${t.last_name}`;
   return t.first_name || t.last_name || "Unknown";
 }
