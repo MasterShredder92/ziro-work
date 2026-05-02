@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
         tenant_id: tenantId,
         family_id: family_id ?? null,
         location_id: location_id ?? null,
-        status: "draft",
+        status: is_recurring ? "scheduled" : "open",
         amount_cents,
         subtotal_cents,
         total_cents,
@@ -172,14 +172,23 @@ export async function POST(req: NextRequest) {
       const { renderInvoicePdf } = await import("@/lib/invoice/pdf");
       const { data: tenantRow } = await db
         .from("tenants")
-        .select("name, logo_url")
+        .select("name, logo_url, primary_color, accent_color")
         .eq("id", tenantId)
         .maybeSingle();
-      let locationRow: { name: string | null; address_line1: string | null; city: string | null; state: string | null; postal_code: string | null } | null = null;
+      let locationRow: {
+        name: string | null;
+        address_line1: string | null;
+        city: string | null;
+        state: string | null;
+        postal_code: string | null;
+        phone: string | null;
+        email: string | null;
+        google_review_url: string | null;
+      } | null = null;
       if (location_id) {
         const { data: loc } = await db
           .from("locations")
-          .select("name, address_line1, city, state, postal_code")
+          .select("name, address_line1, city, state, postal_code, phone, email, google_review_url")
           .eq("id", location_id)
           .maybeSingle();
         locationRow = loc ?? null;
@@ -196,9 +205,15 @@ export async function POST(req: NextRequest) {
           notes: notes ?? null,
           google_review_enabled,
           is_recurring,
+          status: is_recurring ? "SCHEDULED" : "OPEN",
         },
         customer: { name: customer_name, email: customer_email ?? null },
-        tenant: { name: tenantRow?.name ?? "ZiroWork", logo_url: tenantRow?.logo_url ?? null },
+        tenant: {
+          name: tenantRow?.name ?? "ZiroWork",
+          logo_url: tenantRow?.logo_url ?? null,
+          primary_color: tenantRow?.primary_color ?? null,
+          accent_color: tenantRow?.accent_color ?? null,
+        },
         location: locationRow,
         lineItems: line_items.map((li) => ({ description: li.description, quantity: li.quantity, unit_price: li.unit_price })),
       });

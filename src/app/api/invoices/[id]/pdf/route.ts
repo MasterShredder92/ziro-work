@@ -21,7 +21,7 @@ async function generateAndUpload(invoiceId: string): Promise<string> {
   const { data: inv, error: invErr } = await db
     .from("invoices")
     .select(
-      "id, tenant_id, family_id, location_id, number, issued_at, due_date, total_cents, subtotal_cents, balance_cents, notes, google_review_enabled, is_recurring, metadata"
+      "id, tenant_id, family_id, location_id, number, issued_at, due_date, total_cents, subtotal_cents, balance_cents, notes, google_review_enabled, is_recurring, metadata, status"
     )
     .eq("id", invoiceId)
     .maybeSingle();
@@ -34,7 +34,7 @@ async function generateAndUpload(invoiceId: string): Promise<string> {
   // Tenant
   const { data: tenant } = await db
     .from("tenants")
-    .select("name, logo_url")
+    .select("name, logo_url, primary_color, accent_color")
     .eq("id", inv.tenant_id)
     .maybeSingle();
 
@@ -43,7 +43,7 @@ async function generateAndUpload(invoiceId: string): Promise<string> {
   if (inv.location_id) {
     const { data: loc } = await db
       .from("locations")
-      .select("name, address_line1, city, state, postal_code")
+      .select("name, address_line1, city, state, postal_code, phone, email, google_review_url")
       .eq("id", inv.location_id)
       .maybeSingle();
     location = (loc as InvoicePdfInput["location"]) ?? null;
@@ -81,9 +81,15 @@ async function generateAndUpload(invoiceId: string): Promise<string> {
       notes: inv.notes ?? null,
       google_review_enabled: !!inv.google_review_enabled,
       is_recurring: !!inv.is_recurring,
+      status: (inv.status ?? "OPEN").toString().toUpperCase(),
     },
     customer: { name: customerName || "Customer", email: customerEmail },
-    tenant: { name: tenant?.name ?? "ZiroWork", logo_url: tenant?.logo_url ?? null },
+    tenant: {
+      name: tenant?.name ?? "ZiroWork",
+      logo_url: tenant?.logo_url ?? null,
+      primary_color: tenant?.primary_color ?? null,
+      accent_color: tenant?.accent_color ?? null,
+    },
     location,
     lineItems: ((items ?? []) as Array<{ description: string; quantity: number; unit_price: number | string }>).map(
       (i) => ({
