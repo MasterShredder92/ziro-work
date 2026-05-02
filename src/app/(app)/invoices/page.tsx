@@ -222,11 +222,18 @@ export default async function InvoicesPage({
     .eq("status", "UNPAID");
   const unpaidTotal = sumField(unpaidRows ?? [], "amount_cents");
 
-  // Map invoices to the shape InvoicesClient expects (location_id = sq id for now)
+  // Build reverse map: square_location_id → ZiroWork locations.id (UUID)
+  // so the location pill in each row matches LOCATION_MAP keyed by ZW UUID.
+  const squareToZiro: Record<string, string> = {};
+  for (const [zwId, sqId] of Object.entries(ziroToSquareLoc)) {
+    squareToZiro[sqId] = zwId;
+  }
+
+  // Map invoices to the shape InvoicesClient expects (location_id = ZW uuid)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mappedInvoices = (invoices ?? []).map((inv: any) => ({
     ...inv,
-    location_id: inv.square_location_id ?? null,
+    location_id: inv.square_location_id ? (squareToZiro[inv.square_location_id] ?? null) : null,
     amount_paid: inv.amount_paid_cents ?? null,
   }));
 

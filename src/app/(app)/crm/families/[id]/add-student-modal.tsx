@@ -16,7 +16,12 @@ import * as React from "react";
 const ZIRO_GREEN = "#00ff88";
 
 type LocationOpt = { id: string; name: string };
-type TeacherOpt = { id: string; display_name: string };
+type TeacherOpt = {
+  id: string;
+  display_name: string;
+  instruments: string[];
+  teacher_locations: Array<{ location_id: string; is_regular: boolean; can_sub: boolean }>;
+};
 
 const INSTRUMENTS = [
   "Guitar",
@@ -86,7 +91,8 @@ export function AddStudentModal({
       })
       .catch(() => {});
     // Fetch teachers
-    fetch("/api/crm/teachers?limit=500")
+    // Fetch only ACTIVE teachers + include their locations + instruments
+    fetch("/api/crm/teachers?limit=500&isActive=true&include_locations=true")
       .then((r) => r.json())
       .then((j) => {
         const arr = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
@@ -98,12 +104,16 @@ export function AddStudentModal({
                 display_name?: string | null;
                 first_name?: string | null;
                 last_name?: string | null;
+                instruments?: string[] | null;
+                teacher_locations?: Array<{ location_id: string; is_regular: boolean; can_sub: boolean }> | null;
               }) => ({
                 id: t.id,
                 display_name:
                   t.display_name?.trim() ||
                   [t.first_name, t.last_name].filter(Boolean).join(" ").trim() ||
                   t.id,
+                instruments: (t.instruments ?? []).map((s) => s.toLowerCase()),
+                teacher_locations: t.teacher_locations ?? [],
               }),
             )
             .sort((a: TeacherOpt, b: TeacherOpt) =>
@@ -287,18 +297,40 @@ export function AddStudentModal({
             </select>
           </Field>
 
-          <Field label="Teacher">
+          <Field
+            label="Teacher"
+            hint={
+              instrument || locationId
+                ? `Filtered by ${[locationId && "location", instrument && instrument.toLowerCase()].filter(Boolean).join(" + ")}`
+                : undefined
+            }
+          >
             <select
               value={teacherId}
               onChange={(e) => setTeacherId(e.target.value)}
               style={{ ...inputStyle, cursor: "pointer" }}
             >
               <option value="">— Unassigned —</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.display_name}
-                </option>
-              ))}
+              {teachers
+                .filter((t) => {
+                  // Filter by location: must teach at the chosen location
+                  if (locationId) {
+                    const teachesHere = t.teacher_locations.some(
+                      (tl) => tl.location_id === locationId,
+                    );
+                    if (!teachesHere) return false;
+                  }
+                  // Filter by instrument: must have it in their instruments[]
+                  if (instrument) {
+                    if (!t.instruments.includes(instrument.toLowerCase())) return false;
+                  }
+                  return true;
+                })
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.display_name}
+                  </option>
+                ))}
             </select>
           </Field>
 
