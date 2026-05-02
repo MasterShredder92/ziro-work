@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
+import { EditEnrollmentModal, type EditEnrollmentResult } from "./edit-enrollment-modal";
 
 /* ─── Theme tokens (mirrors Family page) ─────────────────── */
 const T = {
@@ -415,15 +416,32 @@ function EnrollmentDetailsCard({
   teacherName,
   teacherLoading,
   familyId,
+  canChangeTeacher,
+  onSaved,
 }: {
   student: StudentOverview;
   teacherName: string | null;
   teacherLoading: boolean;
   familyId: string | null;
+  canChangeTeacher: boolean;
+  onSaved: (updated: Partial<StudentOverview>) => void;
 }) {
+  const [editOpen, setEditOpen] = useState(false);
   return (
     <BrandCard>
-      <CardHeader title="Enrollment Details" />
+      <CardHeader
+        title="Enrollment Details"
+        action={
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="px-3 py-1 rounded-md text-xs font-medium border transition"
+            style={{ background: "transparent", color: BRAND, borderColor: BRAND }}
+          >
+            Edit
+          </button>
+        }
+      />
       <div className="px-5 py-4">
         <dl className="flex flex-col gap-4">
           <Field
@@ -450,6 +468,27 @@ function EnrollmentDetailsCard({
           <Field label="Status"        value={student.status} />
         </dl>
       </div>
+      <EditEnrollmentModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        student={{
+          id: student.id,
+          family_id: student.family_id,
+          teacher_id: student.teacher_id,
+          instrument: student.instrument,
+          lesson_day_of_week: student.lesson_day_of_week,
+          blocks_per_week: student.blocks_per_week,
+          experience_level: student.experience_level,
+          status: student.status,
+        }}
+        currentTeacherName={teacherName}
+        canChangeTeacher={canChangeTeacher}
+        onSaved={(result: EditEnrollmentResult) => {
+          const { teacher_changed, new_teacher_name, ...rest } = result;
+          void teacher_changed; void new_teacher_name;
+          onSaved(rest as Partial<StudentOverview>);
+        }}
+      />
     </BrandCard>
   );
 }
@@ -461,6 +500,20 @@ function OverviewTab({ studentId }: { studentId: string }) {
   const [loading, setLoading] = useState(true);
   const [teacherLoading, setTeacherLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canChangeTeacher, setCanChangeTeacher] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/whoami");
+        if (!res.ok) return;
+        const j = await res.json();
+        const role: string = j?.role ?? "";
+        const elevated = ["admin", "owner", "director", "company_director", "studio_director"].includes(role);
+        setCanChangeTeacher(elevated);
+      } catch { /* non-blocking */ }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!studentId) return;
@@ -518,7 +571,32 @@ function OverviewTab({ studentId }: { studentId: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <LearningProfileCard student={student} onSaved={(updated) => setStudent((prev) => prev ? { ...prev, ...updated } : prev)} />
-      <EnrollmentDetailsCard student={student} teacherName={teacherName} teacherLoading={teacherLoading} familyId={student.family_id ?? null} />
+      <EnrollmentDetailsCard
+        student={student}
+        teacherName={teacherName}
+        teacherLoading={teacherLoading}
+        familyId={student.family_id ?? null}
+        canChangeTeacher={canChangeTeacher}
+        onSaved={async (updated) => {
+          setStudent((prev) => prev ? { ...prev, ...updated } : prev);
+          // If teacher changed, re-resolve teacher name
+          if (updated.teacher_id) {
+            setTeacherLoading(true);
+            try {
+              const tRes = await fetch(`/api/crm/teachers/${updated.teacher_id}`, {
+                headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+              });
+              if (tRes.ok) {
+                const tJson = await tRes.json();
+                const t: TeacherName = tJson.data ?? tJson;
+                setTeacherName(resolveTeacherName(t));
+              }
+            } catch { /* non-blocking */ } finally {
+              setTeacherLoading(false);
+            }
+          }
+        }}
+      />
     </div>
   );
 }
