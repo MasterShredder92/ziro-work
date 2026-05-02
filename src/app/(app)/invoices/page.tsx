@@ -140,11 +140,19 @@ export default async function InvoicesPage({
       (s, r) => s + ((r.requested_amount as number) ?? (r.amount_cents as number) ?? 0),
       0
     );
-    const actualCharged = mtdRows.reduce((s, r) => s + ((r.amount_cents as number) ?? 0), 0);
-    const discountedThisMonth = Math.max(0, totalInvoicedThisMonth - actualCharged);
+    // Discounted This Month = (expected from recurring series) - (actually invoiced).
+    // Currently no rows carry recurring_series_id from Square sync, so we cannot compute
+    // expected. Return -1 as a sentinel so the UI renders a "—" placeholder with tooltip.
+    const discountedThisMonth = -1;
 
+    // Scheduled Payments = SCHEDULED + UNPAID with due_date in CURRENT MONTH only
     const scheduledPayments = rows
-      .filter((r) => r.status === "SCHEDULED" || r.status === "UNPAID")
+      .filter((r) => {
+        const status = r.status as string | null;
+        const d = r.due_date as string | null;
+        if (status !== "SCHEDULED" && status !== "UNPAID") return false;
+        return !!d && d >= thisMonthStart && d <= thisMonthEnd;
+      })
       .reduce((s, r) => s + ((r.amount_cents as number) ?? 0), 0);
 
     const nextMonthProjected = rows

@@ -7,9 +7,9 @@ function fmt(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function MetricRow({ label, value, color }: { label: string; value: string; color?: string }) {
+function MetricRow({ label, value, color, tooltip }: { label: string; value: string; color?: string; tooltip?: string }) {
   return (
-    <div className="flex items-center justify-between py-1.5">
+    <div className="flex items-center justify-between py-1.5" title={tooltip}>
       <span className="text-xs text-[#909098]">{label}</span>
       <span className="text-sm font-semibold" style={{ color: color ?? "white" }}>
         {value}
@@ -31,7 +31,12 @@ function MetricsCard({ m }: { m: BillingMetrics }) {
       <div className="divide-y divide-[#1c1c1e]">
         <MetricRow label="Collected This Month"    value={fmt(m.collectedThisMonth)}     color="#22C55E" />
         <MetricRow label="Total Invoiced This Month" value={fmt(m.totalInvoicedThisMonth)} />
-        <MetricRow label="Discounted This Month"   value={fmt(m.discountedThisMonth)}    color="#F59E0B" />
+        <MetricRow
+          label="Discounted This Month"
+          value={m.discountedThisMonth < 0 ? "—" : fmt(m.discountedThisMonth)}
+          color={m.discountedThisMonth < 0 ? "#5a5a62" : "#F59E0B"}
+          tooltip={m.discountedThisMonth < 0 ? "Pending recurring series sync" : undefined}
+        />
         <MetricRow label="Next Month (Projected)"  value={fmt(m.nextMonthProjected)}     color="#0EA5E9" />
         <MetricRow label="Scheduled Payments"      value={fmt(m.scheduledPayments)}      color="#A78BFA" />
       </div>
