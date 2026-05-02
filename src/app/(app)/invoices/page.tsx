@@ -58,6 +58,23 @@ export default async function InvoicesPage({
   const viewLabel = new Date(targetYear, targetMonth, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const today = now.toISOString().split("T")[0];
 
+  // ── Pre-fetch locations so we can translate location_id (ZiroWork UUID) → square_location_id ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: locRowsForFilter } = await (db as any)
+    .from("locations")
+    .select("id,square_location_id")
+    .eq("tenant_id", tenantId);
+
+  const ziroToSquareLoc: Record<string, string> = {};
+  for (const loc of (locRowsForFilter ?? []) as { id: string; square_location_id: string | null }[]) {
+    if (loc.square_location_id) ziroToSquareLoc[loc.id] = loc.square_location_id;
+  }
+
+  // Resolve filter: accept either ZW location uuid or raw Square location id
+  const filterSquareLocId = params.location_id
+    ? (ziroToSquareLoc[params.location_id] ?? params.location_id)
+    : null;
+
   // ── Filtered invoice list ──────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (db as any)
@@ -73,7 +90,7 @@ export default async function InvoicesPage({
     .range(offset, offset + pageSize - 1);
 
   if (params.status && params.status !== "all") query = query.eq("status", params.status.toUpperCase());
-  if (params.location_id) query = query.eq("square_location_id", params.location_id);
+  if (filterSquareLocId) query = query.eq("square_location_id", filterSquareLocId);
   if (params.search?.trim()) {
     const q = params.search.trim();
     query = query.or(`customer_name.ilike.%${q}%,customer_email.ilike.%${q}%,invoice_number.ilike.%${q}%`);

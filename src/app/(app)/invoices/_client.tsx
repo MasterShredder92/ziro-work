@@ -823,6 +823,7 @@ function CreateInvoiceModal({
             description: item.description,
             quantity: parseFloat(item.quantity) || 1,
             unit_price: parseFloat(item.unit_price) || 0,
+            student_id: item.student_id ?? null,
             is_makeup_session: item.is_makeup,
             is_fifth_week: item.is_fifth_week,
             session_date: null,

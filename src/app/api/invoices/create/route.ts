@@ -19,6 +19,7 @@ const LineItemSchema = z.object({
   description: z.string().min(1),
   quantity: z.number().positive(),
   unit_price: z.number().min(0),
+  student_id: z.string().uuid().nullable().optional(),
   is_makeup_session: z.boolean().optional().default(false),
   is_fifth_week: z.boolean().optional().default(false),
   session_date: z.string().nullable().optional(),
@@ -150,19 +151,28 @@ export async function POST(req: NextRequest) {
 
     // ── 2. Insert line items ───────────────────────────────────
     if (invoice && line_items.length > 0) {
-      const itemRows = line_items.map((item, idx) => ({
-        tenant_id: tenantId,
-        invoice_id: invoice.id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        is_makeup_session: item.is_makeup_session,
-        is_fifth_week: item.is_fifth_week,
-        session_date: item.session_date ?? null,
-        sort_order: idx,
-      }));
+      const itemRows = line_items.map((item, idx) => {
+        const unitCents = Math.round(item.unit_price * 100);
+        const totalCents = Math.round(unitCents * item.quantity);
+        return {
+          tenant_id: tenantId,
+          invoice_id: invoice.id,
+          student_id: item.student_id ?? null,
+          description: item.description,
+          quantity: item.quantity,
+          unit_amount_cents: unitCents,
+          amount_cents: totalCents,
+          taxable: false,
+          sort_order: idx,
+          metadata: {
+            is_makeup_session: item.is_makeup_session ?? false,
+            is_fifth_week: item.is_fifth_week ?? false,
+            session_date: item.session_date ?? null,
+          },
+        };
+      });
 
-      const { error: itemsError } = await db.from("invoice_items").insert(itemRows);
+      const { error: itemsError } = await db.from("invoice_line_items").insert(itemRows);
       if (itemsError) {
         console.warn("[invoices/create] Line items insert failed (non-fatal):", itemsError.message);
       }
