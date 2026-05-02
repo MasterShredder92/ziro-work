@@ -1,7 +1,7 @@
 "use client";
-
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AddFamilyModal } from "./add-family-modal";;
 
 /* ─── Types ──────────────────────────────────────────────── */
 type FamilyRow = {
@@ -24,10 +24,12 @@ type StudentEntry = {
   teacherName?: string | null;
 };
 
+type LocationOpt = { id: string; name: string };
 type Props = {
   rows: FamilyRow[];
   counts: Record<string, number>;
   locationNameById: Record<string, string>;
+  locationOptions?: LocationOpt[];
   studentsByFamily?: Record<string, StudentEntry[]>;
   teacherByFamily?: Record<string, string>;
 };
@@ -109,11 +111,21 @@ export function FamiliesListClient({
   rows,
   counts,
   locationNameById,
+  locationOptions = [],
   studentsByFamily = {},
   teacherByFamily = {},
 }: Props) {
    const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabId>("active");
+  const [showAdd, setShowAdd] = useState(false);
+
+  // Open modal automatically if URL is /crm/families?new=true
+  useEffect(() => {
+    if (searchParams?.get("new") === "true") {
+      setShowAdd(true);
+    }
+  }, [searchParams]);
   const [search, setSearch] = useState("");
   const [filterTeacher, setFilterTeacher] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
@@ -233,6 +245,18 @@ export function FamiliesListClient({
                 background: "transparent", color: "var(--z-muted)", fontSize: 11, cursor: "pointer",
               }}>Clear</button>
           )}
+          {/* + New Family button */}
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{
+              padding: "5px 14px", borderRadius: 7, border: "none",
+              background: ZIRO_GREEN, color: "#000",
+              fontSize: 12, fontWeight: 700, cursor: "pointer",
+              boxShadow: `0 1px 6px ${ZIRO_GREEN}55`,
+            }}
+          >
+            + New Family
+          </button>
         </div>
       </div>
 
@@ -425,6 +449,18 @@ export function FamiliesListClient({
           })}
         </div>
       )}
+
+      <AddFamilyModal
+        open={showAdd}
+        onClose={() => {
+          setShowAdd(false);
+          // Strip ?new=true from URL so it doesn't reopen on refresh
+          if (searchParams?.get("new") === "true") {
+            router.replace("/crm/families");
+          }
+        }}
+        locations={locationOptions}
+      />
     </div>
   );
 }

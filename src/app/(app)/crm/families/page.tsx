@@ -78,6 +78,7 @@ export default async function FamiliesIndexPage() {
         rows={rows}
         counts={counts}
         locationNameById={locationNameById}
+        locationOptions={locations.map((l) => ({ id: l.id, name: l.name ?? l.id }))}
         studentsByFamily={studentsByFamily}
         teacherByFamily={teacherByFamily}
       />
