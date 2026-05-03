@@ -14,12 +14,12 @@ function studentStatus(ctx: LifecycleContext): string {
 
 function isInactiveStudent(ctx: LifecycleContext): boolean {
   const status = studentStatus(ctx);
-  return status === "inactive" || status === "former" || status === "cancelled" || status === "churned";
+  return status === "inactive";
 }
 
 function isActiveStudent(ctx: LifecycleContext): boolean {
   const status = studentStatus(ctx);
-  return status === "active" || status === "enrolled" || status === "current";
+  return status === "active";
 }
 
 function hasEnrollmentSignal(ctx: LifecycleContext): boolean {

@@ -177,7 +177,7 @@ export async function promoteLeadToStudent(
     instrument: lead.instrument ?? null,
     source: lead.source ?? null,
     intake_submission_id: lead.intake_submission_id ?? null,
-    status: "enrolled",
+    status: "active",
   };
 
   const student = await createStudent(tenantId, studentInput);

@@ -770,7 +770,7 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
       <div className="text-xs text-[var(--z-muted)] mb-2">{students.length} active student{students.length !== 1 ? "s" : ""}</div>
       {students.map(s => {
         const displayName = s.display_name ?? [s.first_name, s.last_name].filter(Boolean).join(" ") ?? "—";
-        const isActive = s.student_status?.toLowerCase() === "active" || s.student_status?.toLowerCase() === "enrolled";
+        const isActive = s.student_status?.toLowerCase() === "active";
         // day_of_week from schedules (0=Sun…6=Sat)
         const dayLabel = typeof s.day_of_week === "number" ? DOW_LABELS[s.day_of_week] : null;
         return (

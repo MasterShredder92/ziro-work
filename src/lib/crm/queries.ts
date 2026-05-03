@@ -167,7 +167,7 @@ export async function getCRMKpis(tenantId: string) {
   return {
     totalContacts:
       students.length + teachers.length + families.length + leads.length,
-    activeStudents: students.filter((s) => s.status === "enrolled").length,
+    activeStudents: students.filter((s) => s.status === "active").length,
     activeTeachers: teachers.filter(isTeacherActive).length,
     families: families.length,
     openLeads: leads.filter((l) => l.stage !== "lost" && l.stage !== "enrolled")

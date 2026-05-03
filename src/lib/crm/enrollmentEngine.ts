@@ -42,7 +42,7 @@ export async function enrollStudent(
 
   await updateStudent(input.studentId, tenantId, {
     teacher_id: input.teacherId,
-    status: "enrolled",
+    status: "active",
     start_date: input.startDate ?? null,
     first_lesson_date: student.first_lesson_date ?? input.startDate ?? null,
   });

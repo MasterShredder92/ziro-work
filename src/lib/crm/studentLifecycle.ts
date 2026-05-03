@@ -65,7 +65,7 @@ export async function createProspect(
   tenantId: string,
   input: Omit<StudentInsert, "tenant_id" | "status">,
 ): Promise<Student> {
-  return createStudent(tenantId, { ...input, status: "prospect" });
+  return createStudent(tenantId, { ...input, status: "trial" });
 }
 
 export async function enrollStudentAsActive(
@@ -74,7 +74,7 @@ export async function enrollStudentAsActive(
   firstLessonDate?: string,
 ): Promise<Student> {
   return updateStudent(studentId, tenantId, {
-    status: "enrolled",
+    status: "active",
     first_lesson_date: firstLessonDate ?? null,
     start_date: firstLessonDate ?? null,
   });

@@ -44,7 +44,7 @@ const StudentUpdateSchema = z
     blocks_per_week: z.number().int().min(0).max(10).optional(), // NOT NULL in DB
     sessions_per_month: z.number().int().min(0).max(100).optional(),
     experience_level: z.string().trim().min(1).nullable().optional(),
-    status: z.enum(["active", "inactive", "trial", "paused", "enrolled", "former"]).optional(), // NOT NULL in DB
+    status: z.enum(["active", "inactive", "trial", "paused"]).optional(), // NOT NULL in DB; CHECK constraint enforces same set
     // Profile
     first_name: z.string().trim().min(1).optional(),
     last_name: z.string().trim().min(1).optional(),

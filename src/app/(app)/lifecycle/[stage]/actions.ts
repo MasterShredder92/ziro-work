@@ -125,7 +125,7 @@ function stageRank(stageId: LifecycleStageId): number {
 
 function inferOperationalStage(row: Record<string, unknown>): LifecycleStageId {
   const status = getString(row, "status").toLowerCase();
-  if (status === "inactive" || status === "former" || status === "cancelled" || status === "churned") {
+  if (status === "inactive") {
     return "win-back";
   }
   const overdueAmountRaw = row.overdue_amount;
