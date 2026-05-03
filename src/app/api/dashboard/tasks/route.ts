@@ -153,10 +153,9 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.openSlots - a.openSlots);
 
-    // Top instruments by demand (for hiring suggestions)
+    // All instruments by demand — normalized, sorted desc (chart + hiring suggestions)
     const topInstruments = Array.from(instrumentDemand.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
       .map(([instrument, studentCount]) => ({ instrument, studentCount }));
 
     // ── 4. Hiring signals — days with low coverage ─────────────────

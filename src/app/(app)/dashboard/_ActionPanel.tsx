@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, UserPlus, MapPin, Briefcase } from "lucide-react";
+import { AlertTriangle, MapPin, Briefcase } from "lucide-react";
 
 type OverdueInvoice = {
   invoiceId: string;
@@ -11,14 +11,6 @@ type OverdueInvoice = {
   balanceCents: number;
   dueDate: string;
   status: string;
-};
-
-type UncontactedLead = {
-  leadId: string;
-  name: string;
-  instrument: string | null;
-  source: string | null;
-  createdAt: string;
 };
 
 type CapacitySignal = {
@@ -42,7 +34,6 @@ type HiringSignal = {
 
 type TasksData = {
   overdueInvoices: OverdueInvoice[];
-  uncontactedLeads: UncontactedLead[];
   capacitySignals: CapacitySignal[];
   topInstruments: TopInstrument[];
   hiringSignals: HiringSignal[];
@@ -156,7 +147,6 @@ export function ActionPanel() {
   }
 
   const overdue = data?.overdueInvoices ?? [];
-  const leads = data?.uncontactedLeads ?? [];
   const capacity = data?.capacitySignals ?? [];
   const instruments = data?.topInstruments ?? [];
   const hiring = data?.hiringSignals ?? [];
@@ -200,49 +190,6 @@ export function ActionPanel() {
                 style={{ color: "#ef4444" }}
               >
                 +{overdue.length - 5} more →
-              </Link>
-            )}
-          </div>
-        )}
-      </SectionBlock>
-
-      {/* Leads */}
-      <SectionBlock
-        icon={<UserPlus className="h-3.5 w-3.5" />}
-        label="Leads to contact"
-        count={leads.length}
-        accent="#00ff88"
-      >
-        {leads.length === 0 ? (
-          <EmptyState label="No uncontacted leads." />
-        ) : (
-          <div className="space-y-1">
-            {leads.slice(0, 5).map((lead) => (
-              <Link
-                key={lead.leadId}
-                href="/lifecycle/lead-work"
-                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-all duration-100 hover:bg-[rgba(0,255,136,0.06)]"
-              >
-                <span className="truncate font-medium" style={{ color: "var(--z-fg)" }}>
-                  {lead.name}
-                </span>
-                {lead.instrument && (
-                  <span
-                    className="ml-3 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
-                    style={{ background: "rgba(0,255,136,0.12)", color: "#00ff88" }}
-                  >
-                    {lead.instrument}
-                  </span>
-                )}
-              </Link>
-            ))}
-            {leads.length > 5 && (
-              <Link
-                href="/lifecycle/lead-work"
-                className="block px-2 py-1 text-[11px] font-semibold hover:underline"
-                style={{ color: "#00ff88" }}
-              >
-                +{leads.length - 5} more →
               </Link>
             )}
           </div>

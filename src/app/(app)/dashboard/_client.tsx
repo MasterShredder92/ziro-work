@@ -13,10 +13,10 @@ function ShimmerBlock({ h = "h-[6.5rem]" }: { h?: string }) {
       style={{
         background: "#111113",
         border: "1px solid rgba(255,255,255,0.06)",
-        animation: "shimmer 1.6s infinite",
         backgroundImage:
           "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
         backgroundSize: "200% 100%",
+        animation: "shimmer 1.6s infinite",
       }}
     />
   );
@@ -52,6 +52,11 @@ const OverdueBanner = dynamic(
   { loading: () => null },
 );
 
+const LeadsBox = dynamic(
+  () => import("./_LeadsBox").then((m) => ({ default: m.LeadsBox })),
+  { loading: () => <ShimmerBlock h="h-[120px]" /> },
+);
+
 const RevenueChart = dynamic(
   () => import("./_RevenueChart").then((m) => ({ default: m.RevenueChart })),
   { loading: () => <ShimmerBlock h="h-[280px]" /> },
@@ -59,7 +64,12 @@ const RevenueChart = dynamic(
 
 const ActionPanel = dynamic(
   () => import("./_ActionPanel").then((m) => ({ default: m.ActionPanel })),
-  { loading: () => <PanelSkeleton rows={4} /> },
+  { loading: () => <PanelSkeleton rows={3} /> },
+);
+
+const InstrumentChart = dynamic(
+  () => import("./_InstrumentChart").then((m) => ({ default: m.InstrumentChart })),
+  { loading: () => <PanelSkeleton rows={6} /> },
 );
 
 const TeacherPanel = dynamic(
@@ -94,7 +104,7 @@ export function DashboardClient() {
       <PageTransition>
         <div
           className="mx-auto w-full flex flex-col gap-5 sm:gap-7"
-          data-dashboard-rev="7"
+          data-dashboard-rev="8"
           data-app="ziro-work"
         >
           {/* ── Header ──────────────────────────────────────────────── */}
@@ -138,6 +148,9 @@ export function DashboardClient() {
           {/* ── Overdue alert ───────────────────────────────────────── */}
           <OverdueBanner />
 
+          {/* ── LEADS — top priority box ────────────────────────────── */}
+          <LeadsBox />
+
           {/* ── Revenue chart + Action items ────────────────────────── */}
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.4fr]">
             {/* Revenue donut */}
@@ -149,34 +162,43 @@ export function DashboardClient() {
               <RevenueChart />
             </Panel>
 
-            {/* Action items */}
+            {/* Action items — invoices, capacity, hiring (leads moved out) */}
             <Panel
               title="Action Items"
-              description="Unpaid invoices, hot leads, open capacity, hiring signals"
+              description="Unpaid invoices, open capacity, hiring signals"
               accentColor="#ef4444"
             >
               <ActionPanel />
             </Panel>
           </div>
 
-          {/* ── Teacher utilization + Activity feed ─────────────────── */}
+          {/* ── Instrument demand + Teacher utilization ─────────────── */}
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <Panel
-              title="Teacher Utilization"
-              description="Sessions booked MTD — stacked by location"
+              title="Instrument Demand"
+              description="Active students by instrument — most to least"
               accentColor="#7c3aed"
             >
-              <TeacherPanel />
+              <InstrumentChart />
             </Panel>
 
             <Panel
-              title="Recent Activity"
-              description="Key events — enrollments, payments, teacher changes"
-              accentColor="#2563eb"
+              title="Teacher Utilization"
+              description="Sessions booked MTD — stacked by location"
+              accentColor="#d97706"
             >
-              <ActivityStream />
+              <TeacherPanel />
             </Panel>
           </div>
+
+          {/* ── Activity feed ───────────────────────────────────────── */}
+          <Panel
+            title="Recent Activity"
+            description="Key events — enrollments, payments, teacher changes"
+            accentColor="#2563eb"
+          >
+            <ActivityStream />
+          </Panel>
         </div>
       </PageTransition>
     </PageShell>
