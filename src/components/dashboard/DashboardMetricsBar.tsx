@@ -59,7 +59,7 @@ export function DashboardMetricsBar() {
         icon={<AlertTriangle className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
-        label={`Projected · ${monthLabel}`}
+        label="Next Month"
         value={metrics ? formatUsdFromCents(metrics.projectedMonthlyCents) : "—"}
         trend="up"
         icon={<TrendingUp className="h-4 w-4" aria-hidden />}

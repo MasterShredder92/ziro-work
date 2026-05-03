@@ -109,26 +109,17 @@ export async function GET(_req: NextRequest) {
         r.due_date < today,
     ).length;
 
-    // Scheduled = SCHEDULED or UNPAID (all, not date-filtered — matches invoices page)
-    const scheduledCents = rows
+    // Scheduled = SCHEDULED or UNPAID due THIS month only
+    const scheduledCents = mtdRows
       .filter((r) => r.status === "SCHEDULED" || r.status === "UNPAID")
       .reduce((s, r) => s + (r.amount_cents ?? 0), 0);
 
-    // ── Projected monthly revenue from pricing_tiers SSOT ─────────
-    // v_family_billing.family_monthly_total_cents = already the full monthly
-    // total per family (rate × sessions, with multi-student tier applied)
-    const { data: billingRows, error: billingErr } = await db
-      .from("v_family_billing")
-      .select("family_monthly_total_cents")
-      .eq("tenant_id", tenantId);
-
-    let projectedMonthlyCents = 0;
-    if (!billingErr && billingRows) {
-      projectedMonthlyCents = billingRows.reduce(
-        (s, r) => s + (r.family_monthly_total_cents ?? 0),
-        0,
-      );
-    }
+    // ── Projected = next month's scheduled invoices from square_invoices_fact ──
+    // This mirrors billing-summary's nextMonthProjected exactly.
+    // Much more accurate than v_family_billing theoretical max.
+    const projectedMonthlyCents = rows
+      .filter((r) => r.due_date && r.due_date >= nextStart && r.due_date <= nextEnd)
+      .reduce((s, r) => s + (r.requested_amount ?? r.amount_cents ?? 0), 0);
 
     return ok({
       activeStudents,
