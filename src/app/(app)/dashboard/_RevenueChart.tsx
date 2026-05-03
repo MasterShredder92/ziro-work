@@ -1,0 +1,219 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type DashboardMetrics = {
+  collectedCents: number;
+  totalInvoicedCents: number;
+  outstandingCents: number;
+  scheduledCents: number;
+  projectedMonthlyCents: number;
+  overdueCount: number;
+};
+
+function usd(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
+/** SVG donut segment helper */
+function DonutSegment({
+  pct,
+  offset,
+  color,
+  r = 54,
+}: {
+  pct: number;
+  offset: number;
+  color: string;
+  r?: number;
+}) {
+  const circumference = 2 * Math.PI * r;
+  const dash = (pct / 100) * circumference;
+  const gap = circumference - dash;
+  // rotate so segments start from top (-90deg)
+  const rotation = -90 + (offset / 100) * 360;
+  return (
+    <circle
+      cx="64"
+      cy="64"
+      r={r}
+      fill="none"
+      stroke={color}
+      strokeWidth="12"
+      strokeDasharray={`${dash} ${gap}`}
+      strokeLinecap="round"
+      style={{
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: "64px 64px",
+        transition: "stroke-dasharray 0.8s ease",
+        filter: `drop-shadow(0 0 6px ${color}88)`,
+      }}
+    />
+  );
+}
+
+export function RevenueChart() {
+  const [m, setM] = useState<DashboardMetrics | null>(null);
+
+  useEffect(() => {
+    fetch("/api/dashboard/metrics", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.collectedCents !== undefined) setM(json as DashboardMetrics);
+      })
+      .catch(() => null);
+  }, []);
+
+  const month = new Date().toLocaleString("default", { month: "long" });
+
+  if (!m) {
+    return (
+      <div
+        className="h-full min-h-[220px] animate-pulse rounded-2xl"
+        style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.06)" }}
+      />
+    );
+  }
+
+  const total = m.totalInvoicedCents || 1;
+  const collectedPct = Math.round((m.collectedCents / total) * 100);
+  const outstandingPct = Math.round((m.outstandingCents / total) * 100);
+  const scheduledPct = Math.max(0, 100 - collectedPct - outstandingPct);
+
+  const segments = [
+    { pct: collectedPct, color: "#00ff88", label: "Collected", value: usd(m.collectedCents) },
+    { pct: outstandingPct, color: "#ef4444", label: "Outstanding", value: usd(m.outstandingCents) },
+    { pct: scheduledPct, color: "#d97706", label: "Scheduled", value: usd(m.scheduledCents) },
+  ];
+
+  // compute cumulative offsets
+  let cumulative = 0;
+  const segmentsWithOffset = segments.map((s) => {
+    const seg = { ...s, offset: cumulative };
+    cumulative += s.pct;
+    return seg;
+  });
+
+  return (
+    <div
+      className="flex h-full flex-col gap-4 rounded-2xl p-5"
+      style={{
+        background: "#111113",
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+      }}
+    >
+      {/* Header */}
+      <div>
+        <p className="text-[0.6rem] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--z-muted)" }}>
+          Revenue Breakdown · {month}
+        </p>
+        <p className="mt-1 text-lg font-extrabold" style={{ color: "var(--z-fg)" }}>
+          {usd(m.totalInvoicedCents)}
+          <span className="ml-2 text-xs font-normal" style={{ color: "var(--z-muted)" }}>
+            total invoiced
+          </span>
+        </p>
+      </div>
+
+      {/* Donut + legend */}
+      <div className="flex items-center gap-5">
+        {/* SVG donut */}
+        <div className="relative shrink-0">
+          <svg width="128" height="128" viewBox="0 0 128 128">
+            {/* track */}
+            <circle
+              cx="64"
+              cy="64"
+              r="54"
+              fill="none"
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth="12"
+            />
+            {segmentsWithOffset.map((s) =>
+              s.pct > 0 ? (
+                <DonutSegment
+                  key={s.label}
+                  pct={s.pct}
+                  offset={s.offset}
+                  color={s.color}
+                />
+              ) : null,
+            )}
+          </svg>
+          {/* center label */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <p className="text-lg font-extrabold leading-none" style={{ color: "var(--z-fg)" }}>
+              {collectedPct}%
+            </p>
+            <p className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: "var(--z-muted)" }}>
+              collected
+            </p>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-col gap-3 flex-1 min-w-0">
+          {segments.map((s) => (
+            <div key={s.label} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }}
+                />
+                <span className="truncate text-xs font-medium" style={{ color: "var(--z-muted)" }}>
+                  {s.label}
+                </span>
+              </div>
+              <span className="shrink-0 text-xs font-bold" style={{ color: "var(--z-fg)" }}>
+                {s.value}
+              </span>
+            </div>
+          ))}
+
+          {/* Projected next month */}
+          <div
+            className="mt-1 rounded-xl px-3 py-2"
+            style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)" }}
+          >
+            <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#7c3aed" }}>
+              Next Month Projected
+            </p>
+            <p className="text-sm font-extrabold" style={{ color: "#a78bfa" }}>
+              {usd(m.projectedMonthlyCents)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Collection progress bar */}
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--z-muted)" }}>
+            Collection Rate
+          </span>
+          <span className="text-[10px] font-bold" style={{ color: "#00ff88" }}>
+            {collectedPct}%
+          </span>
+        </div>
+        <div
+          className="h-2 w-full overflow-hidden rounded-full"
+          style={{ background: "rgba(255,255,255,0.06)" }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${collectedPct}%`,
+              background: "linear-gradient(90deg, #00cc6a, #00ff88)",
+              boxShadow: "0 0 12px #00ff8866",
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
