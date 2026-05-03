@@ -1,76 +1,67 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import {
-  Banknote,
-  CalendarClock,
-  ChevronUp,
-  Sparkles,
-  Tag,
-} from "lucide-react";
+import { Users, Banknote, AlertTriangle, TrendingUp, CalendarCheck } from "lucide-react";
 import { DashboardMetricCard } from "./DashboardMetricCard";
 import { formatUsdFromCents } from "./dashboardFormat";
 
-type BillingSummaryMetrics = {
-  collected: number;
-  totalInvoiced: number;
-  outstanding: number;
-  nextMonthProjected: number;
-  scheduled: number;
+type DashboardMetrics = {
+  activeStudents: number;
+  activeFamilies: number;
+  collectedCents: number;
+  outstandingCents: number;
+  overdueCount: number;
+  scheduledCents: number;
+  projectedMonthlyCents: number;
 };
 
 export function DashboardMetricsBar() {
-  const [metrics, setMetrics] = useState<BillingSummaryMetrics | null>(null);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
   useEffect(() => {
-    fetch("/api/invoices/billing-summary", { cache: "no-store" })
+    fetch("/api/dashboard/metrics", { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
-        const all = json?.data?.allSchools;
-        if (!all) return;
-        setMetrics({
-          collected: all.collected ?? 0,
-          totalInvoiced: all.totalInvoiced ?? 0,
-          outstanding: all.outstanding ?? 0,
-          nextMonthProjected: all.nextMonthProjected ?? 0,
-          scheduled: all.scheduled ?? 0,
-        });
+        if (json?.activeStudents !== undefined) {
+          setMetrics(json as DashboardMetrics);
+        }
       })
       .catch(() => null);
   }, []);
 
+  const monthLabel = new Date().toLocaleString("default", { month: "long" });
+
   return (
-    <section className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-5 2xl:grid-cols-5">
+    <section className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-5">
       <DashboardMetricCard
-        label="Collected This Month"
-        value={metrics ? formatUsdFromCents(metrics.collected) : "—"}
-        trend={metrics && metrics.collected > 0 ? "up" : "flat"}
-        icon={<Sparkles className="h-4 w-4" aria-hidden />}
+        label="Active Students"
+        value={metrics ? String(metrics.activeStudents) : "—"}
+        trend="flat"
+        icon={<Users className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
-        label="Total Invoiced"
-        value={metrics ? formatUsdFromCents(metrics.totalInvoiced) : "—"}
-        trend={metrics && metrics.totalInvoiced > 0 ? "up" : "flat"}
+        label={`Collected · ${monthLabel}`}
+        value={metrics ? formatUsdFromCents(metrics.collectedCents) : "—"}
+        trend={metrics && metrics.collectedCents > 0 ? "up" : "flat"}
         icon={<Banknote className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
         label="Outstanding"
-        value={metrics ? formatUsdFromCents(metrics.outstanding) : "—"}
-        trend={metrics && metrics.outstanding > 0 ? "down" : "flat"}
-        valueClassName="text-red-500"
-        icon={<Tag className="h-4 w-4" aria-hidden />}
+        value={metrics ? formatUsdFromCents(metrics.outstandingCents) : "—"}
+        trend={metrics && metrics.outstandingCents > 0 ? "down" : "flat"}
+        valueClassName={metrics && metrics.outstandingCents > 0 ? "text-red-400" : undefined}
+        icon={<AlertTriangle className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
-        label="Next Month Projected"
-        value={metrics ? formatUsdFromCents(metrics.nextMonthProjected) : "—"}
+        label={`Projected · ${monthLabel}`}
+        value={metrics ? formatUsdFromCents(metrics.projectedMonthlyCents) : "—"}
         trend="up"
-        icon={<ChevronUp className="h-4 w-4" aria-hidden />}
+        icon={<TrendingUp className="h-4 w-4" aria-hidden />}
       />
       <DashboardMetricCard
-        label="Scheduled Payments"
-        value={metrics ? formatUsdFromCents(metrics.scheduled) : "—"}
+        label="Scheduled Invoices"
+        value={metrics ? formatUsdFromCents(metrics.scheduledCents) : "—"}
         trend="flat"
-        icon={<CalendarClock className="h-4 w-4" aria-hidden />}
+        icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
       />
     </section>
   );
