@@ -85,6 +85,18 @@ async function handleInvoiceEvent(db: any, tenantId: string, eventType: string, 
   const sqCustId: string | null = primaryRecipient.customer_id ?? null;
   const familyId = await resolveFamilyId(db, tenantId, sqCustId);
 
+  // Resolve internal uuid location_id from Square text location_id (NOT NULL UUID column)
+  let internalLocationId: string | null = null;
+  if (inv.location_id) {
+    const { data: locRow } = await db
+      .from("locations")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("square_location_id", inv.location_id)
+      .maybeSingle();
+    internalLocationId = locRow?.id ?? null;
+  }
+
   if (eventType === "invoice.deleted") {
     await db.from("square_invoices").delete().eq("square_invoice_id", inv.id).eq("tenant_id", tenantId);
     console.log(`[Square Webhook] Deleted invoice ${inv.id}`);
@@ -95,7 +107,7 @@ async function handleInvoiceEvent(db: any, tenantId: string, eventType: string, 
     tenant_id: tenantId,
     square_invoice_id: inv.id,
     square_location_id: inv.location_id ?? null,
-    location_id: inv.location_id ?? null,
+    location_id: internalLocationId,
     square_customer_id: sqCustId,
     family_id: familyId,
     invoice_number: inv.invoice_number ?? null,
@@ -121,7 +133,10 @@ async function handleInvoiceEvent(db: any, tenantId: string, eventType: string, 
     }
   }
 
-  await db.from("square_invoices").upsert(row, { onConflict: "square_invoice_id" });
+  const upsertRes = await db.from("square_invoices").upsert(row, { onConflict: "square_invoice_id" });
+  if (upsertRes.error) {
+    console.error(`[Square Webhook] square_invoices upsert FAILED for ${inv.id}:`, upsertRes.error.message, upsertRes.error.details);
+  }
 
   // Also update our internal invoices table so ZiroWork records reflect real status
   const internalStatusMap: Record<string, string> = {
