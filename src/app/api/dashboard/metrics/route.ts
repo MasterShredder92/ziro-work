@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { ok, serverError } from "@/lib/http";
-import { resolveCRMContext } from "@/app/api/crm/_context";
+import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,15 +28,9 @@ function toDateStr(d: Date): string {
  * - projectedMonthlyCents: from v_family_billing (pricing_tiers SSOT)
  * - totalInvoicedCents: sum of requested_amount for MTD rows
  */
-export async function GET(req: NextRequest) {
-  const resolved = await resolveCRMContext(req, {
-    permissions: ["crm.read"],
-    minRole: "teacher",
-  });
-  if ("response" in resolved) return resolved.response;
-
+export async function GET(_req: NextRequest) {
   try {
-    const { tenantId } = resolved.context;
+    const tenantId = await getCRMTenantId();
     const db = getServiceClient();
 
     const now = new Date();
