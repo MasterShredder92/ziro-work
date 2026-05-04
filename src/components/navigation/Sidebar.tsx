@@ -134,7 +134,8 @@ const GROUPS = [
     id: "growth",
     label: "GROWTH",
     items: [
-      { href: "/recruitment",  label: "Recruitment"                         },
+      { href: "/lifecycle",   label: "Lifecycle",  isLifecycle: true },
+      { href: "/recruitment", label: "Recruitment"                   },
     ],
   },
   {

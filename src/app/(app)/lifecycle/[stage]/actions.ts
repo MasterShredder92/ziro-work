@@ -168,6 +168,76 @@ async function mapWithConcurrency<T, R>(
   return out;
 }
 
+// ── Leads loader for intake + lead-work stages ──────────────────────────────
+async function loadLeadRows(tenantId: string): Promise<Array<Record<string, unknown>>> {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, student_name, instrument, status, stage, notes, email, phone, created_at, converted_student_id")
+    .eq("tenant_id", tenantId)
+    .not("status", "in", "(enrolled,lost)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error || !data) return [];
+  return (data as Array<Record<string, unknown>>).map((lead) => ({
+    ...lead,
+    _is_lead: true,
+    first_name: (lead.student_name as string | null)?.split(" ")[0] ?? "Lead",
+    last_name: (lead.student_name as string | null)?.split(" ").slice(1).join(" ") ?? "",
+    primary_email: (lead.email as string | null) ?? null,
+    primary_phone: (lead.phone as string | null) ?? null,
+    status: "lead",
+    total_lessons_taken: 0,
+    first_lesson_date: null,
+    start_date: null,
+    teacher_id: null,
+    lead_stage: lead.stage,
+    lead_status: lead.status,
+  }));
+}
+
+function inferLeadStage(row: Record<string, unknown>): LifecycleStageId {
+  const stage = (row.lead_stage as string | null) ?? "";
+  if (stage === "contacted" || stage === "qualified") return "lead-work";
+  if (stage === "scheduled") return "lead-work";
+  return "intake";
+}
+
+// ── Leads loader for intake + lead-work stages ──────────────────────────────
+async function loadLeadRows(tenantId: string): Promise<Array<Record<string, unknown>>> {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, student_name, instrument, status, stage, notes, email, phone, created_at, converted_student_id")
+    .eq("tenant_id", tenantId)
+    .not("status", "in", "(enrolled,lost)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error || !data) return [];
+  return (data as Array<Record<string, unknown>>).map((lead) => ({
+    ...lead,
+    _is_lead: true,
+    first_name: (lead.student_name as string | null)?.split(" ")[0] ?? "Lead",
+    last_name: (lead.student_name as string | null)?.split(" ").slice(1).join(" ") ?? "",
+    primary_email: (lead.email as string | null) ?? null,
+    primary_phone: (lead.phone as string | null) ?? null,
+    status: "lead",
+    total_lessons_taken: 0,
+    first_lesson_date: null,
+    start_date: null,
+    teacher_id: null,
+    lead_stage: lead.stage,
+    lead_status: lead.status,
+  }));
+}
+
+function inferLeadStage(row: Record<string, unknown>): LifecycleStageId {
+  const stage = (row.lead_stage as string | null) ?? "";
+  if (stage === "contacted" || stage === "qualified") return "lead-work";
+  if (stage === "scheduled") return "lead-work";
+  return "intake";
+}
+
 async function loadCandidateStudents(input: {
   tenantId: string;
   locationId: string | null | undefined;
@@ -297,8 +367,30 @@ async function projectStudentToStage(
   }
   const firstName = getString(row, "first_name");
   const lastName = getString(row, "last_name");
-  const fullName = `${firstName} ${lastName}`.trim() || "Student";
+  const fullName = `${firstName} ${lastName}`.trim() || "Lead";
   const rowContact = pickContact(row);
+
+  // Lead rows: skip buildLifecycleContext (no student record) — render directly
+  if (row._is_lead === true) {
+    const leadStage = inferLeadStage(row);
+    if (leadStage !== stageId) return { student: null, degraded: false, warnings: [] };
+    const instrument = (row.instrument as string | null) ?? "";
+    const notes = (row.notes as string | null) ?? "";
+    const lastNote = notes.split("\n").filter(Boolean).pop() ?? "";
+    return {
+      student: {
+        id,
+        name: fullName,
+        family_email: rowContact.family_email,
+        family_phone: rowContact.family_phone,
+        blockers: [],
+        nextStep: lastNote || `Follow up with ${fullName}${instrument ? " (" + instrument + ")" : ""}.`,
+        riskBand: "low",
+      },
+      degraded: false,
+      warnings: [],
+    };
+  }
 
   if (Date.now() > deadline) {
     const fallbackStage = inferOperationalStage(row);
@@ -447,7 +539,17 @@ export async function loadLifecycleStageSurface(
       effectiveRows = rows.slice(0, STAGE_LOAD_MAX_CANDIDATES);
     }
 
-    const stageScopedRows = effectiveRows.filter((row) => inferOperationalStage(row) === stageId);
+    // For intake and lead-work stages, also pull leads directly from the leads table
+    let leadRows: Array<Record<string, unknown>> = [];
+    if (stageId === "intake" || stageId === "lead-work") {
+      leadRows = await loadLeadRows(normalizedTenantId);
+    }
+    const leadScopedRows = leadRows.filter((row) => inferLeadStage(row) === stageId);
+
+    const stageScopedRows = [
+      ...effectiveRows.filter((row) => inferOperationalStage(row) === stageId),
+      ...leadScopedRows,
+    ];
     if (stageScopedRows.length === 0) {
       return {
         ok: true,

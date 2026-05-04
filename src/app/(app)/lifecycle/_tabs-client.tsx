@@ -54,11 +54,11 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
       <div className="shrink-0 w-full px-6 pt-6 pb-0 space-y-4">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-[var(--z-muted)] font-semibold">
-            Customer Lifecycle
+            Studio Operations
           </div>
-          <h1 className="text-xl font-semibold text-[var(--z-fg)]">Student Journey</h1>
+          <h1 className="text-xl font-semibold text-[var(--z-fg)]">Lifecycle</h1>
           <p className="text-xs text-[var(--z-muted)] mt-0.5">
-            Track every student from first inquiry to long-term retention.
+            Every student from first inquiry to long-term retention.
           </p>
         </div>
 
