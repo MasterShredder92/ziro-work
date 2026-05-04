@@ -185,7 +185,7 @@ export function ActionPanel() {
             ))}
             {overdue.length > 5 && (
               <Link
-                href="/invoices?status=open"
+                href="/invoices?status=UNPAID"
                 className="block px-2 py-1 text-[11px] font-semibold hover:underline"
                 style={{ color: "#ef4444" }}
               >

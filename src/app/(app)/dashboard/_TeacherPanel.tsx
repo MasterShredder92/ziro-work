@@ -120,7 +120,7 @@ export function TeacherPanel() {
         return (
           <Link
             key={t.teacherId}
-            href={`/teachers/${t.teacherId}`}
+            href={`/crm/teachers/${t.teacherId}`}
             className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:-translate-y-px"
             style={{
               background: "rgba(255,255,255,0.02)",

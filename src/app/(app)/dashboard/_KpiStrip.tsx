@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Users,
   Banknote,
@@ -8,7 +9,6 @@ import {
   TrendingUp,
   CalendarCheck,
   Receipt,
-  Home,
 } from "lucide-react";
 
 type DashboardMetrics = {
@@ -35,16 +35,17 @@ type KpiTileProps = {
   value: string;
   sub?: string;
   icon: React.ReactNode;
-  accent: string; // hex
+  accent: string;
   fillPct?: number;
   danger?: boolean;
+  href?: string;
 };
 
-function KpiTile({ label, value, sub, icon, accent, fillPct, danger }: KpiTileProps) {
+function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href }: KpiTileProps) {
   const color = danger ? "#ef4444" : accent;
-  return (
+  const inner = (
     <div
-      className="relative flex min-h-[6.5rem] min-w-[9.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 sm:min-w-0 transition-transform duration-150 hover:-translate-y-0.5"
+      className="relative flex min-h-[6.5rem] min-w-[9.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 sm:min-w-0 transition-transform duration-150 hover:-translate-y-0.5 cursor-pointer"
       style={{
         background: `radial-gradient(ellipse 90% 55% at 50% 0%, ${color}18, transparent 68%), #111113`,
         border: `1px solid ${color}38`,
@@ -100,6 +101,11 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger }: KpiTilePr
       ) : null}
     </div>
   );
+
+  if (href) {
+    return <Link href={href}>{inner}</Link>;
+  }
+  return inner;
 }
 
 export function KpiStrip() {
@@ -116,13 +122,11 @@ export function KpiStrip() {
 
   const month = new Date().toLocaleString("default", { month: "long" });
 
-  // collection rate for fill bar
   const collectionPct =
     m && m.totalInvoicedCents > 0
       ? Math.round((m.collectedCents / m.totalInvoicedCents) * 100)
       : 0;
 
-  // outstanding severity
   const outstandingDanger = !!(m && m.outstandingCents > 0);
 
   if (!m) {
@@ -154,6 +158,7 @@ export function KpiStrip() {
         icon={<Users className="h-3.5 w-3.5" />}
         accent="#00ff88"
         fillPct={Math.min(100, (m.activeStudents / 200) * 100)}
+        href="/crm/families"
       />
       <KpiTile
         label={`Collected · ${month}`}
@@ -162,6 +167,7 @@ export function KpiStrip() {
         icon={<Banknote className="h-3.5 w-3.5" />}
         accent="#00ff88"
         fillPct={collectionPct}
+        href="/invoices?status=PAID"
       />
       <KpiTile
         label={`Invoiced · ${month}`}
@@ -169,6 +175,7 @@ export function KpiStrip() {
         icon={<Receipt className="h-3.5 w-3.5" />}
         accent="#2563eb"
         fillPct={m.totalInvoicedCents > 0 ? 100 : 0}
+        href="/invoices"
       />
       <KpiTile
         label="Outstanding"
@@ -182,6 +189,7 @@ export function KpiStrip() {
             ? Math.round((m.outstandingCents / m.totalInvoicedCents) * 100)
             : 0
         }
+        href="/invoices?status=UNPAID"
       />
       <KpiTile
         label="Scheduled"
@@ -194,6 +202,7 @@ export function KpiStrip() {
             ? Math.round((m.scheduledCents / m.totalInvoicedCents) * 100)
             : 0
         }
+        href="/invoices?status=SCHEDULED"
       />
       <KpiTile
         label="Next Month"

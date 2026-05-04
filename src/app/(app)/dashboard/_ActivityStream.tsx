@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { EventLog } from "@/lib/data/models/events";
 import { useEvents } from "@/hooks/data";
-import { DASHBOARD_TENANT_ID } from "@/components/dashboard/constants";
 import {
   DollarSign,
   UserPlus,
@@ -13,6 +13,10 @@ import {
   RefreshCw,
   Calendar,
 } from "lucide-react";
+
+// Inline — was in /components/dashboard/constants.ts (deleted)
+const DASHBOARD_TENANT_ID =
+  process.env.NEXT_PUBLIC_TENANT_ID ?? "00000000-0000-0000-0000-000000000001";
 
 const PAGE_SIZE = 25;
 const MAX_PAGES = 24;
@@ -49,6 +53,39 @@ function eventTitle(event: EventLog): string {
   return t.replace(/_/g, " ");
 }
 
+function eventHref(event: EventLog): string | null {
+  const t = event.event_type ?? "";
+  const p = (event.payload ?? {}) as Record<string, unknown>;
+  if (/payment|paid|invoice/.test(t)) {
+    if (p.family_id) return `/crm/families/${p.family_id}`;
+    if (p.invoice_id) return `/invoices`;
+    return `/invoices`;
+  }
+  if (/enroll/.test(t)) {
+    if (p.student_id) return `/students/${p.student_id}`;
+    if (p.family_id) return `/crm/families/${p.family_id}`;
+    return `/crm/families`;
+  }
+  if (/lead|intake/.test(t)) {
+    if (p.lead_id) return `/crm/leads/${p.lead_id}`;
+    return `/crm/leads`;
+  }
+  if (/teacher_change|teacher/.test(t)) {
+    if (p.teacher_id) return `/crm/teachers/${p.teacher_id}`;
+    return `/crm/teachers`;
+  }
+  if (/cancel/.test(t)) {
+    if (p.student_id) return `/students/${p.student_id}`;
+    if (p.family_id) return `/crm/families/${p.family_id}`;
+    return null;
+  }
+  if (/trial/.test(t)) {
+    if (p.student_id) return `/students/${p.student_id}`;
+    return null;
+  }
+  return null;
+}
+
 function eventIcon(event: EventLog): React.ReactNode {
   const t = event.event_type ?? "";
   if (/payment|paid|invoice/.test(t)) return <DollarSign className="h-3.5 w-3.5" />;
@@ -68,6 +105,54 @@ function eventAccent(event: EventLog): string {
   if (/cancel/.test(t)) return "#ef4444";
   if (/trial/.test(t)) return "#d97706";
   return "#6366f1";
+}
+
+function EventRow({
+  event,
+  isRecent,
+  accent,
+}: {
+  event: EventLog;
+  isRecent: boolean;
+  accent: string;
+}) {
+  const href = eventHref(event);
+  const inner = (
+    <div
+      className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:-translate-y-px"
+      style={{
+        background: isRecent ? `${accent}08` : "rgba(255,255,255,0.02)",
+        border: `1px solid ${isRecent ? accent + "22" : "rgba(255,255,255,0.04)"}`,
+        cursor: href ? "pointer" : "default",
+      }}
+    >
+      <div
+        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+        style={{ background: `${accent}20`, color: accent }}
+      >
+        {eventIcon(event)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-xs font-semibold" style={{ color: "var(--z-fg)" }}>
+          {eventTitle(event)}
+        </p>
+        <p className="text-[10px]" style={{ color: "var(--z-muted)" }}>
+          {event.event_type?.replace(/_/g, " ")}
+        </p>
+      </div>
+      <span
+        className="shrink-0 text-[10px] font-medium"
+        style={{ color: isRecent ? accent : "var(--z-muted)" }}
+      >
+        {timeAgo(event.created_at)}
+      </span>
+    </div>
+  );
+
+  if (href) {
+    return <Link href={href}>{inner}</Link>;
+  }
+  return inner;
 }
 
 export function ActivityStream() {
@@ -126,42 +211,7 @@ export function ActivityStream() {
       {merged.map((event) => {
         const accent = eventAccent(event);
         const isRecent = new Date(event.created_at).getTime() > weekCutMs;
-        return (
-          <div
-            key={event.id}
-            className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:-translate-y-px"
-            style={{
-              background: isRecent ? `${accent}08` : "rgba(255,255,255,0.02)",
-              border: `1px solid ${isRecent ? accent + "22" : "rgba(255,255,255,0.04)"}`,
-            }}
-          >
-            {/* Icon badge */}
-            <div
-              className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: `${accent}20`, color: accent }}
-            >
-              {eventIcon(event)}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-xs font-semibold" style={{ color: "var(--z-fg)" }}>
-                {eventTitle(event)}
-              </p>
-              <p className="text-[10px]" style={{ color: "var(--z-muted)" }}>
-                {event.event_type?.replace(/_/g, " ")}
-              </p>
-            </div>
-
-            {/* Time */}
-            <span
-              className="shrink-0 text-[10px] font-medium"
-              style={{ color: isRecent ? accent : "var(--z-muted)" }}
-            >
-              {timeAgo(event.created_at)}
-            </span>
-          </div>
-        );
+        return <EventRow key={event.id} event={event} isRecent={isRecent} accent={accent} />;
       })}
 
       <div ref={sentinelRef} className="h-4 w-full" aria-hidden />
