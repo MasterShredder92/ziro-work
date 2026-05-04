@@ -9,19 +9,6 @@ import { summarizeBlockers } from "@/lib/lifecycle/helpers";
 import { getServiceClient } from "@/lib/supabase";
 import type { ComputedLifecycle } from "@/lib/lifecycle/types";
 
-function formatAgentDisplayName(raw: string): string {
-  const table: Record<string, string> = {
-    star: "STAR",
-    ziro: "Ziro",
-    ruby: "Ruby",
-    stewie: "Stewie",
-    vader: "Vader",
-    bub: "Bub",
-    sid: "Sid",
-  };
-  return table[raw] ?? raw.replace(/-/g, " ");
-}
-
 function nextStepLabel(computed: ComputedLifecycle): string {
   if (computed.blockers.length > 0) {
     return computed.blockers[0]?.message ?? "Resolve blockers";
@@ -35,12 +22,10 @@ export type StudentSurfaceDTO = {
   studentName: string;
   stageName: string;
   stageDescription: string;
-  agentKey: string;
-  agentDisplayName: string;
   blockers: string[];
   nextStep: string;
   riskBand: "low" | "medium" | "high";
-  agentSummary: string;
+  stageSummary: string;
   nextActions: string[];
   timeline: TimelineItem[];
 };
@@ -71,7 +56,6 @@ export async function loadStudentSurface(
     const computed = computeStage(ctx);
     const timeline = await buildTimeline(studentId);
     const def = computed.stage;
-    const agentDisplayName = formatAgentDisplayName(def.agent);
     const blockers = summarizeBlockers(computed.blockers);
     const nextStep = nextStepLabel(computed);
 
@@ -88,7 +72,7 @@ export async function loadStudentSurface(
 
     const rawStudent = student as Record<string, unknown>;
     const studentName = [rawStudent.first_name, rawStudent.last_name].filter(Boolean).join(" ") || (rawStudent.name as string) || "Student";
-    const agentSummary = `${studentName} is in ${def.name}. Risk band is ${ctx.riskBand}.`;
+    const stageSummary = `${studentName} is in ${def.name}. Risk band is ${ctx.riskBand}.`;
 
     return {
       ok: true,
@@ -97,12 +81,10 @@ export async function loadStudentSurface(
         studentName,
         stageName: def.name,
         stageDescription: def.description,
-        agentKey: def.agent,
-        agentDisplayName,
         blockers,
         nextStep,
         riskBand: ctx.riskBand,
-        agentSummary,
+        stageSummary,
         nextActions,
         timeline,
       },

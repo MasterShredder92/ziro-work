@@ -203,40 +203,6 @@ function inferLeadStage(row: Record<string, unknown>): LifecycleStageId {
   return "intake";
 }
 
-// ── Leads loader for intake + lead-work stages ──────────────────────────────
-async function loadLeadRows(tenantId: string): Promise<Array<Record<string, unknown>>> {
-  const supabase = getServiceClient();
-  const { data, error } = await supabase
-    .from("leads")
-    .select("id, student_name, instrument, status, stage, notes, email, phone, created_at, converted_student_id")
-    .eq("tenant_id", tenantId)
-    .not("status", "in", "(enrolled,lost)")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error || !data) return [];
-  return (data as Array<Record<string, unknown>>).map((lead) => ({
-    ...lead,
-    _is_lead: true,
-    first_name: (lead.student_name as string | null)?.split(" ")[0] ?? "Lead",
-    last_name: (lead.student_name as string | null)?.split(" ").slice(1).join(" ") ?? "",
-    primary_email: (lead.email as string | null) ?? null,
-    primary_phone: (lead.phone as string | null) ?? null,
-    status: "lead",
-    total_lessons_taken: 0,
-    first_lesson_date: null,
-    start_date: null,
-    teacher_id: null,
-    lead_stage: lead.stage,
-    lead_status: lead.status,
-  }));
-}
-
-function inferLeadStage(row: Record<string, unknown>): LifecycleStageId {
-  const stage = (row.lead_stage as string | null) ?? "";
-  if (stage === "contacted" || stage === "qualified") return "lead-work";
-  if (stage === "scheduled") return "lead-work";
-  return "intake";
-}
 
 async function loadCandidateStudents(input: {
   tenantId: string;
