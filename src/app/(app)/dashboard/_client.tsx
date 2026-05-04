@@ -11,7 +11,7 @@ function ShimmerBlock({ h = "h-[6.5rem]" }: { h?: string }) {
     <div
       className={`${h} rounded-2xl`}
       style={{
-        background: "linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)",
+        background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
         backgroundSize: "200% 100%",
         animation: "shimmer 1.6s infinite",
         border: "1px solid rgba(255,255,255,0.05)",
@@ -102,20 +102,36 @@ export function DashboardClient() {
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
+        @keyframes livePulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 6px #00ff88; }
+          50% { opacity: 0.5; box-shadow: 0 0 12px #00ff88, 0 0 20px #00ff8855; }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       <PageTransition>
         <div
           className="mx-auto w-full flex flex-col gap-5 sm:gap-7"
-          data-dashboard-rev="9"
+          data-dashboard-rev="10"
           data-app="ziro-work"
         >
           {/* ── Header ──────────────────────────────────────────────── */}
-          <div className="flex items-end justify-between">
+          <div
+            className="flex items-end justify-between"
+            style={{ animation: "fadeInUp 0.4s ease both" }}
+          >
             <div>
               <h1
                 className="text-2xl font-extrabold tracking-tight sm:text-3xl"
-                style={{ color: "var(--z-fg)" }}
+                style={{
+                  background: "linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
               >
                 Command Center
               </h1>
@@ -131,13 +147,14 @@ export function DashboardClient() {
             <div
               className="hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5"
               style={{
-                background: "rgba(0,255,136,0.08)",
-                border: "1px solid rgba(0,255,136,0.25)",
+                background: "rgba(0,255,136,0.07)",
+                border: "1px solid rgba(0,255,136,0.22)",
+                boxShadow: "0 0 20px rgba(0,255,136,0.08)",
               }}
             >
               <div
                 className="h-2 w-2 rounded-full"
-                style={{ background: "#00ff88", boxShadow: "0 0 6px #00ff88" }}
+                style={{ background: "#00ff88", animation: "livePulse 2s ease-in-out infinite" }}
               />
               <span className="text-[11px] font-bold" style={{ color: "#00ff88" }}>
                 Live
@@ -179,6 +196,7 @@ export function DashboardClient() {
               title="Revenue Gap Engine"
               description="Open capacity by location — money left on the table"
               accentColor="#ef4444"
+              featured
             >
               <RevenueGaps />
             </Panel>

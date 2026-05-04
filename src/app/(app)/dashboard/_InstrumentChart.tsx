@@ -1,21 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useDashboardTasks } from "./_useDashboardTasks";
 
 // Instrument accent colors — consistent brand palette
 const INSTRUMENT_COLORS: Record<string, string> = {
-  piano:    "#7c3aed",
-  guitar:   "#00ff88",
-  drums:    "#ef4444",
-  vocals:   "#ec4899",
-  violin:   "#2563eb",
-  bass:     "#d97706",
-  saxophone:"#f59e0b",
-  cello:    "#06b6d4",
-  flute:    "#a78bfa",
-  trumpet:  "#fb923c",
-  trombone: "#84cc16",
-  ukulele:  "#38bdf8",
+  piano:     "#7c3aed",
+  guitar:    "#00ff88",
+  drums:     "#ef4444",
+  vocals:    "#ec4899",
+  violin:    "#2563eb",
+  bass:      "#d97706",
+  saxophone: "#f59e0b",
+  cello:     "#06b6d4",
+  flute:     "#a78bfa",
+  trumpet:   "#fb923c",
+  trombone:  "#84cc16",
+  ukulele:   "#38bdf8",
 };
 
 function instrumentColor(name: string): string {
@@ -25,6 +26,14 @@ function instrumentColor(name: string): string {
 export function InstrumentChart() {
   const tasksData = useDashboardTasks();
   const instruments = tasksData ? tasksData.topInstruments : null;
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    if (instruments && instruments.length > 0) {
+      const t = setTimeout(() => setAnimated(true), 100);
+      return () => clearTimeout(t);
+    }
+  }, [instruments]);
 
   if (!instruments) {
     return (
@@ -32,8 +41,13 @@ export function InstrumentChart() {
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="h-9 animate-pulse rounded-xl"
-            style={{ background: "#1a1a1c", border: "1px solid rgba(255,255,255,0.05)" }}
+            className="h-9 rounded-xl"
+            style={{
+              background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.6s infinite",
+              border: "1px solid rgba(255,255,255,0.05)",
+            }}
           />
         ))}
       </div>
@@ -52,42 +66,47 @@ export function InstrumentChart() {
   const total = instruments.reduce((s, i) => s + i.studentCount, 0);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--z-muted)" }}>
-        {total} active students across {instruments.length} instrument{instruments.length !== 1 ? "s" : ""}
+        {total} active students · {instruments.length} instrument{instruments.length !== 1 ? "s" : ""}
       </p>
 
-      {instruments.map((row) => {
+      {instruments.map((row, idx) => {
         const color = instrumentColor(row.instrument);
         const barPct = Math.round((row.studentCount / max) * 100);
         const sharePct = Math.round((row.studentCount / total) * 100);
+        const delay = `${idx * 60}ms`;
 
         return (
-          <div key={row.instrument} className="flex items-center gap-3">
-            {/* Instrument name */}
+          <div key={row.instrument} className="flex items-center gap-3 group">
+            {/* Instrument pill */}
             <span
-              className="w-20 shrink-0 truncate text-xs font-semibold capitalize"
-              style={{ color: "var(--z-fg)" }}
+              className="w-20 shrink-0 truncate rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize text-center"
+              style={{
+                background: `${color}1e`,
+                color,
+              }}
             >
               {row.instrument}
             </span>
 
             {/* Bar track */}
             <div
-              className="relative h-6 flex-1 overflow-hidden rounded-lg"
-              style={{ background: "rgba(255,255,255,0.05)" }}
+              className="relative h-7 flex-1 overflow-hidden rounded-lg"
+              style={{ background: "rgba(255,255,255,0.04)" }}
             >
               <div
-                className="flex h-full items-center rounded-lg px-2 transition-all duration-700"
+                className="flex h-full items-center rounded-lg px-2.5"
                 style={{
-                  width: `${barPct}%`,
-                  background: `linear-gradient(90deg, ${color}55, ${color}99)`,
-                  boxShadow: `0 0 12px ${color}44`,
-                  minWidth: "2rem",
+                  width: animated ? `${Math.max(barPct, 8)}%` : "0%",
+                  background: `linear-gradient(90deg, ${color}40, ${color}80)`,
+                  boxShadow: `0 0 14px ${color}44, inset 0 1px 0 ${color}30`,
+                  transition: `width 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delay}`,
+                  minWidth: animated ? "2.5rem" : "0",
                 }}
               >
                 <span
-                  className="text-[10px] font-extrabold whitespace-nowrap"
+                  className="text-[11px] font-extrabold whitespace-nowrap"
                   style={{ color }}
                 >
                   {row.studentCount}

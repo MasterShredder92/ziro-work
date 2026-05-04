@@ -14,7 +14,6 @@ import {
   Calendar,
 } from "lucide-react";
 
-// Inline — was in /components/dashboard/constants.ts (deleted)
 const DASHBOARD_TENANT_ID =
   process.env.NEXT_PUBLIC_TENANT_ID ?? "00000000-0000-0000-0000-000000000001";
 
@@ -53,12 +52,15 @@ function eventTitle(event: EventLog): string {
   return t.replace(/_/g, " ");
 }
 
+function eventSubtitle(event: EventLog): string {
+  return (event.event_type ?? "").replace(/_/g, " ");
+}
+
 function eventHref(event: EventLog): string | null {
   const t = event.event_type ?? "";
   const p = (event.payload ?? {}) as Record<string, unknown>;
   if (/payment|paid|invoice/.test(t)) {
     if (p.family_id) return `/crm/families/${p.family_id}`;
-    if (p.invoice_id) return `/invoices`;
     return `/invoices`;
   }
   if (/enroll/.test(t)) {
@@ -111,38 +113,76 @@ function EventRow({
   event,
   isRecent,
   accent,
+  isLast,
 }: {
   event: EventLog;
   isRecent: boolean;
   accent: string;
+  isLast: boolean;
 }) {
   const href = eventHref(event);
   const inner = (
     <div
-      className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:-translate-y-px"
+      className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-all duration-150"
       style={{
-        background: isRecent ? `${accent}08` : "rgba(255,255,255,0.02)",
-        border: `1px solid ${isRecent ? accent + "22" : "rgba(255,255,255,0.04)"}`,
+        background: isRecent ? `${accent}08` : "rgba(255,255,255,0.015)",
+        border: `1px solid ${isRecent ? accent + "20" : "rgba(255,255,255,0.04)"}`,
         cursor: href ? "pointer" : "default",
       }}
+      onMouseEnter={(e) => {
+        if (!href) return;
+        e.currentTarget.style.transform = "translateY(-1px)";
+        e.currentTarget.style.background = isRecent ? `${accent}12` : "rgba(255,255,255,0.03)";
+        e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.15)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.background = isRecent ? `${accent}08` : "rgba(255,255,255,0.015)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
     >
-      <div
-        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: `${accent}20`, color: accent }}
-      >
-        {eventIcon(event)}
+      {/* Timeline column */}
+      <div className="flex flex-col items-center shrink-0 pt-0.5">
+        {/* Icon badge */}
+        <div
+          className="flex h-7 w-7 items-center justify-center rounded-lg"
+          style={{
+            background: `${accent}20`,
+            color: accent,
+            boxShadow: isRecent ? `0 0 10px ${accent}40` : undefined,
+          }}
+        >
+          {eventIcon(event)}
+        </div>
+        {/* Connector line */}
+        {!isLast && (
+          <div
+            className="mt-1 w-px flex-1"
+            style={{
+              background: `linear-gradient(to bottom, ${accent}30, transparent)`,
+              minHeight: "12px",
+            }}
+          />
+        )}
       </div>
-      <div className="flex-1 min-w-0">
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 pb-0.5">
         <p className="truncate text-xs font-semibold" style={{ color: "var(--z-fg)" }}>
           {eventTitle(event)}
         </p>
-        <p className="text-[10px]" style={{ color: "var(--z-muted)" }}>
-          {event.event_type?.replace(/_/g, " ")}
+        <p className="text-[10px] mt-0.5" style={{ color: "var(--z-muted)" }}>
+          {eventSubtitle(event)}
         </p>
       </div>
+
+      {/* Timestamp */}
       <span
-        className="shrink-0 text-[10px] font-medium"
-        style={{ color: isRecent ? accent : "var(--z-muted)" }}
+        className="shrink-0 text-[10px] font-medium mt-0.5"
+        style={{
+          color: isRecent ? accent : "var(--z-muted)",
+          textShadow: isRecent ? `0 0 8px ${accent}50` : undefined,
+        }}
       >
         {timeAgo(event.created_at)}
       </span>
@@ -207,11 +247,20 @@ export function ActivityStream() {
   }
 
   return (
-    <div className="space-y-1">
-      {merged.map((event) => {
+    <div className="space-y-1.5">
+      {merged.map((event, idx) => {
         const accent = eventAccent(event);
         const isRecent = new Date(event.created_at).getTime() > weekCutMs;
-        return <EventRow key={event.id} event={event} isRecent={isRecent} accent={accent} />;
+        const isLast = idx === merged.length - 1;
+        return (
+          <EventRow
+            key={event.id}
+            event={event}
+            isRecent={isRecent}
+            accent={accent}
+            isLast={isLast}
+          />
+        );
       })}
 
       <div ref={sentinelRef} className="h-4 w-full" aria-hidden />

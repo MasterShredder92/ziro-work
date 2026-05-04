@@ -14,9 +14,9 @@ function usd(cents: number) {
 
 const LOCATION_COLORS: Record<string, string> = {
   bellevue: "#7c3aed",
-  gretna: "#059669",
-  omaha: "#2563eb",
-  elkhorn: "#d97706",
+  gretna:   "#059669",
+  omaha:    "#2563eb",
+  elkhorn:  "#d97706",
 };
 
 function resolveLocColor(name: string, fallback: string | null): string {
@@ -25,6 +25,29 @@ function resolveLocColor(name: string, fallback: string | null): string {
     if (n.includes(key)) return val;
   }
   return fallback ?? "#6366f1";
+}
+
+// Avatar initials from family name
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+// Deterministic color from name
+function avatarColor(name: string): [string, string] {
+  const palette: [string, string][] = [
+    ["#00ff88", "rgba(0,255,136,0.15)"],
+    ["#2563eb", "rgba(37,99,235,0.15)"],
+    ["#7c3aed", "rgba(124,58,237,0.15)"],
+    ["#d97706", "rgba(217,119,6,0.15)"],
+    ["#ef4444", "rgba(239,68,68,0.15)"],
+    ["#ec4899", "rgba(236,72,153,0.15)"],
+    ["#06b6d4", "rgba(6,182,212,0.15)"],
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffff;
+  return palette[hash % palette.length];
 }
 
 function SectionBlock({
@@ -44,14 +67,15 @@ function SectionBlock({
     <div
       className="rounded-xl p-3"
       style={{
-        background: `${accent}08`,
-        border: `1px solid ${accent}22`,
+        background: `linear-gradient(135deg, ${accent}06 0%, transparent 100%)`,
+        border: `1px solid ${accent}20`,
+        boxShadow: `inset 0 1px 0 ${accent}10`,
       }}
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2.5 flex items-center gap-2">
         <div
           className="flex h-6 w-6 items-center justify-center rounded-lg"
-          style={{ background: `${accent}20`, color: accent }}
+          style={{ background: `${accent}20`, color: accent, boxShadow: `0 0 8px ${accent}30` }}
         >
           {icon}
         </div>
@@ -64,7 +88,7 @@ function SectionBlock({
         {count > 0 && (
           <span
             className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-extrabold"
-            style={{ background: `${accent}25`, color: accent }}
+            style={{ background: `${accent}22`, color: accent, boxShadow: `0 0 8px ${accent}30` }}
           >
             {count}
           </span>
@@ -92,8 +116,13 @@ export function ActionPanel() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-16 animate-pulse rounded-xl"
-            style={{ background: "#1a1a1c", border: "1px solid rgba(255,255,255,0.05)" }}
+            className="h-16 rounded-xl"
+            style={{
+              background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.6s infinite",
+              border: "1px solid rgba(255,255,255,0.05)",
+            }}
           />
         ))}
       </div>
@@ -123,20 +152,46 @@ export function ActionPanel() {
           <EmptyState label="No outstanding balances." />
         ) : (
           <div className="space-y-1">
-            {overdue.slice(0, 5).map((inv) => (
-              <Link
-                key={inv.invoiceId}
-                href={`/crm/families/${inv.familyId}`}
-                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-all duration-100 hover:bg-[rgba(239,68,68,0.08)]"
-              >
-                <span className="truncate font-medium" style={{ color: "var(--z-fg)" }}>
-                  {inv.familyName}
-                </span>
-                <span className="ml-3 shrink-0 font-extrabold" style={{ color: "#ef4444" }}>
-                  {usd(inv.balanceCents)}
-                </span>
-              </Link>
-            ))}
+            {overdue.slice(0, 5).map((inv) => {
+              const [fg, bg] = avatarColor(inv.familyName);
+              return (
+                <Link
+                  key={inv.invoiceId}
+                  href={`/crm/families/${inv.familyId}`}
+                  className="flex items-center gap-2.5 rounded-xl px-2 py-2 text-xs transition-all duration-150"
+                  style={{
+                    borderLeft: "3px solid #ef4444",
+                    background: "rgba(239,68,68,0.04)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(239,68,68,0.04)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  {/* Avatar */}
+                  <div
+                    className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold"
+                    style={{
+                      background: `radial-gradient(circle at 30% 30%, ${bg.replace("0.15","0.4")}, ${bg.replace("0.15","0.25")})`,
+                      color: fg,
+                      border: `1.5px solid ${fg}40`,
+                    }}
+                  >
+                    {initials(inv.familyName)}
+                  </div>
+                  <span className="flex-1 truncate font-medium" style={{ color: "var(--z-fg)" }}>
+                    {inv.familyName}
+                  </span>
+                  <span className="ml-2 shrink-0 font-extrabold" style={{ color: "#ef4444" }}>
+                    {usd(inv.balanceCents)}
+                  </span>
+                </Link>
+              );
+            })}
             {overdue.length > 5 && (
               <Link
                 href="/invoices?status=UNPAID"
@@ -167,11 +222,12 @@ export function ActionPanel() {
                 <div
                   key={loc.locationId}
                   className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs"
+                  style={{ background: `${color}08`, border: `1px solid ${color}18` }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <div
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: color, boxShadow: `0 0 5px ${color}` }}
+                      style={{ background: color, boxShadow: `0 0 6px ${color}` }}
                     />
                     <span className="truncate font-semibold" style={{ color }}>
                       {loc.locationName}
@@ -179,7 +235,7 @@ export function ActionPanel() {
                   </div>
                   <span
                     className="ml-3 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                    style={{ background: `${color}18`, color }}
+                    style={{ background: `${color}20`, color, boxShadow: `0 0 6px ${color}30` }}
                   >
                     {loc.openSlots} slots
                   </span>
@@ -187,12 +243,12 @@ export function ActionPanel() {
               );
             })}
             {instruments.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 px-2 pt-1">
+              <div className="flex flex-wrap gap-1.5 px-2 pt-1.5">
                 {instruments.slice(0, 4).map((i) => (
                   <span
                     key={i.instrument}
                     className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
-                    style={{ background: "rgba(37,99,235,0.14)", color: "#2563eb" }}
+                    style={{ background: "rgba(37,99,235,0.12)", color: "#2563eb" }}
                   >
                     {i.instrument} · {i.studentCount}
                   </span>
@@ -218,6 +274,7 @@ export function ActionPanel() {
               <div
                 key={d.dayOfWeek}
                 className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs"
+                style={{ background: "rgba(217,119,6,0.06)", border: "1px solid rgba(217,119,6,0.15)" }}
               >
                 <span className="font-semibold" style={{ color: "var(--z-fg)" }}>
                   {d.dayName}
@@ -225,7 +282,7 @@ export function ActionPanel() {
                 <div className="flex items-center gap-2">
                   <span
                     className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                    style={{ background: "rgba(217,119,6,0.15)", color: "#d97706" }}
+                    style={{ background: "rgba(217,119,6,0.15)", color: "#d97706", boxShadow: "0 0 6px rgba(217,119,6,0.3)" }}
                   >
                     {d.sessions} sessions
                   </span>

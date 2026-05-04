@@ -82,7 +82,7 @@ export async function GET() {
       const primary = instruments[0] ?? "other";
       if (!instrumentMap[primary]) instrumentMap[primary] = { rooms: 0, students: 0, gap: 0 };
       instrumentMap[primary].rooms += 1;
-      instrumentMap[primary].gap += slotsPerRoomPerMonth;
+      instrumentMap[primary].gap += STUDENTS_PER_ROOM_CAPACITY;
     }
     for (const student of locStudents) {
       const inst = (student.instrument ?? "other").toLowerCase();

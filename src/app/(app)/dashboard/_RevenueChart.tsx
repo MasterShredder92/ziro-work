@@ -24,33 +24,34 @@ function DonutSegment({
   pct,
   offset,
   color,
-  r = 54,
+  r = 62,
+  animated,
 }: {
   pct: number;
   offset: number;
   color: string;
   r?: number;
+  animated: boolean;
 }) {
   const circumference = 2 * Math.PI * r;
-  const dash = (pct / 100) * circumference;
+  const dash = animated ? (pct / 100) * circumference : 0;
   const gap = circumference - dash;
-  // rotate so segments start from top (-90deg)
   const rotation = -90 + (offset / 100) * 360;
   return (
     <circle
-      cx="64"
-      cy="64"
+      cx="76"
+      cy="76"
       r={r}
       fill="none"
       stroke={color}
-      strokeWidth="12"
+      strokeWidth="11"
       strokeDasharray={`${dash} ${gap}`}
       strokeLinecap="round"
       style={{
         transform: `rotate(${rotation}deg)`,
-        transformOrigin: "64px 64px",
-        transition: "stroke-dasharray 0.8s ease",
-        filter: `drop-shadow(0 0 6px ${color}88)`,
+        transformOrigin: "76px 76px",
+        transition: "stroke-dasharray 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+        filter: `drop-shadow(0 0 8px ${color}aa)`,
       }}
     />
   );
@@ -58,12 +59,16 @@ function DonutSegment({
 
 export function RevenueChart() {
   const [m, setM] = useState<DashboardMetrics | null>(null);
+  const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
     fetch("/api/dashboard/metrics", { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
-        if (json?.collectedCents !== undefined) setM(json as DashboardMetrics);
+        if (json?.collectedCents !== undefined) {
+          setM(json as DashboardMetrics);
+          setTimeout(() => setAnimated(true), 150);
+        }
       })
       .catch(() => null);
   }, []);
@@ -73,8 +78,13 @@ export function RevenueChart() {
   if (!m) {
     return (
       <div
-        className="h-full min-h-[220px] animate-pulse rounded-2xl"
-        style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.06)" }}
+        className="h-full min-h-[220px] rounded-2xl"
+        style={{
+          background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.6s infinite",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
       />
     );
   }
@@ -90,7 +100,6 @@ export function RevenueChart() {
     { pct: scheduledPct, color: "#d97706", label: "Scheduled", value: usd(m.scheduledCents) },
   ];
 
-  // compute cumulative offsets
   let cumulative = 0;
   const segmentsWithOffset = segments.map((s) => {
     const seg = { ...s, offset: cumulative };
@@ -99,14 +108,7 @@ export function RevenueChart() {
   });
 
   return (
-    <div
-      className="flex h-full flex-col gap-4 rounded-2xl p-5"
-      style={{
-        background: "#111113",
-        border: "1px solid rgba(255,255,255,0.07)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-      }}
-    >
+    <div className="flex h-full flex-col gap-5">
       {/* Header */}
       <div>
         <p className="text-[0.6rem] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--z-muted)" }}>
@@ -121,18 +123,27 @@ export function RevenueChart() {
       </div>
 
       {/* Donut + legend */}
-      <div className="flex items-center gap-5">
-        {/* SVG donut */}
+      <div className="flex items-center gap-6">
+        {/* SVG donut — 152px */}
         <div className="relative shrink-0">
-          <svg width="128" height="128" viewBox="0 0 128 128">
-            {/* track */}
+          <svg width="152" height="152" viewBox="0 0 152 152">
+            {/* Outer glow ring */}
             <circle
-              cx="64"
-              cy="64"
-              r="54"
+              cx="76"
+              cy="76"
+              r="70"
+              fill="none"
+              stroke="rgba(0,255,136,0.04)"
+              strokeWidth="1"
+            />
+            {/* Track */}
+            <circle
+              cx="76"
+              cy="76"
+              r="62"
               fill="none"
               stroke="rgba(255,255,255,0.05)"
-              strokeWidth="12"
+              strokeWidth="11"
             />
             {segmentsWithOffset.map((s) =>
               s.pct > 0 ? (
@@ -141,16 +152,20 @@ export function RevenueChart() {
                   pct={s.pct}
                   offset={s.offset}
                   color={s.color}
+                  animated={animated}
                 />
               ) : null,
             )}
           </svg>
-          {/* center label */}
+          {/* Center label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-lg font-extrabold leading-none" style={{ color: "var(--z-fg)" }}>
+            <p
+              className="text-2xl font-extrabold leading-none"
+              style={{ color: "#00ff88", textShadow: "0 0 20px rgba(0,255,136,0.4)" }}
+            >
               {collectedPct}%
             </p>
-            <p className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: "var(--z-muted)" }}>
+            <p className="text-[9px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: "var(--z-muted)" }}>
               collected
             </p>
           </div>
@@ -159,31 +174,49 @@ export function RevenueChart() {
         {/* Legend */}
         <div className="flex flex-col gap-3 flex-1 min-w-0">
           {segments.map((s) => (
-            <div key={s.label} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }}
-                />
-                <span className="truncate text-xs font-medium" style={{ color: "var(--z-muted)" }}>
-                  {s.label}
+            <div key={s.label}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }}
+                  />
+                  <span className="truncate text-xs font-medium" style={{ color: "var(--z-muted)" }}>
+                    {s.label}
+                  </span>
+                </div>
+                <span className="shrink-0 text-xs font-bold" style={{ color: "var(--z-fg)" }}>
+                  {s.value}
                 </span>
               </div>
-              <span className="shrink-0 text-xs font-bold" style={{ color: "var(--z-fg)" }}>
-                {s.value}
-              </span>
+              {/* Mini fill bar per segment */}
+              <div className="h-1 rounded-full overflow-hidden ml-4" style={{ background: "rgba(255,255,255,0.05)" }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: animated ? `${s.pct}%` : "0%",
+                    background: s.color,
+                    boxShadow: `0 0 8px ${s.color}66`,
+                    transition: "width 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                />
+              </div>
             </div>
           ))}
 
           {/* Projected next month */}
           <div
             className="mt-1 rounded-xl px-3 py-2"
-            style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)" }}
+            style={{
+              background: "rgba(124,58,237,0.1)",
+              border: "1px solid rgba(124,58,237,0.22)",
+              boxShadow: "inset 0 1px 0 rgba(124,58,237,0.1)",
+            }}
           >
             <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#7c3aed" }}>
               Next Month Projected
             </p>
-            <p className="text-sm font-extrabold" style={{ color: "#a78bfa" }}>
+            <p className="text-sm font-extrabold mt-0.5" style={{ color: "#a78bfa" }}>
               {usd(m.projectedMonthlyCents)}
             </p>
           </div>
@@ -192,7 +225,7 @@ export function RevenueChart() {
 
       {/* Collection progress bar */}
       <div>
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--z-muted)" }}>
             Collection Rate
           </span>
@@ -205,11 +238,12 @@ export function RevenueChart() {
           style={{ background: "rgba(255,255,255,0.06)" }}
         >
           <div
-            className="h-full rounded-full transition-all duration-700"
+            className="h-full rounded-full"
             style={{
-              width: `${collectedPct}%`,
+              width: animated ? `${collectedPct}%` : "0%",
               background: "linear-gradient(90deg, #00cc6a, #00ff88)",
-              boxShadow: "0 0 12px #00ff8866",
+              boxShadow: "0 0 14px #00ff8877",
+              transition: "width 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           />
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -30,6 +30,35 @@ function usd(cents: number) {
   }).format(cents / 100);
 }
 
+/** Animates a number from 0 to target over ~600ms */
+function useCountUp(target: number, enabled: boolean): number {
+  const [display, setDisplay] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!enabled || target === 0) {
+      setDisplay(target);
+      return;
+    }
+    const start = performance.now();
+    const duration = 600;
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(eased * target));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, enabled]);
+
+  return display;
+}
+
 type KpiTileProps = {
   label: string;
   value: string;
@@ -39,17 +68,34 @@ type KpiTileProps = {
   fillPct?: number;
   danger?: boolean;
   href?: string;
+  animate?: boolean;
 };
 
-function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href }: KpiTileProps) {
+function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href, animate }: KpiTileProps) {
   const color = danger ? "#ef4444" : accent;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(t);
+  }, []);
+
   const inner = (
     <div
-      className="relative flex min-h-[6.5rem] min-w-[9.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 sm:min-w-0 transition-transform duration-150 hover:-translate-y-0.5 cursor-pointer"
+      className="relative flex min-h-[6.5rem] min-w-[9.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 sm:min-w-0 cursor-pointer group"
       style={{
-        background: `radial-gradient(ellipse 90% 55% at 50% 0%, ${color}18, transparent 68%), #111113`,
-        border: `1px solid ${color}38`,
-        boxShadow: `0 0 0 1px ${color}22, 0 6px 28px ${color}14, inset 0 1px 0 rgba(255,255,255,0.04)`,
+        background: `radial-gradient(ellipse 90% 55% at 50% 0%, ${color}1a, transparent 68%), linear-gradient(160deg, #141416 0%, #111113 100%)`,
+        border: `1px solid ${color}30`,
+        boxShadow: `0 0 0 1px ${color}18, 0 8px 32px ${color}10, inset 0 1px 0 rgba(255,255,255,0.05)`,
+        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = `0 0 0 1px ${color}40, 0 16px 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.07)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = `0 0 0 1px ${color}18, 0 8px 32px ${color}10, inset 0 1px 0 rgba(255,255,255,0.05)`;
       }}
     >
       {/* label + icon */}
@@ -61,8 +107,12 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href }: Kpi
           {label}
         </p>
         <div
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: `${color}20`, color }}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150"
+          style={{
+            background: `${color}1e`,
+            color,
+            boxShadow: `0 0 10px ${color}30`,
+          }}
         >
           {icon}
         </div>
@@ -72,7 +122,10 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href }: Kpi
       <div className="mt-2">
         <p
           className="truncate text-xl font-extrabold tracking-tight sm:text-2xl"
-          style={{ color: danger ? "#ef4444" : "var(--z-fg)" }}
+          style={{
+            color: danger ? "#ef4444" : "var(--z-fg)",
+            textShadow: danger ? "0 0 20px rgba(239,68,68,0.3)" : undefined,
+          }}
         >
           {value}
         </p>
@@ -87,18 +140,25 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href }: Kpi
       {fillPct !== undefined ? (
         <div
           className="absolute bottom-0 left-0 right-0 h-[3px] rounded-b-2xl overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.05)" }}
+          style={{ background: "rgba(255,255,255,0.04)" }}
         >
           <div
-            className="h-full rounded-b-2xl transition-all duration-700"
+            className="h-full rounded-b-2xl"
             style={{
-              width: `${Math.min(100, Math.max(0, fillPct))}%`,
-              background: `linear-gradient(90deg, ${color}66, ${color})`,
-              boxShadow: `0 0 10px ${color}88`,
+              width: mounted ? `${Math.min(100, Math.max(0, fillPct))}%` : "0%",
+              background: `linear-gradient(90deg, ${color}55, ${color})`,
+              boxShadow: `0 0 12px ${color}99`,
+              transition: "width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           />
         </div>
       ) : null}
+
+      {/* Top-right corner glow */}
+      <div
+        className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-30"
+        style={{ background: `radial-gradient(circle, ${color}40, transparent 70%)` }}
+      />
     </div>
   );
 
@@ -110,17 +170,24 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href }: Kpi
 
 export function KpiStrip() {
   const [m, setM] = useState<DashboardMetrics | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     fetch("/api/dashboard/metrics", { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
-        if (json?.activeStudents !== undefined) setM(json as DashboardMetrics);
+        if (json?.activeStudents !== undefined) {
+          setM(json as DashboardMetrics);
+          setTimeout(() => setReady(true), 100);
+        }
       })
       .catch(() => null);
   }, []);
 
   const month = new Date().toLocaleString("default", { month: "long" });
+
+  // Animated student count
+  const animatedStudents = useCountUp(m?.activeStudents ?? 0, ready);
 
   const collectionPct =
     m && m.totalInvoicedCents > 0
@@ -135,10 +202,9 @@ export function KpiStrip() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="h-[6.5rem] animate-pulse rounded-2xl"
+            className="h-[6.5rem] rounded-2xl"
             style={{
-              background:
-                "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+              background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
               backgroundSize: "200% 100%",
               animation: "shimmer 1.6s infinite",
               border: "1px solid rgba(255,255,255,0.06)",
@@ -153,12 +219,13 @@ export function KpiStrip() {
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <KpiTile
         label="Active Students"
-        value={String(m.activeStudents)}
+        value={String(animatedStudents)}
         sub={`${m.activeFamilies} families`}
         icon={<Users className="h-3.5 w-3.5" />}
         accent="#00ff88"
         fillPct={Math.min(100, (m.activeStudents / 200) * 100)}
         href="/crm/families"
+        animate={ready}
       />
       <KpiTile
         label={`Collected · ${month}`}
