@@ -183,11 +183,12 @@ export async function buildLifecycleContext(studentId: string): Promise<Lifecycl
     return days >= 0 && days <= 30 && looksNegativeEventType(t);
   }).length;
 
-  // Inactivity: prefer explicit last_attendance_at; else derive from most recent attendance.
+  // Inactivity: prefer explicit last_attendance_at (backfilled from schedule_blocks),
+  // then most recent attendance row, then start_date as last resort.
+  // NEVER use first_lesson_date — that is the START date, not the last seen date.
   const lastAttendanceRaw =
     (student.last_attendance_at as string | null | undefined) ??
     ((attendance[0]?.lesson_date as string | undefined) ?? null) ??
-    (hasTruthyString(student.first_lesson_date) ? (student.first_lesson_date as string) : null) ??
     (hasTruthyString(student.start_date) ? (student.start_date as string) : null);
   const inactivityDays = lastAttendanceRaw
     ? (() => {

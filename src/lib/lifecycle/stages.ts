@@ -156,8 +156,10 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     autoAdvance: false,
     entry: (ctx) => hasEnrollmentSignal(ctx) && !isInactiveStudent(ctx),
     exit: (ctx) => {
-      // Service delivery continues unless churn/inactivity indicates retention/win-back.
-      return ctx.riskBand === "high" || (ctx.signals.inactivityDays != null && ctx.signals.inactivityDays >= 30);
+      // Exit service-delivery only when genuinely inactive (30+ days since last booked lesson)
+      // OR high risk from overdue invoices + missed lessons. Active students stay here.
+      const isInactive = ctx.signals.inactivityDays != null && ctx.signals.inactivityDays >= 30;
+      return (ctx.riskBand === "high" && isInactive) || isInactiveStudent(ctx);
     },
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
@@ -174,8 +176,14 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     description: "When things are steady, stay visible — families notice consistency before referrals.",
     agent: "star",
     autoAdvance: false,
-    entry: (ctx) => hasEnrollmentSignal(ctx) && !isInactiveStudent(ctx) && ctx.riskBand !== "high",
-    exit: (ctx) => ctx.riskBand === "high",
+    // Relationship: active students with 4+ lessons who are in good standing
+    entry: (ctx) => {
+      const lessons = typeof (ctx.student?.total_lessons_taken as number | undefined) === "number"
+        ? (ctx.student!.total_lessons_taken as number)
+        : 0;
+      return hasEnrollmentSignal(ctx) && !isInactiveStudent(ctx) && ctx.riskBand !== "high" && lessons >= 4;
+    },
+    exit: (ctx) => ctx.riskBand === "high" || isInactiveStudent(ctx),
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
       if (ctx.signals.missedLessons30d >= 2) {
@@ -190,8 +198,9 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     description: "When warning lights turn on, step in early with a clear save plan.",
     agent: "star",
     autoAdvance: false,
+    // Retention: active students with high risk (overdue invoices + missed lessons)
     entry: (ctx) => hasEnrollmentSignal(ctx) && !isInactiveStudent(ctx) && ctx.riskBand === "high",
-    exit: (ctx) => ctx.riskBand !== "high",
+    exit: (ctx) => ctx.riskBand !== "high" || isInactiveStudent(ctx),
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
       if (ctx.signals.inactivityDays != null && ctx.signals.inactivityDays >= 45) {
