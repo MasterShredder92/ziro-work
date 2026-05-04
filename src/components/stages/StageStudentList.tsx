@@ -1,16 +1,47 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { List, type ListItem } from "@/components/ui/List";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/components/ui/utils";
 
-function OpenStudentButton({ id }: { id: string }) {
+function OpenStudentButton({ id, isLead }: { id: string; isLead?: boolean }) {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    if (!isLead) {
+      router.push(`/students/${id}`);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${id}/promote`, { method: "POST" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(body.error ?? "Could not open student profile. Try again.");
+        return;
+      }
+      const body = (await res.json()) as { studentId: string };
+      router.push(`/students/${body.studentId}`);
+    } catch {
+      alert("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Button type="button" variant="secondary" size="sm" onClick={() => router.push(`/students/${id}`)}>
-      Open student
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      onClick={() => void handleClick()}
+      disabled={loading}
+    >
+      {loading ? "Opening…" : isLead ? "Open profile" : "Open student"}
     </Button>
   );
 }
@@ -28,6 +59,8 @@ export type StageStudentListRow = {
   blockers: string[];
   nextStep: string;
   riskBand: "low" | "medium" | "high";
+  /** True when this row is a lead (not yet a student record) */
+  isLead?: boolean;
 };
 
 export type StageStudentListProps = {
@@ -52,7 +85,16 @@ export function StageStudentList({ students, className }: StageStudentListProps)
 
     return {
       id: s.id,
-      title: s.name,
+      title: (
+        <span className="flex items-center gap-2">
+          {s.name}
+          {s.isLead ? (
+            <span className="rounded-full bg-[color-mix(in_oklab,var(--z-accent),transparent_80%)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--z-accent)]">
+              Lead
+            </span>
+          ) : null}
+        </span>
+      ),
       description: (
         <div className="space-y-2">
         {s.blockers.length > 0 ? (
@@ -104,7 +146,7 @@ export function StageStudentList({ students, className }: StageStudentListProps)
         <Badge variant={riskVariant(s.riskBand)} active={s.riskBand !== "low"}>
           {s.riskBand === "low" ? "On track" : s.riskBand === "medium" ? "Watch closely" : "Needs help now"}
         </Badge>
-        <OpenStudentButton id={s.id} />
+        <OpenStudentButton id={s.id} isLead={s.isLead} />
         </div>
       ),
     };

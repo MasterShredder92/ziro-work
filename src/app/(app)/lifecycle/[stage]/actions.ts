@@ -28,6 +28,8 @@ export type LifecycleStageSurfaceDTO = {
     blockers: string[];
     nextStep: string;
     riskBand: "low" | "medium" | "high";
+    /** True when this row is a lead (not yet a student record) */
+    isLead?: boolean;
   }>;
   stageSummary: string;
   warnings: Array<{
@@ -351,7 +353,8 @@ async function projectStudentToStage(
         family_phone: rowContact.family_phone,
         blockers: [],
         nextStep: lastNote || `Follow up with ${fullName}${instrument ? " (" + instrument + ")" : ""}.`,
-        riskBand: "low",
+        riskBand: "low" as const,
+        isLead: true as const,
       },
       degraded: false,
       warnings: [],
