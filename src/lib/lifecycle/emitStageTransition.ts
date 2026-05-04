@@ -21,7 +21,7 @@ function getPreviousStageFromEvents(events: Record<string, unknown>[]): string |
 
 /**
  * Compare previous vs new computed stage and, when changed, emit lifecycle events.
- * This is intentionally best-effort; it must not break agent runs.
+ * This is intentionally best-effort; it must not block the main thread.
  */
 export async function emitStageTransition(input: {
   tenantId: string;

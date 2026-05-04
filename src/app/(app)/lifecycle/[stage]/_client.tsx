@@ -88,16 +88,13 @@ function StageSurfaceLoaded({
         ) : null}
         {data ? (
           <>
-            {/* Stage header — agent name shown as badge inside */}
             <StageHeader
               stageName={data.stageName}
               description={data.stageDescription}
-              agentName={data.agentDisplayName}
             />
-            {/* Agent summary + next steps — inline, no duplicate card */}
             <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-[var(--z-space-5)] py-[var(--z-space-4)] space-y-[var(--z-space-3)]">
               <p className="text-sm leading-relaxed text-[color-mix(in_oklab,var(--z-fg),transparent_22%)]">
-                {data.agentSummary}
+                {data.stageSummary}
               </p>
               {nextActions.length > 0 ? (
                 <div className="space-y-1.5">

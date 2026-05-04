@@ -62,8 +62,6 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
           </p>
         </div>
 
-        {/* ── STAR agent bar ── */}
-
         {/* ── Mobile: dropdown stage selector ── */}
         <div className="sm:hidden">
           <label className="sr-only" htmlFor="stage-select">Select stage</label>

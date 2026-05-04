@@ -19,8 +19,6 @@ export type LifecycleStageSurfaceDTO = {
   stageId: LifecycleStageId;
   stageName: string;
   stageDescription: string;
-  agentKey: string;
-  agentDisplayName: string;
   students: Array<{
     id: string;
     name: string;
@@ -31,25 +29,12 @@ export type LifecycleStageSurfaceDTO = {
     nextStep: string;
     riskBand: "low" | "medium" | "high";
   }>;
-  agentSummary: string;
+  stageSummary: string;
   warnings: Array<{
     code: string;
     message: string;
   }>;
 };
-
-function formatAgentDisplayName(raw: string): string {
-  const table: Record<string, string> = {
-    star: "STAR",
-    ziro: "Ziro",
-    ruby: "Ruby",
-    stewie: "Stewie",
-    vader: "Vader",
-    bub: "Bub",
-    sid: "Sid",
-  };
-  return table[raw] ?? raw.replace(/-/g, " ");
-}
 
 function nextStepLabel(computed: ComputedLifecycle): string {
   if (computed.blockers.length > 0) {
@@ -145,7 +130,7 @@ function inferOperationalStage(row: Record<string, unknown>): LifecycleStageId {
         ? Number(totalLessonsRaw)
         : 0;
 
-  if (Number.isFinite(totalLessons) && totalLessons >= 8) return "relationship";
+  if (Number.isFinite(totalLessons) && totalLessons >= 4) return "relationship";
   if (
     (Number.isFinite(totalLessons) && totalLessons >= 1) ||
     hasValue(row, "first_lesson_date") ||
@@ -464,17 +449,14 @@ export async function loadLifecycleStageSurface(
 
     const stageScopedRows = effectiveRows.filter((row) => inferOperationalStage(row) === stageId);
     if (stageScopedRows.length === 0) {
-      const agentDisplayName = formatAgentDisplayName(def.agent);
       return {
         ok: true,
         data: {
           stageId: def.id,
           stageName: def.name,
           stageDescription: def.description,
-          agentKey: def.agent,
-          agentDisplayName,
           students: [],
-          agentSummary: `0 students in ${def.name}`,
+          stageSummary: `0 students in ${def.name}`,
           warnings: compactWarnings(warnings),
         },
       };
@@ -518,10 +500,9 @@ export async function loadLifecycleStageSurface(
     const compactedWarnings = compactWarnings(warnings);
     matched.sort((a, b) => a.name.localeCompare(b.name));
 
-    const agentDisplayName = formatAgentDisplayName(def.agent);
     const blocked = matched.filter((s) => s.blockers.length > 0).length;
     const degradedSummary = degradedCount > 0 ? ` · ${degradedCount} fallback` : "";
-    const agentSummary = `${matched.length} student${matched.length === 1 ? "" : "s"} in ${def.name}${
+    const stageSummary = `${matched.length} student${matched.length === 1 ? "" : "s"} in ${def.name}${
       blocked ? ` · ${blocked} need attention` : ""
     }${degradedSummary}`;
 
@@ -531,10 +512,8 @@ export async function loadLifecycleStageSurface(
         stageId: def.id,
         stageName: def.name,
         stageDescription: def.description,
-        agentKey: def.agent,
-        agentDisplayName,
         students: matched,
-        agentSummary,
+        stageSummary,
         warnings: compactedWarnings,
       },
     };

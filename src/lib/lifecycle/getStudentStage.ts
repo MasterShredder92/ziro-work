@@ -32,15 +32,6 @@ export async function getStudentStage(studentId: string): Promise<ComputedLifecy
     computed,
   });
 
-  // Win-back trigger: on entering win-back, kick off win-back actions.
-  // This is best-effort and uses existing task queue primitives via events; downstream processors can react.
-  if (computed.stage.id === "win-back") {
-    // Emit a single marker event so downstream agents can schedule sequences.
-    // Transition insertion above includes stage entry; this provides a dedicated win-back start.
-    // (Best-effort; failure is logged in emitStageTransition.)
-    // No-op here beyond event emission to keep this module deterministic.
-  }
-
   return computed;
 }
 

@@ -44,7 +44,6 @@ export type LifecycleStageDefinition = {
   id: LifecycleStageId;
   name: string;
   description: string;
-  agent: string;
   autoAdvance: boolean;
 
   /** True if the student has reached this stage (or beyond). */

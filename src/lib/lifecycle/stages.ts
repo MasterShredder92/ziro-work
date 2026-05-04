@@ -36,7 +36,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "intake",
     name: "Inquiries",
     description: "New contacts from web, phone, walk-ins — capture who they are and how to reach them.",
-    agent: "star",
     autoAdvance: true,
     entry: () => true,
     exit: (ctx) => {
@@ -52,7 +51,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
       if (!ctx.lead) out.push(blocker("missing_lead", "Add how they found you and what they want."));
-      // Contact data lives on the family record; student.email/phone were dropped.
       const email = (ctx.student?.primary_email as string | null | undefined) ?? null;
       const phone = (ctx.student?.primary_phone as string | null | undefined) ?? null;
       if (!email && !phone) {
@@ -65,7 +63,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "lead-work",
     name: "Follow-up",
     description: "Stay in touch until they are ready to put a lesson on the calendar.",
-    agent: "star",
     autoAdvance: true,
     entry: (ctx) => {
       const leadStatus = (ctx.lead?.status as string | undefined) ?? null;
@@ -95,7 +92,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "scheduling",
     name: "Scheduling",
     description: "Match a teacher and lock in a trial or first lesson time.",
-    agent: "star",
     autoAdvance: true,
     entry: (ctx) => {
       const leadStatus = (ctx.lead?.status as string | undefined) ?? null;
@@ -127,7 +123,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "enrollment",
     name: "Enrollment",
     description: "Plans, paperwork, and payment so regular lessons can start without loose ends.",
-    agent: "star",
     autoAdvance: true,
     entry: (ctx) => {
       const trialStatus = (ctx.trial?.status as string | undefined) ?? null;
@@ -135,7 +130,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     },
     exit: (ctx) => {
       if (!hasEnrollmentSignal(ctx)) return false;
-      // Exit enrollment once the student has started receiving service (attendance) or teacher assignment + schedule is set.
       return ctx.serviceStarted || (ctx.teacherAssigned && ctx.scheduled);
     },
     blockers: (ctx) => {
@@ -152,12 +146,9 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "service-delivery",
     name: "Ongoing lessons",
     description: "The day-to-day: attendance, subs, billing signals, and keeping the schedule honest.",
-    agent: "star",
     autoAdvance: false,
     entry: (ctx) => hasEnrollmentSignal(ctx) && !isInactiveStudent(ctx),
     exit: (ctx) => {
-      // Exit service-delivery only when genuinely inactive (30+ days since last booked lesson)
-      // OR high risk from overdue invoices + missed lessons. Active students stay here.
       const isInactive = ctx.signals.inactivityDays != null && ctx.signals.inactivityDays >= 30;
       return (ctx.riskBand === "high" && isInactive) || isInactiveStudent(ctx);
     },
@@ -174,9 +165,7 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "relationship",
     name: "Client care",
     description: "When things are steady, stay visible — families notice consistency before referrals.",
-    agent: "star",
     autoAdvance: false,
-    // Relationship: active students with 4+ lessons who are in good standing
     entry: (ctx) => {
       const lessons = typeof (ctx.student?.total_lessons_taken as number | undefined) === "number"
         ? (ctx.student!.total_lessons_taken as number)
@@ -196,9 +185,7 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "retention",
     name: "Retention",
     description: "When warning lights turn on, step in early with a clear save plan.",
-    agent: "star",
     autoAdvance: false,
-    // Retention: active students with high risk (overdue invoices + missed lessons)
     entry: (ctx) => hasEnrollmentSignal(ctx) && !isInactiveStudent(ctx) && ctx.riskBand === "high",
     exit: (ctx) => ctx.riskBand !== "high" || isInactiveStudent(ctx),
     blockers: (ctx) => {
@@ -213,7 +200,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     id: "win-back",
     name: "Invite them back",
     description: "Reach out with a simple, respectful comeback offer.",
-    agent: "star",
     autoAdvance: false,
     entry: (ctx) => {
       const days = ctx.signals.inactivityDays;
@@ -222,7 +208,6 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
     exit: () => false,
     blockers: (ctx) => {
       const out: LifecycleBlocker[] = [];
-      // Contact data lives on the family record; student.email/phone were dropped.
       const email = (ctx.student?.primary_email as string | null | undefined) ?? null;
       const phone = (ctx.student?.primary_phone as string | null | undefined) ?? null;
       if (!email && !phone) {
@@ -236,4 +221,3 @@ export const lifecycleStages: LifecycleStageDefinition[] = [
 export function getLifecycleStage(id: string): LifecycleStageDefinition | null {
   return lifecycleStages.find((s) => s.id === id) ?? null;
 }
-
