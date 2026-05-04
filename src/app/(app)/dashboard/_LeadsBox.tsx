@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { UserPlus, ArrowRight, Clock } from "lucide-react";
+import { useDashboardTasks } from "./_useDashboardTasks";
 
 type UncontactedLead = {
   leadId: string;
@@ -48,19 +48,8 @@ function instrColor(name: string | null): string {
 }
 
 export function LeadsBox() {
-  const [leads, setLeads] = useState<UncontactedLead[] | null>(null);
-
-  useEffect(() => {
-    fetch("/api/dashboard/tasks", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (Array.isArray(json?.uncontactedLeads)) {
-          setLeads(json.uncontactedLeads as UncontactedLead[]);
-        }
-      })
-      .catch(() => null);
-  }, []);
-
+  const tasksData = useDashboardTasks();
+  const leads: UncontactedLead[] | null = tasksData ? tasksData.uncontactedLeads : null;
   const count = leads?.length ?? 0;
 
   return (
@@ -115,7 +104,7 @@ export function LeadsBox() {
             </div>
           )}
           <Link
-            href="/lifecycle/lead-work"
+            href="/crm/leads"
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={{
               background: count > 0 ? "rgba(0,255,136,0.12)" : "rgba(255,255,255,0.06)",
@@ -161,7 +150,7 @@ export function LeadsBox() {
             return (
               <Link
                 key={lead.leadId}
-                href="/lifecycle/lead-work"
+                href={`/crm/leads/${lead.leadId}`}
                 className="group flex flex-col gap-2 rounded-xl p-3 transition-all duration-150 hover:-translate-y-px"
                 style={{
                   background: urgent ? "rgba(0,255,136,0.06)" : "rgba(255,255,255,0.02)",
@@ -216,7 +205,7 @@ export function LeadsBox() {
           })}
           {count > 8 && (
             <Link
-              href="/lifecycle/lead-work"
+              href="/crm/leads"
               className="flex items-center justify-center rounded-xl p-3 text-[11px] font-bold transition-all duration-150 hover:-translate-y-px"
               style={{
                 background: "rgba(0,255,136,0.06)",

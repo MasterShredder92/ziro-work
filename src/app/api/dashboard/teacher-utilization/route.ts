@@ -1,7 +1,7 @@
-import { NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { ok, serverError } from "@/lib/http";
-import { resolveCRMContext } from "@/app/api/crm/_context";
+import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,21 +10,14 @@ export const dynamic = "force-dynamic";
  * GET /api/dashboard/teacher-utilization
  *
  * Returns teacher utilization for the current month:
- * - Only counts block_type = 'student_session'
+ * - Only counts billable block types (mirrors payroll logic)
  * - Excludes fifth_week = true blocks
  * - Scoped to current month (MTD start → month end)
- * - Returns top teachers sorted by session count descending
- * - Includes teacher display_name and location breakdown
+ * - Returns all active teachers sorted by session count descending
  */
-export async function GET(req: NextRequest) {
-  const resolved = await resolveCRMContext(req, {
-    permissions: ["crm.read"],
-    minRole: "teacher",
-  });
-  if ("response" in resolved) return resolved.response;
-
+export async function GET() {
   try {
-    const { tenantId } = resolved.context;
+    const tenantId = await getCRMTenantId();
     const db = getServiceClient();
 
     const now = new Date();
@@ -35,7 +28,6 @@ export async function GET(req: NextRequest) {
       .toISOString()
       .split("T")[0];
 
-    // Billable block types — mirrors payroll route logic
     const BILLABLE_TYPES = [
       "student_session",
       "first_day",
@@ -45,75 +37,63 @@ export async function GET(req: NextRequest) {
       "sub",
     ];
 
-    // Fetch all billable blocks for current month, no 5th week
-    const { data: blocks, error: blocksErr } = await db
-      .from("schedule_blocks")
-      .select("teacher_id, location_id, status")
-      .eq("tenant_id", tenantId)
-      .in("block_type", BILLABLE_TYPES)
-      .eq("fifth_week", false)
-      .gte("block_date", monthStart)
-      .lte("block_date", monthEnd);
+    // Parallel queries — no sequential waterfalls
+    const [blocksResult, teachersResult, locationsResult] = await Promise.all([
+      db
+        .from("schedule_blocks")
+        .select("teacher_id, location_id, status")
+        .eq("tenant_id", tenantId)
+        .in("block_type", BILLABLE_TYPES)
+        .eq("fifth_week", false)
+        .gte("block_date", monthStart)
+        .lte("block_date", monthEnd),
 
-    if (blocksErr) throw blocksErr;
+      db
+        .from("teachers")
+        .select("id, display_name, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true),
 
-    // Fetch active teachers
-    const { data: teachers, error: teacherErr } = await db
-      .from("teachers")
-      .select("id, display_name, first_name, last_name")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true);
+      db
+        .from("locations")
+        .select("id, name, color")
+        .eq("tenant_id", tenantId),
+    ]);
 
-    if (teacherErr) throw teacherErr;
-
-    // Fetch locations for name mapping
-    const { data: locations, error: locErr } = await db
-      .from("locations")
-      .select("id, name, color")
-      .eq("tenant_id", tenantId);
-
-    if (locErr) throw locErr;
+    if (blocksResult.error) throw blocksResult.error;
+    if (teachersResult.error) throw teachersResult.error;
+    if (locationsResult.error) throw locationsResult.error;
 
     const teacherMap = new Map(
-      (teachers ?? []).map((t) => [
+      (teachersResult.data ?? []).map((t) => [
         t.id,
         { name: t.display_name ?? `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim() },
       ]),
     );
 
     const locationMap = new Map(
-      (locations ?? []).map((l) => [l.id, { name: l.name, color: l.color }]),
+      (locationsResult.data ?? []).map((l) => [l.id, { name: l.name, color: l.color }]),
     );
 
-    // Aggregate: sessions per teacher (total + by location)
+    // Aggregate sessions per teacher
     const teacherTotals = new Map<
       string,
       { total: number; booked: number; byLocation: Map<string, number> }
     >();
 
-    for (const block of blocks ?? []) {
+    for (const block of blocksResult.data ?? []) {
       if (!block.teacher_id) continue;
       if (!teacherTotals.has(block.teacher_id)) {
-        teacherTotals.set(block.teacher_id, {
-          total: 0,
-          booked: 0,
-          byLocation: new Map(),
-        });
+        teacherTotals.set(block.teacher_id, { total: 0, booked: 0, byLocation: new Map() });
       }
       const entry = teacherTotals.get(block.teacher_id)!;
       entry.total++;
-      if (block.status === "booked") {
-        entry.booked++;
-      }
+      if (block.status === "booked") entry.booked++;
       if (block.location_id) {
-        entry.byLocation.set(
-          block.location_id,
-          (entry.byLocation.get(block.location_id) ?? 0) + 1,
-        );
+        entry.byLocation.set(block.location_id, (entry.byLocation.get(block.location_id) ?? 0) + 1);
       }
     }
 
-    // Build result array, sorted by total sessions desc
     const result = Array.from(teacherTotals.entries())
       .map(([teacherId, data]) => {
         const teacher = teacherMap.get(teacherId);
@@ -133,10 +113,14 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.totalSessions - a.totalSessions);
 
-    return ok({
+    const payload = {
       teachers: result,
       mtd: { start: monthStart, end: monthEnd },
-    });
+    };
+
+    const res = NextResponse.json(payload, { status: 200 });
+    res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+    return res;
   } catch (err) {
     return serverError(err);
   }

@@ -1,43 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, MapPin, Briefcase } from "lucide-react";
-
-type OverdueInvoice = {
-  invoiceId: string;
-  familyId: string;
-  familyName: string;
-  balanceCents: number;
-  dueDate: string;
-  status: string;
-};
-
-type CapacitySignal = {
-  locationId: string;
-  locationName: string;
-  locationColor: string | null;
-  openSlots: number;
-};
-
-type TopInstrument = {
-  instrument: string;
-  studentCount: number;
-};
-
-type HiringSignal = {
-  dayOfWeek: number;
-  dayName: string;
-  sessions: number;
-  uniqueTeachers: number;
-};
-
-type TasksData = {
-  overdueInvoices: OverdueInvoice[];
-  capacitySignals: CapacitySignal[];
-  topInstruments: TopInstrument[];
-  hiringSignals: HiringSignal[];
-};
+import { useDashboardTasks } from "./_useDashboardTasks";
 
 function usd(cents: number) {
   return new Intl.NumberFormat("en-US", {
@@ -119,20 +84,9 @@ function EmptyState({ label }: { label: string }) {
 }
 
 export function ActionPanel() {
-  const [data, setData] = useState<TasksData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const data = useDashboardTasks();
 
-  useEffect(() => {
-    fetch("/api/dashboard/tasks", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.overdueInvoices !== undefined) setData(json as TasksData);
-      })
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (!data) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -146,10 +100,10 @@ export function ActionPanel() {
     );
   }
 
-  const overdue = data?.overdueInvoices ?? [];
-  const capacity = data?.capacitySignals ?? [];
-  const instruments = data?.topInstruments ?? [];
-  const hiring = data?.hiringSignals ?? [];
+  const overdue = data.overdueInvoices ?? [];
+  const capacity = data.capacitySignals ?? [];
+  const instruments = data.topInstruments ?? [];
+  const hiring = data.hiringSignals ?? [];
 
   const hiringNeeds = hiring
     .filter((d) => d.sessions > 0)

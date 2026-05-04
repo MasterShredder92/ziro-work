@@ -1,11 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-type InstrumentRow = {
-  instrument: string;
-  studentCount: number;
-};
+import { useDashboardTasks } from "./_useDashboardTasks";
 
 // Instrument accent colors — consistent brand palette
 const INSTRUMENT_COLORS: Record<string, string> = {
@@ -28,18 +23,8 @@ function instrumentColor(name: string): string {
 }
 
 export function InstrumentChart() {
-  const [instruments, setInstruments] = useState<InstrumentRow[] | null>(null);
-
-  useEffect(() => {
-    fetch("/api/dashboard/tasks", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (Array.isArray(json?.topInstruments)) {
-          setInstruments(json.topInstruments as InstrumentRow[]);
-        }
-      })
-      .catch(() => null);
-  }, []);
+  const tasksData = useDashboardTasks();
+  const instruments = tasksData ? tasksData.topInstruments : null;
 
   if (!instruments) {
     return (
