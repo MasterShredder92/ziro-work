@@ -21,7 +21,18 @@ function groupLeadsByStage(rows: Lead[]): Record<string, Lead[]> {
 
 export default async function LeadPipelinePage() {
   const tenantId = await getCRMTenantId();
-  const leads = await listLeads(tenantId, undefined, { limit: 500 });
+
+  let leads: Lead[] = [];
+  let fetchError: string | null = null;
+
+  try {
+    leads = await listLeads(tenantId, undefined, { limit: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[crm/leads] listLeads failed:", msg);
+    fetchError = msg;
+  }
+
   const grouped = groupLeadsByStage(leads);
 
   return (
@@ -30,6 +41,11 @@ export default async function LeadPipelinePage() {
       subtitle="Move stages, convert prospects, and schedule follow-ups."
     >
       <CRMNav current="leads" />
+      {fetchError ? (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+          <strong>Error loading leads:</strong> {fetchError}
+        </div>
+      ) : null}
       <LeadKanbanBoard grouped={grouped} />
     </CRMLayout>
   );
