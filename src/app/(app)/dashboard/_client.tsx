@@ -9,14 +9,12 @@ import { PageTransition } from "@/components/system/PageTransition";
 function ShimmerBlock({ h = "h-[6.5rem]" }: { h?: string }) {
   return (
     <div
-      className={`${h} animate-pulse rounded-2xl`}
+      className={`${h} rounded-2xl`}
       style={{
-        background: "#111113",
-        border: "1px solid rgba(255,255,255,0.06)",
-        backgroundImage:
-          "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+        background: "linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)",
         backgroundSize: "200% 100%",
         animation: "shimmer 1.6s infinite",
+        border: "1px solid rgba(255,255,255,0.05)",
       }}
     />
   );
@@ -72,9 +70,9 @@ const InstrumentChart = dynamic(
   { loading: () => <PanelSkeleton rows={6} /> },
 );
 
-const TeacherPanel = dynamic(
-  () => import("./_TeacherPanel").then((m) => ({ default: m.TeacherPanel })),
-  { loading: () => <PanelSkeleton rows={6} /> },
+const RevenueGaps = dynamic(
+  () => import("./_RevenueGaps").then((m) => ({ default: m.RevenueGaps })),
+  { loading: () => <PanelSkeleton rows={4} /> },
 );
 
 const ActivityStream = dynamic(
@@ -99,12 +97,17 @@ export function DashboardClient() {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
+        @keyframes gradientBorder {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
       `}</style>
 
       <PageTransition>
         <div
           className="mx-auto w-full flex flex-col gap-5 sm:gap-7"
-          data-dashboard-rev="8"
+          data-dashboard-rev="9"
           data-app="ziro-work"
         >
           {/* ── Header ──────────────────────────────────────────────── */}
@@ -153,7 +156,6 @@ export function DashboardClient() {
 
           {/* ── Revenue chart + Action items ────────────────────────── */}
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.4fr]">
-            {/* Revenue donut */}
             <Panel
               title="Revenue · This Month"
               description="Collected vs outstanding vs scheduled"
@@ -162,7 +164,6 @@ export function DashboardClient() {
               <RevenueChart />
             </Panel>
 
-            {/* Action items — invoices, capacity, hiring (leads moved out) */}
             <Panel
               title="Action Items"
               description="Unpaid invoices, open capacity, hiring signals"
@@ -172,22 +173,22 @@ export function DashboardClient() {
             </Panel>
           </div>
 
-          {/* ── Instrument demand + Teacher utilization ─────────────── */}
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          {/* ── Revenue Gap Engine + Instrument Demand ──────────────── */}
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.4fr_1fr]">
+            <Panel
+              title="Revenue Gap Engine"
+              description="Open capacity by location — money left on the table"
+              accentColor="#ef4444"
+            >
+              <RevenueGaps />
+            </Panel>
+
             <Panel
               title="Instrument Demand"
               description="Active students by instrument — most to least"
               accentColor="#7c3aed"
             >
               <InstrumentChart />
-            </Panel>
-
-            <Panel
-              title="Teacher Utilization"
-              description="Sessions booked MTD — stacked by location"
-              accentColor="#d97706"
-            >
-              <TeacherPanel />
             </Panel>
           </div>
 
