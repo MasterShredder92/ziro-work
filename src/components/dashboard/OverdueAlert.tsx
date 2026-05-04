@@ -47,7 +47,7 @@ export function OverdueAlert() {
         <p className="mt-0.5 text-xs text-[var(--z-muted)]">
           {formatUsdFromCents(overdueAmount)} outstanding past due date.{" "}
           <Link
-            href="/invoices?status=overdue"
+            href="/invoices?status=UNPAID"
             className="font-semibold text-red-300 underline underline-offset-2 hover:text-red-200"
           >
             Review now →

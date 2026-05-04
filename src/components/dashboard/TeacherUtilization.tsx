@@ -69,7 +69,7 @@ export function TeacherUtilization() {
         return (
           <Link
             key={t.teacherId}
-            href={`/teachers/${t.teacherId}`}
+            href={`/crm/teachers/${t.teacherId}`}
             className="group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_30%)]"
           >
             {/* Rank */}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Activity,
   Bell,
@@ -76,6 +77,30 @@ function pickIcon(event: EventLog): LucideIcon {
   return Activity;
 }
 
+/**
+ * Resolve the best drill-down URL for an event based on entity_type + entity_id.
+ * Returns null if no meaningful link can be built.
+ */
+function resolveEntityHref(event: EventLog): string | null {
+  const id = event.entity_id;
+  if (!id) return null;
+
+  switch (event.entity_type) {
+    case "family":
+      return `/crm/families/${id}`;
+    case "student":
+      return `/students/${id}`;
+    case "teacher":
+      return `/crm/teachers/${id}`;
+    case "invoice":
+      return `/invoices`;
+    case "lifecycle":
+      return `/lifecycle`;
+    default:
+      return null;
+  }
+}
+
 export type ActivityFeedItemProps = {
   event: EventLog;
 };
@@ -83,8 +108,9 @@ export type ActivityFeedItemProps = {
 export function ActivityFeedItem({ event }: ActivityFeedItemProps) {
   const lifecycle = isLifecycleTransition(event);
   const IconGlyph = pickIcon(event);
+  const href = resolveEntityHref(event);
 
-  return (
+  const inner = (
     <div className="flex items-start gap-[var(--z-space-3)]">
       <div
         className={cn(
@@ -97,7 +123,10 @@ export function ActivityFeedItem({ event }: ActivityFeedItemProps) {
       </div>
       <div className="min-w-0 flex-1 space-y-[var(--z-space-2)]">
         <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-          <span className="text-sm font-semibold text-[var(--z-fg)]">
+          <span className={cn(
+            "text-sm font-semibold text-[var(--z-fg)]",
+            href && "group-hover:text-[var(--z-accent)] transition-colors",
+          )}>
             {prettyEventType(event.event_type)}
           </span>
           <time
@@ -111,4 +140,17 @@ export function ActivityFeedItem({ event }: ActivityFeedItemProps) {
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="group block rounded-lg px-1 py-0.5 transition-colors hover:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_30%)]"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return <div>{inner}</div>;
 }

@@ -102,7 +102,7 @@ export function TasksPanel() {
   const instruments = data?.topInstruments ?? [];
   const hiring = data?.hiringSignals ?? [];
 
-  // Hiring signal: top 3 busiest days with fewest teachers
+  // Hiring signal: top 3 busiest days with fewest teachers (highest sessions-per-teacher ratio)
   const hiringNeeds = hiring
     .filter((d) => d.sessions > 0)
     .sort((a, b) => b.sessions / (b.uniqueTeachers || 1) - a.sessions / (a.uniqueTeachers || 1))
@@ -110,6 +110,7 @@ export function TasksPanel() {
 
   return (
     <div className="space-y-4 divide-y divide-[color-mix(in_oklab,var(--z-border),transparent_40%)]">
+
       {/* ── Overdue invoices ──────────────────────────────────── */}
       <div>
         <SectionHeader
@@ -135,7 +136,7 @@ export function TasksPanel() {
             ))}
             {overdue.length > 5 && (
               <Link
-                href="/invoices?status=open"
+                href="/invoices?status=UNPAID"
                 className="block px-2 py-1 text-[11px] text-[var(--z-accent)] hover:underline"
               >
                 +{overdue.length - 5} more →
@@ -159,7 +160,7 @@ export function TasksPanel() {
             {leads.slice(0, 5).map((lead) => (
               <Link
                 key={lead.leadId}
-                href={`/lifecycle/lead-work`}
+                href={`/crm/leads/${lead.leadId}`}
                 className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_30%)]"
               >
                 <span className="truncate font-medium text-[var(--z-fg)]">{lead.name}</span>
@@ -172,7 +173,7 @@ export function TasksPanel() {
             ))}
             {leads.length > 5 && (
               <Link
-                href="/lifecycle/lead-work"
+                href="/crm/leads"
                 className="block px-2 py-1 text-[11px] text-[var(--z-accent)] hover:underline"
               >
                 +{leads.length - 5} more →
@@ -194,9 +195,10 @@ export function TasksPanel() {
         ) : (
           <div className="space-y-1">
             {capacity.slice(0, 4).map((loc) => (
-              <div
+              <Link
                 key={loc.locationId}
-                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs"
+                href={`/locations/${loc.locationId}`}
+                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_30%)]"
               >
                 <span
                   className="truncate font-medium"
@@ -207,7 +209,7 @@ export function TasksPanel() {
                 <span className="ml-3 shrink-0 text-[var(--z-muted)]">
                   {loc.openSlots} slots
                 </span>
-              </div>
+              </Link>
             ))}
             {instruments.length > 0 && (
               <p className="px-2 pt-1 text-[11px] text-[color-mix(in_oklab,var(--z-fg),transparent_45%)]">
@@ -234,15 +236,16 @@ export function TasksPanel() {
         ) : (
           <div className="space-y-1">
             {hiringNeeds.map((d) => (
-              <div
+              <Link
                 key={d.dayOfWeek}
-                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs"
+                href="/schedule/availability"
+                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_30%)]"
               >
                 <span className="font-medium text-[var(--z-fg)]">{d.dayName}</span>
                 <span className="text-[var(--z-muted)]">
                   {d.sessions} sessions · {d.uniqueTeachers} teacher{d.uniqueTeachers !== 1 ? "s" : ""}
                 </span>
-              </div>
+              </Link>
             ))}
             {instruments.length > 0 && (
               <p className="px-2 pt-1 text-[11px] text-[color-mix(in_oklab,var(--z-fg),transparent_45%)]">
@@ -256,6 +259,7 @@ export function TasksPanel() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
