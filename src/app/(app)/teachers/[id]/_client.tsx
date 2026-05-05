@@ -1477,6 +1477,16 @@ function PayrollTab({ teacherId, payRatePerHalfHour }: { teacherId: string; payR
   );
 }
 
+type ProfileSubTab = "info" | "instruments" | "teaching" | "matching" | "internal";
+
+const PROFILE_SUB_TABS: { id: ProfileSubTab; label: string }[] = [
+  { id: "info",        label: "Info"        },
+  { id: "instruments", label: "Instruments"  },
+  { id: "teaching",   label: "Teaching"    },
+  { id: "matching",   label: "Matching"    },
+  { id: "internal",   label: "Internal"    },
+];
+
 /** Profile tab: shows TeacherProfileView with an inline Edit toggle */
 function ProfileTabWithEdit({
   teacher, allLocations, assignedLocationIds, activeAvailabilityLocationIds, capacitySlots, studentCount, onSaved,
@@ -1490,25 +1500,34 @@ function ProfileTabWithEdit({
   onSaved: () => void;
 }) {
   const [editing, setEditing] = React.useState(false);
-  // Header pills: strictly driven by teacher_availability SSOT.
-  // Only show a location if it has at least one active availability row.
-  // No fallback — if availability is empty, no pills render (prevents false positives).
+  const [subTab, setSubTab] = React.useState<ProfileSubTab>("info");
   const headerLocations = allLocations.filter(l => activeAvailabilityLocationIds.includes(l.id));
+  const t = teacher;
+
   return (
     <div className="space-y-4">
       {/* Edit / Cancel toggle */}
       <div className="flex justify-end">
         <button
           onClick={() => setEditing(e => !e)}
-          className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
-            editing
-              ? "border border-[var(--z-border)] text-[var(--z-muted)] hover:text-[var(--z-fg)]"
-              : "bg-[#00ff88]/10 text-[#00ff88] hover:bg-[#00ff88]/20"
-          }`}
+          style={editing ? {
+            borderRadius: 12, padding: "8px 16px", fontSize: 11, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.07em",
+            border: "1px solid var(--z-border)", background: "transparent",
+            color: "var(--z-muted)", cursor: "pointer",
+          } : {
+            borderRadius: 12, padding: "8px 16px", fontSize: 11, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.07em",
+            border: "1px solid rgba(0,255,136,0.35)",
+            background: "rgba(0,255,136,0.08)",
+            color: "var(--z-accent-text, #00cc6a)",
+            cursor: "pointer",
+          }}
         >
           {editing ? "Cancel" : "Edit Profile"}
         </button>
       </div>
+
       {editing ? (
         <TeacherEditForm
           teacher={teacher}
@@ -1517,12 +1536,203 @@ function ProfileTabWithEdit({
           onSaved={() => { setEditing(false); onSaved(); }}
         />
       ) : (
-        <TeacherProfileView
-          teacher={teacher}
-          locations={headerLocations}
-          capacitySlots={capacitySlots}
-          studentCount={studentCount}
-        />
+        <>
+          {/* Sub-tab pill nav */}
+          <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 2 }}>
+            {PROFILE_SUB_TABS.map(st => (
+              <button
+                key={st.id}
+                onClick={() => setSubTab(st.id)}
+                style={{
+                  flexShrink: 0, borderRadius: 20, padding: "5px 14px",
+                  fontSize: 11, fontWeight: 700, cursor: "pointer",
+                  border: subTab === st.id ? "1px solid rgba(0,255,136,0.4)" : "1px solid var(--z-border)",
+                  background: subTab === st.id ? "rgba(0,255,136,0.1)" : "transparent",
+                  color: subTab === st.id ? "var(--z-accent-text, #00cc6a)" : "var(--z-muted)",
+                  transition: "all 0.15s",
+                }}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sub-tab: Info */}
+          {subTab === "info" && (
+            <>
+              {/* Hero card */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 16,
+                borderRadius: 12, border: "1px solid var(--z-border)",
+                borderLeft: "3px solid #00ff88",
+                background: "var(--z-surface, #101012)",
+                padding: 16,
+                boxShadow: "0 4px 20px rgba(0,255,136,0.06)",
+              }}>
+                <div style={{
+                  position: "relative", width: 64, height: 64, flexShrink: 0,
+                  borderRadius: "50%", overflow: "hidden",
+                  background: "radial-gradient(circle at 35% 35%, rgba(0,255,136,0.25), rgba(0,255,136,0.08))",
+                  border: "1.5px solid rgba(0,255,136,0.3)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {t.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.photo_url} alt={teacher.display_name ?? ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <span style={{ fontSize: 22, fontWeight: 800, color: "#00ff88" }}>{(teacher.display_name ?? teacher.first_name ?? "?").charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "var(--z-fg)" }}>{teacher.display_name ?? [teacher.first_name, teacher.last_name].filter(Boolean).join(" ")}</div>
+                  {t.teacher_role && <div style={{ fontSize: 12, color: "var(--z-muted)", marginTop: 2 }}>{t.teacher_role}</div>}
+                  {headerLocations.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                      {headerLocations.map(l => (
+                        <span key={l.id} style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(0,255,136,0.1)", color: "#00cc6a" }}>
+                          {l.name.replace(/music lessons?/i, "").trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Data rows */}
+              <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+                {([
+                  { label: "Status", value: t.status ?? (t.is_active ? "active" : "inactive") },
+                  { label: "Role", value: t.teacher_role },
+                  { label: "Email", value: t.email },
+                  { label: "Phone", value: t.phone },
+                  { label: "Hire Date", value: t.hire_date },
+                  { label: "Rate / Block", value: t.rate_per_block != null ? `$${t.rate_per_block}` : null },
+                  { label: "Capacity", value: capacitySlots != null ? `${studentCount ?? "?"} / ${capacitySlots} slots` : t.max_students != null ? String(t.max_students) : null },
+                  { label: "Tax Form", value: "1099 / W-9" },
+                  { label: "W9 Status", value: t.w9_status },
+                  { label: "Contract Status", value: t.contract_status },
+                  { label: "Sub Available", value: (t.is_sub_available || t.sub_available) ? "Yes" : "No" },
+                ] as { label: string; value: string | null | undefined }[]).map(({ label, value }, i, arr) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: i < arr.length - 1 ? "1px solid var(--z-border)" : "none" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{label}</span>
+                    <span style={{ fontSize: 13, color: value ? "var(--z-fg)" : "var(--z-border)" }}>{value ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Sub-tab: Instruments */}
+          {subTab === "instruments" && (
+            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+              {(t.instruments?.length || t.primary_instruments) && (
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Primary</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(t.instruments ?? []).map(inst => (
+                      <span key={inst} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.1)", color: "#00cc6a" }}>{inst}</span>
+                    ))}
+                    {t.primary_instruments && t.primary_instruments.split(",").map(i => i.trim()).filter(Boolean).map(i => (
+                      <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.08)", color: "#00cc6a" }}>{i}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {t.secondary_instruments && (
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Secondary / Can Cover</div>
+                  <div className="flex flex-wrap gap-2">
+                    {t.secondary_instruments.split(",").map(i => i.trim()).filter(Boolean).map(i => (
+                      <span key={i} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: "var(--z-border)", color: "var(--z-muted)" }}>{i}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {t.skill_levels_by_instrument && (
+                <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Skill Levels</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.skill_levels_by_instrument}</div></div>
+              )}
+              {t.style_genre_strengths && (
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Style / Genre Strengths</div>
+                  <div className="flex flex-wrap gap-2">
+                    {t.style_genre_strengths.split(",").map(s => s.trim()).filter(Boolean).map(s => (
+                      <span key={s} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: "var(--z-border)", color: "var(--z-muted)" }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!t.instruments?.length && !t.primary_instruments && !t.secondary_instruments && (
+                <p style={{ fontSize: 13, color: "var(--z-muted)" }}>No instrument data on file.</p>
+              )}
+            </div>
+          )}
+
+          {/* Sub-tab: Teaching */}
+          {subTab === "teaching" && (
+            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+              {t.bio && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Bio</div><div style={{ fontSize: 13, color: "var(--z-fg)", lineHeight: 1.55 }}>{t.bio}</div></div>}
+              {t.personality && (
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Personality</div>
+                  <div className="flex flex-wrap gap-2">
+                    {t.personality.split(",").map(p => p.trim()).filter(Boolean).map(p => (
+                      <span key={p} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: "var(--z-border)", color: "var(--z-fg)" }}>{p}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {t.lesson_style && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Lesson Style</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.lesson_style}</div></div>}
+              {t.teaching_strengths && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Teaching Strengths</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.teaching_strengths}</div></div>}
+              {t.musical_strengths_background && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Musical Background</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.musical_strengths_background}</div></div>}
+              {!t.bio && !t.personality && !t.lesson_style && !t.teaching_strengths && !t.musical_strengths_background && (
+                <p style={{ fontSize: 13, color: "var(--z-muted)" }}>No teaching profile data on file.</p>
+              )}
+            </div>
+          )}
+
+          {/* Sub-tab: Matching */}
+          {subTab === "matching" && (
+            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+              {t.customer_facing_match_summary && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Summary</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.customer_facing_match_summary}</div></div>}
+              {t.preferred_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Preferred Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.preferred_age_range}</div></div>}
+              {t.acceptable_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Acceptable Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.acceptable_age_range}</div></div>}
+              {t.best_first_lesson_fit && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Best First Lesson Fit</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.best_first_lesson_fit}</div></div>}
+              {t.best_match_students && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Best Match Students</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.best_match_students}</div></div>}
+              {t.meet_and_greet_fit && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Meet &amp; Greet Fit</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.meet_and_greet_fit}</div></div>}
+              {t.substitute_coverage && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Substitute Coverage</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.substitute_coverage}</div></div>}
+              {!t.customer_facing_match_summary && !t.preferred_age_range && !t.acceptable_age_range && !t.best_first_lesson_fit && !t.best_match_students && (
+                <p style={{ fontSize: 13, color: "var(--z-muted)" }}>No matching data on file.</p>
+              )}
+            </div>
+          )}
+
+          {/* Sub-tab: Internal */}
+          {subTab === "internal" && (
+            <div style={{ borderRadius: 12, border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.05)", padding: 16 }} className="space-y-3">
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(245,158,11,0.7)" }}>Internal — Director Only</div>
+              {t.use_caution_internal_placement_notes && (
+                <div>
+                  <div style={{ fontSize: 10, color: "rgba(245,158,11,0.6)", marginBottom: 4 }}>⚠ Use Caution</div>
+                  <div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.use_caution_internal_placement_notes}</div>
+                </div>
+              )}
+              {t.director_notes && <div><div style={{ fontSize: 10, color: "rgba(245,158,11,0.6)", marginBottom: 4 }}>Director Notes</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.director_notes}</div></div>}
+              {t.internal_match_notes && <div><div style={{ fontSize: 10, color: "rgba(245,158,11,0.6)", marginBottom: 4 }}>Internal Match Notes</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.internal_match_notes}</div></div>}
+              {t.internal_matching_tags && (
+                <div>
+                  <div style={{ fontSize: 10, color: "rgba(245,158,11,0.6)", marginBottom: 6 }}>Matching Tags</div>
+                  <div className="flex flex-wrap gap-2">
+                    {t.internal_matching_tags.split(",").map(tag => tag.trim()).filter(Boolean).map(tag => (
+                      <span key={tag} style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, border: "1px solid rgba(245,158,11,0.2)", background: "rgba(245,158,11,0.08)", color: "var(--z-fg)" }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!t.use_caution_internal_placement_notes && !t.director_notes && !t.internal_match_notes && !t.internal_matching_tags && (
+                <p style={{ fontSize: 13, color: "var(--z-muted)" }}>No internal notes on file.</p>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
