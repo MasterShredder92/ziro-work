@@ -68,7 +68,7 @@ type FamilyDetail = {
   primary_location_id: string | null;
 };
 
-type Tab = "overview" | "billing" | "docs_notes";
+type Tab = "overview" | "teachers" | "billing" | "docs_notes";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function formatAddress(f: FamilyDetail): string | null {
@@ -139,6 +139,7 @@ function BrandCard({
 /* ─── Tab nav ────────────────────────────────────────────── */
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview",   label: "Overview"    },
+  { id: "teachers",   label: "Teachers"    },
   { id: "billing",    label: "Billing"     },
   { id: "docs_notes", label: "Docs & Notes" },
 ];
@@ -944,7 +945,6 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
         <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
         <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
       </div>
-      <MeetTeachersCard familyId={familyId} brandColor={brandColor} />
     </div>
   );
 }
@@ -1849,6 +1849,7 @@ export function FamilyAccountContent() {
       <TabNav active={activeTab} onChange={setActiveTab} brandColor={brandColor} />
       <div className="pt-5">
         {activeTab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
         {activeTab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
         {activeTab === "docs_notes" && <DocsNotesTab  familyId={familyId} brandColor={brandColor} />}
       </div>
