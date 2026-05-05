@@ -321,113 +321,109 @@ function BlockEditSheet({
         </div>
       </div>
     </div>
+    {/* Teacher detail view — rendered via portal to escape overflow-hidden ancestors */}
+    {typeof window !== "undefined" && detailTeacherId && (() => {
+      const detailTeacher = teachers.find(t => t.id === detailTeacherId);
+      if (!detailTeacher) return null;
+      return ReactDOM.createPortal(
+        <>
+          <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999, background: "var(--z-bg)" }}>
+            <div className="flex items-center gap-3 border-b px-4 py-3 shrink-0"
+              style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}>
+              <button onClick={() => setDetailTeacherId(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border text-sm"
+                style={{ borderColor: "var(--z-border)", color: "var(--z-muted)" }}>
+                ←
+              </button>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold shrink-0"
+                style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: locationConfig?.accent ?? "var(--z-surface-2)", color: locationConfig?.textColor ?? "var(--z-accent)" }}>
+                {teacherInitials(detailTeacher)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold truncate" style={{ color: "var(--z-fg)" }}>{teacherName(detailTeacher)}</div>
+                <div className="text-xs" style={{ color: "var(--z-muted)" }}>
+                  {dayBlocks.filter(b => b.teacher_id === detailTeacher.id && b.student_id).length} sessions
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {(() => {
+                const tBlocks = dayBlocks.filter(b => b.teacher_id === detailTeacher.id).sort((a, b) => toMinute(a.start_time) - toMinute(b.start_time));
+                const slots: number[] = [];
+                for (let m = openMinute; m < closeMinute; m += 30) slots.push(m);
+                return slots.map(slotMinute => {
+                  const block = tBlocks.find(b => {
+                    const startM = toMinute(b.start_time);
+                    const endM = toMinute(b.end_time);
+                    return startM <= slotMinute && endM > slotMinute;
+                  });
+                  const isSlotStart = block ? toMinute(block.start_time) === slotMinute : false;
+                  return (
+                    <div key={slotMinute} className="flex border-b" style={{ borderColor: "var(--z-border)", minHeight: 52 }}>
+                      <div className="flex w-14 shrink-0 items-start justify-end pr-2 pt-2 text-[10px]" style={{ color: "var(--z-muted)" }}>
+                        {minuteToLabel(slotMinute)}
+                      </div>
+                      <div className="flex-1 px-2 py-1.5">
+                        {block && isSlotStart ? (
+                          <button onClick={() => setSelectedBlockId(block.source_block_id || block.id)}
+                            className="w-full rounded-xl border px-3 py-2 text-left transition-all active:scale-[0.98]"
+                            style={{ backgroundColor: getBlockColor(block).bg, borderColor: getBlockColor(block).border, color: getBlockColor(block).text }}>
+                            {block.student_id ? (() => {
+                              const s = studentsById.get(block.student_id);
+                              const instr = s ? (s as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
+                              return (
+                                <div>
+                                  <div className="text-xs font-bold leading-tight truncate">
+                                    {instr ? instrumentEmoji(instr) + " " : ""}{s ? studentName(s) : "Student"}
+                                  </div>
+                                  <div className="text-[10px] opacity-80 mt-0.5">
+                                    {minuteToLabel(toMinute(block.start_time))} – {minuteToLabel(toMinute(block.end_time))}
+                                    {block.is_virtual && " · Virtual"}
+                                    {block.is_makeup_session && " · Makeup"}
+                                  </div>
+                                </div>
+                              );
+                            })() : (
+                              <div className="text-xs font-semibold">{getBlockLabel(block)}</div>
+                            )}
+                          </button>
+                        ) : block && !isSlotStart ? (
+                          <div className="h-full w-1 rounded-full ml-1" style={{ background: getBlockColor(block).border, opacity: 0.4 }} />
+                        ) : (
+                          <div className="h-full rounded-xl border border-dashed" style={{ borderColor: "color-mix(in srgb, var(--z-border) 30%, transparent)" }} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+          {selectedBlock && (
+            <BlockEditSheet
+              block={selectedBlock}
+              student={selectedBlock.student_id ? (studentsById.get(selectedBlock.student_id) ?? null) : null}
+              family={(() => { const s = selectedBlock.student_id ? studentsById.get(selectedBlock.student_id) : null; return s?.family_id ? (familiesById.get(s.family_id) ?? null) : null; })()}
+              teachers={teachers} students={students}
+              onSave={patch => patchBlock(selectedBlock, patch)}
+              onCheckIn={() => checkIn(selectedBlock)}
+              onCallOut={() => callOut(selectedBlock)}
+              onCancelSession={(scope, reason) => cancelSession(selectedBlock, scope, reason)}
+              onClose={() => { setSelectedBlockId(null); setError(null); }}
+              saving={saving} error={error}
+            />
+          )}
+        </>,
+        document.body
+      );
+    })()}
+  </div>
   );
 }
 
 // ─── Teacher Detail View ──────────────────────────────────────────────────────
 // Isolated single-teacher view. Shown when user taps a teacher name in the main grid.
 // All block data comes from the same dayBlocks array — no additional API calls.
-function TeacherDetailView({
-  teacher, dayBlocks, studentsById, familiesById, teachers, students,
-  openMinute, closeMinute, locationConfig, onBack, onSelectBlock,
-}: {
-  teacher: Teacher;
-  dayBlocks: ProjectedBlock[];
-  studentsById: Map<string, Student>;
-  familiesById: Map<string, Family>;
-  teachers: Teacher[];
-  students: Student[];
-  openMinute: number;
-  closeMinute: number;
-  locationConfig?: Props["locationConfig"];
-  onBack: () => void;
-  onSelectBlock: (blockId: string) => void;
-}) {
-  const tBlocks = React.useMemo(
-    () => dayBlocks.filter(b => b.teacher_id === teacher.id).sort((a, b) => toMinute(a.start_time) - toMinute(b.start_time)),
-    [dayBlocks, teacher.id],
-  );
-  const slots = React.useMemo(() => {
-    const out: number[] = [];
-    for (let m = openMinute; m < closeMinute; m += 30) out.push(m);
-    return out;
-  }, [openMinute, closeMinute]);
-  const tName = teacherName(teacher);
-  const tInitials = teacherInitials(teacher);
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return null;
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: "var(--z-bg)" }}>
-      <div className="flex items-center gap-3 border-b px-4 py-3 shrink-0"
-        style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}>
-        <button onClick={onBack}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border text-sm text-[var(--z-muted)]"
-          style={{ borderColor: "var(--z-border)" }}>
-          \u2190
-        </button>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold shrink-0"
-          style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: locationConfig?.accent ?? "var(--z-surface-2)", color: locationConfig?.textColor ?? "var(--z-accent)" }}>
-          {tInitials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-[var(--z-fg)] truncate">{tName}</div>
-          <div className="text-xs text-[var(--z-muted)]">
-            {tBlocks.filter(b => b.student_id).length} sessions \u00b7 {tBlocks.filter(b => !b.student_id || b.block_type === "open_time").length} open
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        {slots.map(slotMinute => {
-          const block = tBlocks.find(b => {
-            const startM = toMinute(b.start_time);
-            const endM = toMinute(b.end_time);
-            return startM <= slotMinute && endM > slotMinute;
-          });
-          const isSlotStart = block ? toMinute(block.start_time) === slotMinute : false;
-          return (
-            <div key={slotMinute} className="flex border-b" style={{ borderColor: "var(--z-border)", minHeight: 52 }}>
-              <div className="flex w-14 shrink-0 items-start justify-end pr-2 pt-2 text-[10px] text-[var(--z-muted)]">
-                {minuteToLabel(slotMinute)}
-              </div>
-              <div className="flex-1 px-2 py-1.5">
-                {block && isSlotStart ? (
-                  <button onClick={() => onSelectBlock(block.source_block_id || block.id)}
-                    className="w-full rounded-xl border px-3 py-2 text-left transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: getBlockColor(block).bg, borderColor: getBlockColor(block).border, color: getBlockColor(block).text }}>
-                    {block.student_id ? (() => {
-                      const s = studentsById.get(block.student_id);
-                      const instr = s ? (s as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
-                      return (
-                        <div>
-                          <div className="text-xs font-bold leading-tight truncate">
-                            {instr ? instrumentEmoji(instr) + " " : ""}{s ? studentName(s) : "Student"}
-                          </div>
-                          <div className="text-[10px] opacity-80 mt-0.5">
-                            {minuteToLabel(toMinute(block.start_time))} \u2013 {minuteToLabel(toMinute(block.end_time))}
-                            {block.is_virtual && " \u00b7 Virtual"}
-                            {block.is_makeup_session && " \u00b7 Makeup"}
-                          </div>
-                        </div>
-                      );
-                    })() : (
-                      <div className="text-xs font-semibold">{getBlockLabel(block)}</div>
-                    )}
-                  </button>
-                ) : block && !isSlotStart ? (
-                  <div className="h-full w-1 rounded-full ml-1" style={{ background: getBlockColor(block).border, opacity: 0.4 }} />
-                ) : (
-                  <div className="h-full rounded-xl border border-dashed border-[var(--z-border)]/30" />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>,
-    document.body
-  );
-}
 // ─── Main component ───────────────────────────────────────────────────────────
 export function MobileScheduleView({
   locationId,
@@ -562,43 +558,7 @@ export function MobileScheduleView({
     );
   }
 
-  // ── Teacher detail view ──
-  if (detailTeacherId) {
-    const detailTeacher = teachers.find(t => t.id === detailTeacherId);
-    if (detailTeacher) {
-      return (
-        <>
-          <TeacherDetailView
-            teacher={detailTeacher}
-            dayBlocks={dayBlocks}
-            studentsById={studentsById}
-            familiesById={familiesById}
-            teachers={teachers}
-            students={students}
-            openMinute={openMinute}
-            closeMinute={closeMinute}
-            locationConfig={locationConfig}
-            onBack={() => setDetailTeacherId(null)}
-            onSelectBlock={blockId => setSelectedBlockId(blockId)}
-          />
-          {selectedBlock && (
-            <BlockEditSheet
-              block={selectedBlock}
-              student={selectedBlock.student_id ? (studentsById.get(selectedBlock.student_id) ?? null) : null}
-              family={(() => { const s = selectedBlock.student_id ? studentsById.get(selectedBlock.student_id) : null; return s?.family_id ? (familiesById.get(s.family_id) ?? null) : null; })()}
-              teachers={teachers} students={students}
-              onSave={patch => patchBlock(selectedBlock, patch)}
-              onCheckIn={() => checkIn(selectedBlock)}
-              onCallOut={() => callOut(selectedBlock)}
-              onCancelSession={(scope, reason) => cancelSession(selectedBlock, scope, reason)}
-              onClose={() => { setSelectedBlockId(null); setError(null); }}
-              saving={saving} error={error}
-            />
-          )}
-        </>
-      );
-    }
-  }
+  // ── Teacher detail view rendered as portal in main return below ──
 
   // ── Main grid: teacher rows + horizontal timeline ──
   return (
