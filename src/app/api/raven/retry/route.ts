@@ -1,17 +1,13 @@
 /**
- * POST /api/raven/approve
- * Approves or rejects a pending RAVEN message.
+ * POST /api/raven/retry
+ * Resets a failed RAVEN message for re-send.
  *
- * Body:
- *   { id: string, action: "approve" | "reject", tenant_id?: string }
+ * Body: { id: string }
  *
- * On approve:
- *   1. Updates raven_message_log status → "approved"
- *   2. Fires POST to AGENT_API_URL/events/raven/send (fire-and-forget)
- *      with X-Raven-Secret header and { message_log_id }
- *
- * On reject:
- *   1. Updates raven_message_log status → "rejected"
+ * Flow:
+ *   1. Verifies message is in send_failed or send_failed_permanent status
+ *   2. Resets retry_count to 0, status to "approved"
+ *   3. Fires /events/raven/send (fire-and-forget)
  */
 
 import { NextResponse } from "next/server";
@@ -28,7 +24,7 @@ function getPlatformClient() {
 }
 
 export async function POST(request: Request) {
-  let body: { id: string; action: "approve" | "reject"; tenant_id?: string };
+  let body: { id: string; tenant_id?: string };
 
   try {
     body = await request.json();
@@ -36,21 +32,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { id, action, tenant_id } = body;
+  const { id, tenant_id } = body;
   const tenantId = tenant_id || DEFAULT_TENANT_ID;
 
-  if (!id || !action) {
-    return NextResponse.json({ error: "id and action are required" }, { status: 422 });
-  }
-
-  if (action !== "approve" && action !== "reject") {
-    return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 422 });
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 422 });
   }
 
   try {
     const client = getPlatformClient();
 
-    // Fetch the message row first
+    // Fetch the message
     const { data: rows, error: fetchError } = await client
       .from("raven_message_log")
       .select("id, status, tenant_id")
@@ -68,39 +60,28 @@ export async function POST(request: Request) {
 
     const row = rows[0];
 
-    if (row.status !== "pending_approval") {
+    if (!["send_failed", "send_failed_permanent"].includes(row.status)) {
       return NextResponse.json(
-        { error: `Message is already in status: ${row.status}` },
+        { error: `Cannot retry message in status: ${row.status}` },
         { status: 409 }
       );
     }
 
-    if (action === "reject") {
-      const { error: updateError } = await client
-        .from("raven_message_log")
-        .update({ status: "rejected" })
-        .eq("id", id);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, status: "rejected" });
-    }
-
-    // action === "approve"
+    // Reset for retry
     const { error: updateError } = await client
       .from("raven_message_log")
-      .update({ status: "approved" })
+      .update({
+        status: "approved",
+        retry_count: 0,
+        error_message: null,
+      })
       .eq("id", id);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Fire-and-forget: trigger actual send in agent layer
-    // The approve route does NOT wait for the send to complete.
-    // The agent layer handles the send async and updates raven_message_log.
+    // Fire-and-forget send
     const agentApiUrl = process.env.NEXT_PUBLIC_AGENT_API_URL;
     const ravenWebhookSecret = process.env.RAVEN_WEBHOOK_SECRET;
 
@@ -112,17 +93,12 @@ export async function POST(request: Request) {
           "X-Raven-Secret": ravenWebhookSecret,
         },
         body: JSON.stringify({ message_log_id: id }),
-      }).catch((fireErr) => {
-        console.error("[/api/raven/approve] Agent send fire failed:", fireErr);
-        // Don't fail the approval — message is already marked approved in DB
+      }).catch((err) => {
+        console.error("[/api/raven/retry] Agent send fire failed:", err);
       });
-    } else {
-      console.warn(
-        "[/api/raven/approve] NEXT_PUBLIC_AGENT_API_URL or RAVEN_WEBHOOK_SECRET not set — send not triggered"
-      );
     }
 
-    return NextResponse.json({ success: true, status: "approved" });
+    return NextResponse.json({ success: true, status: "retry_queued" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
