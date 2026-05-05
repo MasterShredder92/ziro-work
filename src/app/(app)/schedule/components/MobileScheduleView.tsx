@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import * as ReactDOM from "react-dom";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { getHoursForDate } from "@/lib/schedule/locationHoursUtils";
@@ -353,8 +354,11 @@ function TeacherDetailView({
   }, [openMinute, closeMinute]);
   const tName = teacherName(teacher);
   const tInitials = teacherInitials(teacher);
-  return (
-    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "var(--z-bg)" }}>
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: "var(--z-bg)" }}>
       <div className="flex items-center gap-3 border-b px-4 py-3 shrink-0"
         style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}>
         <button onClick={onBack}
@@ -420,10 +424,10 @@ function TeacherDetailView({
           );
         })}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
-
 // ─── Main component ───────────────────────────────────────────────────────────
 export function MobileScheduleView({
   locationId,
