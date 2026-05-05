@@ -445,7 +445,10 @@ export function InvoicesClient({
                     <Link
                       key={inv.id}
                       href={href ?? "#"}
-                      className="grid items-center border-b px-4 py-3 text-sm transition-colors hover:bg-[var(--z-accent)]/5 cursor-pointer"
+                      onClick={href ? undefined : (e) => e.preventDefault()}
+                      className={`grid items-center border-b px-4 py-3 text-sm transition-colors ${
+                        href ? "hover:bg-[var(--z-accent)]/5 cursor-pointer" : "cursor-not-allowed opacity-50"
+                      }`}
                       style={{
                         gridTemplateColumns: "1fr 100px 90px 100px 110px 100px 90px",
                         borderColor: "var(--z-border)",
@@ -493,7 +496,10 @@ export function InvoicesClient({
                     <Link
                       key={inv.id}
                       href={href ?? "#"}
-                      className="block rounded-xl border px-4 py-3 space-y-1.5 transition-colors hover:border-[var(--z-accent)]/40"
+                      onClick={href ? undefined : (e) => e.preventDefault()}
+                      className={`block rounded-xl border px-4 py-3 space-y-1.5 transition-colors ${
+                        href ? "hover:border-[var(--z-accent)]/40 cursor-pointer" : "cursor-not-allowed opacity-50"
+                      }`}
                       style={{
                         borderColor: overdue ? "#EF444466" : "var(--z-border)",
                         background: "var(--z-surface)",
