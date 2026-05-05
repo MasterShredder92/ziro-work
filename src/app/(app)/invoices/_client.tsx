@@ -278,24 +278,20 @@ export function InvoicesClient({
           );
         })()}
 
-        {/* ── KPI tiles ── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-            <div className="text-2xl font-extrabold text-[#22C55E]">{formatCents(paidTotal)}</div>
-            <div className="text-xs text-[var(--z-muted)]">Total collected</div>
-          </div>
-          <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-            <div className="text-2xl font-extrabold text-[#EF4444]">{formatCents(unpaidTotal)}</div>
-            <div className="text-xs text-[var(--z-muted)]">Outstanding</div>
-          </div>
-          <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-            <div className="text-2xl font-extrabold text-[#F59E0B]">{overdueCount}</div>
-            <div className="text-xs text-[var(--z-muted)]">Overdue invoices</div>
-          </div>
-          <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-            <div className="text-2xl font-extrabold text-[var(--z-fg)]">{totalCount.toLocaleString()}</div>
-            <div className="text-xs text-[var(--z-muted)]">Total invoices</div>
-          </div>
+        {/* ── KPI strip ── */}
+        <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] divide-x divide-[var(--z-border)] flex overflow-hidden">
+          {[
+            { label: "Collected", value: formatCents(paidTotal), color: "#22C55E" },
+            { label: "Outstanding", value: formatCents(unpaidTotal), color: "#EF4444" },
+            { label: "Scheduled", value: formatCents(billingMetrics?.find(m => m.locationId === null)?.scheduledPayments ?? 0), color: "#A78BFA" },
+            { label: "Overdue", value: String(overdueCount), color: "#F59E0B" },
+            { label: "Invoices", value: totalCount.toLocaleString(), color: "var(--z-fg)" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="flex-1 min-w-0 px-3 py-3 text-center">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1 truncate">{label}</div>
+              <div className="text-base font-extrabold truncate" style={{ color }}>{value}</div>
+            </div>
+          ))}
         </div>
 
         {/* ── Month navigation + Create Invoice ── */}
