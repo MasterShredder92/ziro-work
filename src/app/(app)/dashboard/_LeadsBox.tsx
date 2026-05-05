@@ -57,12 +57,12 @@ export function LeadsBox() {
       className="rounded-2xl p-5"
       style={{
         background: count > 0
-          ? "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,255,136,0.08), transparent 65%), #111113"
-          : "#111113",
-        border: count > 0 ? "1px solid rgba(0,255,136,0.3)" : "1px solid rgba(255,255,255,0.07)",
+          ? "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,255,136,0.06), transparent 65%), var(--z-surface)"
+          : "var(--z-surface)",
+        border: count > 0 ? "1px solid rgba(0,255,136,0.3)" : "1px solid var(--z-border)",
         boxShadow: count > 0
-          ? "0 0 32px rgba(0,255,136,0.08), inset 0 1px 0 rgba(255,255,255,0.04)"
-          : "inset 0 1px 0 rgba(255,255,255,0.04)",
+          ? "0 0 32px rgba(0,255,136,0.06), inset 0 1px 0 var(--z-kpi-inset)"
+          : "inset 0 1px 0 var(--z-kpi-inset)",
       }}
     >
       {/* Header */}
@@ -71,8 +71,8 @@ export function LeadsBox() {
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl"
             style={{
-              background: count > 0 ? "rgba(0,255,136,0.15)" : "rgba(255,255,255,0.06)",
-              color: count > 0 ? "#00ff88" : "var(--z-muted)",
+              background: count > 0 ? "rgba(0,255,136,0.15)" : "var(--z-surface-2)",
+              color: count > 0 ? "var(--z-accent)" : "var(--z-muted)",
             }}
           >
             <UserPlus className="h-4 w-4" />
@@ -80,7 +80,7 @@ export function LeadsBox() {
           <div>
             <h2
               className="text-[0.6rem] font-bold uppercase tracking-[0.22em]"
-              style={{ color: count > 0 ? "#00ff88" : "var(--z-muted)" }}
+              style={{ color: count > 0 ? "var(--z-accent)" : "var(--z-muted)" }}
             >
               Leads to Contact
             </h2>
@@ -96,7 +96,7 @@ export function LeadsBox() {
               className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-extrabold"
               style={{
                 background: "rgba(0,255,136,0.2)",
-                color: "#00ff88",
+                color: "var(--z-accent)",
                 boxShadow: "0 0 12px rgba(0,255,136,0.3)",
               }}
             >
@@ -107,9 +107,9 @@ export function LeadsBox() {
             href="/crm/leads"
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={{
-              background: count > 0 ? "rgba(0,255,136,0.12)" : "rgba(255,255,255,0.06)",
-              color: count > 0 ? "#00ff88" : "var(--z-muted)",
-              border: count > 0 ? "1px solid rgba(0,255,136,0.3)" : "1px solid rgba(255,255,255,0.1)",
+              background: count > 0 ? "rgba(0,255,136,0.12)" : "var(--z-surface-2)",
+              color: count > 0 ? "var(--z-accent)" : "var(--z-muted)",
+              border: count > 0 ? "1px solid rgba(0,255,136,0.3)" : "1px solid var(--z-border)",
             }}
           >
             Open pipeline
@@ -125,7 +125,7 @@ export function LeadsBox() {
             <div
               key={i}
               className="h-12 animate-pulse rounded-xl"
-              style={{ background: "#1a1a1c" }}
+              style={{ background: "var(--z-surface-2)" }}
             />
           ))}
         </div>
@@ -136,9 +136,9 @@ export function LeadsBox() {
         >
           <div
             className="h-2 w-2 rounded-full"
-            style={{ background: "#00ff88", boxShadow: "0 0 6px #00ff88" }}
+            style={{ background: "var(--z-accent)", boxShadow: "0 0 6px var(--z-accent)" }}
           />
-          <p className="text-xs font-semibold" style={{ color: "#00ff88" }}>
+          <p className="text-xs font-semibold" style={{ color: "var(--z-accent)" }}>
             Pipeline clear — no uncontacted leads.
           </p>
         </div>
@@ -153,10 +153,10 @@ export function LeadsBox() {
                 href={`/crm/leads/${lead.leadId}`}
                 className="group flex flex-col gap-2 rounded-xl p-3 transition-all duration-150 hover:-translate-y-px"
                 style={{
-                  background: urgent ? "rgba(0,255,136,0.06)" : "rgba(255,255,255,0.02)",
+                  background: urgent ? "rgba(0,255,136,0.06)" : "var(--z-surface-2)",
                   border: urgent
                     ? "1px solid rgba(0,255,136,0.2)"
-                    : "1px solid rgba(255,255,255,0.06)",
+                    : "1px solid var(--z-border)",
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,255,136,0.12)";
@@ -166,7 +166,7 @@ export function LeadsBox() {
                   (e.currentTarget as HTMLElement).style.boxShadow = "none";
                   (e.currentTarget as HTMLElement).style.borderColor = urgent
                     ? "rgba(0,255,136,0.2)"
-                    : "rgba(255,255,255,0.06)";
+                    : "var(--z-border)";
                 }}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -179,7 +179,7 @@ export function LeadsBox() {
                   {urgent && (
                     <div
                       className="h-1.5 w-1.5 shrink-0 rounded-full mt-1"
-                      style={{ background: "#00ff88", boxShadow: "0 0 5px #00ff88" }}
+                      style={{ background: "var(--z-accent)", boxShadow: "0 0 5px var(--z-accent)" }}
                     />
                   )}
                 </div>
@@ -210,7 +210,7 @@ export function LeadsBox() {
               style={{
                 background: "rgba(0,255,136,0.06)",
                 border: "1px dashed rgba(0,255,136,0.25)",
-                color: "#00ff88",
+                color: "var(--z-accent)",
               }}
             >
               +{count - 8} more →

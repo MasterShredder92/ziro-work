@@ -11,10 +11,10 @@ function ShimmerBlock({ h = "h-[6.5rem]" }: { h?: string }) {
     <div
       className={`${h} rounded-2xl`}
       style={{
-        background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+        background: "var(--z-surface)",
         backgroundSize: "200% 100%",
         animation: "shimmer 1.6s infinite",
-        border: "1px solid rgba(255,255,255,0.05)",
+        border: "1px solid var(--z-border)",
       }}
     />
   );
@@ -127,10 +127,7 @@ export function DashboardClient() {
               <h1
                 className="text-2xl font-extrabold tracking-tight sm:text-3xl"
                 style={{
-                  background: "linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
+                  color: "var(--z-fg)",
                 }}
               >
                 Command Center

@@ -49,10 +49,10 @@ function capitalize(s: string) {
 
 // Location brand color map
 const LOCATION_COLORS: Record<string, { bg: string; text: string; glow: string }> = {
-  bellevue: { bg: "rgba(124,58,237,0.12)", text: "#7c3aed", glow: "rgba(124,58,237,0.25)" },
-  gretna:   { bg: "rgba(5,150,105,0.12)",  text: "#059669", glow: "rgba(5,150,105,0.25)" },
-  omaha:    { bg: "rgba(37,99,235,0.12)",  text: "#2563eb", glow: "rgba(37,99,235,0.25)" },
-  elkhorn:  { bg: "rgba(217,119,6,0.12)",  text: "#d97706", glow: "rgba(217,119,6,0.25)" },
+  bellevue: { bg: "rgba(124,58,237,0.14)", text: "#7c3aed", glow: "rgba(124,58,237,0.30)" },
+  gretna:   { bg: "rgba(5,150,105,0.14)",  text: "#059669", glow: "rgba(5,150,105,0.30)" },
+  omaha:    { bg: "rgba(37,99,235,0.14)",  text: "#2563eb", glow: "rgba(37,99,235,0.30)" },
+  elkhorn:  { bg: "rgba(217,119,6,0.14)",  text: "#d97706", glow: "rgba(217,119,6,0.30)" },
 };
 
 function locationBrand(name: string): { bg: string; text: string; glow: string } {
@@ -60,7 +60,7 @@ function locationBrand(name: string): { bg: string; text: string; glow: string }
   for (const [key, val] of Object.entries(LOCATION_COLORS)) {
     if (n.includes(key)) return val;
   }
-  return { bg: "rgba(99,102,241,0.12)", text: "#6366f1", glow: "rgba(99,102,241,0.25)" };
+  return { bg: "rgba(99,102,241,0.14)", text: "#6366f1", glow: "rgba(99,102,241,0.30)" };
 }
 
 // SVG arc fill ring — animated
