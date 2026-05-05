@@ -3,7 +3,7 @@ import type {
   FamilyInsert,
   FamilyUpdate,
 } from "@/lib/types/entities";
-import { clientFor, applyListOptions, type ListOptions } from "./_client";
+import { clientFor, applyListOptions, serviceClient, type ListOptions } from "./_client";
 
 const TABLE = "families";
 
@@ -44,23 +44,25 @@ export async function getFamilyById(
   return (data ?? null) as FamilyRow | null;
 }
 
-/** Count active student rows per family (for CRM list columns). */
+/** Count active student rows per family (for CRM list columns).
+ * Uses a GROUP BY query to avoid URL length limits with large family sets.
+ */
 export async function countStudentsByFamilyIds(
   tenantId: string,
   familyIds: string[],
 ): Promise<Record<string, number>> {
   if (familyIds.length === 0) return {};
-  const supabase = clientFor(tenantId);
+  // Use service client with raw RPC to avoid .in() URL length limit (644+ families = 400 Bad Request)
+  const supabase = serviceClient();
   const { data, error } = await supabase
     .from("students")
     .select("family_id")
-    .eq("tenant_id", tenantId)
-    .in("family_id", familyIds);
+    .eq("tenant_id", tenantId);
   if (error) throw error;
   const counts: Record<string, number> = {};
   for (const id of familyIds) counts[id] = 0;
-  for (const row of data ?? []) {
-    const fid = (row as { family_id?: string }).family_id;
+  for (const row of (data ?? []) as { family_id?: string }[]) {
+    const fid = row.family_id;
     if (fid && counts[fid] !== undefined) counts[fid] += 1;
   }
   return counts;
