@@ -115,10 +115,19 @@ export function FamiliesListClient({
   studentsByFamily = {},
   teacherByFamily = {},
 }: Props) {
-   const router = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabId>("active");
   const [showAdd, setShowAdd] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Open modal automatically if URL is /crm/families?new=true
   useEffect(() => {
@@ -126,6 +135,7 @@ export function FamiliesListClient({
       setShowAdd(true);
     }
   }, [searchParams]);
+
   const [search, setSearch] = useState("");
   const [filterTeacher, setFilterTeacher] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
@@ -134,12 +144,10 @@ export function FamiliesListClient({
   const inactiveRows = useMemo(() => rows.filter(r => ["inactive","paused","archived"].includes((r.status ?? "").toLowerCase())), [rows]);
   const displayRows  = tab === "active" ? activeRows : inactiveRows;
 
-  // Build unique teacher + location lists for dropdowns
   const allTeachers = useMemo(() => {
     const set = new Set<string>();
     for (const row of rows) {
       const t = teacherByFamily[row.id];
-      // teacherByFamily may be a comma-separated string — flatten to individual names
       if (t) t.split(",").map(s => s.trim()).filter(Boolean).forEach(n => set.add(n));
     }
     return [...set].sort();
@@ -156,7 +164,6 @@ export function FamiliesListClient({
 
   const filtered = useMemo(() => {
     let list = displayRows;
-    // Deep search: family name + email + location + ALL student first/last names
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(r => {
@@ -167,14 +174,12 @@ export function FamiliesListClient({
         return studs.some(s => s.name.toLowerCase().includes(q));
       });
     }
-    // Teacher filter — match if the teacher appears anywhere in the family's teacher list
     if (filterTeacher) {
       list = list.filter(r => {
         const t = teacherByFamily[r.id] ?? "";
         return t.split(",").map(s => s.trim()).includes(filterTeacher);
       });
     }
-    // Location filter
     if (filterLocation) {
       list = list.filter(r => (locationNameById[r.primary_location_id ?? ""] ?? "") === filterLocation);
     }
@@ -185,115 +190,304 @@ export function FamiliesListClient({
     <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", gap: 0 }}>
 
       {/* ── Top bar ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, paddingBottom: 12, flexWrap: "wrap" }}>
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 2, background: "var(--z-surface)", borderRadius: 8, padding: 3, border: "1px solid var(--z-border)" }}>
-          {(["active","inactive"] as TabId[]).map(t => {
-            const cnt = t === "active" ? (tab === "active" ? filtered.length : activeRows.length) : (tab === "inactive" ? filtered.length : inactiveRows.length);
-            const on = tab === t;
-            return (
-              <button key={t} onClick={() => setTab(t)} style={{
-                padding: "4px 14px", borderRadius: 6, fontSize: 12, fontWeight: on ? 700 : 500,
-                cursor: "pointer", border: "none", transition: "all 0.12s",
-                background: on ? ZIRO_GREEN : "transparent",
-                color: on ? "#fff" : "var(--z-muted)",
-                boxShadow: on ? `0 1px 6px ${ZIRO_GREEN}44` : "none",
-              }}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-                <span style={{
-                  marginLeft: 6, padding: "0px 6px", borderRadius: 20, fontSize: 10, fontWeight: 700,
-                  background: on ? "rgba(255,255,255,0.25)" : "var(--z-border)",
-                  color: on ? "#fff" : "var(--z-muted)",
-                }}>{cnt}</span>
-              </button>
-            );
-          })}
+      <div style={{
+        display: "flex",
+        alignItems: isMobile ? "stretch" : "center",
+        justifyContent: "space-between",
+        gap: 8,
+        paddingBottom: 12,
+        flexDirection: isMobile ? "column" : "row",
+        flexWrap: isMobile ? "nowrap" : "wrap",
+      }}>
+        {/* Tabs + New Family (mobile: same row) */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", gap: 2, background: "var(--z-surface)", borderRadius: 8, padding: 3, border: "1px solid var(--z-border)" }}>
+            {(["active","inactive"] as TabId[]).map(t => {
+              const cnt = t === "active" ? (tab === "active" ? filtered.length : activeRows.length) : (tab === "inactive" ? filtered.length : inactiveRows.length);
+              const on = tab === t;
+              return (
+                <button key={t} onClick={() => setTab(t)} style={{
+                  padding: "4px 14px", borderRadius: 6, fontSize: 12, fontWeight: on ? 700 : 500,
+                  cursor: "pointer", border: "none", transition: "all 0.12s",
+                  background: on ? ZIRO_GREEN : "transparent",
+                  color: on ? "#000" : "var(--z-muted)",
+                  boxShadow: on ? `0 1px 6px ${ZIRO_GREEN}44` : "none",
+                }}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                  <span style={{
+                    marginLeft: 6, padding: "0px 6px", borderRadius: 20, fontSize: 10, fontWeight: 700,
+                    background: on ? "rgba(0,0,0,0.18)" : "var(--z-border)",
+                    color: on ? "#000" : "var(--z-muted)",
+                  }}>{cnt}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* + New Family always visible on mobile top row */}
+          {isMobile && (
+            <button
+              onClick={() => setShowAdd(true)}
+              style={{
+                padding: "6px 14px", borderRadius: 7, border: "none",
+                background: ZIRO_GREEN, color: "#000",
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              + New Family
+            </button>
+          )}
         </div>
 
-        {/* Right controls: search + dropdowns */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <input type="search" placeholder="Search families, students…" value={search} onChange={e => setSearch(e.target.value)}
+        {/* Search + filters */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          flexWrap: isMobile ? "wrap" : "nowrap",
+        }}>
+          <input
+            type="search"
+            placeholder="Search families, students…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             style={{
-              padding: "5px 12px", borderRadius: 7, border: "1px solid var(--z-border)",
-              background: "var(--z-surface)", color: "var(--z-fg)", fontSize: 12, outline: "none", width: 220,
+              padding: "6px 12px", borderRadius: 7, border: "1px solid var(--z-border)",
+              background: "var(--z-surface)", color: "var(--z-fg)", fontSize: 12, outline: "none",
+              width: isMobile ? "100%" : 220,
+              flex: isMobile ? "1 1 100%" : "none",
             }}
           />
-          {/* Teacher filter */}
-          <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
-            style={{
-              padding: "5px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
-              background: "var(--z-surface)", color: filterTeacher ? "var(--z-fg)" : "var(--z-muted)",
-              fontSize: 12, outline: "none", cursor: "pointer",
-            }}>
-            <option value="">All Teachers</option>
-            {allTeachers.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          {/* Location filter */}
-          <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}
-            style={{
-              padding: "5px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
-              background: "var(--z-surface)", color: filterLocation ? "var(--z-fg)" : "var(--z-muted)",
-              fontSize: 12, outline: "none", cursor: "pointer",
-            }}>
-            <option value="">All Locations</option>
-            {allLocations.map(l => <option key={l} value={l}>{l.replace(" Music Lessons", "")}</option>)}
-          </select>
+          <div style={{ display: "flex", gap: 6, flex: isMobile ? "1 1 100%" : "none" }}>
+            <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
+              style={{
+                padding: "6px 8px", borderRadius: 7, border: "1px solid var(--z-border)",
+                background: "var(--z-surface)", color: filterTeacher ? "var(--z-fg)" : "var(--z-muted)",
+                fontSize: 12, outline: "none", cursor: "pointer", flex: 1,
+              }}>
+              <option value="">All Teachers</option>
+              {allTeachers.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}
+              style={{
+                padding: "6px 8px", borderRadius: 7, border: "1px solid var(--z-border)",
+                background: "var(--z-surface)", color: filterLocation ? "var(--z-fg)" : "var(--z-muted)",
+                fontSize: 12, outline: "none", cursor: "pointer", flex: 1,
+              }}>
+              <option value="">All Locations</option>
+              {allLocations.map(l => <option key={l} value={l}>{l.replace(" Music Lessons", "")}</option>)}
+            </select>
+          </div>
           {(search || filterTeacher || filterLocation) && (
             <button onClick={() => { setSearch(""); setFilterTeacher(""); setFilterLocation(""); }}
               style={{
-                padding: "5px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
+                padding: "6px 10px", borderRadius: 7, border: "1px solid var(--z-border)",
                 background: "transparent", color: "var(--z-muted)", fontSize: 11, cursor: "pointer",
+                whiteSpace: "nowrap",
               }}>Clear</button>
           )}
-          {/* + New Family button */}
-          <button
-            onClick={() => setShowAdd(true)}
-            style={{
-              padding: "5px 14px", borderRadius: 7, border: "none",
-              background: ZIRO_GREEN, color: "#000",
-              fontSize: 12, fontWeight: 700, cursor: "pointer",
-              boxShadow: `0 1px 6px ${ZIRO_GREEN}55`,
-            }}
-          >
-            + New Family
-          </button>
+          {/* + New Family — desktop only */}
+          {!isMobile && (
+            <button
+              onClick={() => setShowAdd(true)}
+              style={{
+                padding: "5px 14px", borderRadius: 7, border: "none",
+                background: ZIRO_GREEN, color: "#000",
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              + New Family
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Column header ── */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 10,
-        background: "var(--z-bg, var(--z-surface))",
-        borderBottom: "1px solid var(--z-border)",
-        display: "grid",
-        gridTemplateColumns: "minmax(0,1.6fr) 100px minmax(0,1.2fr) 80px minmax(0,2fr)",
-        padding: "6px 16px 6px 20px",
-        gap: 8,
-      }}>
-        {["Family","Phone","Email","Location","Students & Teachers"].map(h => (
-          <span key={h} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{h}</span>
-        ))}
-      </div>
+      {/* ── DESKTOP: Column header ── */}
+      {!isMobile && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 10,
+          background: "var(--z-bg, var(--z-surface))",
+          borderBottom: "1px solid var(--z-border)",
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1.6fr) 100px minmax(0,1.2fr) 80px minmax(0,2fr)",
+          padding: "6px 16px 6px 20px",
+          gap: 8,
+        }}>
+          {["Family","Phone","Email","Location","Students & Teachers"].map(h => (
+            <span key={h} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{h}</span>
+          ))}
+        </div>
+      )}
 
       {/* ── Rows ── */}
       {filtered.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: "var(--z-muted)", fontSize: 13 }}>
           {(search || filterTeacher || filterLocation) ? `No families match the current filters` : `No ${tab} families`}
         </div>
+      ) : isMobile ? (
+        /* ═══════════════════════════════════════════════════════
+           MOBILE: stacked card layout
+           ═══════════════════════════════════════════════════════ */
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {filtered.map((row) => {
+            const locName   = locationNameById[row.primary_location_id ?? ""] ?? null;
+            const ls        = locStyle(locName);
+            const locShort  = shortLoc(locName);
+            const students  = studentsByFamily[row.id] ?? [];
+            const [avBg, avFg] = avColor(row.name);
+            const isMil     = row.is_military === true;
+            const isOverdue = (row.billing_status ?? "").toLowerCase() === "overdue";
+
+            const studentLines = students.slice(0, 6).map(s => ({
+              name: firstName(s.name),
+              instrument: s.instrument ? normInst(s.instrument) : null,
+              teacher: s.teacherName ?? null,
+            }));
+            const extraCount = students.length > 6 ? students.length - 6 : 0;
+
+            return (
+              <div key={row.id}>
+                <div
+                  onClick={() => router.push(`/crm/families/${row.id}`)}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0,
+                    padding: "12px 16px 12px 0",
+                    cursor: "pointer",
+                    borderLeft: `4px solid ${ZIRO_GREEN}`,
+                    position: "relative",
+                  }}
+                  onTouchStart={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--z-surface)"; }}
+                  onTouchEnd={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                >
+                  {/* Row 1: Avatar + Name + MIL + Location + Chevron */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 12 }}>
+                    {/* Avatar */}
+                    <div style={{
+                      flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+                      background: `radial-gradient(circle at 35% 35%, ${avBg}, ${avBg}88)`,
+                      border: `1.5px solid ${avFg}44`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 800, color: avFg, letterSpacing: "-0.02em",
+                    }}>
+                      {initials(row.name)}
+                    </div>
+
+                    {/* Name + badges */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                        <span style={{
+                          fontSize: 14, fontWeight: 700, color: "var(--z-fg)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                          {(row.name ?? '').replace(/\s+family$/i, "").trim()}
+                        </span>
+                        {isMil && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 20,
+                            background: "rgba(124,58,237,0.12)", color: "#7c3aed", letterSpacing: "0.04em",
+                            whiteSpace: "nowrap",
+                          }}>★ MIL</span>
+                        )}
+                        {isOverdue && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 20,
+                            background: "rgba(185,28,28,0.1)", color: "#b91c1c", letterSpacing: "0.04em",
+                            whiteSpace: "nowrap",
+                          }}>OVERDUE</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Location pill + chevron */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                        background: ls.bg, color: ls.fg, whiteSpace: "nowrap",
+                      }}>{locShort}</span>
+                      <span style={{ color: "var(--z-muted)", fontSize: 14, lineHeight: 1 }}>›</span>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Email */}
+                  {row.primary_email && (
+                    <div style={{ paddingLeft: 58, marginTop: 4 }}>
+                      <span style={{
+                        fontSize: 11, color: "var(--z-muted)", fontWeight: 400,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        display: "block", maxWidth: "100%",
+                      }}>
+                        {row.primary_email.length > 32
+                          ? row.primary_email.slice(0, 32) + "…"
+                          : row.primary_email}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Row 3: Phone */}
+                  {row.primary_phone && (
+                    <div style={{ paddingLeft: 58, marginTop: 2 }}>
+                      <span style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 400 }}>
+                        {row.primary_phone}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Row 4+: Students */}
+                  {studentLines.length > 0 && (
+                    <div style={{ paddingLeft: 58, marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+                      {studentLines.map((sl, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--z-fg)" }}>{sl.name}</span>
+                          {sl.instrument && (
+                            <span style={{
+                              fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
+                              background: `${ZIRO_GREEN}18`, color: ZIRO_GREEN,
+                              letterSpacing: "0.04em",
+                            }}>{sl.instrument}</span>
+                          )}
+                          {sl.teacher && (
+                            <span style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 400 }}>
+                              {sl.teacher}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {extraCount > 0 && (
+                        <span style={{ fontSize: 10, color: "var(--z-muted)", fontWeight: 500 }}>+{extraCount} more</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Row separator */}
+                <div style={{ position: "relative", height: 1, marginLeft: 4 }}>
+                  <div style={{
+                    position: "absolute", left: 0, top: 0, right: 0, height: 1,
+                    background: `linear-gradient(to right, ${ZIRO_GREEN}66 0%, ${ZIRO_GREEN}22 40%, transparent 100%)`,
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* ═══════════════════════════════════════════════════════
+           DESKTOP: original table layout — unchanged
+           ═══════════════════════════════════════════════════════ */
         <div style={{ display: "flex", flexDirection: "column" }}>
           {filtered.map((row, idx) => {
             const locName   = locationNameById[row.primary_location_id ?? ""] ?? null;
             const ls        = locStyle(locName);
             const locShort  = shortLoc(locName);
             const students  = studentsByFamily[row.id] ?? [];
-            const teacher   = teacherByFamily[row.id] ?? null;
-            const instruments = parseInst(row.instruments);
             const [avBg, avFg] = avColor(row.name);
             const isMil     = row.is_military === true;
             const isOverdue = (row.billing_status ?? "").toLowerCase() === "overdue";
+            const instruments = parseInst(row.instruments);
 
-            // Build nested student lines: "Name • Instrument • Teacher"
             const studentLines = students.slice(0, 5).map(s => ({
               name: firstName(s.name),
               instrument: s.instrument ? normInst(s.instrument) : null,
@@ -314,7 +508,6 @@ export function FamiliesListClient({
                     padding: "8px 16px 8px 0",
                     cursor: "pointer",
                     transition: "background 0.1s, transform 0.1s",
-                    /* L-border: left 4px solid green, bottom gradient via box-shadow trick */
                     borderLeft: `4px solid ${ZIRO_GREEN}`,
                     borderBottom: "none",
                   }}
@@ -329,9 +522,8 @@ export function FamiliesListClient({
                     el.style.transform = "translateY(0)";
                   }}
                 >
-                  {/* Col 1: Avatar + Name + sub-info */}
+                  {/* Col 1: Avatar + Name */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, paddingLeft: 12 }}>
-                    {/* Avatar */}
                     <div style={{
                       flexShrink: 0, width: 32, height: 32, borderRadius: "50%",
                       background: `radial-gradient(circle at 35% 35%, ${avBg}, ${avBg}88)`,
@@ -341,9 +533,7 @@ export function FamiliesListClient({
                     }}>
                       {initials(row.name)}
                     </div>
-
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      {/* Name row */}
                       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "nowrap" }}>
                         <span style={{
                           fontSize: 13, fontWeight: 700, color: "var(--z-fg)",
@@ -366,8 +556,6 @@ export function FamiliesListClient({
                           }}>OVERDUE</span>
                         )}
                       </div>
-
-                       {/* Instrument pills — keep under name */}
                       {instruments.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "nowrap", gap: 3, marginTop: 3, overflow: "hidden" }}>
                           {instruments.slice(0, 3).map(inst => (
@@ -384,20 +572,14 @@ export function FamiliesListClient({
 
                   {/* Col 2: Phone */}
                   <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {row.primary_phone ? (
-                      <span>{row.primary_phone}</span>
-                    ) : (
-                      <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>
-                    )}
+                    {row.primary_phone ? <span>{row.primary_phone}</span> : <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>}
                   </div>
+
                   {/* Col 3: Email */}
                   <div style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {row.primary_email ? (
-                      <span title={row.primary_email}>{row.primary_email}</span>
-                    ) : (
-                      <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>
-                    )}
+                    {row.primary_email ? <span title={row.primary_email}>{row.primary_email}</span> : <span style={{ color: "var(--z-border)", fontSize: 11 }}>—</span>}
                   </div>
+
                   {/* Col 4: Location pill */}
                   <div>
                     <span style={{
@@ -405,7 +587,8 @@ export function FamiliesListClient({
                       background: ls.bg, color: ls.fg, whiteSpace: "nowrap",
                     }}>{locShort}</span>
                   </div>
-                  {/* Col 5: Students & Teachers — stacked "Name • Instrument • Teacher" lines */}
+
+                  {/* Col 5: Students & Teachers */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 1, overflow: "hidden" }}>
                     {studentLines.length > 0 ? (
                       <>
@@ -436,9 +619,8 @@ export function FamiliesListClient({
                   </div>
                 </div>
 
-                {/* Fading L-border bottom + row separator */}
+                {/* Fading L-border bottom */}
                 <div style={{ position: "relative", height: 1, marginLeft: 4 }}>
-                  {/* The "L" bottom fade — starts at Ziro Green on the left, fades to transparent */}
                   <div style={{
                     position: "absolute", left: 0, top: 0, right: 0, height: 1,
                     background: `linear-gradient(to right, ${ZIRO_GREEN}66 0%, ${ZIRO_GREEN}22 40%, transparent 100%)`,
@@ -454,7 +636,6 @@ export function FamiliesListClient({
         open={showAdd}
         onClose={() => {
           setShowAdd(false);
-          // Strip ?new=true from URL so it doesn't reopen on refresh
           if (searchParams?.get("new") === "true") {
             router.replace("/crm/families");
           }
