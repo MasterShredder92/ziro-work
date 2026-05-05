@@ -532,7 +532,7 @@ export function InvoicesClient({
         )}
 
         {/* ── Pagination ── */}
-        {totalPages > 1 && (
+        {listIsActive && totalPages > 1 && (
           <div className="flex items-center justify-between text-sm">
             <span className="text-[var(--z-muted)]">
               Page {page} of {totalPages} ({totalCount.toLocaleString()} total)
