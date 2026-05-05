@@ -3,7 +3,6 @@ import React, { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layouts/PageShell";
-import { BillingSummaryBar } from "@/components/billing/BillingSummaryBar";
 import type { BillingMetrics } from "./page";
 
 // ─── Location config ──────────────────────────────────────────────────────────
@@ -163,6 +162,8 @@ export function InvoicesClient({
   const [monthOffset, setMonthOffset] = useState(initialMonthOffset);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [invoiceType, setInvoiceType] = useState<"recurring" | "one-time" | null>(null);
+  // Billing summary tab — independent from the list location filter
+  const [summaryTab, setSummaryTab] = useState<string | null>(null);
   const returnFamilyId = searchParams.get("family_id") ?? null;
 
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -209,26 +210,86 @@ export function InvoicesClient({
   return (
     <PageShell title="Invoices">
       <div className="space-y-6">
-        {/* ── Bub agent bar + Square sync ── */}
-        <div className="flex items-stretch gap-3">
-          <div className="flex-1">
-          </div>
+        {/* ── Top bar: Sync ── */}
+        <div className="flex items-center justify-end">
           <SquareSyncButton />
         </div>
-        {/* ── Billing summary by location ── */}
-        {billingMetrics && <BillingSummaryBar metrics={billingMetrics} />}
-        {/* ── Summary stats ── */}
+
+        {/* ── Billing Summary: pills + single swapping card ── */}
+        {billingMetrics && (() => {
+          const allSchools = billingMetrics.find(m => m.locationId === null);
+          const locationMetrics = billingMetrics.filter(m => m.locationId !== null);
+          const tabs: { id: string | null; label: string; color: string }[] = [
+            { id: null, label: "All Locations", color: "#00ff88" },
+            ...locationMetrics.map(l => ({ id: l.locationId, label: l.locationName, color: l.color })),
+          ];
+          const activeMetric = summaryTab === null
+            ? allSchools
+            : locationMetrics.find(l => l.locationId === summaryTab);
+          const fmtM = (cents: number) => cents ? `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "$0";
+          return (
+            <div className="space-y-3">
+              {/* Location pills */}
+              <div className="flex flex-wrap gap-2">
+                {tabs.map(t => {
+                  const isActive = summaryTab === t.id;
+                  return (
+                    <button
+                      key={t.id ?? "all"}
+                      onClick={() => setSummaryTab(t.id)}
+                      className="h-8 rounded-full border px-4 text-xs font-semibold transition-all whitespace-nowrap"
+                      style={{
+                        borderColor: isActive ? t.color : "var(--z-border)",
+                        background: isActive ? `${t.color}1a` : "var(--z-surface)",
+                        color: isActive ? t.color : "var(--z-muted)",
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Single metric card */}
+              {activeMetric && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{
+                    borderColor: `${activeMetric.color}33`,
+                    background: "var(--z-surface)",
+                  }}
+                >
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: activeMetric.color }} />
+                    <span className="text-sm font-bold text-[var(--z-fg)]">{activeMetric.locationName}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-5">
+                    {[
+                      { label: "Collected", value: fmtM(activeMetric.collectedThisMonth), color: "#22C55E" },
+                      { label: "Invoiced", value: fmtM(activeMetric.totalInvoicedThisMonth), color: "var(--z-fg)" },
+                      { label: "Discounted", value: activeMetric.discountedThisMonth < 0 ? "—" : fmtM(activeMetric.discountedThisMonth), color: activeMetric.discountedThisMonth < 0 ? "var(--z-muted)" : "#F59E0B" },
+                      { label: "Next Month", value: fmtM(activeMetric.nextMonthProjected), color: "#0EA5E9" },
+                      { label: "Scheduled", value: fmtM(activeMetric.scheduledPayments), color: "#A78BFA" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label}>
+                        <div className="text-[10px] text-[var(--z-muted)] uppercase tracking-wider mb-0.5">{label}</div>
+                        <div className="text-base font-bold" style={{ color }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── KPI tiles ── */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-            <div className="text-2xl font-extrabold text-[#22C55E]">
-              {formatCents(paidTotal)}
-            </div>
+            <div className="text-2xl font-extrabold text-[#22C55E]">{formatCents(paidTotal)}</div>
             <div className="text-xs text-[var(--z-muted)]">Total collected</div>
           </div>
           <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
-            <div className="text-2xl font-extrabold text-[#EF4444]">
-              {formatCents(unpaidTotal)}
-            </div>
+            <div className="text-2xl font-extrabold text-[#EF4444]">{formatCents(unpaidTotal)}</div>
             <div className="text-xs text-[var(--z-muted)]">Outstanding</div>
           </div>
           <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] p-4">
@@ -276,72 +337,77 @@ export function InvoicesClient({
         </div>
 
         {/* ── Filters ── */}
-        <div className="flex flex-wrap items-center gap-3">
-
-          <form onSubmit={handleSearch} className="flex w-full gap-2 sm:w-auto">
+        <div className="space-y-3">
+          {/* Search row */}
+          <form onSubmit={handleSearch} className="flex gap-2">
             <input
               type="search"
               placeholder="Search name, email, invoice #…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] sm:w-64"
+              className="h-9 flex-1 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 text-sm text-[var(--z-fg)] placeholder:text-[var(--z-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] sm:max-w-72"
             />
             <button
               type="submit"
-              className="h-9 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-3 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+              className="h-9 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-4 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
             >
               Search
             </button>
+            <span className="ml-auto flex items-center text-sm text-[var(--z-muted)]">
+              {totalCount.toLocaleString()} invoices
+            </span>
           </form>
-
-          <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
-            {(["all", "unpaid", "paid", "partially_paid"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
-                className="px-3 py-1.5 capitalize transition-colors"
-                style={{
-                  background: status === s ? "var(--z-accent)" : "var(--z-surface)",
-                  color: status === s ? "var(--z-on-accent)" : "var(--z-muted)",
-                  fontWeight: status === s ? 700 : 400,
-                }}
-              >
-                {s === "partially_paid" ? "Partial" : s}
-              </button>
-            ))}
+          {/* Status pills */}
+          <div className="flex flex-wrap gap-2">
+            {(["all", "unpaid", "paid", "partially_paid"] as const).map((s) => {
+              const isActive = status === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  className="h-8 rounded-full border px-4 text-xs font-semibold capitalize transition-all whitespace-nowrap"
+                  style={{
+                    borderColor: isActive ? "var(--z-accent)" : "var(--z-border)",
+                    background: isActive ? "rgba(0,255,136,0.1)" : "var(--z-surface)",
+                    color: isActive ? "var(--z-accent)" : "var(--z-muted)",
+                  }}
+                >
+                  {s === "partially_paid" ? "Partial" : s}
+                </button>
+              );
+            })}
           </div>
-
-          <div className="flex rounded-lg border border-[var(--z-border)] overflow-hidden text-sm">
+          {/* Location pills */}
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handleLocationChange("")}
-              className="px-3 py-1.5 transition-colors"
+              className="h-8 rounded-full border px-4 text-xs font-semibold transition-all whitespace-nowrap"
               style={{
-                background: !locationId ? "var(--z-accent)" : "var(--z-surface)",
-                color: !locationId ? "var(--z-on-accent)" : "var(--z-muted)",
-                fontWeight: !locationId ? 700 : 400,
+                borderColor: !locationId ? "var(--z-accent)" : "var(--z-border)",
+                background: !locationId ? "rgba(0,255,136,0.1)" : "var(--z-surface)",
+                color: !locationId ? "var(--z-accent)" : "var(--z-muted)",
               }}
             >
               All
             </button>
-            {LOCATIONS.map((loc) => (
-              <button
-                key={loc.id}
-                onClick={() => handleLocationChange(loc.id)}
-                className="px-3 py-1.5 transition-colors"
-                style={{
-                  background: locationId === loc.id ? loc.color : "var(--z-surface)",
-                  color: locationId === loc.id ? "#fff" : "var(--z-muted)",
-                  fontWeight: locationId === loc.id ? 700 : 400,
-                }}
-              >
-                {loc.name}
-              </button>
-            ))}
+            {LOCATIONS.map((loc) => {
+              const isActive = locationId === loc.id;
+              return (
+                <button
+                  key={loc.id}
+                  onClick={() => handleLocationChange(loc.id)}
+                  className="h-8 rounded-full border px-4 text-xs font-semibold transition-all whitespace-nowrap"
+                  style={{
+                    borderColor: isActive ? loc.color : "var(--z-border)",
+                    background: isActive ? `${loc.color}1a` : "var(--z-surface)",
+                    color: isActive ? loc.color : "var(--z-muted)",
+                  }}
+                >
+                  {loc.name}
+                </button>
+              );
+            })}
           </div>
-
-          <span className="ml-auto text-sm text-[var(--z-muted)]">
-            {totalCount.toLocaleString()} invoices
-          </span>
         </div>
 
         {/* ── Table (desktop) ── */}
