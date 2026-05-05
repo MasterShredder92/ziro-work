@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { AddStudentModal } from "./add-student-modal";
 
@@ -1856,7 +1856,11 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
 export function FamilyAccountContent() {
   const params = useParams<{ id: string }>();
   const familyId = params?.id ?? "";
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const searchParams = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const validTabs: Tab[] = ["overview", "teachers", "billing", "docs_notes"];
+  const initialTab: Tab = validTabs.includes(rawTab as Tab) ? (rawTab as Tab) : "overview";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [brandColor, setBrandColor] = useState<string>("#00D16C");
 
   useEffect(() => {

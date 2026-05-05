@@ -166,6 +166,9 @@ export function InvoicesClient({
   const [summaryTab, setSummaryTab] = useState<string | null>(null);
   const returnFamilyId = searchParams.get("family_id") ?? null;
 
+  // List is "active" once any filter has been explicitly applied
+  const listIsActive = initialStatus !== "all" || !!initialLocationId || !!initialSearch;
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const navigate = useCallback(
@@ -404,162 +407,123 @@ export function InvoicesClient({
           </div>
         </div>
 
-        {/* ── Table (desktop) ── */}
-        <div className="hidden sm:block rounded-xl border border-[var(--z-border)] overflow-hidden">
-          <div
-            className="grid px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--z-muted)]"
-            style={{
-              gridTemplateColumns: "1fr 100px 90px 100px 110px 100px 90px",
-              background: "var(--z-surface)",
-              borderBottom: "1px solid var(--z-border)",
-            }}
-          >
-            <div>Customer</div>
-            <div>Invoice #</div>
-            <div>Studio</div>
-            <div>Amount</div>
-            <div>Due</div>
-            <div>Paid</div>
-            <div>Status</div>
+        {/* ── Invoice list (lazy — only shown when a filter is active) ── */}
+        {!listIsActive ? (
+          <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-6 py-14 text-center">
+            <div className="text-sm font-semibold text-[var(--z-fg)] mb-1">Select a filter to view invoices</div>
+            <div className="text-xs text-[var(--z-muted)]">Use the Status or Location dropdowns, or search by name, email, or invoice #.</div>
           </div>
-
-          {invoices.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-[var(--z-muted)]">
-              No invoices match your filters.
-            </div>
-          ) : (
-            invoices.map((inv) => {
-              const badge = statusBadge(inv.status);
-              const overdue = isOverdue(inv);
-              const locInfo = inv.location_id ? LOCATION_MAP[inv.location_id] : null;
-
-              return (
-                <div
-                  key={inv.id}
-                  className="grid items-center border-b px-4 py-3 text-sm transition-colors hover:bg-white/[0.02]"
-                  style={{
-                    gridTemplateColumns: "1fr 100px 90px 100px 110px 100px 90px",
-                    borderColor: "var(--z-border)",
-                  }}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold text-[var(--z-fg)]">
-                      {inv.customer_name || "—"}
-                    </div>
-                    {inv.customer_email && (
-                      <div className="truncate text-xs text-[var(--z-muted)]">
-                        {inv.customer_email}
-                      </div>
-                    )}
-                    {inv.family_id && (
-                      <Link
-                        href={`/crm/families/${inv.family_id}`}
-                        className="text-[10px] hover:underline"
-                        style={{ color: "var(--z-accent)" }}
-                      >
-                        View family →
-                      </Link>
-                    )}
-                  </div>
-
-                  <div className="truncate text-xs text-[var(--z-muted)]">
-                    {inv.invoice_number || "—"}
-                  </div>
-
-                  <div>
-                    {locInfo ? (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                        style={{
-                          background: `${locInfo.color}22`,
-                          color: locInfo.color,
-                        }}
-                      >
-                        {locInfo.name}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-[var(--z-muted)]">—</span>
-                    )}
-                  </div>
-
-                  <div className="font-semibold text-[var(--z-fg)]">
-                    {formatCents(inv.amount_cents)}
-                  </div>
-
-                  <div
-                    className="text-xs"
-                    style={{ color: overdue ? "#EF4444" : "var(--z-muted)" }}
-                  >
-                    {formatDate(inv.due_date)}
-                    {overdue && (
-                      <span className="ml-1 text-[10px] font-bold text-[#EF4444]">
-                        OVERDUE
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-[var(--z-muted)]">
-                    {formatDate(inv.paid_at)}
-                  </div>
-
-                  <div>
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                      style={{ background: badge.bg, color: badge.color }}
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden sm:block rounded-xl border border-[var(--z-border)] overflow-hidden">
+              <div
+                className="grid px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--z-muted)]"
+                style={{
+                  gridTemplateColumns: "1fr 100px 90px 100px 110px 100px 90px",
+                  background: "var(--z-surface)",
+                  borderBottom: "1px solid var(--z-border)",
+                }}
+              >
+                <div>Customer</div>
+                <div>Invoice #</div>
+                <div>Studio</div>
+                <div>Amount</div>
+                <div>Due</div>
+                <div>Paid</div>
+                <div>Status</div>
+              </div>
+              {invoices.length === 0 ? (
+                <div className="px-6 py-12 text-center text-sm text-[var(--z-muted)]">No invoices match your filters.</div>
+              ) : (
+                invoices.map((inv) => {
+                  const badge = statusBadge(inv.status);
+                  const overdue = isOverdue(inv);
+                  const locInfo = inv.location_id ? LOCATION_MAP[inv.location_id] : null;
+                  const href = inv.family_id ? `/crm/families/${inv.family_id}?tab=billing` : null;
+                  return (
+                    <Link
+                      key={inv.id}
+                      href={href ?? "#"}
+                      className="grid items-center border-b px-4 py-3 text-sm transition-colors hover:bg-[var(--z-accent)]/5 cursor-pointer"
+                      style={{
+                        gridTemplateColumns: "1fr 100px 90px 100px 110px 100px 90px",
+                        borderColor: "var(--z-border)",
+                        textDecoration: "none",
+                      }}
                     >
-                      {badge.label}
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* ── Cards (mobile) ── */}
-        <div className="sm:hidden space-y-3">
-          {invoices.length === 0 ? (
-            <div className="rounded-xl border border-[var(--z-border)] px-6 py-12 text-center text-sm text-[var(--z-muted)]">
-              No invoices match your filters.
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-[var(--z-fg)]">{inv.customer_name || "—"}</div>
+                        {inv.customer_email && <div className="truncate text-xs text-[var(--z-muted)]">{inv.customer_email}</div>}
+                      </div>
+                      <div className="truncate text-xs text-[var(--z-muted)]">{inv.invoice_number || "—"}</div>
+                      <div>
+                        {locInfo ? (
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${locInfo.color}22`, color: locInfo.color }}>{locInfo.name}</span>
+                        ) : (
+                          <span className="text-xs text-[var(--z-muted)]">-</span>
+                        )}
+                      </div>
+                      <div className="font-semibold text-[var(--z-fg)]">{formatCents(inv.amount_cents)}</div>
+                      <div className="text-xs" style={{ color: overdue ? "#EF4444" : "var(--z-muted)" }}>
+                        {formatDate(inv.due_date)}
+                        {overdue && <span className="ml-1 text-[10px] font-bold text-[#EF4444]">OVERDUE</span>}
+                      </div>
+                      <div className="text-xs text-[var(--z-muted)]">{formatDate(inv.paid_at)}</div>
+                      <div>
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
             </div>
-          ) : (
-            invoices.map((inv) => {
-              const badge = statusBadge(inv.status);
-              const overdue = isOverdue(inv);
-              const locInfo = inv.location_id ? LOCATION_MAP[inv.location_id] : null;
-              return (
-                <div
-                  key={inv.id}
-                  className="rounded-xl border px-4 py-3 space-y-1.5"
-                  style={{
-                    borderColor: overdue ? "#EF444466" : "var(--z-border)",
-                    background: "var(--z-surface)",
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate font-bold text-[var(--z-fg)]">{inv.customer_name || "—"}</div>
-                      {inv.customer_email && <div className="truncate text-xs text-[var(--z-muted)]">{inv.customer_email}</div>}
-                    </div>
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                    <span className="font-semibold text-[var(--z-fg)]">{formatCents(inv.amount_cents)}</span>
-                    {locInfo && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${locInfo.color}22`, color: locInfo.color }}>{locInfo.name}</span>}
-                    {inv.invoice_number && <span className="text-[var(--z-muted)]">#{inv.invoice_number}</span>}
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--z-muted)]">
-                    {inv.due_date && <span style={{ color: overdue ? "#EF4444" : undefined }}>Due {formatDate(inv.due_date)}{overdue ? " · OVERDUE" : ""}</span>}
-                    {inv.paid_at && <span>Paid {formatDate(inv.paid_at)}</span>}
-                  </div>
-                  {inv.family_id && (
-                    <Link href={`/crm/families/${inv.family_id}`} className="text-[10px] hover:underline" style={{ color: "var(--z-accent)" }}>View family →</Link>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+
+            {/* Mobile cards */}
+            <div className="sm:hidden space-y-3">
+              {invoices.length === 0 ? (
+                <div className="rounded-xl border border-[var(--z-border)] px-6 py-12 text-center text-sm text-[var(--z-muted)]">No invoices match your filters.</div>
+              ) : (
+                invoices.map((inv) => {
+                  const badge = statusBadge(inv.status);
+                  const overdue = isOverdue(inv);
+                  const locInfo = inv.location_id ? LOCATION_MAP[inv.location_id] : null;
+                  const href = inv.family_id ? `/crm/families/${inv.family_id}?tab=billing` : null;
+                  return (
+                    <Link
+                      key={inv.id}
+                      href={href ?? "#"}
+                      className="block rounded-xl border px-4 py-3 space-y-1.5 transition-colors hover:border-[var(--z-accent)]/40"
+                      style={{
+                        borderColor: overdue ? "#EF444466" : "var(--z-border)",
+                        background: "var(--z-surface)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate font-bold text-[var(--z-fg)]">{inv.customer_name || "—"}</div>
+                          {inv.customer_email && <div className="truncate text-xs text-[var(--z-muted)]">{inv.customer_email}</div>}
+                        </div>
+                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                        <span className="font-semibold text-[var(--z-fg)]">{formatCents(inv.amount_cents)}</span>
+                        {locInfo && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${locInfo.color}22`, color: locInfo.color }}>{locInfo.name}</span>}
+                        {inv.invoice_number && <span className="text-[var(--z-muted)]">#{inv.invoice_number}</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--z-muted)]">
+                        {inv.due_date && <span style={{ color: overdue ? "#EF4444" : undefined }}>Due {formatDate(inv.due_date)}{overdue ? " · OVERDUE" : ""}</span>}
+                        {inv.paid_at && <span>Paid {formatDate(inv.paid_at)}</span>}
+                      </div>
+                      <div className="text-[10px]" style={{ color: "var(--z-accent)" }}>View billing →</div>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
 
         {/* ── Pagination ── */}
         {totalPages > 1 && (
