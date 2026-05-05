@@ -827,19 +827,25 @@ function MeetTeachersCard({ familyId, brandColor }: { familyId: string; brandCol
     load();
   }, [familyId]);
 
-  if (!loading && teachers.length === 0) return null;
+  const [expandedBios, setExpandedBios] = useState<Record<string, boolean>>({});
+  function toggleBio(id: string) { setExpandedBios(prev => ({ ...prev, [id]: !prev[id] })); }
+
+  if (!loading && teachers.length === 0) {
+    return (
+      <BrandCard brandColor={brandColor}>
+        <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+          <p className="text-sm font-medium" style={{ color: T.muted }}>No teachers assigned to this family yet</p>
+        </div>
+      </BrandCard>
+    );
+  }
 
   return (
     <BrandCard brandColor={brandColor} id="meet-teachers">
-      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+      <div className="px-5 pt-4 pb-2">
         <h3 className="text-sm font-semibold uppercase tracking-widest" style={{ color: T.label }}>
-          Meet Your Teacher{teachers.length !== 1 ? "s" : ""}
+          Teacher{teachers.length !== 1 ? "s" : ""}
         </h3>
-        {!loading && (
-          <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
-            {teachers.length}
-          </span>
-        )}
       </div>
       {loading ? (
         <div className="flex flex-col gap-3 animate-pulse px-5 pb-4">
@@ -855,38 +861,72 @@ function MeetTeachersCard({ familyId, brandColor }: { familyId: string; brandCol
         </div>
       ) : (
         <ul className="flex flex-col divide-y" style={{ borderColor: T.border }}>
-          {teachers.map((teacher) => (
-            <li key={teacher.id} className="flex items-start gap-4 px-5 py-4">
-              <TeacherAvatar teacher={teacher} size={52} />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold" style={{ color: T.fg }}>{teacher.full_name}</p>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
-                    {teacher.teacher_role}
-                  </span>
-                </div>
-                {teacher.teaches_students.length > 0 && (
-                  <p className="mt-0.5 text-xs" style={{ color: T.muted }}>
-                    Teacher for {teacher.teaches_students.join(" & ")}
-                  </p>
-                )}
-                {teacher.bio && (
-                  <p className="mt-2 text-xs leading-relaxed" style={{ color: T.label }}>
-                    {teacher.bio}
-                  </p>
-                )}
-                {teacher.instruments && teacher.instruments.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {teacher.instruments.map((inst: string) => (
-                      <span key={inst} className="rounded-full px-2 py-0.5 text-xs" style={{ background: "rgba(0,255,0,0.06)", color: "#00cc00" }}>
-                        {inst}
+          {teachers.map((teacher) => {
+            const bioExpanded = !!expandedBios[teacher.id];
+            const bioLong = (teacher.bio ?? "").length > 160;
+            return (
+              <li key={teacher.id}>
+                <a
+                  href={`/teachers/${teacher.id}`}
+                  className="flex items-start gap-3 px-5 py-4 transition-colors hover:opacity-90"
+                  style={{ display: "flex", textDecoration: "none" }}
+                >
+                  <TeacherAvatar teacher={teacher} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold" style={{ color: T.fg }}>{teacher.full_name}</p>
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: T.surface2, color: T.muted }}>
+                        {teacher.teacher_role}
                       </span>
-                    ))}
+                    </div>
+                    {teacher.teaches_students.length > 0 && (
+                      <p className="mt-0.5 text-xs" style={{ color: T.muted }}>
+                        Teaching {teacher.teaches_students.join(" & ")}
+                      </p>
+                    )}
+                    {teacher.bio && (
+                      <>
+                        <p
+                          className="mt-2 text-xs leading-relaxed"
+                          style={{
+                            color: T.label,
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: bioExpanded ? undefined : 3,
+                            overflow: bioExpanded ? "visible" : "hidden",
+                          }}
+                        >
+                          {teacher.bio}
+                        </p>
+                        {bioLong && (
+                          <button
+                            type="button"
+                            onClick={e => { e.preventDefault(); toggleBio(teacher.id); }}
+                            className="mt-1 text-xs font-medium hover:opacity-70 transition-opacity"
+                            style={{ color: T.muted, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                          >
+                            {bioExpanded ? "Show less" : "Show more"}
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {teacher.instruments && teacher.instruments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {teacher.instruments.map((inst: string) => (
+                          <span key={inst} className="rounded-full px-2 py-0.5 text-xs" style={{ background: "rgba(0,255,0,0.06)", color: "#00cc00" }}>
+                            {inst}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </li>
-          ))}
+                  <svg className="mt-1 h-4 w-4 shrink-0" style={{ color: T.muted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </li>
+            );
+          })}
         </ul>
       )}
     </BrandCard>
