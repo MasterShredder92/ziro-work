@@ -37,6 +37,7 @@ const INSTRUMENT_EMOJI: Record<string, string> = {
   drums: "🥁", percussion: "🥁", violin: "🎻", viola: "🎻",
   cello: "🎻", trumpet: "🎺", trombone: "🎺", saxophone: "🎷",
   clarinet: "🎷", flute: "🎷", voice: "🎤", vocals: "🎤",
+  ukulele: "🪕", banjo: "🪕",
 };
 
 function instrEmoji(instr?: string | null) {
@@ -80,6 +81,15 @@ export function TeachersClient() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ matched: number; unmatched: number; updated: number; unmatched_list: Array<{ name: string; email: string }> } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   async function handleSquareSync() {
     setSyncing(true);
@@ -129,15 +139,25 @@ export function TeachersClient() {
   return (
     <PageTransition>
       <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 56px)", overflow: "hidden" }}>
-        {/* Header */}
-        <div style={{ flexShrink: 0, borderBottom: "1px solid var(--z-border)", padding: "16px 24px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+
+        {/* ── Header ── */}
+        <div style={{ flexShrink: 0, borderBottom: "1px solid var(--z-border)", padding: isMobile ? "12px 16px" : "16px 24px" }}>
+
+          {/* Title row + action buttons */}
+          <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
             <PageHeader title="Teachers" subtitle="Staff directory, pay rates, and W-9 status" />
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <button
                 onClick={handleSquareSync}
                 disabled={syncing}
-                style={{ borderRadius: 8, border: `1px solid ${ZIRO_GREEN}40`, padding: "6px 14px", fontSize: 13, fontWeight: 600, color: syncing ? "var(--z-muted)" : ZIRO_GREEN, background: `${ZIRO_GREEN}10`, cursor: syncing ? "not-allowed" : "pointer", opacity: syncing ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
+                style={{
+                  borderRadius: 8, border: `1px solid ${ZIRO_GREEN}40`, padding: isMobile ? "5px 10px" : "6px 14px",
+                  fontSize: isMobile ? 11 : 13, fontWeight: 600,
+                  color: syncing ? "var(--z-muted)" : ZIRO_GREEN,
+                  background: `${ZIRO_GREEN}10`, cursor: syncing ? "not-allowed" : "pointer",
+                  opacity: syncing ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6,
+                  whiteSpace: "nowrap",
+                }}
               >
                 {syncing ? (
                   <><span style={{ display: "inline-block", width: 12, height: 12, border: `2px solid ${ZIRO_GREEN}40`, borderTop: `2px solid ${ZIRO_GREEN}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Syncing...</>
@@ -145,14 +165,25 @@ export function TeachersClient() {
               </button>
               <button
                 onClick={() => setShowInvite(true)}
-                style={{ borderRadius: 8, border: "1px solid var(--z-border)", padding: "6px 14px", fontSize: 13, fontWeight: 600, color: "var(--z-muted)", background: "transparent", cursor: "pointer" }}
-              >✉ Invite Teacher</button>
+                style={{
+                  borderRadius: 8, border: "1px solid var(--z-border)", padding: isMobile ? "5px 10px" : "6px 14px",
+                  fontSize: isMobile ? 11 : 13, fontWeight: 600,
+                  color: "var(--z-muted)", background: "transparent", cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >✉ Invite</button>
               <Link
                 href="/crm/teachers/new"
-                style={{ borderRadius: 8, background: `${ZIRO_GREEN}18`, padding: "6px 14px", fontSize: 13, fontWeight: 600, color: ZIRO_GREEN, textDecoration: "none" }}
+                style={{
+                  borderRadius: 8, background: `${ZIRO_GREEN}18`, padding: isMobile ? "5px 10px" : "6px 14px",
+                  fontSize: isMobile ? 11 : 13, fontWeight: 600, color: ZIRO_GREEN, textDecoration: "none",
+                  whiteSpace: "nowrap",
+                }}
               >+ Add Teacher</Link>
             </div>
           </div>
+
+          {/* Location filter pills */}
           <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
             {["all", ...LOCATIONS.map((l: { id: string }) => l.id)].map(locId => {
               const locCfg = locId !== "all" ? LOCATION_MAP[locId] : null;
@@ -173,8 +204,10 @@ export function TeachersClient() {
               );
             })}
           </div>
-          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-            <div style={{ display: "flex", borderRadius: 8, border: "1px solid var(--z-border)", overflow: "hidden", fontSize: 11, fontWeight: 600 }}>
+
+          {/* Status filter + search */}
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
+            <div style={{ display: "flex", borderRadius: 8, border: "1px solid var(--z-border)", overflow: "hidden", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
               {(["all", "active", "inactive"] as const).map(s => (
                 <button
                   key={s}
@@ -195,27 +228,30 @@ export function TeachersClient() {
               style={{
                 flex: 1, borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)",
                 padding: "5px 12px", fontSize: 13, color: "var(--z-fg)", outline: "none",
+                minWidth: 0,
               }}
             />
           </div>
         </div>
 
-        {/* Column header */}
-        <div style={{
-          flexShrink: 0,
-          background: "var(--z-bg, #0a0a0c)",
-          borderBottom: "1px solid var(--z-border)",
-          display: "grid",
-          gridTemplateColumns: "minmax(0,1.8fr) 140px minmax(0,1.2fr) minmax(0,1.2fr) 90px 80px",
-          padding: "6px 16px 6px 20px",
-          gap: 8,
-        }}>
-          {["Teacher", "Contact", "Instruments", "Location", "Pay Rate", "W-9"].map(h => (
-            <span key={h} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{h}</span>
-          ))}
-        </div>
+        {/* ── DESKTOP: Column header ── */}
+        {!isMobile && (
+          <div style={{
+            flexShrink: 0,
+            background: "var(--z-bg, #0a0a0c)",
+            borderBottom: "1px solid var(--z-border)",
+            display: "grid",
+            gridTemplateColumns: "minmax(0,1.8fr) 140px minmax(0,1.2fr) minmax(0,1.2fr) 90px 80px",
+            padding: "6px 16px 6px 20px",
+            gap: 8,
+          }}>
+            {["Teacher", "Contact", "Instruments", "Location", "Pay Rate", "W-9"].map(h => (
+              <span key={h} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>{h}</span>
+            ))}
+          </div>
+        )}
 
-        {/* Rows */}
+        {/* ── Rows ── */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {loading ? (
             <div>
@@ -227,7 +263,154 @@ export function TeachersClient() {
             <div style={{ padding: "60px 0", textAlign: "center", color: "var(--z-muted)", fontSize: 13 }}>
               No teachers found
             </div>
+          ) : isMobile ? (
+            /* ═══════════════════════════════════════════════════════
+               MOBILE: stacked card layout
+               ═══════════════════════════════════════════════════════ */
+            <div>
+              {filtered.map(t => {
+                const name = teacherName(t);
+                const [avBg, avFg] = avColor(name);
+                const payRate = t.pay_rate_per_half_hour ?? t.rate_per_block ?? null;
+                const w9Done = !!t.w9_completed_at;
+                const isActive = t.is_active !== false && (t.status ?? "active") !== "inactive";
+                const locIds = t.location_ids ?? [];
+                const locConfigs = locIds.map((id: string) => LOCATION_MAP[id]).filter(Boolean);
+                const instrs = t.instruments ?? [];
+
+                return (
+                  <div key={t.id}>
+                    <div
+                      onClick={() => router.push(`/teachers/${t.id}`)}
+                      style={{
+                        display: "flex", flexDirection: "column", gap: 0,
+                        padding: "12px 16px 12px 0",
+                        cursor: "pointer",
+                        borderLeft: `4px solid ${ZIRO_GREEN}`,
+                        position: "relative",
+                      }}
+                      onTouchStart={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--z-surface)"; }}
+                      onTouchEnd={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                    >
+                      {/* Row 1: Avatar + Name + Role | Location pills + Chevron */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 12 }}>
+                        {/* Avatar */}
+                        <div style={{ position: "relative", flexShrink: 0 }}>
+                          {t.photo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={t.photo_url} alt={name} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "1.5px solid var(--z-border)" }} />
+                          ) : (
+                            <div style={{
+                              width: 38, height: 38, borderRadius: "50%",
+                              background: `radial-gradient(circle at 35% 35%, ${avBg}, ${avBg}88)`,
+                              border: `1.5px solid ${avFg}44`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 12, fontWeight: 800, color: avFg, letterSpacing: "-0.02em",
+                            }}>
+                              {initials(t)}
+                            </div>
+                          )}
+                          {/* Active dot */}
+                          <div style={{
+                            position: "absolute", bottom: 0, right: 0,
+                            width: 10, height: 10, borderRadius: "50%",
+                            background: isActive ? "#22c55e" : "#505055",
+                            border: "2px solid var(--z-bg, #0a0a0c)",
+                          }} />
+                        </div>
+
+                        {/* Name + role */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--z-fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {name}
+                          </div>
+                          <div style={{ fontSize: 10, color: "var(--z-muted)", marginTop: 1 }}>
+                            {t.teacher_role ?? "Music Teacher"}
+                          </div>
+                        </div>
+
+                        {/* Location pills + chevron */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                          {locConfigs.slice(0, 2).map((lc: { color: string; name: string }, i: number) => (
+                            <span key={i} style={{
+                              fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
+                              background: `${lc.color}20`, color: lc.color, whiteSpace: "nowrap",
+                            }}>{lc.name}</span>
+                          ))}
+                          {locConfigs.length > 2 && (
+                            <span style={{ fontSize: 9, color: "var(--z-muted)" }}>+{locConfigs.length - 2}</span>
+                          )}
+                          <span style={{ color: "var(--z-muted)", fontSize: 14, lineHeight: 1, marginLeft: 2 }}>›</span>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Instrument pills */}
+                      {instrs.length > 0 && (
+                        <div style={{ paddingLeft: 60, marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {instrs.map((instr: string, i: number) => (
+                            <span key={i} style={{
+                              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20,
+                              background: `${ZIRO_GREEN}15`, color: ZIRO_GREEN, whiteSpace: "nowrap",
+                            }}>
+                              {instrEmoji(instr)} {instr}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Row 3: Phone • Email */}
+                      {(t.phone || t.email) && (
+                        <div style={{ paddingLeft: 60, marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {t.phone && (
+                            <span style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 400 }}>{t.phone}</span>
+                          )}
+                          {t.phone && t.email && (
+                            <span style={{ fontSize: 10, color: "var(--z-border)" }}>•</span>
+                          )}
+                          {t.email && (
+                            <span style={{
+                              fontSize: 11, color: "var(--z-muted)", fontWeight: 400,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              maxWidth: 200,
+                            }}>
+                              {t.email.length > 28 ? t.email.slice(0, 28) + "…" : t.email}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Row 4: Pay rate + W-9 */}
+                      <div style={{ paddingLeft: 60, marginTop: 6, display: "flex", alignItems: "center", gap: 10 }}>
+                        {payRate != null ? (
+                          <span style={{ fontSize: 13, fontWeight: 700, color: ZIRO_GREEN }}>
+                            ${payRate}<span style={{ fontSize: 9, fontWeight: 500, color: "var(--z-muted)", marginLeft: 2 }}>/blk</span>
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, color: "var(--z-border)" }}>No rate set</span>
+                        )}
+                        {w9Done ? (
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(34,197,94,0.12)", color: "#22c55e", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>✓ W-9</span>
+                        ) : (
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(239,68,68,0.10)", color: "#ef4444", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>✕ W-9</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Fading separator */}
+                    <div style={{ position: "relative", height: 1, marginLeft: 4 }}>
+                      <div style={{
+                        position: "absolute", left: 0, top: 0, right: 0, height: 1,
+                        background: `linear-gradient(to right, ${ZIRO_GREEN}66 0%, ${ZIRO_GREEN}22 40%, transparent 100%)`,
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* ═══════════════════════════════════════════════════════
+               DESKTOP: original 6-column table — unchanged
+               ═══════════════════════════════════════════════════════ */
             <div>
               {filtered.map(t => {
                 const name = teacherName(t);
@@ -385,6 +568,7 @@ export function TeachersClient() {
           onSent={() => { setShowInvite(false); loadTeachers(); }}
         />
       )}
+
       {/* Square Sync Result Modal */}
       {(syncResult || syncError) && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
@@ -446,67 +630,62 @@ function InviteTeacherModal({ onClose, onSent }: { onClose: () => void; onSent: 
   const [success, setSuccess] = useState(false);
 
   async function handleSend() {
-    if (!email.trim()) { setError("Email is required"); return; }
+    if (!email.trim()) { setError("Email required"); return; }
     setSending(true);
     setError(null);
     try {
-      const res = await fetch("/api/teachers/invite", {
+      const res = await fetch("/api/crm/teachers/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), first_name: firstName.trim(), last_name: lastName.trim() }),
       });
-      const j = await res.json().catch(() => ({})) as { error?: string; ok?: boolean };
-      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to send invite");
       setSuccess(true);
-      setTimeout(() => onSent(), 1500);
+      setTimeout(onSent, 1200);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send invite");
+      setError(err instanceof Error ? err.message : "Failed");
     } finally {
       setSending(false);
     }
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
-      <div style={{ width: "100%", maxWidth: 420, borderRadius: 16, border: "1px solid var(--z-border)", background: "var(--z-bg, #0a0a0c)", padding: 24, boxShadow: "0 24px 48px rgba(0,0,0,0.6)" }}>
-        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--z-fg)" }}>Invite Teacher</div>
-            <div style={{ fontSize: 11, color: "var(--z-muted)", marginTop: 2 }}>Sends a magic link to their email to set up their account.</div>
-          </div>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+      <div style={{ background: "#111113", border: "1px solid #1c1c1e", borderRadius: 12, padding: 28, minWidth: 340, maxWidth: 440, width: "90%" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--z-fg)" }}>Invite Teacher</span>
           <button onClick={onClose} style={{ fontSize: 18, color: "var(--z-muted)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
         </div>
         {success ? (
-          <div style={{ borderRadius: 10, background: `${ZIRO_GREEN}18`, border: `1px solid ${ZIRO_GREEN}30`, padding: "10px 14px", fontSize: 13, fontWeight: 600, color: ZIRO_GREEN }}>
-            ✓ Invite sent to {email}
-          </div>
+          <p style={{ color: "#22c55e", fontSize: 14, textAlign: "center", padding: "16px 0" }}>Invite sent!</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 600, color: "var(--z-muted)" }}>First Name</label>
-                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane"
-                  style={{ width: "100%", borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)", padding: "7px 10px", fontSize: 13, color: "var(--z-fg)", outline: "none", boxSizing: "border-box" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 600, color: "var(--z-muted)" }}>Last Name</label>
-                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith"
-                  style={{ width: "100%", borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)", padding: "7px 10px", fontSize: 13, color: "var(--z-fg)", outline: "none", boxSizing: "border-box" }} />
-              </div>
-            </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 600, color: "var(--z-muted)" }}>Email <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(null); }} onKeyDown={e => e.key === "Enter" && handleSend()} placeholder="teacher@example.com"
-                style={{ width: "100%", borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)", padding: "7px 10px", fontSize: 13, color: "var(--z-fg)", outline: "none", boxSizing: "border-box" }} />
-            </div>
-            {error && <p style={{ fontSize: 11, color: "#ef4444", margin: 0 }}>{error}</p>}
-            <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-              <button onClick={onClose} style={{ flex: 1, borderRadius: 8, border: "1px solid var(--z-border)", padding: "8px 0", fontSize: 13, fontWeight: 600, color: "var(--z-muted)", background: "transparent", cursor: "pointer" }}>Cancel</button>
-              <button onClick={handleSend} disabled={sending || !email.trim()}
-                style={{ flex: 1, borderRadius: 8, background: `${ZIRO_GREEN}18`, padding: "8px 0", fontSize: 13, fontWeight: 600, color: ZIRO_GREEN, border: "none", cursor: "pointer", opacity: (sending || !email.trim()) ? 0.5 : 1 }}>
-                {sending ? "Sending…" : "Send Invite"}
-              </button>
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input
+              placeholder="First name"
+              value={firstName}
+              onChange={e => setFirstName(e.target.value)}
+              style={{ borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)", padding: "8px 12px", fontSize: 13, color: "var(--z-fg)", outline: "none" }}
+            />
+            <input
+              placeholder="Last name"
+              value={lastName}
+              onChange={e => setLastName(e.target.value)}
+              style={{ borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)", padding: "8px 12px", fontSize: 13, color: "var(--z-fg)", outline: "none" }}
+            />
+            <input
+              placeholder="Email address *"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={{ borderRadius: 8, border: "1px solid var(--z-border)", background: "var(--z-surface)", padding: "8px 12px", fontSize: 13, color: "var(--z-fg)", outline: "none" }}
+            />
+            {error && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{error}</p>}
+            <button
+              onClick={handleSend}
+              disabled={sending}
+              style={{ borderRadius: 8, background: `${ZIRO_GREEN}18`, border: `1px solid ${ZIRO_GREEN}30`, padding: "9px 0", fontSize: 13, fontWeight: 600, color: ZIRO_GREEN, cursor: sending ? "not-allowed" : "pointer", opacity: sending ? 0.6 : 1 }}
+            >{sending ? "Sending…" : "Send Invite"}</button>
           </div>
         )}
       </div>

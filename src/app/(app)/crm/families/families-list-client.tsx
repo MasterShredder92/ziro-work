@@ -60,19 +60,37 @@ function shortLoc(name: string | null): string {
   return name.replace(/music lessons?/i, "").trim() || name;
 }
 
-/* ─── Instrument normalization ───────────────────────────── */
+/* ─── Instrument normalization + emoji ───────────────────── */
 const INST_MAP: Record<string, string> = {
-  paino:"PIANO",pino:"PIANO",pano:"PIANO",
-  gutar:"GUITAR",guitr:"GUITAR",
-  voce:"VOICE",vioce:"VOICE",
-  drums:"DRUMS",drum:"DRUMS",
-  base:"BASS",bas:"BASS",
-  viloin:"VIOLIN",violen:"VIOLIN",
-  ukele:"UKULELE",ukelele:"UKULELE",
+  paino:"Piano",pino:"Piano",pano:"Piano",
+  gutar:"Guitar",guitr:"Guitar",
+  voce:"Voice",vioce:"Voice",
+  drums:"Drums",drum:"Drums",
+  base:"Bass",bas:"Bass",
+  viloin:"Violin",violen:"Violin",
+  ukele:"Ukulele",ukelele:"Ukulele",
 };
+const INSTRUMENT_EMOJI: Record<string, string> = {
+  guitar:"🎸", bass:"🎸", piano:"🎹", keyboard:"🎹",
+  drums:"🥁", percussion:"🥁", violin:"🎻", viola:"🎻",
+  cello:"🎻", trumpet:"🎺", trombone:"🎺", saxophone:"🎷",
+  clarinet:"🎷", flute:"🎷", voice:"🎤", vocals:"🎤",
+  ukulele:"🪕", banjo:"🪕", harp:"🎵",
+};
+function instrEmoji(name: string): string {
+  const k = name.toLowerCase();
+  for (const [key, val] of Object.entries(INSTRUMENT_EMOJI)) {
+    if (k.includes(key)) return val;
+  }
+  return "🎵";
+}
 function normInst(raw: string): string {
   const l = raw.trim().toLowerCase();
-  return INST_MAP[l] ?? raw.trim().toUpperCase();
+  // Return proper-case canonical name
+  const mapped = INST_MAP[l];
+  if (mapped) return mapped;
+  // Capitalize first letter of each word for unknown instruments
+  return raw.trim().replace(/\b\w/g, c => c.toUpperCase());
 }
 function parseInst(arr: string[] | null | undefined): string[] {
   if (!arr?.length) return [];
@@ -446,7 +464,7 @@ export function FamiliesListClient({
                               fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
                               background: `${ZIRO_GREEN}18`, color: ZIRO_GREEN,
                               letterSpacing: "0.04em",
-                            }}>{sl.instrument}</span>
+                            }}>{instrEmoji(sl.instrument)} {sl.instrument}</span>
                           )}
                           {sl.teacher && (
                             <span style={{ fontSize: 11, color: "var(--z-muted)", fontWeight: 400 }}>
@@ -563,7 +581,7 @@ export function FamiliesListClient({
                               fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: 20,
                               background: `${ZIRO_GREEN}15`, color: ZIRO_GREEN, letterSpacing: "0.03em",
                               whiteSpace: "nowrap",
-                            }}>{inst}</span>
+                            }}>{instrEmoji(inst)} {inst}</span>
                           ))}
                         </div>
                       )}
