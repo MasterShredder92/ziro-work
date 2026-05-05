@@ -354,7 +354,7 @@ function TeacherDetailView({
   const tName = teacherName(teacher);
   const tInitials = teacherInitials(teacher);
   return (
-    <div className="flex flex-col" style={{ minHeight: 0 }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "var(--z-bg)" }}>
       <div className="flex items-center gap-3 border-b px-4 py-3 shrink-0"
         style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}>
         <button onClick={onBack}
