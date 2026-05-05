@@ -29,9 +29,9 @@ function computeMetrics(
   nextEnd: string,
   today: string,
 ) {
-  // Rows due this month
+  // Rows due this month — exclude CANCELLED
   const mtdRows = rows.filter(
-    (r) => r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd,
+    (r) => r.due_date && r.due_date >= mtdStart && r.due_date <= mtdEnd && r.status !== "CANCELLED",
   );
 
   // Collected = PAID invoices with due_date this month OR paid_at this month
@@ -63,9 +63,9 @@ function computeMetrics(
     .filter((r) => r.status === "SCHEDULED" || r.status === "UNPAID")
     .reduce((s, r) => s + (r.amount_cents ?? 0), 0);
 
-  // Next month projected = rows due next month, using requested_amount ?? amount_cents
+  // Next month projected = rows due next month, excluding CANCELLED
   const nextMonthProjected = rows
-    .filter((r) => r.due_date && r.due_date >= nextStart && r.due_date <= nextEnd)
+    .filter((r) => r.due_date && r.due_date >= nextStart && r.due_date <= nextEnd && r.status !== "CANCELLED")
     .reduce((s, r) => s + (r.requested_amount ?? r.amount_cents ?? 0), 0);
 
   // Outstanding = UNPAID or PARTIALLY_PAID with due_date <= today
