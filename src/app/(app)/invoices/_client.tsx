@@ -215,39 +215,35 @@ export function InvoicesClient({
           <SquareSyncButton />
         </div>
 
-        {/* ── Billing Summary: pills + single swapping card ── */}
+        {/* ── Billing Summary: dropdown + single swapping card ── */}
         {billingMetrics && (() => {
           const allSchools = billingMetrics.find(m => m.locationId === null);
           const locationMetrics = billingMetrics.filter(m => m.locationId !== null);
-          const tabs: { id: string | null; label: string; color: string }[] = [
-            { id: null, label: "All Locations", color: "#00ff88" },
-            ...locationMetrics.map(l => ({ id: l.locationId, label: l.locationName, color: l.color })),
-          ];
           const activeMetric = summaryTab === null
             ? allSchools
             : locationMetrics.find(l => l.locationId === summaryTab);
           const fmtM = (cents: number) => cents ? `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "$0";
+          const activeColor = summaryTab === null ? "#00ff88" : (locationMetrics.find(l => l.locationId === summaryTab)?.color ?? "#00ff88");
           return (
             <div className="space-y-3">
-              {/* Location pills */}
-              <div className="flex flex-wrap gap-2">
-                {tabs.map(t => {
-                  const isActive = summaryTab === t.id;
-                  return (
-                    <button
-                      key={t.id ?? "all"}
-                      onClick={() => setSummaryTab(t.id)}
-                      className="h-8 rounded-full border px-4 text-xs font-semibold transition-all whitespace-nowrap"
-                      style={{
-                        borderColor: isActive ? t.color : "var(--z-border)",
-                        background: isActive ? `${t.color}1a` : "var(--z-surface)",
-                        color: isActive ? t.color : "var(--z-muted)",
-                      }}
-                    >
-                      {t.label}
-                    </button>
-                  );
-                })}
+              {/* Location dropdown */}
+              <div className="relative inline-block">
+                <select
+                  value={summaryTab ?? ""}
+                  onChange={e => setSummaryTab(e.target.value === "" ? null : e.target.value)}
+                  className="h-9 appearance-none rounded-lg border pl-3 pr-8 text-sm font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] cursor-pointer"
+                  style={{
+                    borderColor: `${activeColor}66`,
+                    background: "var(--z-surface)",
+                    color: activeColor,
+                  }}
+                >
+                  <option value="">All Locations</option>
+                  {locationMetrics.map(l => (
+                    <option key={l.locationId} value={l.locationId ?? ""}>{l.locationName}</option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style={{ color: activeColor }}>&#9660;</span>
               </div>
               {/* Single metric card */}
               {activeMetric && (
@@ -357,56 +353,36 @@ export function InvoicesClient({
               {totalCount.toLocaleString()} invoices
             </span>
           </form>
-          {/* Status pills */}
+          {/* Status + Location dropdowns */}
           <div className="flex flex-wrap gap-2">
-            {(["all", "unpaid", "paid", "partially_paid"] as const).map((s) => {
-              const isActive = status === s;
-              return (
-                <button
-                  key={s}
-                  onClick={() => handleStatusChange(s)}
-                  className="h-8 rounded-full border px-4 text-xs font-semibold capitalize transition-all whitespace-nowrap"
-                  style={{
-                    borderColor: isActive ? "var(--z-accent)" : "var(--z-border)",
-                    background: isActive ? "rgba(0,255,136,0.1)" : "var(--z-surface)",
-                    color: isActive ? "var(--z-accent)" : "var(--z-muted)",
-                  }}
-                >
-                  {s === "partially_paid" ? "Partial" : s}
-                </button>
-              );
-            })}
-          </div>
-          {/* Location pills */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleLocationChange("")}
-              className="h-8 rounded-full border px-4 text-xs font-semibold transition-all whitespace-nowrap"
-              style={{
-                borderColor: !locationId ? "var(--z-accent)" : "var(--z-border)",
-                background: !locationId ? "rgba(0,255,136,0.1)" : "var(--z-surface)",
-                color: !locationId ? "var(--z-accent)" : "var(--z-muted)",
-              }}
-            >
-              All
-            </button>
-            {LOCATIONS.map((loc) => {
-              const isActive = locationId === loc.id;
-              return (
-                <button
-                  key={loc.id}
-                  onClick={() => handleLocationChange(loc.id)}
-                  className="h-8 rounded-full border px-4 text-xs font-semibold transition-all whitespace-nowrap"
-                  style={{
-                    borderColor: isActive ? loc.color : "var(--z-border)",
-                    background: isActive ? `${loc.color}1a` : "var(--z-surface)",
-                    color: isActive ? loc.color : "var(--z-muted)",
-                  }}
-                >
-                  {loc.name}
-                </button>
-              );
-            })}
+            {/* Status dropdown */}
+            <div className="relative">
+              <select
+                value={status}
+                onChange={e => handleStatusChange(e.target.value)}
+                className="h-9 appearance-none rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] pl-3 pr-8 text-sm font-semibold text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="paid">Paid</option>
+                <option value="partially_paid">Partial</option>
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--z-muted)]">&#9660;</span>
+            </div>
+            {/* Location dropdown */}
+            <div className="relative">
+              <select
+                value={locationId}
+                onChange={e => handleLocationChange(e.target.value)}
+                className="h-9 appearance-none rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] pl-3 pr-8 text-sm font-semibold text-[var(--z-fg)] focus:outline-none focus:ring-1 focus:ring-[var(--z-accent)] cursor-pointer"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--z-muted)]">&#9660;</span>
+            </div>
           </div>
         </div>
 
