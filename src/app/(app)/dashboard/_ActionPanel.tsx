@@ -118,10 +118,10 @@ export function ActionPanel() {
             key={i}
             className="h-16 rounded-xl"
             style={{
-              background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+              background: "var(--z-surface)",
               backgroundSize: "200% 100%",
               animation: "shimmer 1.6s infinite",
-              border: "1px solid rgba(255,255,255,0.05)",
+              border: "1px solid var(--z-border)",
             }}
           />
         ))}

@@ -15,9 +15,9 @@ export function Panel({ title, description, children, accentColor = "#00ff88", c
     <div
       className={`flex flex-col gap-4 rounded-2xl p-5 ${className}`}
       style={{
-        background: "linear-gradient(160deg, #131315 0%, #111113 100%)",
-        border: featured ? "none" : "1px solid rgba(255,255,255,0.07)",
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)`,
+        background: "var(--z-surface)",
+        border: featured ? "none" : `1px solid var(--z-border)`,
+        boxShadow: `inset 0 1px 0 var(--z-kpi-inset, rgba(255,255,255,0.05)), 0 8px 32px var(--z-shadow), 0 2px 8px var(--z-shadow)`,
         borderLeft: featured ? "none" : `3px solid ${accentColor}`,
         borderRadius: featured ? "13px" : undefined,
       }}
@@ -51,8 +51,8 @@ export function Panel({ title, description, children, accentColor = "#00ff88", c
       <div
         className="rounded-2xl p-px"
         style={{
-          background: `linear-gradient(135deg, ${accentColor}55, rgba(255,255,255,0.08) 40%, ${accentColor}22 100%)`,
-          boxShadow: `0 0 40px ${accentColor}18, 0 8px 32px rgba(0,0,0,0.35)`,
+          background: `linear-gradient(135deg, ${accentColor}55, var(--z-border) 40%, ${accentColor}22 100%)`,
+          boxShadow: `0 0 40px ${accentColor}18, 0 8px 32px var(--z-shadow)`,
         }}
       >
         {inner}

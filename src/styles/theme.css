@@ -30,6 +30,12 @@
   /* Semantic */
   --z-overlay: rgba(0, 0, 0, 0.5);
   --z-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Aliases */
+  --z-muted: #505055;
+  --z-danger: #ef4444;
+  --z-kpi-inset: rgba(255, 255, 255, 0.05);
+  --z-kpi-track: rgba(255, 255, 255, 0.04);
 }
 
 /* Light Theme */
@@ -68,6 +74,12 @@
   /* Semantic */
   --z-overlay: rgba(0, 0, 0, 0.3);
   --z-shadow: rgba(0, 0, 0, 0.08);
+
+  /* Aliases */
+  --z-muted: #888894;
+  --z-danger: #dc2626;
+  --z-kpi-inset: rgba(0, 0, 0, 0.04);
+  --z-kpi-track: rgba(0, 0, 0, 0.08);
 
   /* Legacy tokens used in globals.css */
   --card-bg: #ffffff;

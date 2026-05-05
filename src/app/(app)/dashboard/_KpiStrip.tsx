@@ -45,7 +45,6 @@ function useCountUp(target: number, enabled: boolean): number {
     const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setDisplay(Math.round(eased * target));
       if (progress < 1) {
@@ -82,20 +81,20 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href, anima
 
   const inner = (
     <div
-      className="relative flex min-h-[6.5rem] min-w-[9.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 sm:min-w-0 cursor-pointer group"
+      className="relative flex min-h-[6.5rem] min-w-[9.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 sm:min-w-0 cursor-pointer group kpi-tile"
       style={{
-        background: `radial-gradient(ellipse 90% 55% at 50% 0%, ${color}1a, transparent 68%), linear-gradient(160deg, #141416 0%, #111113 100%)`,
+        background: `radial-gradient(ellipse 90% 55% at 50% 0%, ${color}1a, transparent 68%), var(--z-kpi-bg, var(--z-surface))`,
         border: `1px solid ${color}30`,
-        boxShadow: `0 0 0 1px ${color}18, 0 8px 32px ${color}10, inset 0 1px 0 rgba(255,255,255,0.05)`,
+        boxShadow: `0 0 0 1px ${color}18, 0 8px 32px ${color}10, inset 0 1px 0 var(--z-kpi-inset, rgba(255,255,255,0.05))`,
         transition: "transform 0.15s ease, box-shadow 0.15s ease",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = `0 0 0 1px ${color}40, 0 16px 40px ${color}20, inset 0 1px 0 rgba(255,255,255,0.07)`;
+        e.currentTarget.style.boxShadow = `0 0 0 1px ${color}40, 0 16px 40px ${color}20, inset 0 1px 0 var(--z-kpi-inset, rgba(255,255,255,0.07))`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = `0 0 0 1px ${color}18, 0 8px 32px ${color}10, inset 0 1px 0 rgba(255,255,255,0.05)`;
+        e.currentTarget.style.boxShadow = `0 0 0 1px ${color}18, 0 8px 32px ${color}10, inset 0 1px 0 var(--z-kpi-inset, rgba(255,255,255,0.05))`;
       }}
     >
       {/* label + icon */}
@@ -140,7 +139,7 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href, anima
       {fillPct !== undefined ? (
         <div
           className="absolute bottom-0 left-0 right-0 h-[3px] rounded-b-2xl overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.04)" }}
+          style={{ background: "var(--z-kpi-track, rgba(255,255,255,0.04))" }}
         >
           <div
             className="h-full rounded-b-2xl"
@@ -186,7 +185,6 @@ export function KpiStrip() {
 
   const month = new Date().toLocaleString("default", { month: "long" });
 
-  // Animated student count
   const animatedStudents = useCountUp(m?.activeStudents ?? 0, ready);
 
   const collectionPct =
@@ -202,12 +200,12 @@ export function KpiStrip() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="h-[6.5rem] rounded-2xl"
+            className="h-[6.5rem] rounded-2xl kpi-shimmer"
             style={{
-              background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+              background: "var(--z-kpi-shimmer-bg, linear-gradient(90deg, var(--z-surface) 25%, var(--z-surface-hover) 50%, var(--z-surface) 75%))",
               backgroundSize: "200% 100%",
               animation: "shimmer 1.6s infinite",
-              border: "1px solid rgba(255,255,255,0.06)",
+              border: "1px solid var(--z-border)",
             }}
           />
         ))}

@@ -125,19 +125,19 @@ function EventRow({
     <div
       className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-all duration-150"
       style={{
-        background: isRecent ? `${accent}08` : "rgba(255,255,255,0.015)",
-        border: `1px solid ${isRecent ? accent + "20" : "rgba(255,255,255,0.04)"}`,
+        background: isRecent ? `${accent}08` : "var(--z-surface-2)",
+        border: `1px solid ${isRecent ? accent + "20" : "var(--z-border)"}`,
         cursor: href ? "pointer" : "default",
       }}
       onMouseEnter={(e) => {
         if (!href) return;
         e.currentTarget.style.transform = "translateY(-1px)";
-        e.currentTarget.style.background = isRecent ? `${accent}12` : "rgba(255,255,255,0.03)";
+        e.currentTarget.style.background = isRecent ? `${accent}12` : "var(--z-surface-hover)";
         e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.15)`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.background = isRecent ? `${accent}08` : "rgba(255,255,255,0.015)";
+        e.currentTarget.style.background = isRecent ? `${accent}08` : "var(--z-surface-2)";
         e.currentTarget.style.boxShadow = "none";
       }}
     >

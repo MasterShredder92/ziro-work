@@ -80,10 +80,10 @@ export function RevenueChart() {
       <div
         className="h-full min-h-[220px] rounded-2xl"
         style={{
-          background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+          background: "var(--z-surface)",
           backgroundSize: "200% 100%",
           animation: "shimmer 1.6s infinite",
-          border: "1px solid rgba(255,255,255,0.06)",
+          border: "1px solid var(--z-border)",
         }}
       />
     );
@@ -142,7 +142,7 @@ export function RevenueChart() {
               cy="76"
               r="62"
               fill="none"
-              stroke="rgba(255,255,255,0.05)"
+              stroke="var(--z-border)"
               strokeWidth="11"
             />
             {segmentsWithOffset.map((s) =>
@@ -161,7 +161,7 @@ export function RevenueChart() {
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p
               className="text-2xl font-extrabold leading-none"
-              style={{ color: "#00ff88", textShadow: "0 0 20px rgba(0,255,136,0.4)" }}
+              style={{ color: "var(--z-accent)", textShadow: "0 0 20px rgba(0,255,136,0.4)" }}
             >
               {collectedPct}%
             </p>
@@ -190,7 +190,7 @@ export function RevenueChart() {
                 </span>
               </div>
               {/* Mini fill bar per segment */}
-              <div className="h-1 rounded-full overflow-hidden ml-4" style={{ background: "rgba(255,255,255,0.05)" }}>
+              <div className="h-1 rounded-full overflow-hidden ml-4" style={{ background: "var(--z-border)" }}>
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -210,13 +210,12 @@ export function RevenueChart() {
             style={{
               background: "rgba(124,58,237,0.1)",
               border: "1px solid rgba(124,58,237,0.22)",
-              boxShadow: "inset 0 1px 0 rgba(124,58,237,0.1)",
             }}
           >
             <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#7c3aed" }}>
               Next Month Projected
             </p>
-            <p className="text-sm font-extrabold mt-0.5" style={{ color: "#a78bfa" }}>
+            <p className="text-sm font-extrabold mt-0.5" style={{ color: "#7c3aed" }}>
               {usd(m.projectedMonthlyCents)}
             </p>
           </div>
@@ -229,20 +228,20 @@ export function RevenueChart() {
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--z-muted)" }}>
             Collection Rate
           </span>
-          <span className="text-[10px] font-bold" style={{ color: "#00ff88" }}>
+          <span className="text-[10px] font-bold" style={{ color: "var(--z-accent)" }}>
             {collectedPct}%
           </span>
         </div>
         <div
           className="h-2 w-full overflow-hidden rounded-full"
-          style={{ background: "rgba(255,255,255,0.06)" }}
+          style={{ background: "var(--z-border)" }}
         >
           <div
             className="h-full rounded-full"
             style={{
               width: animated ? `${collectedPct}%` : "0%",
-              background: "linear-gradient(90deg, #00cc6a, #00ff88)",
-              boxShadow: "0 0 14px #00ff8877",
+              background: "linear-gradient(90deg, var(--z-accent-dim, #00cc6a), var(--z-accent))",
+              boxShadow: "0 0 14px var(--z-accent)",
               transition: "width 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           />

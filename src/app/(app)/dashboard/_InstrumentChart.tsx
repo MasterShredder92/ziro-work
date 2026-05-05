@@ -43,10 +43,10 @@ export function InstrumentChart() {
             key={i}
             className="h-9 rounded-xl"
             style={{
-              background: "linear-gradient(90deg, #111113 25%, rgba(255,255,255,0.04) 50%, #111113 75%)",
+              background: "var(--z-surface)",
               backgroundSize: "200% 100%",
               animation: "shimmer 1.6s infinite",
-              border: "1px solid rgba(255,255,255,0.05)",
+              border: "1px solid var(--z-border)",
             }}
           />
         ))}
@@ -93,7 +93,7 @@ export function InstrumentChart() {
             {/* Bar track */}
             <div
               className="relative h-7 flex-1 overflow-hidden rounded-lg"
-              style={{ background: "rgba(255,255,255,0.04)" }}
+              style={{ background: "var(--z-border)" }}
             >
               <div
                 className="flex h-full items-center rounded-lg px-2.5"
