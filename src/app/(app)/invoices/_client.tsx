@@ -279,20 +279,42 @@ export function InvoicesClient({
         })()}
 
         {/* ── KPI strip ── */}
-        <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] divide-x divide-[var(--z-border)] flex overflow-hidden">
-          {[
+        {(() => {
+          const kpis = [
             { label: "Collected", value: formatCents(paidTotal), color: "#22C55E" },
             { label: "Outstanding", value: formatCents(unpaidTotal), color: "#EF4444" },
             { label: "Scheduled", value: formatCents(billingMetrics?.find(m => m.locationId === null)?.scheduledPayments ?? 0), color: "#A78BFA" },
             { label: "Overdue", value: String(overdueCount), color: "#F59E0B" },
             { label: "Invoices", value: totalCount.toLocaleString(), color: "var(--z-fg)" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex-1 min-w-0 px-3 py-3 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1 truncate">{label}</div>
-              <div className="text-base font-extrabold truncate" style={{ color }}>{value}</div>
-            </div>
-          ))}
-        </div>
+          ];
+          return (
+            <>
+              {/* Mobile: 2-col grid */}
+              <div className="sm:hidden rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] grid grid-cols-2 divide-y divide-[var(--z-border)]">
+                {kpis.map(({ label, value, color }, i) => (
+                  <div
+                    key={label}
+                    className={`px-4 py-3${
+                      i % 2 === 0 ? " border-r border-[var(--z-border)]" : ""
+                    }${i === 4 ? " col-span-2 border-r-0" : ""}`}
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1">{label}</div>
+                    <div className="text-lg font-extrabold" style={{ color }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: single horizontal strip */}
+              <div className="hidden sm:flex rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] divide-x divide-[var(--z-border)] overflow-hidden">
+                {kpis.map(({ label, value, color }) => (
+                  <div key={label} className="flex-1 px-4 py-3 text-center">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1">{label}</div>
+                    <div className="text-base font-extrabold" style={{ color }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
 
         {/* ── Month navigation + Create Invoice ── */}
         <div className="flex flex-wrap items-center justify-between gap-3">
