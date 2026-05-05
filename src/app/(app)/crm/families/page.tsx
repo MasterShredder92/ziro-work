@@ -84,12 +84,22 @@ export default async function FamiliesIndexPage() {
       </div>
     );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[families/page] crash — tenantId:", tenantId, "error:", msg);
+    // Supabase throws PostgrestError objects, not plain Errors
+    const pgErr = err as { message?: string; code?: string; details?: string; hint?: string } | null;
+    const msg = pgErr?.message ?? (err instanceof Error ? err.message : String(err));
+    const code = pgErr?.code ?? "";
+    const details = pgErr?.details ?? "";
+    const hint = pgErr?.hint ?? "";
+    console.error("[families/page] crash — tenantId:", tenantId, "error:", JSON.stringify(err));
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
         <p className="text-lg font-semibold" style={{ color: "var(--z-fg)" }}>Failed to load families</p>
-        <p className="text-sm font-mono px-4 py-2 rounded" style={{ background: "var(--z-surface)", color: "var(--z-danger)" }}>{msg}</p>
+        <div className="text-sm font-mono px-4 py-2 rounded text-left" style={{ background: "var(--z-surface)", color: "var(--z-danger)", maxWidth: "90vw", wordBreak: "break-all" }}>
+          <div><strong>message:</strong> {msg || "(none)"}</div>
+          {code && <div><strong>code:</strong> {code}</div>}
+          {details && <div><strong>details:</strong> {details}</div>}
+          {hint && <div><strong>hint:</strong> {hint}</div>}
+        </div>
         <p className="text-xs" style={{ color: "var(--z-muted)" }}>tenantId: {tenantId}</p>
       </div>
     );
