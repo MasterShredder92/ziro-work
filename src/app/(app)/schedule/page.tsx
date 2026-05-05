@@ -23,13 +23,6 @@ export default async function ScheduleDashboardPage() {
     );
   }
 
-  // Log current session for debugging
-  console.log(
-    "CURRENT DEV SESSION ROLE:",
-    (ctx.session as Record<string, unknown>).role ?? "unknown",
-    (ctx.session as Record<string, unknown>).email ?? ctx.session.userId,
-  );
-
   // Direct query — all active locations, ghost excluded, no profile_locations filter
   const supabase = getServiceClient();
   const tenantId = ctx.tenantId || DEFAULT_TENANT_ID;

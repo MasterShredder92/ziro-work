@@ -372,19 +372,38 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
           </div>
         )}
         {activeView === "schedule" ? (
-          <LocationScheduleGrid
-            locationId={activeLocationId}
-            locationName={activeLocConfig?.name ?? "Studio"}
-            selectedDate={selectedDate}
-            blocks={activeBlocks.filter((b) => b.block_date === selectedDate)}
-            teachers={activeData?.teachers ?? []}
-            students={activeData?.students ?? []}
-            families={activeData?.families ?? []}
-            availability={activeData?.availability ?? []}
-            rooms={activeData?.rooms ?? []}
-            locationHours={activeData?.locationHours ?? {}}
-            onBlocksChange={handleBlocksChange}
-          />
+          <>
+            {/* ── Desktop grid (hidden on mobile) ── */}
+            <div className="hidden sm:block">
+              <LocationScheduleGrid
+                locationId={activeLocationId}
+                locationName={activeLocConfig?.name ?? "Studio"}
+                selectedDate={selectedDate}
+                blocks={activeBlocks.filter((b) => b.block_date === selectedDate)}
+                teachers={activeData?.teachers ?? []}
+                students={activeData?.students ?? []}
+                families={activeData?.families ?? []}
+                availability={activeData?.availability ?? []}
+                rooms={activeData?.rooms ?? []}
+                locationHours={activeData?.locationHours ?? {}}
+                onBlocksChange={handleBlocksChange}
+              />
+            </div>
+            {/* ── Mobile view (hidden on sm+) — same data source, optimized layout ── */}
+            <div className="block sm:hidden">
+              <MobileScheduleView
+                locationId={activeLocationId}
+                locationConfig={activeLocConfig}
+                selectedDate={selectedDate}
+                blocks={activeBlocks.filter((b) => b.block_date === selectedDate)}
+                teachers={activeData?.teachers ?? []}
+                students={activeData?.students ?? []}
+                families={activeData?.families ?? []}
+                locationHours={activeData?.locationHours ?? {}}
+                onBlocksChange={handleBlocksChange}
+              />
+            </div>
+          </>
         ) : (
           <ScheduleRoomsPanel
             locationId={activeLocationId}
