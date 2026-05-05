@@ -103,8 +103,8 @@ export function DashboardClient() {
           100% { background-position: 0% 50%; }
         }
         @keyframes livePulse {
-          0%, 100% { opacity: 1; box-shadow: 0 0 6px #00ff88; }
-          50% { opacity: 0.5; box-shadow: 0 0 12px #00ff88, 0 0 20px #00ff8855; }
+          0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--z-accent-readable); }
+          50% { opacity: 0.5; box-shadow: 0 0 12px var(--z-accent-readable), 0 0 20px var(--z-accent-glow); }
         }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(8px); }
@@ -144,16 +144,16 @@ export function DashboardClient() {
             <div
               className="hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5"
               style={{
-                background: "rgba(0,255,136,0.07)",
-                border: "1px solid rgba(0,255,136,0.22)",
-                boxShadow: "0 0 20px rgba(0,255,136,0.08)",
+                background: "var(--z-accent-bg)",
+                border: "1px solid var(--z-accent-glow)",
+                boxShadow: "0 0 20px var(--z-accent-glow)",
               }}
             >
               <div
                 className="h-2 w-2 rounded-full"
-                style={{ background: "#00ff88", animation: "livePulse 2s ease-in-out infinite" }}
+                style={{ background: "var(--z-accent-readable)", animation: "livePulse 2s ease-in-out infinite" }}
               />
-              <span className="text-[11px] font-bold" style={{ color: "#00ff88" }}>
+              <span className="text-[11px] font-bold" style={{ color: "var(--z-accent-readable)" }}>
                 Live
               </span>
             </div>

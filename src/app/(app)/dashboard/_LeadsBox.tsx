@@ -57,11 +57,11 @@ export function LeadsBox() {
       className="rounded-2xl p-5"
       style={{
         background: count > 0
-          ? "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,255,136,0.06), transparent 65%), var(--z-surface)"
+          ? "radial-gradient(ellipse 80% 50% at 50% 0%, var(--z-accent-bg), transparent 65%), var(--z-surface)"
           : "var(--z-surface)",
-        border: count > 0 ? "1px solid rgba(0,255,136,0.3)" : "1px solid var(--z-border)",
+        border: count > 0 ? "1px solid var(--z-accent-glow)" : "1px solid var(--z-border)",
         boxShadow: count > 0
-          ? "0 0 32px rgba(0,255,136,0.06), inset 0 1px 0 var(--z-kpi-inset)"
+          ? "0 0 32px var(--z-accent-bg), inset 0 1px 0 var(--z-kpi-inset)"
           : "inset 0 1px 0 var(--z-kpi-inset)",
       }}
     >
@@ -71,7 +71,7 @@ export function LeadsBox() {
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl"
             style={{
-              background: count > 0 ? "rgba(0,255,136,0.15)" : "var(--z-surface-2)",
+              background: count > 0 ? "var(--z-accent-bg)" : "var(--z-surface-2)",
               color: count > 0 ? "var(--z-accent)" : "var(--z-muted)",
             }}
           >
@@ -95,9 +95,9 @@ export function LeadsBox() {
             <div
               className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-extrabold"
               style={{
-                background: "rgba(0,255,136,0.2)",
-                color: "var(--z-accent)",
-                boxShadow: "0 0 12px rgba(0,255,136,0.3)",
+                background: "var(--z-accent-bg)",
+                color: "var(--z-accent-readable)",
+                boxShadow: "0 0 12px var(--z-accent-glow)",
               }}
             >
               {count}
@@ -107,9 +107,9 @@ export function LeadsBox() {
             href="/crm/leads"
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={{
-              background: count > 0 ? "rgba(0,255,136,0.12)" : "var(--z-surface-2)",
-              color: count > 0 ? "var(--z-accent)" : "var(--z-muted)",
-              border: count > 0 ? "1px solid rgba(0,255,136,0.3)" : "1px solid var(--z-border)",
+              background: count > 0 ? "var(--z-accent-bg)" : "var(--z-surface-2)",
+              color: count > 0 ? "var(--z-accent-readable)" : "var(--z-muted)",
+              border: count > 0 ? "1px solid var(--z-accent-glow)" : "1px solid var(--z-border)",
             }}
           >
             Open pipeline
@@ -132,7 +132,7 @@ export function LeadsBox() {
       ) : count === 0 ? (
         <div
           className="flex items-center gap-3 rounded-xl px-4 py-3"
-          style={{ background: "rgba(0,255,136,0.05)", border: "1px solid rgba(0,255,136,0.12)" }}
+          style={{ background: "var(--z-accent-bg)", border: "1px solid var(--z-accent-glow)" }}
         >
           <div
             className="h-2 w-2 rounded-full"
@@ -153,19 +153,19 @@ export function LeadsBox() {
                 href={`/crm/leads/${lead.leadId}`}
                 className="group flex flex-col gap-2 rounded-xl p-3 transition-all duration-150 hover:-translate-y-px"
                 style={{
-                  background: urgent ? "rgba(0,255,136,0.06)" : "var(--z-surface-2)",
+                  background: urgent ? "var(--z-accent-bg)" : "var(--z-surface-2)",
                   border: urgent
-                    ? "1px solid rgba(0,255,136,0.2)"
+                    ? "1px solid var(--z-accent-glow)"
                     : "1px solid var(--z-border)",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,255,136,0.12)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,255,136,0.35)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px var(--z-accent-glow)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--z-accent-glow)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.boxShadow = "none";
                   (e.currentTarget as HTMLElement).style.borderColor = urgent
-                    ? "rgba(0,255,136,0.2)"
+                    ? "var(--z-accent-glow)"
                     : "var(--z-border)";
                 }}
               >
@@ -208,9 +208,9 @@ export function LeadsBox() {
               href="/crm/leads"
               className="flex items-center justify-center rounded-xl p-3 text-[11px] font-bold transition-all duration-150 hover:-translate-y-px"
               style={{
-                background: "rgba(0,255,136,0.06)",
-                border: "1px dashed rgba(0,255,136,0.25)",
-                color: "var(--z-accent)",
+                background: "var(--z-accent-bg)",
+                border: "1px dashed var(--z-accent-glow)",
+                color: "var(--z-accent-readable)",
               }}
             >
               +{count - 8} more →

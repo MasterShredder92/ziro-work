@@ -133,7 +133,7 @@ export function RevenueChart() {
               cy="76"
               r="70"
               fill="none"
-              stroke="rgba(0,255,136,0.04)"
+              stroke="var(--z-accent-bg)"
               strokeWidth="1"
             />
             {/* Track */}
@@ -161,7 +161,7 @@ export function RevenueChart() {
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p
               className="text-2xl font-extrabold leading-none"
-              style={{ color: "var(--z-accent)", textShadow: "0 0 20px rgba(0,255,136,0.4)" }}
+              style={{ color: "var(--z-accent-readable)", textShadow: "0 0 20px var(--z-accent-glow)" }}
             >
               {collectedPct}%
             </p>
@@ -208,14 +208,14 @@ export function RevenueChart() {
           <div
             className="mt-1 rounded-xl px-3 py-2"
             style={{
-              background: "rgba(124,58,237,0.1)",
-              border: "1px solid rgba(124,58,237,0.22)",
+              background: "rgba(124,58,237,0.12)",
+              border: "1px solid rgba(124,58,237,0.28)",
             }}
           >
-            <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#7c3aed" }}>
+            <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--z-fg-secondary)" }}>
               Next Month Projected
             </p>
-            <p className="text-sm font-extrabold mt-0.5" style={{ color: "#7c3aed" }}>
+            <p className="text-sm font-extrabold mt-0.5" style={{ color: "var(--z-fg)" }}>
               {usd(m.projectedMonthlyCents)}
             </p>
           </div>

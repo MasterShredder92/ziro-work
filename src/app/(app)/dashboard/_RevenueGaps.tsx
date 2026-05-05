@@ -71,7 +71,7 @@ function FillRing({ pct, color, glow, size = 76, animated }: { pct: number; colo
   const cx = size / 2;
   const cy = size / 2;
 
-  const ringColor = pct >= 85 ? "#00ff88" : pct >= 60 ? color : "#ef4444";
+  const ringColor = pct >= 85 ? "var(--z-accent-readable)" : pct >= 60 ? color : "var(--z-danger)";
 
   return (
     <svg width={size} height={size} className="shrink-0">
@@ -169,9 +169,9 @@ function LocationCard({ loc, animated }: { loc: LocationGap; animated: boolean }
               <span
                 className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
                 style={{
-                  background: "rgba(0,255,136,0.12)",
-                  color: "var(--z-accent)",
-                  border: "1px solid rgba(0,255,136,0.25)",
+                  background: "var(--z-accent-bg)",
+                  color: "var(--z-accent-readable)",
+                  border: "1px solid var(--z-accent-glow)",
                 }}
               >
                 At Capacity
@@ -194,7 +194,7 @@ function LocationCard({ loc, animated }: { loc: LocationGap; animated: boolean }
           <div className="text-right">
             {loc.revenueLostCents > 0 ? (
               <>
-                <p className="text-xs font-bold" style={{ color: "#ef4444", textShadow: "0 0 10px rgba(239,68,68,0.3)" }}>
+                <p className="text-xs font-bold" style={{ color: "var(--z-danger)" }}>
                   {usd(loc.revenueLostCents)}
                 </p>
                 <p className="text-[10px]" style={{ color: "var(--z-muted)" }}>
@@ -202,7 +202,7 @@ function LocationCard({ loc, animated }: { loc: LocationGap; animated: boolean }
                 </p>
               </>
             ) : (
-              <p className="text-xs font-bold" style={{ color: "var(--z-accent)" }}>
+              <p className="text-xs font-bold" style={{ color: "var(--z-accent-readable)" }}>
                 Full
               </p>
             )}
@@ -246,7 +246,7 @@ function LocationCard({ loc, animated }: { loc: LocationGap; animated: boolean }
             </p>
             {loc.instruments.map((inst, idx) => {
               const barPct = inst.rooms > 0 ? Math.min(100, Math.round((inst.students / (inst.rooms * 20)) * 100)) : 0;
-              const barColor = barPct >= 85 ? "#00ff88" : barPct >= 60 ? brand.text : "#ef4444";
+              const barColor = barPct >= 85 ? "var(--z-accent-readable)" : barPct >= 60 ? brand.text : "var(--z-danger)";
               return (
                 <div key={inst.name}>
                   <div className="flex items-center justify-between mb-1.5">
@@ -266,7 +266,7 @@ function LocationCard({ loc, animated }: { loc: LocationGap; animated: boolean }
                     </div>
                     <span
                       className="text-[10px] font-bold"
-                      style={{ color: inst.openSlots > 0 ? "#ef4444" : "var(--z-accent)" }}
+                      style={{ color: inst.openSlots > 0 ? "var(--z-danger)" : "var(--z-accent-readable)" }}
                     >
                       {inst.openSlots > 0 ? `${inst.openSlots} open` : "Full"}
                     </span>
@@ -349,15 +349,15 @@ export function RevenueGaps() {
         }}
       >
         <div className="flex items-center gap-2">
-          <TrendingDown className="h-4 w-4" style={{ color: "#ef4444" }} />
-          <span className="text-[11px] font-bold" style={{ color: "#ef4444" }}>
+          <TrendingDown className="h-4 w-4" style={{ color: "var(--z-danger)" }} />
+          <span className="text-[11px] font-bold" style={{ color: "var(--z-danger)" }}>
             Total Revenue Gap
           </span>
         </div>
         <div className="text-right">
           <span
             className="text-sm font-extrabold"
-            style={{ color: "#ef4444", textShadow: "0 0 16px rgba(239,68,68,0.4)" }}
+            style={{ color: "var(--z-danger)" }}
           >
             {usd(totalGapCents)}
           </span>

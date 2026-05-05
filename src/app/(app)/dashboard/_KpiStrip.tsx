@@ -71,7 +71,7 @@ type KpiTileProps = {
 };
 
 function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href, animate }: KpiTileProps) {
-  const color = danger ? "#ef4444" : accent;
+  const color = danger ? "var(--z-danger)" : accent;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -122,8 +122,8 @@ function KpiTile({ label, value, sub, icon, accent, fillPct, danger, href, anima
         <p
           className="truncate text-xl font-extrabold tracking-tight sm:text-2xl"
           style={{
-            color: danger ? "#ef4444" : "var(--z-fg)",
-            textShadow: danger ? "0 0 20px rgba(239,68,68,0.3)" : undefined,
+            color: danger ? "var(--z-danger)" : "var(--z-fg)",
+            textShadow: danger ? "0 0 20px rgba(239,68,68,0.15)" : undefined,
           }}
         >
           {value}

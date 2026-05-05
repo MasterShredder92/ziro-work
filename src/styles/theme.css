@@ -36,6 +36,9 @@
   --z-danger: #ef4444;
   --z-kpi-inset: rgba(255, 255, 255, 0.05);
   --z-kpi-track: rgba(255, 255, 255, 0.04);
+  --z-accent-readable: #00ff88;
+  --z-accent-glow: rgba(0, 255, 136, 0.25);
+  --z-accent-bg: rgba(0, 255, 136, 0.10);
 }
 
 /* Light Theme */
@@ -80,6 +83,9 @@
   --z-danger: #dc2626;
   --z-kpi-inset: rgba(0, 0, 0, 0.04);
   --z-kpi-track: rgba(0, 0, 0, 0.08);
+  --z-accent-readable: #007a42;
+  --z-accent-glow: rgba(0, 122, 66, 0.20);
+  --z-accent-bg: rgba(0, 122, 66, 0.08);
 
   /* Legacy tokens used in globals.css */
   --card-bg: #ffffff;

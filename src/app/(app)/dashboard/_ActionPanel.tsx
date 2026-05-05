@@ -160,7 +160,7 @@ export function ActionPanel() {
                   href={`/crm/families/${inv.familyId}`}
                   className="flex items-center gap-2.5 rounded-xl px-2 py-2 text-xs transition-all duration-150"
                   style={{
-                    borderLeft: "3px solid #ef4444",
+                    borderLeft: "3px solid var(--z-danger)",
                     background: "rgba(239,68,68,0.04)",
                   }}
                   onMouseEnter={(e) => {
@@ -186,7 +186,7 @@ export function ActionPanel() {
                   <span className="flex-1 truncate font-medium" style={{ color: "var(--z-fg)" }}>
                     {inv.familyName}
                   </span>
-                  <span className="ml-2 shrink-0 font-extrabold" style={{ color: "#ef4444" }}>
+                  <span className="ml-2 shrink-0 font-extrabold" style={{ color: "var(--z-danger)" }}>
                     {usd(inv.balanceCents)}
                   </span>
                 </Link>
@@ -196,7 +196,7 @@ export function ActionPanel() {
               <Link
                 href="/invoices?status=UNPAID"
                 className="block px-2 py-1 text-[11px] font-semibold hover:underline"
-                style={{ color: "#ef4444" }}
+                style={{ color: "var(--z-danger)" }}
               >
                 +{overdue.length - 5} more →
               </Link>
@@ -248,7 +248,7 @@ export function ActionPanel() {
                   <span
                     key={i.instrument}
                     className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
-                    style={{ background: "rgba(37,99,235,0.12)", color: "#2563eb" }}
+                    style={{ background: "rgba(37,99,235,0.12)", color: "var(--z-info)" }}
                   >
                     {i.instrument} · {i.studentCount}
                   </span>

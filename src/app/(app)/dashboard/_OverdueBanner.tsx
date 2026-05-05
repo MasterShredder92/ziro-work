@@ -38,24 +38,24 @@ export function OverdueBanner() {
       style={{
         background: "rgba(239,68,68,0.08)",
         border: "1px solid rgba(239,68,68,0.35)",
-        boxShadow: "0 0 24px rgba(239,68,68,0.12), inset 0 1px 0 rgba(255,255,255,0.04)",
+        boxShadow: "0 0 24px rgba(239,68,68,0.12), inset 0 1px 0 var(--z-kpi-inset)",
       }}
     >
       <div
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: "rgba(239,68,68,0.18)", color: "#ef4444" }}
+        style={{ background: "rgba(239,68,68,0.18)", color: "var(--z-danger)" }}
       >
         <AlertTriangle className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold" style={{ color: "#ef4444" }}>
+        <p className="text-sm font-bold" style={{ color: "var(--z-danger)" }}>
           {m.overdueCount} overdue invoice{m.overdueCount !== 1 ? "s" : ""}
         </p>
-        <p className="text-xs" style={{ color: "rgba(239,68,68,0.7)" }}>
+        <p className="text-xs" style={{ color: "var(--z-fg-secondary)" }}>
           {usd(m.outstandingCents)} outstanding — action required
         </p>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0" style={{ color: "#ef4444" }} />
+      <ArrowRight className="h-4 w-4 shrink-0" style={{ color: "var(--z-danger)" }} />
     </Link>
   );
 }

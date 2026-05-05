@@ -101,7 +101,7 @@ function eventIcon(event: EventLog): React.ReactNode {
 
 function eventAccent(event: EventLog): string {
   const t = event.event_type ?? "";
-  if (/payment|paid/.test(t)) return "#00ff88";
+  if (/payment|paid/.test(t)) return "var(--z-accent-readable)";
   if (/enroll/.test(t)) return "#2563eb";
   if (/lead|intake/.test(t)) return "#7c3aed";
   if (/cancel/.test(t)) return "#ef4444";
@@ -133,7 +133,7 @@ function EventRow({
         if (!href) return;
         e.currentTarget.style.transform = "translateY(-1px)";
         e.currentTarget.style.background = isRecent ? `${accent}12` : "var(--z-surface-hover)";
-        e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.15)`;
+        e.currentTarget.style.boxShadow = `0 4px 16px var(--z-shadow)`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
