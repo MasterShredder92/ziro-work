@@ -159,28 +159,28 @@ type SidebarProps = {
 
 export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname() ?? "";
-  const isSchedulePage = pathname.startsWith("/schedule");
   const isLifecyclePage = pathname.startsWith("/lifecycle");
 
-  const [hovered, setHovered] = React.useState(false);
-  const hoverInTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverOutTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── Desktop: click-to-expand (replaces hover) ─────────────────────────────
+  const [desktopExpanded, setDesktopExpanded] = React.useState(false);
 
   const [lifecycleOpen, setLifecycleOpen] = React.useState(isLifecyclePage);
   React.useEffect(() => {
     if (isLifecyclePage) setLifecycleOpen(true);
   }, [isLifecyclePage]);
 
-  // Auto-collapse on all pages, expand on hover
-  const isExpanded = hovered;
+  // On mobile the sidebar is controlled by isMobileOpen from the parent.
+  // When open on mobile it is ALWAYS fully expanded.
+  // On desktop (lg+) it is icon-only by default and expands on click.
+  const isExpanded = isMobileOpen || desktopExpanded;
 
-  function handleMouseEnter() {
-    if (hoverOutTimer.current) clearTimeout(hoverOutTimer.current);
-    hoverInTimer.current = setTimeout(() => setHovered(true), 200);
-  }
-  function handleMouseLeave() {
-    if (hoverInTimer.current) clearTimeout(hoverInTimer.current);
-    hoverOutTimer.current = setTimeout(() => setHovered(false), 200);
+  // Close desktop sidebar when user navigates to a new page
+  React.useEffect(() => {
+    setDesktopExpanded(false);
+  }, [pathname]);
+
+  function handleDesktopToggle() {
+    setDesktopExpanded((v) => !v);
   }
 
   function isActive(href: string) {
@@ -191,20 +191,22 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
   return (
     <aside
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       className={clsx(
         "fixed left-0 top-0 z-40 h-full border-r border-[#1c1c1e] bg-[#0a0a0c] flex flex-col",
         "transition-[width] duration-200 ease-out",
-        hovered ? "w-[260px] shadow-2xl" : "w-[64px]",
+        isExpanded ? "w-[260px] shadow-2xl" : "w-[64px]",
+        // Mobile: slide in/out based on isMobileOpen
+        // Desktop (lg+): always visible at 64px, expands on click
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
     >
-      {/* Logo */}
-      <div className={clsx(
-        "flex items-center border-b border-[#1c1c1e] overflow-hidden transition-all duration-200",
-        isExpanded ? "justify-between px-6 pb-5 pt-7" : "justify-center px-0 py-5",
-      )}>
+      {/* Logo / toggle button */}
+      <div
+        className={clsx(
+          "flex items-center border-b border-[#1c1c1e] overflow-hidden transition-all duration-200",
+          isExpanded ? "justify-between px-6 pb-5 pt-7" : "justify-center px-0 py-5",
+        )}
+      >
         {isExpanded ? (
           <>
             <div className="flex items-center gap-2">
@@ -215,11 +217,37 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                 <span className="text-white ml-1 font-light">WORK</span>
               </div>
             </div>
-            <button type="button" className="rounded-md border border-[#2b2b2f] px-2 py-1 text-xs font-semibold text-[#909098] lg:hidden" onClick={onClose}>✕</button>
+            {/* Desktop collapse button */}
+            <button
+              type="button"
+              onClick={handleDesktopToggle}
+              className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-[#505055] hover:bg-white/5 hover:text-[#909098] transition-colors"
+              aria-label="Collapse sidebar"
+            >
+              <svg viewBox="0 0 16 16" fill="none" style={{ width: 14, height: 14 }} aria-hidden>
+                <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {/* Mobile close button */}
+            <button
+              type="button"
+              className="rounded-md border border-[#2b2b2f] px-2 py-1 text-xs font-semibold text-[#909098] lg:hidden"
+              onClick={onClose}
+            >
+              ✕
+            </button>
           </>
         ) : (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src="/zw-logo.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
+          /* Collapsed: clicking the logo expands on desktop */
+          <button
+            type="button"
+            onClick={handleDesktopToggle}
+            className="flex items-center justify-center focus:outline-none"
+            aria-label="Expand sidebar"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/zw-logo.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
+          </button>
         )}
       </div>
 
