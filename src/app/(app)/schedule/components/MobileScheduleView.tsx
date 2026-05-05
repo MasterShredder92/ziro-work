@@ -85,7 +85,7 @@ function getBlockLabel(block: ScheduleBlock | ProjectedBlock): string {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PX_PER_MINUTE = 2.2;
 const ROW_HEIGHT = 44;
-const TEACHER_COL_W = 64;
+const TEACHER_COL_W = 80;
 const BLOCK_TYPES = [
   { value: "student_session", label: "Student Session" },
   { value: "open_time", label: "Open Time" },
@@ -566,19 +566,18 @@ export function MobileScheduleView({
       <div className="flex" style={{ borderBottom: "1px solid var(--z-border)" }}>
         {/* Fixed teacher column */}
         <div className="shrink-0 border-r" style={{ width: TEACHER_COL_W, borderColor: "var(--z-border)" }}>
-          <div className="border-b flex items-center justify-center" style={{ height: 28, borderColor: "var(--z-border)" }}>
+          <div className="border-b flex items-center justify-center gap-1" style={{ height: 28, borderColor: "var(--z-border)" }}>
             <span className="text-[9px] text-[var(--z-muted)] uppercase tracking-wider">Teacher</span>
           </div>
           {teachersForBoard.map(t => (
             <button key={t.id} onClick={() => setDetailTeacherId(t.id)}
-              className="flex w-full items-center gap-1.5 border-b px-2 text-left transition-colors active:bg-[var(--z-surface-2)]"
+              className="flex w-full flex-col items-center justify-center border-b gap-1 transition-colors active:bg-[var(--z-surface-2)] hover:bg-white/5"
               style={{ height: ROW_HEIGHT, borderColor: "var(--z-border)" }}>
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold"
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold"
                 style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: locationConfig?.accent ?? "var(--z-surface-2)", color: locationConfig?.textColor ?? "var(--z-accent)" }}>
                 {teacherInitials(t)}
               </div>
-              <span className="truncate text-[10px] font-semibold text-[var(--z-fg)]">{teacherName(t).split(" ")[0]}</span>
-              <span className="ml-auto text-[8px] text-[var(--z-muted)] opacity-60">›</span>
+              <span className="text-[9px] font-semibold text-[var(--z-muted)]" style={{ color: locationConfig?.textColor ?? "var(--z-muted)" }}>›</span>
             </button>
           ))}
         </div>
