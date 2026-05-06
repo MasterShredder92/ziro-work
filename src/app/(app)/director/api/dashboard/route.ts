@@ -7,7 +7,6 @@ import {
 } from "@/lib/http";
 import { requireRole, assertTenantAccess } from "@/lib/auth/guards";
 import { logAudit } from "@/lib/audit/log";
-import { invokeSkill } from "@/lib/ziro/invokeSkill";
 import { listLocations, getDirectorLocation } from "@/lib/director/queries";
 import { getDirectorDashboard } from "@/lib/director/service";
 
@@ -57,27 +56,7 @@ export async function GET(req: NextRequest) {
       generatedAt: data.generatedAt,
     });
 
-    const skillParam = url.searchParams.get("skill");
-    const automation = skillParam && skillParam.trim().length > 0
-      ? await invokeSkill(skillParam.trim(), {
-          tenantId: location.tenant_id,
-          profileId: session?.userId,
-          locationId: location.id,
-        })
-      : null;
-
-    if (automation) {
-      await logAudit("director.skill.invoke", {
-        locationId: location.id,
-        tenantId: location.tenant_id,
-        profileId: session?.userId ?? null,
-        skillId: (automation as any).skillId,
-        ok: automation.ok,
-        durationMs: automation.durationMs,
-      });
-    }
-
-    return ok({ data, automation });
+    return ok({ data });
   } catch (err) {
     if (err instanceof Error && err.message === "FORBIDDEN") {
       return forbidden();

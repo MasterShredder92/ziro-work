@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { badRequest, ok, serverError } from "@/lib/http";
 import { logAudit } from "@/lib/audit/log";
-import { invokeSkill } from "@/lib/ziro/invokeSkill";
 import { getSchedulingDashboard } from "@/lib/scheduling/service";
 import { resolveSchedulingContext } from "../../guard";
 
@@ -18,8 +17,6 @@ export async function GET(req: NextRequest) {
     const tenantParam = url.searchParams.get("tenantId")?.trim() || null;
     const start = url.searchParams.get("start")?.trim();
     const end = url.searchParams.get("end")?.trim();
-    const skillParam = url.searchParams.get("skill")?.trim() ?? "";
-
     let ctx;
     try {
       ctx = await resolveSchedulingContext({ tenantId: tenantParam });
@@ -46,28 +43,7 @@ export async function GET(req: NextRequest) {
       source: "api",
     });
 
-    let automation: unknown = null;
-    if (skillParam.length > 0) {
-      const result = await invokeSkill(skillParam, {
-        tenantId: ctx.tenantId,
-        profileId: ctx.session.userId,
-        extra: {
-          scope: "scheduling",
-          rangeStart: data.range.start,
-          rangeEnd: data.range.end,
-        },
-      });
-      automation = result;
-      await logAudit("scheduling.skill.invoke", {
-        tenantId: ctx.tenantId,
-        profileId: ctx.session.userId,
-        skillId: skillParam,
-        ok: result.ok,
-        durationMs: result.durationMs,
-      });
-    }
-
-    return ok({ data, automation });
+    return ok({ data });
   } catch (err) {
     return serverError(err);
   }

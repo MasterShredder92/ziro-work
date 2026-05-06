@@ -39,25 +39,6 @@ function readTenantIdFromUrl(): string | null {
   }
 }
 
-function readTenantIdFromAgentContext(): string | null {
-  const g = globalThis as unknown as Record<string, unknown>;
-  const candidates = [
-    g.__agentContext,
-    g.agentContext,
-    g.__ctx,
-    g.ctx,
-  ];
-
-  for (const c of candidates) {
-    if (!c || typeof c !== "object") continue;
-    const tenantId = (c as { tenantId?: unknown; tenant_id?: unknown }).tenantId ?? (c as { tenant_id?: unknown }).tenant_id;
-    const norm = normalizeTenantId(tenantId);
-    if (norm) return norm;
-  }
-
-  return null;
-}
-
 export async function getTenantContext(
   input?: TenantContextInput
 ): Promise<{ tenantId: string | null }> {
@@ -69,9 +50,6 @@ export async function getTenantContext(
 
   const fromUrl = readTenantIdFromUrl();
   if (fromUrl) return { tenantId: fromUrl };
-
-  const fromAgent = readTenantIdFromAgentContext();
-  if (fromAgent) return { tenantId: fromAgent };
 
   return { tenantId: null };
 }
