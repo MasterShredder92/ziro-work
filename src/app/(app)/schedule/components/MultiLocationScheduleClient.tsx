@@ -212,8 +212,28 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
     <div className="space-y-0">
       {/* Unified compact header */}
       <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Row 1: location pills | view toggle | toolbar actions */}
+        {/* Row 1: location selector | view toggle | toolbar actions */}
         <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
+          {/* Mobile: location dropdown */}
+          <div className="relative sm:hidden shrink-0">
+            <select
+              value={activeLocationId}
+              onChange={(e) => { setActiveLocationId(e.target.value); setActiveView("schedule"); }}
+              className="appearance-none rounded-lg border px-3 py-1.5 pr-7 text-xs font-semibold bg-[var(--z-surface-2)] focus:outline-none cursor-pointer"
+              style={{
+                borderColor: LOCATION_CONFIG[activeLocationId]?.border ?? "var(--z-border)",
+                color: LOCATION_CONFIG[activeLocationId]?.textColor ?? "var(--z-fg)",
+              }}
+            >
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id} style={{ background: "#0a0a0c", color: "#e0e0e6" }}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: LOCATION_CONFIG[activeLocationId]?.textColor ?? "var(--z-muted)" }}>&#9662;</span>
+          </div>
+          {/* Desktop: location pills */}
           {locations.map((loc) => {
             const cfg = LOCATION_CONFIG[loc.id];
             const isActive = loc.id === activeLocationId;
@@ -230,7 +250,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                   backgroundColor: cfg?.accent ?? "transparent",
                   color: cfg?.textColor ?? "inherit",
                 } : {}}
-                className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`hidden sm:block shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
                   isActive
                     ? "border"
                     : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
