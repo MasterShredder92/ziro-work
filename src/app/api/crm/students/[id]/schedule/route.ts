@@ -91,8 +91,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         is_family_callout,
         notes,
         teacher_id,
-        location_id,
-        source_block_id
+        location_id
       `)
       .eq("student_id", studentId)
       .eq("tenant_id", tenantId as unknown as string)
@@ -175,7 +174,6 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         is_virtual: b.is_virtual ?? false,
         is_family_callout: b.is_family_callout ?? false,
         notes: b.notes ?? null,
-        source_block_id: b.source_block_id ?? null,
         teacher: {
           id: b.teacher_id ?? null,
           display_name: teacherDisplayName,
