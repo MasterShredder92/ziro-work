@@ -94,7 +94,6 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         location_id
       `)
       .eq("student_id", studentId)
-      .eq("tenant_id", tenantId as unknown as string)
       .eq("status", "booked")
       .order("block_date", { ascending: includeParam !== "past" })
       .order("start_time", { ascending: true })
