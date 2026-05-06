@@ -85,7 +85,7 @@ type StudentFile = {
   uploaded_by_role: string | null;
 };
 
-type Tab = "overview" | "notes_files" | "timeline";
+type Tab = "overview" | "notes_files" | "schedule" | "timeline";
 
 /* ─── Note type config ───────────────────────────────────── */
 const NOTE_TYPES: { value: NoteType; label: string; color: string; bg: string }[] = [
@@ -248,6 +248,7 @@ function BrandSelect({ value, onChange, children }: { value: string; onChange: (
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview",    label: "Overview"      },
   { id: "notes_files", label: "Notes & Files" },
+  { id: "schedule",    label: "Schedule"      },
   { id: "timeline",    label: "Timeline"      },
 ];
 
@@ -1141,6 +1142,202 @@ function FilterChips({ active, onChange }: { active: EventType | "all"; onChange
   );
 }
 
+/* ─── Schedule tab ──────────────────────────────────────────
+   Shows upcoming booked lesson blocks grouped by week.
+─────────────────────────────────────────────────────────── */
+type ScheduleBlock = {
+  id: string;
+  block_date: string;
+  start_time: string;
+  end_time: string;
+  block_type: string;
+  status: string;
+  checked_in: boolean;
+  is_makeup_session: boolean;
+  is_virtual: boolean;
+  teacher: { id: string | null; display_name: string };
+  location: { id: string | null; name: string; color: string | null };
+};
+
+function fmt12(time: string): string {
+  try {
+    const [h, m] = time.split(":").map(Number);
+    const ampm = h! >= 12 ? "PM" : "AM";
+    const h12 = h! % 12 || 12;
+    return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+  } catch { return time; }
+}
+
+function fmtBlockDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  } catch { return dateStr; }
+}
+
+function blockTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    student_session: "Lesson",
+    first_day: "First Lesson",
+    makeup_session: "Makeup",
+    sub: "Sub",
+    call_out: "Call Out",
+    open_time: "Open",
+  };
+  return map[type] ?? type;
+}
+
+function ScheduleTab({ studentId }: { studentId: string }) {
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    if (!studentId) return;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const toDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        const res = await fetch(
+          `/api/crm/students/${studentId}/schedule?include=upcoming&limit=200&to=${toDate}`,
+          { headers: { "x-tenant-id": DEFAULT_TENANT_ID } }
+        );
+        if (!res.ok) throw new Error(`Failed to load schedule (${res.status})`);
+        const json = await res.json();
+        setBlocks(json.data?.blocks ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load schedule");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [studentId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-2 animate-pulse">
+        {[0,1,2,3,4,5].map(i => (
+          <div key={i} className="h-14 rounded-lg" style={{ background: T.surface }} />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>
+        {error}
+      </div>
+    );
+  }
+
+  if (blocks.length === 0) {
+    return (
+      <div className="rounded-xl px-6 py-10 text-center" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        <p className="text-sm font-medium" style={{ color: T.fg }}>No upcoming sessions</p>
+        <p className="mt-1 text-xs" style={{ color: T.muted }}>No booked blocks found for this student.</p>
+      </div>
+    );
+  }
+
+  // Group blocks by week (Mon–Sun)
+  const grouped: { weekLabel: string; blocks: ScheduleBlock[] }[] = [];
+  const seen = new Map<string, ScheduleBlock[]>();
+  for (const b of blocks) {
+    const d = new Date(b.block_date + "T00:00:00");
+    const dow = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - ((dow + 6) % 7));
+    const key = mon.toISOString().split("T")[0]!;
+    if (!seen.has(key)) seen.set(key, []);
+    seen.get(key)!.push(b);
+  }
+  for (const [key, wBlocks] of seen.entries()) {
+    const mon = new Date(key + "T00:00:00");
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    grouped.push({ weekLabel: `Week of ${fmt(mon)} – ${fmt(sun)}`, blocks: wBlocks });
+  }
+
+  const visibleGroups = showAll ? grouped : grouped.slice(0, 8);
+  const hiddenCount = grouped.length - 8;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs" style={{ color: T.muted }}>
+          {blocks.length} upcoming session{blocks.length !== 1 ? "s" : ""}
+          {blocks.length > 0 ? ` · through ${fmtBlockDate(blocks[blocks.length - 1]?.block_date ?? "")}` : ""}
+        </p>
+      </div>
+
+      {visibleGroups.map(({ weekLabel, blocks: wBlocks }) => (
+        <div key={weekLabel}>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: T.muted }}>
+            {weekLabel}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {wBlocks.map((b) => {
+              const locColor = b.location.color ?? BRAND;
+              const isMakeup = b.is_makeup_session || b.block_type === "makeup_session";
+              const isFirst = b.block_type === "first_day";
+              const isVirtual = b.is_virtual;
+              return (
+                <div
+                  key={b.id}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5"
+                  style={{
+                    background: T.surface,
+                    border: `1px solid ${T.border}`,
+                    borderLeft: `3px solid ${locColor}`,
+                  }}
+                >
+                  <div className="min-w-[110px]">
+                    <p className="text-xs font-semibold" style={{ color: T.fg }}>{fmtBlockDate(b.block_date)}</p>
+                    <p className="text-[11px]" style={{ color: T.muted }}>{fmt12(b.start_time)} – {fmt12(b.end_time)}</p>
+                  </div>
+                  <div className="h-8 w-px" style={{ background: T.border }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-xs font-medium" style={{ color: T.fg }}>{b.teacher.display_name}</p>
+                    <p className="truncate text-[11px]" style={{ color: T.muted }}>{b.location.name}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isFirst && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(0,209,108,0.12)", color: BRAND }}>First</span>
+                    )}
+                    {isMakeup && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(234,179,8,0.12)", color: "#ca8a04" }}>Makeup</span>
+                    )}
+                    {isVirtual && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(99,102,241,0.12)", color: "#818cf8" }}>Virtual</span>
+                    )}
+                    {!isFirst && !isMakeup && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(107,114,128,0.10)", color: T.muted }}>{blockTypeLabel(b.block_type)}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {!showAll && hiddenCount > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full rounded-lg py-2.5 text-xs font-medium transition-colors"
+          style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.muted }}
+        >
+          Show {hiddenCount} more week{hiddenCount !== 1 ? "s" : ""}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TimelineTab({ studentId }: { studentId: string }) {
   const [allEvents, setAllEvents] = useState<TimelineEvent[]>([]);
   const [filter, setFilter] = useState<EventType | "all">("all");
@@ -1226,6 +1423,7 @@ export function StudentOverviewContent() {
       <div className="pt-5">
         {activeTab === "overview"    && <OverviewTab    studentId={studentId} />}
         {activeTab === "notes_files" && <NotesFilesTab  studentId={studentId} />}
+        {activeTab === "schedule"    && <ScheduleTab    studentId={studentId} />}
         {activeTab === "timeline"    && <TimelineTab    studentId={studentId} />}
       </div>
     </div>
