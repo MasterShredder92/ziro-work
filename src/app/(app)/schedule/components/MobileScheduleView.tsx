@@ -363,6 +363,7 @@ export function MobileScheduleView({
   onBlocksChange,
 }: Props) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
+  const [detailTeacherId, setDetailTeacherId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [currentMinute, setCurrentMinute] = React.useState(nowMin);
@@ -375,6 +376,7 @@ export function MobileScheduleView({
 
   React.useEffect(() => {
     setSelectedBlockId(null);
+    setDetailTeacherId(null);
   }, [selectedDate]);
 
   const { openMinute, closeMinute, isClosed } = React.useMemo(
@@ -509,6 +511,167 @@ export function MobileScheduleView({
     }
   }
 
+  // ── Teacher detail view (early return) ────────────────────────────────────
+  if (detailTeacherId) {
+    const teacher = teachers.find(t => t.id === detailTeacherId);
+    if (!teacher) { setDetailTeacherId(null); return null; }
+
+    const tBlocks = dayBlocks
+      .filter(b => b.teacher_id === teacher.id)
+      .sort((a, b) => toMin(a.start_time) - toMin(b.start_time));
+
+    const slots: number[] = [];
+    for (let m = openMinute; m < closeMinute; m += 30) slots.push(m);
+
+    return (
+      <div style={{ background: "var(--z-bg)" }}>
+        {/* Back header */}
+        <div className="flex items-center gap-3 border-b px-4 py-3"
+          style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: "var(--z-bg)" }}>
+          <button
+            onClick={() => { setDetailTeacherId(null); setSelectedBlockId(null); }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base font-bold"
+            style={{ borderColor: "var(--z-border)", color: "var(--z-muted)" }}>
+            ←
+          </button>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
+            style={{
+              borderColor: locationConfig?.border ?? "var(--z-border)",
+              background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
+              color: locationConfig?.textColor ?? "#00ff88",
+            }}>
+            {teacherInitials(teacher)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold text-[var(--z-fg)] truncate">{teacherDisplayName(teacher)}</div>
+            <div className="text-[10px] text-[var(--z-muted)]">
+              {tBlocks.filter(b => b.student_id && b.block_type !== "open_time").length} students
+              {" · "}
+              {tBlocks.filter(b => !b.student_id || b.block_type === "open_time").length} open
+            </div>
+          </div>
+          <button onClick={() => { setDetailTeacherId(null); setSelectedBlockId(null); }}
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{ border: "1px solid var(--z-border)", color: "var(--z-muted)" }}>
+            All
+          </button>
+        </div>
+
+        {/* Vertical slot list */}
+        <div>
+          {slots.map(slotMin => {
+            const block = tBlocks.find(b => {
+              const bStart = toMin(b.start_time);
+              const bEnd = toMin(b.end_time);
+              return bStart <= slotMin && bEnd > slotMin;
+            });
+
+            if (!block) {
+              return (
+                <div key={slotMin} className="flex items-center gap-3 px-4 py-3 border-b"
+                  style={{ borderColor: "var(--z-border)" }}>
+                  <div className="w-16 shrink-0 text-right text-xs font-medium text-[var(--z-muted)]">
+                    {minToLabel(slotMin)}
+                  </div>
+                  <div className="flex-1 rounded-lg border py-3 px-3 text-center text-xs font-semibold"
+                    style={{
+                      borderColor: "rgba(16,185,129,0.3)",
+                      borderStyle: "dashed",
+                      color: "rgba(16,185,129,0.7)",
+                      background: "rgba(16,185,129,0.04)",
+                    }}>
+                    Open
+                  </div>
+                </div>
+              );
+            }
+
+            const blockStart = toMin(block.start_time);
+            if (blockStart !== slotMin) return null;
+
+            const bs = blockStyle(block as ScheduleBlock);
+            const student = block.student_id ? studentsById.get(block.student_id) : null;
+            const family = student?.family_id ? familiesById.get(student.family_id) : null;
+            const instr = student ? (student as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
+            const blockEnd = toMin(block.end_time);
+            const durationMins = blockEnd - blockStart;
+            const isSelected = block.id === selectedBlockId || block.source_block_id === selectedBlockId;
+            const isNow = isToday && currentMinute >= blockStart && currentMinute < blockEnd;
+
+            return (
+              <React.Fragment key={block.id}>
+                <button
+                  onClick={() => setSelectedBlockId(isSelected ? null : (block.source_block_id || block.id))}
+                  className="w-full text-left border-b"
+                  style={{ borderColor: "var(--z-border)", background: isSelected ? bs.bg : "transparent" }}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-16 shrink-0 text-right">
+                      <div className="text-xs font-semibold text-[var(--z-fg)]">{minToLabel(blockStart)}</div>
+                      <div className="text-[9px] text-[var(--z-muted)]">{durationMins}m</div>
+                    </div>
+                    <div className="flex-1 rounded-lg border px-3 py-2.5"
+                      style={{ background: bs.bg, borderColor: bs.border }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          {student ? (
+                            <>
+                              <div className="flex items-center gap-1.5">
+                                {instr && <span className="text-sm">{instrumentEmoji(instr)}</span>}
+                                <span className="text-sm font-bold truncate" style={{ color: bs.text }}>
+                                  {studentFirstName(student)} {String((student as unknown as Record<string, unknown>).last_name ?? "")}
+                                </span>
+                                {isNow && (
+                                  <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                                    style={{ background: "rgba(168,85,247,0.2)", color: "#c084fc" }}>NOW</span>
+                                )}
+                              </div>
+                              {family && (
+                                <div className="text-[10px] truncate" style={{ color: bs.text, opacity: 0.7 }}>
+                                  {String((family as unknown as Record<string, unknown>).name ?? "")}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-sm font-semibold" style={{ color: bs.text }}>
+                              {bs.label || "Open"}
+                            </span>
+                          )}
+                        </div>
+                        {block.checked_in && (
+                          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                            style={{ background: "rgba(34,197,94,0.15)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)" }}>
+                            ✓ In
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {isSelected && (
+                  <ActionSheet
+                    block={block}
+                    student={student ?? null}
+                    family={family ?? null}
+                    teachers={teachers}
+                    students={students}
+                    onSave={patch => { void patchBlock(block, patch); }}
+                    onCheckIn={() => { void checkIn(block); }}
+                    onCallOut={() => { void callOut(block); }}
+                    onCancelSession={(scope, reason) => { void cancelSession(block, scope, reason); }}
+                    onClose={() => { setSelectedBlockId(null); setError(null); }}
+                    saving={saving}
+                    error={error}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (isClosed) {
     return (
       <div className="mx-4 my-6 rounded-xl border p-8 text-center"
@@ -539,14 +702,16 @@ export function MobileScheduleView({
         <div className="shrink-0 z-10" style={{ width: TEACHER_COL_W, background: "var(--z-bg)" }}>
           {/* Corner cell */}
           <div style={{ height: HEADER_H, borderBottom: "1px solid var(--z-border)", borderRight: "1px solid var(--z-border)" }} />
-          {/* Teacher rows */}
+          {/* Teacher rows — tap to open detail view */}
           {teachersForBoard.map(teacher => (
-            <div key={teacher.id}
-              className="flex items-center justify-center"
+            <button key={teacher.id}
+              onClick={() => { setDetailTeacherId(teacher.id); setSelectedBlockId(null); }}
+              className="flex w-full items-center justify-center"
               style={{
                 height: ROW_H,
                 borderBottom: "1px solid var(--z-border)",
                 borderRight: "1px solid var(--z-border)",
+                background: "transparent",
               }}>
               <div className="flex flex-col items-center gap-0.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold"
@@ -560,11 +725,10 @@ export function MobileScheduleView({
                 <div className="max-w-[60px] truncate text-center text-[8px] text-[var(--z-muted)] leading-tight">
                   {teacherDisplayName(teacher).split(" ")[0]}
                 </div>
-              </div>
-            </div>
+               </div>
+            </button>
           ))}
         </div>
-
         {/* Scrollable timeline */}
         <div ref={scrollRef} className="flex-1 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
           <div style={{ width: timelineWidth, position: "relative" }}>
