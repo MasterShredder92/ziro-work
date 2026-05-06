@@ -513,6 +513,7 @@ export function MobileScheduleView({
   }
 
   // ── Teacher detail view (early return) ────────────────────────────────────
+  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
   const detailTeacher = detailTeacherId ? (teachers.find(t => t.id === detailTeacherId) ?? null) : null;
   if (detailTeacherId && detailTeacher) {
     return (
@@ -552,7 +553,6 @@ export function MobileScheduleView({
 
   const totalSlots = Math.ceil((closeMinute - openMinute) / 30);
   const timelineWidth = totalSlots * SLOT_W;
-  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
   const nowX = isToday && currentMinute >= openMinute && currentMinute <= closeMinute
     ? ((currentMinute - openMinute) / 30) * SLOT_W
     : null;
