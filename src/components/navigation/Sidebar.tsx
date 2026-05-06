@@ -152,6 +152,10 @@ const ALL_ITEMS = GROUPS.flatMap((g) =>
   g.items.map((item) => ({ ...item, groupLabel: g.label }))
 );
 
+// ─── Hover delay constant (ms) ────────────────────────────────────────────────
+const HOVER_EXPAND_DELAY = 400;
+const HOVER_COLLAPSE_DELAY = 300;
+
 type SidebarProps = {
   isMobileOpen?: boolean;
   onClose?: () => void;
@@ -161,8 +165,10 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname() ?? "";
   const isLifecyclePage = pathname.startsWith("/lifecycle");
 
-  // ── Desktop: click-to-expand (replaces hover) ─────────────────────────────
+  // ── Desktop: hover-to-expand ──────────────────────────────────────────────
   const [desktopExpanded, setDesktopExpanded] = React.useState(false);
+  const expandTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const collapseTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [lifecycleOpen, setLifecycleOpen] = React.useState(isLifecyclePage);
   React.useEffect(() => {
@@ -171,16 +177,46 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
   // On mobile the sidebar is controlled by isMobileOpen from the parent.
   // When open on mobile it is ALWAYS fully expanded.
-  // On desktop (lg+) it is icon-only by default and expands on click.
+  // On desktop (lg+) it is icon-only by default and expands on hover after delay.
   const isExpanded = isMobileOpen || desktopExpanded;
 
-  // Close desktop sidebar when user navigates to a new page
+  // Collapse desktop sidebar when user navigates to a new page
   React.useEffect(() => {
     setDesktopExpanded(false);
   }, [pathname]);
 
-  function handleDesktopToggle() {
-    setDesktopExpanded((v) => !v);
+  // Clean up timers on unmount
+  React.useEffect(() => {
+    return () => {
+      if (expandTimerRef.current) clearTimeout(expandTimerRef.current);
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    };
+  }, []);
+
+  function handleMouseEnter() {
+    // Cancel any pending collapse
+    if (collapseTimerRef.current) {
+      clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+    }
+    // Schedule expand after delay
+    if (!desktopExpanded) {
+      expandTimerRef.current = setTimeout(() => {
+        setDesktopExpanded(true);
+      }, HOVER_EXPAND_DELAY);
+    }
+  }
+
+  function handleMouseLeave() {
+    // Cancel any pending expand
+    if (expandTimerRef.current) {
+      clearTimeout(expandTimerRef.current);
+      expandTimerRef.current = null;
+    }
+    // Schedule collapse after short delay
+    collapseTimerRef.current = setTimeout(() => {
+      setDesktopExpanded(false);
+    }, HOVER_COLLAPSE_DELAY);
   }
 
   function isActive(href: string) {
@@ -196,11 +232,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         "transition-[width] duration-200 ease-out",
         isExpanded ? "w-[260px] shadow-2xl" : "w-[64px]",
         // Mobile: slide in/out based on isMobileOpen
-        // Desktop (lg+): always visible at 64px, expands on click
+        // Desktop (lg+): always visible at 64px, expands on hover
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
+      // Hover handlers only fire on desktop (pointer device); mobile uses isMobileOpen
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* Logo / toggle button */}
+      {/* Logo / header */}
       <div
         className={clsx(
           "flex items-center border-b border-[#1c1c1e] overflow-hidden transition-all duration-200",
@@ -217,17 +256,6 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                 <span className="text-white ml-1 font-light">WORK</span>
               </div>
             </div>
-            {/* Desktop collapse button */}
-            <button
-              type="button"
-              onClick={handleDesktopToggle}
-              className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-[#505055] hover:bg-white/5 hover:text-[#909098] transition-colors"
-              aria-label="Collapse sidebar"
-            >
-              <svg viewBox="0 0 16 16" fill="none" style={{ width: 14, height: 14 }} aria-hidden>
-                <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
             {/* Mobile close button */}
             <button
               type="button"
@@ -238,16 +266,11 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             </button>
           </>
         ) : (
-          /* Collapsed: clicking the logo expands on desktop */
-          <button
-            type="button"
-            onClick={handleDesktopToggle}
-            className="flex items-center justify-center focus:outline-none"
-            aria-label="Expand sidebar"
-          >
+          /* Collapsed: logo icon only */
+          <div className="flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/zw-logo.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
-          </button>
+          </div>
         )}
       </div>
 
