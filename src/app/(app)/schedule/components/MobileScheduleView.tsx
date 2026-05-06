@@ -8,67 +8,82 @@ import {
   type ProjectedBlock,
 } from "@/lib/schedule/windowedClient";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const TEACHER_COL_W = 72;   // px — fixed left column
+const SLOT_W = 56;           // px per 30-min slot
+const ROW_H = 56;            // px per teacher row
+const HEADER_H = 32;         // px — time header row
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toMinute(value: string): number {
-  const [h = "0", m = "0"] = value.split(":");
+function toMin(t: string): number {
+  const [h = "0", m = "0"] = t.split(":");
   return Number(h) * 60 + Number(m);
 }
-function minuteToLabel(value: number): string {
-  const h24 = Math.floor(value / 60);
-  const m = value % 60;
-  const hour = h24 % 12 || 12;
+function minToLabel(m: number): string {
+  const h24 = Math.floor(m / 60);
+  const min = m % 60;
+  const h = h24 % 12 || 12;
   const suffix = h24 >= 12 ? "PM" : "AM";
-  return m === 0 ? `${hour}${suffix}` : `${hour}:${m.toString().padStart(2, "0")}${suffix}`;
+  return min === 0 ? `${h}${suffix}` : `${h}:${String(min).padStart(2, "0")}`;
 }
-function nowMinute(): number {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
+function nowMin(): number {
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
 }
 function teacherInitials(t: Teacher): string {
   const r = t as unknown as Record<string, unknown>;
-  const first = (r.first_name as string | undefined)?.trim() ?? "";
-  const last = (r.last_name as string | undefined)?.trim() ?? "";
-  return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase() || "?";
+  const f = (r.first_name as string | undefined)?.trim() ?? "";
+  const l = (r.last_name as string | undefined)?.trim() ?? "";
+  return `${f[0] ?? ""}${l[0] ?? ""}`.toUpperCase() || "?";
 }
-function teacherName(t: Teacher): string {
+function teacherDisplayName(t: Teacher): string {
   const r = t as unknown as Record<string, unknown>;
-  const first = (r.first_name as string | undefined)?.trim() ?? "";
-  const last = (r.last_name as string | undefined)?.trim() ?? "";
-  return `${first} ${last}`.trim() || "Teacher";
+  const f = (r.first_name as string | undefined)?.trim() ?? "";
+  const l = (r.last_name as string | undefined)?.trim() ?? "";
+  return `${f} ${l}`.trim() || "Teacher";
 }
-function studentName(s: Student): string {
+function studentFirstName(s: Student): string {
   const r = s as unknown as Record<string, unknown>;
-  const first = (r.first_name as string | undefined)?.trim() ?? "";
-  const last = (r.last_name as string | undefined)?.trim() ?? "";
-  return `${first} ${last}`.trim() || "Student";
+  return (r.first_name as string | undefined)?.trim() || "Student";
 }
 function instrumentEmoji(instr: string | null | undefined): string {
   if (!instr) return "";
   if (/guitar|bass/i.test(instr)) return "🎸";
   if (/piano|keyboard/i.test(instr)) return "🎹";
   if (/drum|perc/i.test(instr)) return "🥁";
-  if (/violin|viola|cello|string/i.test(instr)) return "🎻";
+  if (/violin|viola|cello/i.test(instr)) return "🎻";
   if (/trumpet|horn|brass/i.test(instr)) return "🎺";
-  if (/sax|clarinet|flute|wind/i.test(instr)) return "🎷";
+  if (/sax|clarinet|flute/i.test(instr)) return "🎷";
   if (/voice|vocal|sing/i.test(instr)) return "🎤";
   return "🎵";
 }
 
 // ─── Block styling ────────────────────────────────────────────────────────────
-type BlockStyle = { bg: string; border: string; text: string; label: string };
-function getBlockStyle(block: ScheduleBlock | ProjectedBlock): BlockStyle {
-  if (block.checked_in) return { bg: "rgba(34,197,94,0.18)", border: "rgba(34,197,94,0.55)", text: "#86efac", label: "✓ Checked In" };
-  if (block.is_family_callout || block.block_type === "call_out") return { bg: "rgba(249,115,22,0.18)", border: "#ea580c", text: "#fb923c", label: "Call Out" };
-  if (block.is_makeup_session || block.block_type === "makeup_session") return { bg: "rgba(236,72,153,0.18)", border: "#db2777", text: "#f472b6", label: "Makeup" };
-  if (block.is_virtual || block.block_type === "virtual") return { bg: "rgba(14,165,233,0.18)", border: "#0284c7", text: "#38bdf8", label: "Virtual" };
-  if (block.block_type === "first_day") return { bg: "rgba(59,130,246,0.18)", border: "#2563eb", text: "#60a5fa", label: "First Day" };
-  if (block.block_type === "last_day") return { bg: "rgba(239,68,68,0.18)", border: "#dc2626", text: "#f87171", label: "Last Day" };
-  if (block.block_type === "meet_greet") return { bg: "rgba(20,184,166,0.18)", border: "#0d9488", text: "#2dd4bf", label: "Meet & Greet" };
-  if (block.block_type === "sub") return { bg: "rgba(34,197,94,0.18)", border: "#16a34a", text: "#4ade80", label: "Sub" };
-  if (block.block_type === "teacher_training") return { bg: "rgba(139,92,246,0.18)", border: "#7c3aed", text: "#a78bfa", label: "Training" };
-  if (block.block_type === "not_bookable") return { bg: "rgba(107,114,128,0.18)", border: "#6b7280", text: "#9ca3af", label: "Locked" };
-  if (block.block_type === "open_time" || !block.student_id) return { bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.3)", text: "rgba(16,185,129,0.8)", label: "Open" };
-  return { bg: "rgba(234,179,8,0.18)", border: "#ca8a04", text: "#fbbf24", label: "" };
+type BStyle = { bg: string; border: string; text: string; label: string };
+function blockStyle(b: ScheduleBlock | ProjectedBlock): BStyle {
+  if (b.checked_in)
+    return { bg: "rgba(34,197,94,0.22)", border: "rgba(34,197,94,0.6)", text: "#86efac", label: "✓ In" };
+  if (b.is_family_callout || b.block_type === "call_out")
+    return { bg: "rgba(249,115,22,0.2)", border: "#ea580c", text: "#fb923c", label: "Call Out" };
+  if (b.is_makeup_session || b.block_type === "makeup_session")
+    return { bg: "rgba(236,72,153,0.2)", border: "#db2777", text: "#f472b6", label: "Makeup" };
+  if (b.is_virtual || b.block_type === "virtual")
+    return { bg: "rgba(14,165,233,0.2)", border: "#0284c7", text: "#38bdf8", label: "Virtual" };
+  if (b.block_type === "first_day")
+    return { bg: "rgba(59,130,246,0.2)", border: "#2563eb", text: "#60a5fa", label: "1st Day" };
+  if (b.block_type === "last_day")
+    return { bg: "rgba(239,68,68,0.2)", border: "#dc2626", text: "#f87171", label: "Last Day" };
+  if (b.block_type === "meet_greet")
+    return { bg: "rgba(20,184,166,0.2)", border: "#0d9488", text: "#2dd4bf", label: "M&G" };
+  if (b.block_type === "sub")
+    return { bg: "rgba(34,197,94,0.18)", border: "#16a34a", text: "#4ade80", label: "Sub" };
+  if (b.block_type === "teacher_training")
+    return { bg: "rgba(139,92,246,0.2)", border: "#7c3aed", text: "#a78bfa", label: "Training" };
+  if (b.block_type === "not_bookable")
+    return { bg: "rgba(107,114,128,0.18)", border: "#6b7280", text: "#9ca3af", label: "Locked" };
+  if (b.block_type === "open_time" || !b.student_id)
+    return { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.35)", text: "rgba(16,185,129,0.9)", label: "Open" };
+  return { bg: "rgba(234,179,8,0.2)", border: "#ca8a04", text: "#fbbf24", label: "" };
 }
 
 const BLOCK_TYPES = [
@@ -98,8 +113,8 @@ type Props = {
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
 };
 
-// ─── Block Edit Sheet ─────────────────────────────────────────────────────────
-function BlockEditSheet({
+// ─── Action Sheet ─────────────────────────────────────────────────────────────
+function ActionSheet({
   block, student, family, teachers, students,
   onSave, onCheckIn, onCallOut, onCancelSession, onClose, saving, error,
 }: {
@@ -121,45 +136,54 @@ function BlockEditSheet({
   const [assignedStudentId, setAssignedStudentId] = React.useState(block.student_id ?? "");
   const [assignedTeacherId, setAssignedTeacherId] = React.useState(block.teacher_id ?? "");
   const [isVirtual, setIsVirtual] = React.useState(!!block.is_virtual);
-  const [showCancelConfirm, setShowCancelConfirm] = React.useState(false);
+  const [showCancel, setShowCancel] = React.useState(false);
   const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("single");
   const [cancelReason, setCancelReason] = React.useState("");
-  const bStyle = getBlockStyle(block);
+  const bs = blockStyle(block);
   const isOpen = block.block_type === "open_time" || !block.student_id;
 
   return (
-    <div className="border-t" style={{ borderColor: bStyle.border }}>
-      {/* Sheet header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--z-border)" }}>
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl"
+      style={{ background: "var(--z-bg)", borderTop: `2px solid ${bs.border}`, maxHeight: "70vh", overflowY: "auto" }}>
+      {/* Drag handle */}
+      <div className="flex justify-center pt-2 pb-1">
+        <div className="h-1 w-10 rounded-full" style={{ background: "var(--z-border)" }} />
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pb-3 border-b" style={{ borderColor: "var(--z-border)" }}>
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full" style={{ background: bStyle.border }} />
+          <div className="h-2.5 w-2.5 rounded-full" style={{ background: bs.border }} />
           <span className="text-sm font-bold text-[var(--z-fg)]">
-            {minuteToLabel(toMinute(block.start_time))} – {minuteToLabel(toMinute(block.end_time))}
+            {minToLabel(toMin(block.start_time))} – {minToLabel(toMin(block.end_time))}
           </span>
-          {bStyle.label && (
+          {bs.label && (
             <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold"
-              style={{ background: bStyle.bg, color: bStyle.text, border: `1px solid ${bStyle.border}` }}>
-              {bStyle.label}
+              style={{ background: bs.bg, color: bs.text, border: `1px solid ${bs.border}` }}>
+              {bs.label}
             </span>
           )}
         </div>
         <button onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--z-muted)]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-sm text-[var(--z-muted)]"
           style={{ border: "1px solid var(--z-border)" }}>
           ✕
         </button>
       </div>
 
-      {/* Student info */}
+      {/* Student row */}
       {student && (
         <div className="flex items-center gap-3 px-4 py-2.5 border-b"
           style={{ borderColor: "var(--z-border)", background: "var(--z-surface)" }}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
             style={{ background: "rgba(0,255,136,0.12)", border: "1px solid rgba(0,255,136,0.3)", color: "#00ff88" }}>
-            {(studentName(student)[0] ?? "?").toUpperCase()}
+            {(studentFirstName(student)[0] ?? "?").toUpperCase()}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-[var(--z-fg)] truncate">{studentName(student)}</div>
+            <div className="text-sm font-semibold text-[var(--z-fg)] truncate">
+              {studentFirstName(student)} {String((student as unknown as Record<string, unknown>).last_name ?? "")}
+            </div>
             {family && (
               <div className="text-xs text-[var(--z-muted)] truncate">
                 {String((family as unknown as Record<string, unknown>).name ?? "")}
@@ -183,7 +207,6 @@ function BlockEditSheet({
         ))}
       </div>
 
-      {/* Content */}
       <div className="px-4 py-3 space-y-2">
         {error && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
@@ -207,14 +230,14 @@ function BlockEditSheet({
                 Call Out
               </button>
             )}
-            {!isOpen && !showCancelConfirm && (
-              <button onClick={() => setShowCancelConfirm(true)}
+            {!isOpen && !showCancel && (
+              <button onClick={() => setShowCancel(true)}
                 className="w-full rounded-xl py-3 text-sm font-bold"
                 style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171" }}>
                 Cancel Session
               </button>
             )}
-            {showCancelConfirm && (
+            {showCancel && (
               <div className="space-y-2 rounded-xl border p-3"
                 style={{ borderColor: "rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.06)" }}>
                 <div className="text-xs font-semibold text-red-400">Cancel this session?</div>
@@ -241,7 +264,7 @@ function BlockEditSheet({
                     style={{ background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.4)" }}>
                     {saving ? "Cancelling…" : "Confirm Cancel"}
                   </button>
-                  <button onClick={() => setShowCancelConfirm(false)}
+                  <button onClick={() => setShowCancel(false)}
                     className="rounded-lg px-3 py-2 text-xs text-[var(--z-muted)]"
                     style={{ border: "1px solid var(--z-border)" }}>
                     Back
@@ -258,7 +281,8 @@ function BlockEditSheet({
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
                 Block Type
               </label>
-              <select value={blockType} onChange={e => setBlockType(e.target.value as ScheduleBlock["block_type"])}
+              <select value={blockType}
+                onChange={e => setBlockType(e.target.value as ScheduleBlock["block_type"])}
                 className="w-full rounded-lg border bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none"
                 style={{ borderColor: "var(--z-border)" }}>
                 {BLOCK_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
@@ -272,7 +296,11 @@ function BlockEditSheet({
                 className="w-full rounded-lg border bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none"
                 style={{ borderColor: "var(--z-border)" }}>
                 <option value="">— No student —</option>
-                {students.map(s => <option key={s.id} value={s.id}>{studentName(s)}</option>)}
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {studentFirstName(s)} {String((s as unknown as Record<string, unknown>).last_name ?? "")}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -283,7 +311,7 @@ function BlockEditSheet({
                 className="w-full rounded-lg border bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none"
                 style={{ borderColor: "var(--z-border)" }}>
                 <option value="">— Select teacher —</option>
-                {teachers.map(t => <option key={t.id} value={t.id}>{teacherName(t)}</option>)}
+                {teachers.map(t => <option key={t.id} value={t.id}>{teacherDisplayName(t)}</option>)}
               </select>
             </div>
             <button type="button" onClick={() => setIsVirtual(!isVirtual)}
@@ -334,20 +362,18 @@ export function MobileScheduleView({
   locationHours,
   onBlocksChange,
 }: Props) {
-  const [detailTeacherId, setDetailTeacherId] = React.useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [currentMinute, setCurrentMinute] = React.useState(nowMinute);
+  const [currentMinute, setCurrentMinute] = React.useState(nowMin);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    const id = setInterval(() => setCurrentMinute(nowMinute()), 60_000);
+    const id = setInterval(() => setCurrentMinute(nowMin()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  // Reset detail view when date changes
   React.useEffect(() => {
-    setDetailTeacherId(null);
     setSelectedBlockId(null);
   }, [selectedDate]);
 
@@ -380,9 +406,23 @@ export function MobileScheduleView({
 
   const teachersForBoard = React.useMemo(() => {
     const ids = new Set(dayBlocks.map(b => b.teacher_id).filter(Boolean) as string[]);
-    const withBlocks = teachers.filter(t => ids.has(t.id)).sort((a, b) => teacherName(a).localeCompare(teacherName(b)));
+    const withBlocks = teachers.filter(t => ids.has(t.id)).sort((a, b) =>
+      teacherDisplayName(a).localeCompare(teacherDisplayName(b)),
+    );
     return withBlocks.length > 0 ? withBlocks : teachers.slice(0, 8);
   }, [teachers, dayBlocks]);
+
+  // Scroll to current time on mount
+  React.useEffect(() => {
+    if (!scrollRef.current) return;
+    const isToday = selectedDate === new Date().toISOString().slice(0, 10);
+    if (!isToday) return;
+    const totalMinutes = closeMinute - openMinute;
+    const nowOffset = currentMinute - openMinute;
+    const totalWidth = Math.ceil(totalMinutes / 30) * SLOT_W;
+    const scrollX = Math.max(0, (nowOffset / totalMinutes) * totalWidth - 80);
+    scrollRef.current.scrollLeft = scrollX;
+  }, [selectedDate, openMinute, closeMinute, currentMinute]);
 
   async function patchBlock(block: ProjectedBlock, patch: Partial<ScheduleBlock>) {
     const targetId = block.source_block_id || block.id;
@@ -450,7 +490,14 @@ export function MobileScheduleView({
       onBlocksChange(
         blocks.map(b =>
           b.id === targetId
-            ? { ...b, student_id: null, block_type: "open_time" as ScheduleBlock["block_type"], status: "available" as ScheduleBlock["status"], checked_in: false, teacher_tally: false }
+            ? {
+                ...b,
+                student_id: null,
+                block_type: "open_time" as ScheduleBlock["block_type"],
+                status: "available" as ScheduleBlock["status"],
+                checked_in: false,
+                teacher_tally: false,
+              }
             : b,
         ),
       );
@@ -471,267 +518,175 @@ export function MobileScheduleView({
     );
   }
 
-  // ── Teacher detail view (early return) ───────────────────────────────────
-  if (detailTeacherId) {
-    const teacher = teachers.find(t => t.id === detailTeacherId);
-    if (!teacher) {
-      setDetailTeacherId(null);
-      return null;
-    }
+  const totalSlots = Math.ceil((closeMinute - openMinute) / 30);
+  const timelineWidth = totalSlots * SLOT_W;
+  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
+  const nowX = isToday && currentMinute >= openMinute && currentMinute <= closeMinute
+    ? ((currentMinute - openMinute) / 30) * SLOT_W
+    : null;
 
-    const tBlocks = dayBlocks
-      .filter(b => b.teacher_id === teacher.id)
-      .sort((a, b) => toMinute(a.start_time) - toMinute(b.start_time));
+  const selectedBlock = selectedBlockId
+    ? dayBlocks.find(b => b.id === selectedBlockId || b.source_block_id === selectedBlockId) ?? null
+    : null;
+  const selectedStudent = selectedBlock?.student_id ? studentsById.get(selectedBlock.student_id) ?? null : null;
+  const selectedFamily = selectedStudent?.family_id ? familiesById.get(selectedStudent.family_id) ?? null : null;
 
-    const slots: number[] = [];
-    for (let m = openMinute; m < closeMinute; m += 30) slots.push(m);
-    const isToday = selectedDate === new Date().toISOString().slice(0, 10);
-
-    return (
-      <div style={{ background: "var(--z-bg)" }}>
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b px-4 py-3 sticky top-0 z-10"
-          style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: "var(--z-bg)" }}>
-          <button
-            onClick={() => { setDetailTeacherId(null); setSelectedBlockId(null); }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border font-bold text-lg"
-            style={{ borderColor: "var(--z-border)", color: "var(--z-muted)" }}>
-            ←
-          </button>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
-            style={{
-              borderColor: locationConfig?.border ?? "var(--z-border)",
-              background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
-              color: locationConfig?.textColor ?? "#00ff88",
-            }}>
-            {teacherInitials(teacher)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold text-[var(--z-fg)] truncate">{teacherName(teacher)}</div>
-            <div className="text-[10px] text-[var(--z-muted)]">
-              {tBlocks.filter(b => b.student_id && b.block_type !== "open_time").length} students
-              {" · "}
-              {tBlocks.filter(b => !b.student_id || b.block_type === "open_time").length} open
+  return (
+    <>
+      {/* Grid */}
+      <div className="flex" style={{ background: "var(--z-bg)" }}>
+        {/* Fixed teacher column */}
+        <div className="shrink-0 z-10" style={{ width: TEACHER_COL_W, background: "var(--z-bg)" }}>
+          {/* Corner cell */}
+          <div style={{ height: HEADER_H, borderBottom: "1px solid var(--z-border)", borderRight: "1px solid var(--z-border)" }} />
+          {/* Teacher rows */}
+          {teachersForBoard.map(teacher => (
+            <div key={teacher.id}
+              className="flex items-center justify-center"
+              style={{
+                height: ROW_H,
+                borderBottom: "1px solid var(--z-border)",
+                borderRight: "1px solid var(--z-border)",
+              }}>
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold"
+                  style={{
+                    borderColor: locationConfig?.border ?? "var(--z-border)",
+                    background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
+                    color: locationConfig?.textColor ?? "#00ff88",
+                  }}>
+                  {teacherInitials(teacher)}
+                </div>
+                <div className="max-w-[60px] truncate text-center text-[8px] text-[var(--z-muted)] leading-tight">
+                  {teacherDisplayName(teacher).split(" ")[0]}
+                </div>
+              </div>
             </div>
-          </div>
-          {isToday && (
-            <div className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
-              style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.4)", color: "#c084fc" }}>
-              TODAY
-            </div>
-          )}
+          ))}
         </div>
 
-        {/* Vertical slot list */}
-        <div>
-          {slots.map(slotMinute => {
-            // Find a block that covers this slot
-            const block = tBlocks.find(b => {
-              const bStart = toMinute(b.start_time);
-              const bEnd = toMinute(b.end_time);
-              return bStart <= slotMinute && bEnd > slotMinute;
-            });
-
-            // Empty slot
-            if (!block) {
-              return (
-                <div key={slotMinute} className="flex items-center gap-3 px-4 py-2 border-b"
-                  style={{ borderColor: "var(--z-border)" }}>
-                  <div className="w-14 shrink-0 text-right text-[11px] font-medium text-[var(--z-muted)]">
-                    {minuteToLabel(slotMinute)}
+        {/* Scrollable timeline */}
+        <div ref={scrollRef} className="flex-1 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div style={{ width: timelineWidth, position: "relative" }}>
+            {/* Time header */}
+            <div className="relative" style={{ height: HEADER_H, borderBottom: "1px solid var(--z-border)" }}>
+              {Array.from({ length: totalSlots }).map((_, i) => {
+                const slotMin = openMinute + i * 30;
+                const showLabel = slotMin % 60 === 0;
+                return (
+                  <div key={i} className="absolute top-0 bottom-0 flex items-center"
+                    style={{
+                      left: i * SLOT_W,
+                      width: SLOT_W,
+                      borderRight: "1px solid var(--z-border)",
+                    }}>
+                    {showLabel && (
+                      <span className="pl-1 text-[9px] text-[var(--z-muted)]">{minToLabel(slotMin)}</span>
+                    )}
                   </div>
-                  <div className="h-px flex-1 opacity-20" style={{ background: "var(--z-border)" }} />
-                </div>
-              );
-            }
+                );
+              })}
+              {/* Now indicator in header */}
+              {nowX !== null && (
+                <div className="absolute top-0 bottom-0 w-px" style={{ left: nowX, background: "#a855f7", opacity: 0.8 }} />
+              )}
+            </div>
 
-            // Only render the block row at its start time
-            const blockStart = toMinute(block.start_time);
-            if (blockStart !== slotMinute) return null;
+            {/* Teacher rows */}
+            {teachersForBoard.map(teacher => {
+              const tBlocks = dayBlocks.filter(b => b.teacher_id === teacher.id);
+              return (
+                <div key={teacher.id} className="relative"
+                  style={{ height: ROW_H, borderBottom: "1px solid var(--z-border)" }}>
+                  {/* Slot dividers */}
+                  {Array.from({ length: totalSlots }).map((_, i) => (
+                    <div key={i} className="absolute top-0 bottom-0"
+                      style={{
+                        left: i * SLOT_W,
+                        width: SLOT_W,
+                        borderRight: "1px solid var(--z-border)",
+                        opacity: 0.3,
+                      }} />
+                  ))}
 
-            const bStyle = getBlockStyle(block);
-            const student = block.student_id ? studentsById.get(block.student_id) : null;
-            const family = student?.family_id ? familiesById.get(student.family_id) : null;
-            const instr = student ? (student as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
-            const emoji = instr ? instrumentEmoji(instr) : "";
-            const blockEnd = toMinute(block.end_time);
-            const durationMins = blockEnd - blockStart;
-            const isSelected = block.id === selectedBlockId || block.source_block_id === selectedBlockId;
-            const isNow = isToday && currentMinute >= blockStart && currentMinute < blockEnd;
+                  {/* Now line */}
+                  {nowX !== null && (
+                    <div className="absolute top-0 bottom-0 w-px z-10"
+                      style={{ left: nowX, background: "#a855f7", opacity: 0.5 }} />
+                  )}
 
-            return (
-              <React.Fragment key={block.id}>
-                <button
-                  onClick={() => setSelectedBlockId(isSelected ? null : (block.source_block_id || block.id))}
-                  className="w-full text-left border-b"
-                  style={{ background: isSelected ? bStyle.bg : "transparent", borderColor: "var(--z-border)" }}>
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    {/* Time */}
-                    <div className="w-14 shrink-0 text-right">
-                      <div className="text-[11px] font-semibold text-[var(--z-fg)]">{minuteToLabel(blockStart)}</div>
-                      <div className="text-[9px] text-[var(--z-muted)]">{durationMins}m</div>
-                    </div>
-                    {/* Color bar */}
-                    <div className="w-1 shrink-0 self-stretch rounded-full" style={{ background: bStyle.border, minHeight: 36 }} />
-                    {/* Content */}
-                    <div className="min-w-0 flex-1">
-                      {student ? (
-                        <>
-                          <div className="flex items-center gap-1.5">
-                            {emoji && <span className="text-sm">{emoji}</span>}
-                            <span className="text-sm font-semibold text-[var(--z-fg)] truncate">{studentName(student)}</span>
-                            {isNow && (
-                              <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                                style={{ background: "rgba(168,85,247,0.2)", color: "#c084fc" }}>
-                                NOW
-                              </span>
-                            )}
-                          </div>
-                          {family && (
-                            <div className="text-[11px] text-[var(--z-muted)] truncate">
-                              {String((family as unknown as Record<string, unknown>).name ?? "")}
+                  {/* Blocks */}
+                  {tBlocks.map(b => {
+                    const startSlot = (toMin(b.start_time) - openMinute) / 30;
+                    const endSlot = (toMin(b.end_time) - openMinute) / 30;
+                    const left = startSlot * SLOT_W;
+                    const width = Math.max((endSlot - startSlot) * SLOT_W - 2, 10);
+                    const bs = blockStyle(b as ScheduleBlock);
+                    const student = b.student_id ? studentsById.get(b.student_id) : null;
+                    const instr = student
+                      ? (student as unknown as Record<string, unknown>).instrument as string | undefined
+                      : undefined;
+                    const isSelected = b.id === selectedBlockId || b.source_block_id === selectedBlockId;
+
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => setSelectedBlockId(isSelected ? null : (b.source_block_id || b.id))}
+                        className="absolute top-1 bottom-1 rounded overflow-hidden text-left transition-all"
+                        style={{
+                          left,
+                          width,
+                          background: bs.bg,
+                          border: `1px solid ${bs.border}`,
+                          color: bs.text,
+                          outline: isSelected ? `2px solid ${bs.border}` : "none",
+                          outlineOffset: 1,
+                          zIndex: isSelected ? 5 : 2,
+                        }}>
+                        <div className="flex h-full flex-col justify-center px-1">
+                          {width > 30 && (
+                            <div className="truncate text-[9px] font-semibold leading-tight">
+                              {student ? `${instrumentEmoji(instr)}${studentFirstName(student)}` : (bs.label || "Open")}
                             </div>
                           )}
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold" style={{ color: bStyle.text }}>
-                            {bStyle.label || "Open"}
-                          </span>
-                          {isNow && (
-                            <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                              style={{ background: "rgba(168,85,247,0.2)", color: "#c084fc" }}>
-                              NOW
-                            </span>
+                          {width > 50 && (
+                            <div className="truncate text-[8px] opacity-75 leading-tight">
+                              {minToLabel(toMin(b.start_time))}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                    {/* Status badge */}
-                    <div className="shrink-0">
-                      {block.checked_in ? (
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                          style={{ background: "rgba(34,197,94,0.15)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)" }}>
-                          ✓ In
-                        </span>
-                      ) : bStyle.label && bStyle.label !== "Open" ? (
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                          style={{ background: bStyle.bg, color: bStyle.text, border: `1px solid ${bStyle.border}` }}>
-                          {bStyle.label}
-                        </span>
-                      ) : (
-                        <span className="text-[var(--z-muted)] text-lg">›</span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-
-                {/* Inline edit sheet */}
-                {isSelected && (
-                  <BlockEditSheet
-                    block={block}
-                    student={student ?? null}
-                    family={family ?? null}
-                    teachers={teachers}
-                    students={students}
-                    onSave={patch => { void patchBlock(block, patch); }}
-                    onCheckIn={() => { void checkIn(block); }}
-                    onCallOut={() => { void callOut(block); }}
-                    onCancelSession={(scope, reason) => { void cancelSession(block, scope, reason); }}
-                    onClose={() => { setSelectedBlockId(null); setError(null); }}
-                    saving={saving}
-                    error={error}
-                  />
-                )}
-              </React.Fragment>
-            );
-          })}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
-    );
-  }
 
-  // ── Main view: teacher cards stacked vertically ───────────────────────────
-  return (
-    <div>
-      {teachersForBoard.map(teacher => {
-        const tBlocks = dayBlocks
-          .filter(b => b.teacher_id === teacher.id)
-          .sort((a, b) => toMinute(a.start_time) - toMinute(b.start_time));
-        const bookedCount = tBlocks.filter(b => b.student_id && b.block_type !== "open_time").length;
-        const openCount = tBlocks.filter(b => !b.student_id || b.block_type === "open_time").length;
-
-        return (
-          <button
-            key={teacher.id}
-            onClick={() => { setDetailTeacherId(teacher.id); setSelectedBlockId(null); }}
-            className="w-full text-left border-b"
-            style={{ borderColor: "var(--z-border)", background: "transparent" }}>
-            <div className="flex items-center gap-3 px-4 py-3.5">
-              {/* Avatar */}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold"
-                style={{
-                  borderColor: locationConfig?.border ?? "var(--z-border)",
-                  background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
-                  color: locationConfig?.textColor ?? "#00ff88",
-                }}>
-                {teacherInitials(teacher)}
-              </div>
-
-              {/* Name + counts */}
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-[var(--z-fg)] truncate">{teacherName(teacher)}</div>
-                <div className="mt-0.5 flex items-center gap-2">
-                  {bookedCount > 0 && (
-                    <span className="text-[11px] font-medium text-[var(--z-muted)]">{bookedCount} booked</span>
-                  )}
-                  {openCount > 0 && (
-                    <span className="text-[11px] font-medium" style={{ color: "rgba(16,185,129,0.8)" }}>
-                      {openCount} open
-                    </span>
-                  )}
-                  {tBlocks.length === 0 && (
-                    <span className="text-[11px] text-[var(--z-muted)]">No blocks today</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Session preview pills */}
-              <div className="flex shrink-0 flex-col gap-0.5 items-end">
-                {tBlocks.slice(0, 4).map(b => {
-                  const s = getBlockStyle(b);
-                  const student = b.student_id ? studentsById.get(b.student_id) : null;
-                  const instr = student
-                    ? (student as unknown as Record<string, unknown>).instrument as string | undefined
-                    : undefined;
-                  return (
-                    <div key={b.id} className="flex items-center gap-1">
-                      <span className="text-[10px] text-[var(--z-muted)]">{minuteToLabel(toMinute(b.start_time))}</span>
-                      <span className="rounded px-1 py-0.5 text-[9px] font-semibold truncate max-w-[80px]"
-                        style={{ background: s.bg, color: s.text, border: `1px solid ${s.border}` }}>
-                        {instr ? instrumentEmoji(instr) : ""}
-                        {student ? studentName(student).split(" ")[0] : (s.label || "Open")}
-                      </span>
-                    </div>
-                  );
-                })}
-                {tBlocks.length > 4 && (
-                  <span className="text-[9px] text-[var(--z-muted)]">+{tBlocks.length - 4} more</span>
-                )}
-              </div>
-
-              {/* Chevron */}
-              <div className="shrink-0 text-[var(--z-muted)] text-lg ml-1">›</div>
-            </div>
-          </button>
-        );
-      })}
-
-      {teachersForBoard.length === 0 && (
-        <div className="px-4 py-8 text-center text-sm text-[var(--z-muted)]">
-          No teachers scheduled today
-        </div>
+      {/* Action sheet overlay */}
+      {selectedBlock && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.5)" }}
+            onClick={() => { setSelectedBlockId(null); setError(null); }} />
+          <ActionSheet
+            block={selectedBlock}
+            student={selectedStudent}
+            family={selectedFamily}
+            teachers={teachers}
+            students={students}
+            onSave={patch => { void patchBlock(selectedBlock, patch); }}
+            onCheckIn={() => { void checkIn(selectedBlock); }}
+            onCallOut={() => { void callOut(selectedBlock); }}
+            onCancelSession={(scope, reason) => { void cancelSession(selectedBlock, scope, reason); }}
+            onClose={() => { setSelectedBlockId(null); setError(null); }}
+            saving={saving}
+            error={error}
+          />
+        </>
       )}
-    </div>
+    </>
   );
 }
