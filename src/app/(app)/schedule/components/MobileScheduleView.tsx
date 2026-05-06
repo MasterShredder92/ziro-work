@@ -1,6 +1,5 @@
 "use client";
 import * as React from "react";
-import * as ReactDOM from "react-dom";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { getHoursForDate } from "@/lib/schedule/locationHoursUtils";
@@ -85,7 +84,7 @@ function getBlockLabel(block: ScheduleBlock | ProjectedBlock): string {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PX_PER_MINUTE = 2.2;
 const ROW_HEIGHT = 44;
-const TEACHER_COL_W = 80;
+const TEACHER_COL_W = 64;
 const BLOCK_TYPES = [
   { value: "student_session", label: "Student Session" },
   { value: "open_time", label: "Open Time" },
@@ -321,6 +320,110 @@ function BlockEditSheet({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Teacher Detail View ──────────────────────────────────────────────────────
+// Isolated single-teacher view. Shown when user taps a teacher name in the main grid.
+// All block data comes from the same dayBlocks array — no additional API calls.
+function TeacherDetailView({
+  teacher, dayBlocks, studentsById, familiesById, teachers, students,
+  openMinute, closeMinute, locationConfig, onBack, onSelectBlock,
+}: {
+  teacher: Teacher;
+  dayBlocks: ProjectedBlock[];
+  studentsById: Map<string, Student>;
+  familiesById: Map<string, Family>;
+  teachers: Teacher[];
+  students: Student[];
+  openMinute: number;
+  closeMinute: number;
+  locationConfig?: Props["locationConfig"];
+  onBack: () => void;
+  onSelectBlock: (blockId: string) => void;
+}) {
+  const tBlocks = React.useMemo(
+    () => dayBlocks.filter(b => b.teacher_id === teacher.id).sort((a, b) => toMinute(a.start_time) - toMinute(b.start_time)),
+    [dayBlocks, teacher.id],
+  );
+  const slots = React.useMemo(() => {
+    const out: number[] = [];
+    for (let m = openMinute; m < closeMinute; m += 30) out.push(m);
+    return out;
+  }, [openMinute, closeMinute]);
+  const tName = teacherName(teacher);
+  const tInitials = teacherInitials(teacher);
+  return (
+    <div className="flex flex-col" style={{ minHeight: 0 }}>
+      <div className="flex items-center gap-3 border-b px-4 py-3 shrink-0"
+        style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}>
+        <button onClick={onBack}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border text-sm text-[var(--z-muted)]"
+          style={{ borderColor: "var(--z-border)" }}>
+          \u2190
+        </button>
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold shrink-0"
+          style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: locationConfig?.accent ?? "var(--z-surface-2)", color: locationConfig?.textColor ?? "var(--z-accent)" }}>
+          {tInitials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-bold text-[var(--z-fg)] truncate">{tName}</div>
+          <div className="text-xs text-[var(--z-muted)]">
+            {tBlocks.filter(b => b.student_id).length} sessions \u00b7 {tBlocks.filter(b => !b.student_id || b.block_type === "open_time").length} open
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {slots.map(slotMinute => {
+          const block = tBlocks.find(b => {
+            const startM = toMinute(b.start_time);
+            const endM = toMinute(b.end_time);
+            return startM <= slotMinute && endM > slotMinute;
+          });
+          const isSlotStart = block ? toMinute(block.start_time) === slotMinute : false;
+          return (
+            <div key={slotMinute} className="flex border-b" style={{ borderColor: "var(--z-border)", minHeight: 52 }}>
+              <div className="flex w-14 shrink-0 items-start justify-end pr-2 pt-2 text-[10px] text-[var(--z-muted)]">
+                {minuteToLabel(slotMinute)}
+              </div>
+              <div className="flex-1 px-2 py-1.5">
+                {block && isSlotStart ? (
+                  <button onClick={() => onSelectBlock(block.source_block_id || block.id)}
+                    className="w-full rounded-xl border px-3 py-2 text-left transition-all active:scale-[0.98]"
+                    style={{ backgroundColor: getBlockColor(block).bg, borderColor: getBlockColor(block).border, color: getBlockColor(block).text }}>
+                    {block.student_id ? (() => {
+                      const s = studentsById.get(block.student_id);
+                      const instr = s ? (s as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
+                      return (
+                        <div>
+                          <div className="text-xs font-bold leading-tight truncate">
+                            {instr ? instrumentEmoji(instr) + " " : ""}{s ? studentName(s) : "Student"}
+                          </div>
+                          <div className="text-[10px] opacity-80 mt-0.5">
+                            {minuteToLabel(toMinute(block.start_time))} \u2013 {minuteToLabel(toMinute(block.end_time))}
+                            {block.is_virtual && " \u00b7 Virtual"}
+                            {block.is_makeup_session && " \u00b7 Makeup"}
+                          </div>
+                        </div>
+                      );
+                    })() : (
+                      <div className="text-xs font-semibold">{getBlockLabel(block)}</div>
+                    )}
+                  </button>
+                ) : block && !isSlotStart ? (
+                  <div className="h-full w-1 rounded-full ml-1" style={{ background: getBlockColor(block).border, opacity: 0.4 }} />
+                ) : (
+                  <div className="h-full rounded-xl border border-dashed border-[var(--z-border)]/30" />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export function MobileScheduleView({
   locationId,
@@ -455,92 +558,25 @@ export function MobileScheduleView({
     );
   }
 
-  // ── Teacher detail view: early return (no portal — avoids transform stacking context trap) ──
+  // ── Teacher detail view ──
   if (detailTeacherId) {
     const detailTeacher = teachers.find(t => t.id === detailTeacherId);
     if (detailTeacher) {
-      const tBlocks = dayBlocks
-        .filter(b => b.teacher_id === detailTeacher.id)
-        .sort((a, b) => toMinute(a.start_time) - toMinute(b.start_time));
-      const slots: number[] = [];
-      for (let m = openMinute; m < closeMinute; m += 30) slots.push(m);
       return (
-        <div className="flex flex-col">
-          {/* Header */}
-          <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3"
-            style={{ borderColor: locationConfig?.border ?? "var(--z-border)" }}>
-            <button
-              onClick={() => { setDetailTeacherId(null); setSelectedBlockId(null); }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base font-bold"
-              style={{ borderColor: "var(--z-border)", color: "var(--z-muted)" }}>
-              ←
-            </button>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
-              style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: locationConfig?.accent ?? "var(--z-surface-2)", color: locationConfig?.textColor ?? "var(--z-accent)" }}>
-              {teacherInitials(detailTeacher)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-bold" style={{ color: "var(--z-fg)" }}>{teacherName(detailTeacher)}</div>
-              <div className="text-xs" style={{ color: "var(--z-muted)" }}>
-                {tBlocks.filter(b => b.student_id).length} sessions today
-              </div>
-            </div>
-          </div>
-          {/* Vertical slot list */}
-          <div className="flex flex-col">
-            {slots.map(slotMinute => {
-              const block = tBlocks.find(b => {
-                const s = toMinute(b.start_time);
-                const e = toMinute(b.end_time);
-                return s <= slotMinute && e > slotMinute;
-              });
-              const isSlotStart = block ? toMinute(block.start_time) === slotMinute : false;
-              return (
-                <div key={slotMinute} className="flex items-stretch border-b"
-                  style={{ borderColor: "var(--z-border)", minHeight: 60 }}>
-                  <div className="flex w-16 shrink-0 items-start justify-end pr-3 pt-3 text-[11px] font-medium"
-                    style={{ color: "var(--z-muted)" }}>
-                    {minuteToLabel(slotMinute)}
-                  </div>
-                  <div className="flex-1 px-3 py-2">
-                    {block && isSlotStart ? (
-                      <button
-                        onClick={() => setSelectedBlockId(block.source_block_id || block.id)}
-                        className="w-full rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98]"
-                        style={{ backgroundColor: getBlockColor(block).bg, borderColor: getBlockColor(block).border, color: getBlockColor(block).text }}>
-                        {block.student_id ? (() => {
-                          const s = studentsById.get(block.student_id);
-                          const instr = s ? (s as unknown as Record<string, unknown>).instrument as string | undefined : undefined;
-                          return (
-                            <div>
-                              <div className="truncate text-sm font-bold leading-tight">
-                                {instr ? instrumentEmoji(instr) + " " : ""}{s ? studentName(s) : "Student"}
-                              </div>
-                              <div className="mt-0.5 text-[11px] opacity-80">
-                                {minuteToLabel(toMinute(block.start_time))} – {minuteToLabel(toMinute(block.end_time))}
-                                {block.checked_in && " · Checked In"}
-                                {block.is_virtual && " · Virtual"}
-                                {block.is_makeup_session && " · Makeup"}
-                              </div>
-                            </div>
-                          );
-                        })() : (
-                          <div className="text-sm font-semibold">{getBlockLabel(block)}</div>
-                        )}
-                      </button>
-                    ) : block && !isSlotStart ? (
-                      <div className="flex h-full items-center">
-                        <div className="h-full w-1 rounded-full" style={{ background: getBlockColor(block).border, opacity: 0.35 }} />
-                      </div>
-                    ) : (
-                      <div className="h-full rounded-xl border border-dashed opacity-30"
-                        style={{ borderColor: "var(--z-border)" }} />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <>
+          <TeacherDetailView
+            teacher={detailTeacher}
+            dayBlocks={dayBlocks}
+            studentsById={studentsById}
+            familiesById={familiesById}
+            teachers={teachers}
+            students={students}
+            openMinute={openMinute}
+            closeMinute={closeMinute}
+            locationConfig={locationConfig}
+            onBack={() => setDetailTeacherId(null)}
+            onSelectBlock={blockId => setSelectedBlockId(blockId)}
+          />
           {selectedBlock && (
             <BlockEditSheet
               block={selectedBlock}
@@ -555,7 +591,7 @@ export function MobileScheduleView({
               saving={saving} error={error}
             />
           )}
-        </div>
+        </>
       );
     }
   }
@@ -566,18 +602,19 @@ export function MobileScheduleView({
       <div className="flex" style={{ borderBottom: "1px solid var(--z-border)" }}>
         {/* Fixed teacher column */}
         <div className="shrink-0 border-r" style={{ width: TEACHER_COL_W, borderColor: "var(--z-border)" }}>
-          <div className="border-b flex items-center justify-center gap-1" style={{ height: 28, borderColor: "var(--z-border)" }}>
+          <div className="border-b flex items-center justify-center" style={{ height: 28, borderColor: "var(--z-border)" }}>
             <span className="text-[9px] text-[var(--z-muted)] uppercase tracking-wider">Teacher</span>
           </div>
           {teachersForBoard.map(t => (
             <button key={t.id} onClick={() => setDetailTeacherId(t.id)}
-              className="flex w-full flex-col items-center justify-center border-b gap-1 transition-colors active:bg-[var(--z-surface-2)] hover:bg-white/5"
+              className="flex w-full items-center gap-1.5 border-b px-2 text-left transition-colors active:bg-[var(--z-surface-2)]"
               style={{ height: ROW_HEIGHT, borderColor: "var(--z-border)" }}>
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold"
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold"
                 style={{ borderColor: locationConfig?.border ?? "var(--z-border)", background: locationConfig?.accent ?? "var(--z-surface-2)", color: locationConfig?.textColor ?? "var(--z-accent)" }}>
                 {teacherInitials(t)}
               </div>
-              <span className="text-[9px] font-semibold text-[var(--z-muted)]" style={{ color: locationConfig?.textColor ?? "var(--z-muted)" }}>›</span>
+              <span className="truncate text-[10px] font-semibold text-[var(--z-fg)]">{teacherName(t).split(" ")[0]}</span>
+              <span className="ml-auto text-[8px] text-[var(--z-muted)] opacity-60">›</span>
             </button>
           ))}
         </div>
