@@ -4,7 +4,7 @@
  * Called by family profile header and content to resolve primary_location_id → name/color.
  */
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { getLocationById } from "@data/locations";
 import { notFound, ok, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../_context";
 
@@ -24,17 +24,10 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     const { id } = await ctx.params;
     const { tenantId } = resolved.context;
 
-    const db = getServiceClient();
-    const { data, error } = await db
-      .from("locations")
-      .select("id, name, color, address, city, state, zip, phone, email, is_active, square_location_id, hours_json")
-      .eq("id", id)
-      .eq("tenant_id", tenantId)
-      .single();
+    const location = await getLocationById(id, tenantId);
+    if (!location) return notFound();
 
-    if (error || !data) return notFound();
-
-    return ok({ data });
+    return ok({ data: location });
   } catch (err) {
     return serverError(err);
   }
