@@ -512,9 +512,10 @@ export function MobileScheduleView({
   }
 
   // ── Teacher detail view (early return) ────────────────────────────────────
-  if (detailTeacherId) {
-    const teacher = teachers.find(t => t.id === detailTeacherId);
-    if (!teacher) { setDetailTeacherId(null); return null; }
+  const detailTeacher = detailTeacherId ? (teachers.find(t => t.id === detailTeacherId) ?? null) : null;
+
+  if (detailTeacherId && detailTeacher) {
+    const teacher = detailTeacher;
 
     const tBlocks = dayBlocks
       .filter(b => b.teacher_id === teacher.id)
