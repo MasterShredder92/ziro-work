@@ -258,7 +258,7 @@ function BlockEditSheet({
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
                 Block Type
               </label>
-              <select value={blockType} onChange={e => setBlockType(e.target.value)}
+              <select value={blockType} onChange={e => setBlockType(e.target.value as ScheduleBlock["block_type"])}
                 className="w-full rounded-lg border bg-[var(--z-surface)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none"
                 style={{ borderColor: "var(--z-border)" }}>
                 {BLOCK_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
