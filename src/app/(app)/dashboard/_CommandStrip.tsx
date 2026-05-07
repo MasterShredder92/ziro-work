@@ -226,7 +226,7 @@ export function CommandStrip() {
             lineHeight: 1,
             color: leadsCount > 0 ? "#bf36f8" : "var(--z-muted)",
             fontFamily: "Space Grotesk, sans-serif",
-            textShadow: leadsCount > 0 ? "0 0 20px rgba(191,54,248,0.5)" : "none",
+            // textShadow removed
           }}>
             {leadsCount}
           </div>
@@ -313,7 +313,7 @@ export function CommandStrip() {
               lineHeight: 1,
               color: "#c4f036",
               fontFamily: "Space Grotesk, sans-serif",
-              textShadow: "0 0 30px rgba(196,240,54,0.5), 0 0 60px rgba(196,240,54,0.2)",
+              // textShadow removed
               flexShrink: 0,
             }}>
               {animatedCollected}
@@ -384,7 +384,7 @@ export function CommandStrip() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 11, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif" }}>Outstanding</span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: "#ef4444", fontFamily: "Space Grotesk, sans-serif",
-                  textShadow: "0 0 10px rgba(239,68,68,0.3)" }}>
+                  }}>
                   {usd(m.outstandingCents)}
                 </span>
               </div>

@@ -90,7 +90,7 @@ function CapacityMeter({ pct, color }: { pct: number; color: string }) {
           fontSize: 11, fontWeight: 800,
           color: barColor,
           fontFamily: "Space Grotesk, sans-serif",
-          textShadow: `0 0 8px ${barColor}66`,
+          // textShadow removed
         }}>
           {pct}%
         </span>
@@ -168,7 +168,7 @@ function LocationCard({
           fontSize: 40, fontWeight: 900, lineHeight: 1,
           color: color,
           fontFamily: "Space Grotesk, sans-serif",
-          textShadow: `0 0 20px ${color}66`,
+          // textShadow removed
         }}>
           {gap.occupied}
         </span>
@@ -198,7 +198,7 @@ function LocationCard({
             fontSize: 14, fontWeight: 800,
             color: "#c4f036",
             fontFamily: "Space Grotesk, sans-serif",
-            textShadow: "0 0 10px rgba(196,240,54,0.4)",
+            // textShadow removed
           }}>
             {usd(currentRev)}
           </div>
@@ -212,7 +212,7 @@ function LocationCard({
             fontSize: 14, fontWeight: 800,
             color: "#bf36f8",
             fontFamily: "Space Grotesk, sans-serif",
-            textShadow: "0 0 10px rgba(191,54,248,0.4)",
+            // textShadow removed
           }}>
             {usd(potential75)}
           </div>
