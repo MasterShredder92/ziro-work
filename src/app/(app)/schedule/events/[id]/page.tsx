@@ -11,7 +11,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/50 focus:outline-none";
+  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#c4f036]/50 focus:outline-none";
 
 function splitDateTime(iso: string): { date: string; time: string } {
   const d = new Date(iso);
@@ -163,7 +163,7 @@ export default async function EventDetailPage({
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-medium text-[#00ff88] hover:bg-[#00ff88]/20"
+              className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-medium text-[#c4f036] hover:bg-[#c4f036]/20"
             >
               Save changes
             </button>

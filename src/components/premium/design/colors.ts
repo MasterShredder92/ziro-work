@@ -19,8 +19,10 @@ export const colors = {
     900: "#12151a",
   },
   neon: {
-    green: "#00ff88",
-    greenDim: "#00cc6e",
+    green: "#c4f036",
+    greenDim: "#9ec42a",
+    purple: "#bf36f8",
+    purpleDim: "#9a28cc",
   },
   danger: {
     red: "#ff3b6b",

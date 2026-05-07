@@ -56,13 +56,13 @@ export function EmailIdentityTester({
         type="button"
         disabled={disabled || status === "sending"}
         onClick={send}
-        className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-sm font-semibold text-[var(--z-fg)] hover:text-[#00ff88] disabled:opacity-50"
+        className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-sm font-semibold text-[var(--z-fg)] hover:text-[#c4f036] disabled:opacity-50"
       >
         {status === "sending" ? "Sending…" : "Send test"}
       </button>
       {msg ? (
         <span
-          className={`text-xs ${status === "ok" ? "text-[#00ff88]" : "text-[var(--z-danger)]"}`}
+          className={`text-xs ${status === "ok" ? "text-[#c4f036]" : "text-[var(--z-danger)]"}`}
         >
           {msg}
         </span>

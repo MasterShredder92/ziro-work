@@ -87,7 +87,7 @@ export function EnrollmentFilters({
       </label>
       <button
         type="submit"
-        className="h-9 rounded-md bg-[var(--z-accent,#00ff88)]/10 px-3 text-sm font-semibold text-[var(--z-accent,#00ff88)] hover:bg-[var(--z-accent,#00ff88)]/20"
+        className="h-9 rounded-md bg-[var(--z-accent,#c4f036)]/10 px-3 text-sm font-semibold text-[var(--z-accent,#c4f036)] hover:bg-[var(--z-accent,#c4f036)]/20"
       >
         Apply filters
       </button>
@@ -178,7 +178,7 @@ export function EnrollmentRowActions({
           type="button"
           disabled={busy || !dirty}
           onClick={save}
-          className="rounded bg-[var(--z-accent,#00ff88)]/15 px-2 py-1 text-[11px] font-semibold text-[var(--z-accent,#00ff88)] disabled:opacity-40"
+          className="rounded bg-[var(--z-accent,#c4f036)]/15 px-2 py-1 text-[11px] font-semibold text-[var(--z-accent,#c4f036)] disabled:opacity-40"
         >
           {busy ? "…" : "Save"}
         </button>
@@ -271,7 +271,7 @@ export function EnrollmentActions() {
       <button
         type="submit"
         disabled={busy}
-        className="h-9 rounded-md bg-[var(--z-accent,#00ff88)]/10 px-4 text-sm font-semibold text-[var(--z-accent,#00ff88)] hover:bg-[var(--z-accent,#00ff88)]/20 disabled:opacity-50"
+        className="h-9 rounded-md bg-[var(--z-accent,#c4f036)]/10 px-4 text-sm font-semibold text-[var(--z-accent,#c4f036)] hover:bg-[var(--z-accent,#c4f036)]/20 disabled:opacity-50"
       >
         {busy ? "Enrolling…" : "Enroll"}
       </button>

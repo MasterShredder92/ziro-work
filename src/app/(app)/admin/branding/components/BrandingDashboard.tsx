@@ -55,7 +55,7 @@ export function BrandingDashboard({
             <div className="text-sm font-semibold text-[var(--z-fg)]">Logo & colors</div>
             <Link
               href="/admin/branding/theme"
-              className="text-xs text-[#00ff88] hover:underline"
+              className="text-xs text-[#c4f036] hover:underline"
             >
               Edit theme →
             </Link>
@@ -104,7 +104,7 @@ export function BrandingDashboard({
             <div className="text-sm font-semibold text-[var(--z-fg)]">Domain</div>
             <Link
               href="/admin/branding/domain"
-              className="text-xs text-[#00ff88] hover:underline"
+              className="text-xs text-[#c4f036] hover:underline"
             >
               Manage domains →
             </Link>
@@ -131,7 +131,7 @@ export function BrandingDashboard({
             <div className="text-sm font-semibold text-[var(--z-fg)]">Email identity</div>
             <Link
               href="/admin/branding/email"
-              className="text-xs text-[#00ff88] hover:underline"
+              className="text-xs text-[#c4f036] hover:underline"
             >
               Edit identity →
             </Link>
@@ -162,7 +162,7 @@ export function BrandingDashboard({
             </div>
             <Link
               href="/admin/branding/layouts"
-              className="text-xs text-[#00ff88] hover:underline"
+              className="text-xs text-[#c4f036] hover:underline"
             >
               Configure →
             </Link>
@@ -179,7 +179,7 @@ export function BrandingDashboard({
                   key={s}
                   className={`text-[10px] uppercase tracking-wider rounded border px-1.5 py-0.5 ${
                     configured
-                      ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88]"
+                      ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036]"
                       : "border-[var(--z-border)] text-[var(--z-muted)]"
                   }`}
                 >

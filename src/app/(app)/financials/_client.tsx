@@ -79,7 +79,7 @@ function ExpenseForm({ onAdd, saving }: { onAdd: (e: Omit<Expense, "id">) => voi
           placeholder="Description (e.g. Rent — Bellevue)"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none col-span-full sm:col-span-2"
+          className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#c4f036]/30 focus:outline-none col-span-full sm:col-span-2"
           required
         />
         <input
@@ -89,7 +89,7 @@ function ExpenseForm({ onAdd, saving }: { onAdd: (e: Omit<Expense, "id">) => voi
           onChange={(e) => setAmount(e.target.value)}
           step="0.01"
           min="0"
-          className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none"
+          className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#c4f036]/30 focus:outline-none"
           required
         />
         <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white focus:outline-none">
@@ -101,7 +101,7 @@ function ExpenseForm({ onAdd, saving }: { onAdd: (e: Omit<Expense, "id">) => voi
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white focus:outline-none" />
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-[#909098] cursor-pointer">
-            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="accent-[#00ff88]" />
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="accent-[#c4f036]" />
             Recurring
           </label>
           {recurring && (
@@ -117,7 +117,7 @@ function ExpenseForm({ onAdd, saving }: { onAdd: (e: Omit<Expense, "id">) => voi
       <button
         type="submit"
         disabled={saving}
-        className="mt-4 rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors disabled:opacity-50"
+        className="mt-4 rounded-lg bg-[#c4f036]/10 px-4 py-2 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors disabled:opacity-50"
       >
         {saving ? "Saving…" : "+ Add Expense"}
       </button>
@@ -266,7 +266,7 @@ export function FinancialsClient() {
           ) : revenue ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {[
-                { label: "Collected", value: fmt(revenue.collected), color: "text-[#00ff88]" },
+                { label: "Collected", value: fmt(revenue.collected), color: "text-[#c4f036]" },
                 { label: "Total Invoiced", value: fmt(revenue.totalInvoiced), color: "text-white" },
                 { label: "Outstanding", value: fmt(revenue.outstanding), color: "text-red-500" },
                 { label: "Next Month Projected", value: fmt(revenue.nextMonthProjected), color: "text-[#0EA5E9]" },
@@ -289,7 +289,7 @@ export function FinancialsClient() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#909098]">Collected This Month</span>
-              <span className="text-sm font-semibold text-[#00ff88]">{fmt(collectedCents)}</span>
+              <span className="text-sm font-semibold text-[#c4f036]">{fmt(collectedCents)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#909098]">Teacher Payroll (~50%)</span>
@@ -302,7 +302,7 @@ export function FinancialsClient() {
             <div className="my-2 border-t border-[#1c1c1e]" />
             <div className="flex items-center justify-between">
               <span className="text-base font-bold text-white">Owner Take-Home</span>
-              <span className={`text-xl font-extrabold ${ownerTakeHome >= 0 ? "text-[#00ff88]" : "text-red-400"}`}>
+              <span className={`text-xl font-extrabold ${ownerTakeHome >= 0 ? "text-[#c4f036]" : "text-red-400"}`}>
                 {ownerTakeHome < 0 ? "−" : ""}{fmt(Math.abs(ownerTakeHome))}
               </span>
             </div>
@@ -449,7 +449,7 @@ function EditExpenseModal({
               required
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+              className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#c4f036]/50 focus:outline-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -462,7 +462,7 @@ function EditExpenseModal({
                 step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#c4f036]/50 focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -472,7 +472,7 @@ function EditExpenseModal({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#c4f036]/50 focus:outline-none"
               />
             </div>
           </div>
@@ -482,7 +482,7 @@ function EditExpenseModal({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#c4f036]/50 focus:outline-none"
               >
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -492,7 +492,7 @@ function EditExpenseModal({
               <select
                 value={locationId}
                 onChange={(e) => setLocationId(e.target.value)}
-                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+                className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#c4f036]/50 focus:outline-none"
               >
                 <option value="">All Locations</option>
                 {LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -500,14 +500,14 @@ function EditExpenseModal({
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
-            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="accent-[#00ff88]" />
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="accent-[#c4f036]" />
             Recurring
           </label>
           {recurring && (
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as typeof frequency)}
-              className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#00ff88]/50 focus:outline-none"
+              className="w-full rounded-xl border border-[#2b2b2f] bg-[#1a1a1e] px-3 py-2 text-sm text-white focus:border-[#c4f036]/50 focus:outline-none"
             >
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
@@ -526,7 +526,7 @@ function EditExpenseModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-40 hover:bg-[#00ff88]/25 transition-colors"
+              className="flex-1 rounded-xl border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 py-2.5 text-sm font-semibold text-[#c4f036] disabled:opacity-40 hover:bg-[#c4f036]/25 transition-colors"
             >
               {saving ? "Saving…" : "Save Changes"}
             </button>

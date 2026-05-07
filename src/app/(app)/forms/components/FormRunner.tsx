@@ -114,7 +114,7 @@ export function FormRunner({ form, fields }: FormRunnerProps) {
 
   if (success) {
     return (
-      <div className="rounded-[var(--z-radius-lg)] border border-[#00ff88]/40 bg-[#00ff88]/5 p-6 text-center space-y-2">
+      <div className="rounded-[var(--z-radius-lg)] border border-[#c4f036]/40 bg-[#c4f036]/5 p-6 text-center space-y-2">
         <div className="text-lg font-semibold text-[var(--z-fg)]">Thank you!</div>
         <div className="text-sm text-[var(--z-muted)]">{success}</div>
       </div>
@@ -174,7 +174,7 @@ export function FormRunner({ form, fields }: FormRunnerProps) {
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-[var(--z-radius-md)] bg-[#00ff88] text-black font-semibold px-4 py-2 text-sm hover:bg-[#00e679] disabled:opacity-60"
+        className="rounded-[var(--z-radius-md)] bg-[#c4f036] text-black font-semibold px-4 py-2 text-sm hover:bg-[#00e679] disabled:opacity-60"
       >
         {submitting ? "Submitting…" : form.submitLabel || "Submit"}
       </button>

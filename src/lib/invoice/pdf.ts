@@ -75,7 +75,7 @@ export type InvoicePdfInput = {
 
 // ── Color helpers ──
 const FALLBACK_PRIMARY = "#0a0a0c";
-const FALLBACK_ACCENT = "#00ff88";
+const FALLBACK_ACCENT = "#c4f036";
 
 function hexToRgb(hex: string | null | undefined, fallback: string): RGB {
   const h = (hex && hex.startsWith("#") ? hex : fallback).replace("#", "");

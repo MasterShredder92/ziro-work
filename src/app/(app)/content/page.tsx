@@ -113,7 +113,7 @@ export default async function ContentDashboardPage() {
             label="Indexed"
             value={`${data.kpis.embeddingCoveragePct}%`}
             sublabel={`${data.kpis.itemsWithEmbeddings}/${data.kpis.totalItems} embedded`}
-            accent="text-[#00ff88]"
+            accent="text-[#c4f036]"
           />
         </div>
       </section>

@@ -70,8 +70,8 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
               id="stage-select"
               value={safeActiveTab}
               onChange={(e) => setTab(e.target.value as LifecycleStageId)}
-              className="w-full appearance-none rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-4 py-2.5 pr-10 text-sm font-semibold text-[var(--z-fg)] focus:outline-none focus:ring-2 focus:ring-[#00ff88]/40"
-              style={{ borderColor: "#00ff88", color: "#00ff88" }}
+              className="w-full appearance-none rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] px-4 py-2.5 pr-10 text-sm font-semibold text-[var(--z-fg)] focus:outline-none focus:ring-2 focus:ring-[#c4f036]/40"
+              style={{ borderColor: "#c4f036", color: "#c4f036" }}
             >
               {STAGES.map((stage, i) => (
                 <option key={stage.id} value={stage.id} style={{ color: "#f0f0f0", background: "#0a0a0c" }}>
@@ -81,7 +81,7 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
             </select>
             {/* Chevron icon */}
             <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-              <svg className="h-4 w-4 text-[#00ff88]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 text-[#c4f036]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -102,7 +102,7 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
                     className={[
                       "relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all whitespace-nowrap",
                       isActive
-                        ? "bg-[#00ff88]/15 text-[#00ff88] border border-[#00ff88]/30"
+                        ? "bg-[#c4f036]/15 text-[#c4f036] border border-[#c4f036]/30"
                         : isPast
                         ? "text-[#505055] hover:text-[#909098] hover:bg-white/5 border border-transparent"
                         : "text-[#303035] hover:text-[#505055] hover:bg-white/3 border border-transparent",
@@ -112,7 +112,7 @@ export function LifecycleTabsClient({ tenantId, locationId, initialTab }: Props)
                       className={[
                         "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold shrink-0",
                         isActive
-                          ? "bg-[#00ff88]/30 text-[#00ff88]"
+                          ? "bg-[#c4f036]/30 text-[#c4f036]"
                           : isPast
                           ? "bg-[#303035] text-[#505055]"
                           : "bg-[#1c1c1e] text-[#303035]",

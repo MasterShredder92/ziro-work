@@ -47,9 +47,9 @@ function toDraft(profile: BrandingProfile | null): DraftState {
     name: profile?.name ?? "Default brand",
     theme_key: profile?.theme_key ?? null,
     colors: profile?.colors ?? {
-      primary: "#00ff88",
-      secondary: "#00cc6e",
-      accent: "#00ff88",
+      primary: "#c4f036",
+      secondary: "#9ec42a",
+      accent: "#c4f036",
       background: "#080808",
       surface: "#101012",
     },
@@ -256,7 +256,7 @@ export function ThemeEditor({
             type="button"
             disabled={!canWrite || isPending}
             onClick={() => save({ publish: true })}
-            className="h-9 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+            className="h-9 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
           >
             Publish
           </button>

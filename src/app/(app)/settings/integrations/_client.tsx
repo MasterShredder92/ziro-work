@@ -168,7 +168,7 @@ function SquareCard() {
 
         {/* What Square syncs */}
         <div className="rounded-lg border px-4 py-3 text-xs" style={{ borderColor: "rgba(0,255,136,0.2)", background: "rgba(0,255,136,0.04)" }}>
-          <p className="mb-1.5 font-bold text-[#00ff88]">What gets synced</p>
+          <p className="mb-1.5 font-bold text-[#c4f036]">What gets synced</p>
           <ul className="space-y-1 text-[var(--z-muted)]">
             <li>• Invoices and payments for the current month (month-to-date)</li>
             <li>• Linked to student/family records by email match</li>
@@ -239,7 +239,7 @@ function SquareCard() {
           </p>
           <div
             className="rounded-lg border px-3 py-2 font-mono text-xs"
-            style={{ borderColor: "var(--z-border)", background: "var(--z-surface)", color: "#00ff88" }}
+            style={{ borderColor: "var(--z-border)", background: "var(--z-surface)", color: "#c4f036" }}
           >
             https://app.zirowork.com/api/integrations/square/webhook
           </div>

@@ -63,7 +63,7 @@ export function MonthGrid({ focusDate, appointments, onSelectDay }: MonthGridPro
               <div
                 className={[
                   "text-xs",
-                  sameDay(day, today) ? "font-semibold text-[#00ff88]" : "text-[var(--z-fg)]",
+                  sameDay(day, today) ? "font-semibold text-[#c4f036]" : "text-[var(--z-fg)]",
                 ].join(" ")}
               >
                 {day.getDate()}

@@ -46,7 +46,7 @@ export function LeadDetailPanel({ detail, profile }: LeadDetailPanelProps) {
   return (
     <section className="rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] p-5 space-y-5">
       <header className="flex items-start gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#00ff88]/15 text-[#00ff88] text-lg font-semibold border border-[#00ff88]/30">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#c4f036]/15 text-[#c4f036] text-lg font-semibold border border-[#c4f036]/30">
           {profile.initials}
         </div>
         <div className="min-w-0 flex-1">

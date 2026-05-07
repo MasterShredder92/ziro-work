@@ -13,7 +13,7 @@
 
 import * as React from "react";
 
-const ZIRO_GREEN = "#00ff88";
+const ZIRO_GREEN = "#c4f036";
 
 type LocationOpt = { id: string; name: string };
 type TeacherOpt = {

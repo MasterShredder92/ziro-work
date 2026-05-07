@@ -18,7 +18,7 @@ export default async function LoginPage({
   const lp = profile?.login_page;
   const bg =
     lp?.backgroundColor ?? profile?.colors.background ?? "var(--z-bg)";
-  const accent = lp?.accentColor ?? profile?.colors.accent ?? "#00ff88";
+  const accent = lp?.accentColor ?? profile?.colors.accent ?? "#c4f036";
   const nextHref = sp.next?.startsWith("/") ? sp.next : "/dashboard";
   const logoAlt = profile?.name ? `${profile.name} logo` : "Studio logo";
 

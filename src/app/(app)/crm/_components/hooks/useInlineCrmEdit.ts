@@ -129,7 +129,7 @@ export function useInlineCrmEdit({
       "aria-label": `Editing ${label}`,
       autoFocus: true,
       className:
-        "h-8 w-full rounded border border-[var(--z-border,#1c1c1e)] bg-black px-2 text-sm text-[var(--z-fg,#f0f0f0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--z-accent,#00ff88)]",
+        "h-8 w-full rounded border border-[var(--z-border,#1c1c1e)] bg-black px-2 text-sm text-[var(--z-fg,#f0f0f0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--z-accent,#c4f036)]",
     }),
     [cancelEditing, commitEditing, draftValue, editingKey, isSaving],
   );

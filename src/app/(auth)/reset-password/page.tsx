@@ -12,7 +12,7 @@ export default async function ResetPasswordPage() {
   const profile = await getBrandingProfile(tenantId);
   const lp = profile?.login_page;
   const bg = lp?.backgroundColor ?? profile?.colors.background ?? "var(--z-bg)";
-  const accent = lp?.accentColor ?? profile?.colors.accent ?? "#00ff88";
+  const accent = lp?.accentColor ?? profile?.colors.accent ?? "#c4f036";
 
   return (
     <main

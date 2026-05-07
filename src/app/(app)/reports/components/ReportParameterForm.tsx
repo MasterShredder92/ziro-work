@@ -62,7 +62,7 @@ export function ReportParameterForm({
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex items-center gap-2 rounded-md bg-[#00ff88] text-black font-semibold px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00ff88]/90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-md bg-[#c4f036] text-black font-semibold px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#c4f036]/90 transition-colors"
         >
           {submitting ? "Running…" : "Run report"}
         </button>
@@ -81,7 +81,7 @@ function ParameterInput({
   onChange: (value: unknown) => void;
 }) {
   const baseClass =
-    "rounded-md bg-[color-mix(in_oklab,var(--z-surface),black_20%)] border border-[var(--z-border)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/60";
+    "rounded-md bg-[color-mix(in_oklab,var(--z-surface),black_20%)] border border-[var(--z-border)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/60";
 
   switch (parameter.type) {
     case "boolean":
@@ -90,7 +90,7 @@ function ParameterInput({
           type="checkbox"
           checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 accent-[#00ff88]"
+          className="h-4 w-4 accent-[#c4f036]"
         />
       );
     case "number":

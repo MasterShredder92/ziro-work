@@ -25,10 +25,10 @@ export function ReportList({ reports }: ReportListProps) {
         <Link
           key={r.id}
           href={`/reports/${r.id}`}
-          className="group rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] p-4 hover:border-[#00ff88]/40 hover:bg-white/[0.02] transition-colors"
+          className="group rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] p-4 hover:border-[#c4f036]/40 hover:bg-white/[0.02] transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="text-sm font-semibold text-[var(--z-fg)] group-hover:text-[#00ff88]">
+            <div className="text-sm font-semibold text-[var(--z-fg)] group-hover:text-[#c4f036]">
               {r.name}
             </div>
             <span className="text-[10px] uppercase tracking-wider text-[var(--z-muted)] border border-[var(--z-border)] rounded-full px-2 py-0.5">
@@ -41,7 +41,7 @@ export function ReportList({ reports }: ReportListProps) {
           <div className="mt-3 flex items-center gap-2 text-[11px] text-[var(--z-muted)]">
             <span>{r.parameters.length} parameter{r.parameters.length === 1 ? "" : "s"}</span>
             <span aria-hidden>·</span>
-            <span className="text-[#00ff88]/80 group-hover:text-[#00ff88]">
+            <span className="text-[#c4f036]/80 group-hover:text-[#c4f036]">
               Run report →
             </span>
           </div>

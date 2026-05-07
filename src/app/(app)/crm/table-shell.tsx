@@ -160,7 +160,7 @@ function SaveSpinner() {
   return (
     <span
       aria-hidden
-      className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-[var(--z-accent,#00ff88)] border-t-transparent"
+      className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-[var(--z-accent,#c4f036)] border-t-transparent"
     />
   );
 }
@@ -504,7 +504,7 @@ export function TableShell({
                             <button
                               type="button"
                               onClick={() => onSortColumn(key)}
-                              className="flex min-w-0 flex-1 items-center gap-1 rounded-sm text-left font-semibold text-inherit outline-offset-2 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[var(--z-accent,#00ff88)]"
+                              className="flex min-w-0 flex-1 items-center gap-1 rounded-sm text-left font-semibold text-inherit outline-offset-2 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[var(--z-accent,#c4f036)]"
                             >
                               <span className="min-w-0 flex-1 truncate">{h}</span>
                               <span
@@ -525,7 +525,7 @@ export function TableShell({
                           aria-orientation="vertical"
                           aria-label={`Resize column ${h || String(colIdx + 1)}`}
                           onMouseDown={handleResizeStart(colIdx)}
-                          className="absolute top-0 right-0 z-30 h-full w-3 cursor-col-resize select-none touch-none hover:bg-[var(--z-accent,#00ff88)]/15"
+                          className="absolute top-0 right-0 z-30 h-full w-3 cursor-col-resize select-none touch-none hover:bg-[var(--z-accent,#c4f036)]/15"
                         />
                       </>
                     )}

@@ -24,7 +24,7 @@ export function AssessmentList({
           <Link
             key={a.id}
             href={`/assessments/${a.id}`}
-            className="block rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] p-4 hover:border-[#00ff88]/40 hover:bg-[color-mix(in_oklab,var(--z-surface),var(--z-accent)_4%)] transition-colors"
+            className="block rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] p-4 hover:border-[#c4f036]/40 hover:bg-[color-mix(in_oklab,var(--z-surface),var(--z-accent)_4%)] transition-colors"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -74,7 +74,7 @@ export function AssessmentList({
 function StatusPill({ status }: { status: string }) {
   const color =
     status === "published"
-      ? "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30"
+      ? "text-[#c4f036] bg-[#c4f036]/10 border-[#c4f036]/30"
       : status === "draft"
         ? "text-amber-300 bg-amber-400/10 border-amber-400/30"
         : "text-[var(--z-muted)] bg-white/5 border-[var(--z-border)]";

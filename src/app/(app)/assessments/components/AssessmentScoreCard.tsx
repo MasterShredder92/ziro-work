@@ -2,7 +2,7 @@ import type { AssessmentScore } from "@/lib/assessments/types";
 
 export function AssessmentScoreCard({ score }: { score: AssessmentScore }) {
   const tone = score.passed
-    ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88]"
+    ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036]"
     : score.manualPendingCount > 0
       ? "border-amber-400/40 bg-amber-400/10 text-amber-200"
       : "border-red-400/40 bg-red-400/10 text-red-300";

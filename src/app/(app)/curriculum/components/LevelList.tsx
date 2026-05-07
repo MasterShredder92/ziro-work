@@ -37,7 +37,7 @@ export function LevelList({
               className={
                 "text-[10px] rounded-full px-1.5 py-0.5 border " +
                 (level.is_active
-                  ? "border-[#00ff88]/30 text-[#00ff88]"
+                  ? "border-[#c4f036]/30 text-[#c4f036]"
                   : "border-[var(--z-border)] text-[var(--z-muted)]")
               }
             >

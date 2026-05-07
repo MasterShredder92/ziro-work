@@ -60,7 +60,7 @@ export function BulkActionBar({
             <button
               type="button"
               onClick={() => setMenuOpen((m) => !m)}
-              className="inline-flex items-center gap-1 rounded-md bg-[var(--z-accent,#00ff88)]/15 px-2.5 py-1.5 text-xs font-semibold text-[var(--z-accent,#00ff88)] hover:bg-[var(--z-accent,#00ff88)]/25"
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--z-accent,#c4f036)]/15 px-2.5 py-1.5 text-xs font-semibold text-[var(--z-accent,#c4f036)] hover:bg-[var(--z-accent,#c4f036)]/25"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
             >

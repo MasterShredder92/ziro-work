@@ -103,7 +103,7 @@ export function PayrollClient() {
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-3">
-              <div className="text-xl font-extrabold text-[#00ff88]">{fmt(filteredGross)}</div>
+              <div className="text-xl font-extrabold text-[#c4f036]">{fmt(filteredGross)}</div>
               <div className="text-[10px] text-[#505055]">Total gross pay</div>
             </div>
             <div className="rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-3">
@@ -123,7 +123,7 @@ export function PayrollClient() {
               return (
                 <button key={locId} onClick={() => setLocationFilter(locId)}
                   className="rounded-full px-3 py-1 text-xs font-semibold border transition-colors"
-                  style={active && lc ? { backgroundColor: `${lc.color}20`, color: lc.color, borderColor: `${lc.color}50` } : active ? { backgroundColor: "#00ff8815", color: "#00ff88", borderColor: "#00ff8830" } : { backgroundColor: "transparent", color: "#505055", borderColor: "#1c1c1e" }}>
+                  style={active && lc ? { backgroundColor: `${lc.color}20`, color: lc.color, borderColor: `${lc.color}50` } : active ? { backgroundColor: "#c4f03615", color: "#c4f036", borderColor: "#c4f03630" } : { backgroundColor: "transparent", color: "#505055", borderColor: "#1c1c1e" }}>
                   {locId === "all" ? "All Locations" : lc?.name ?? locId}
                 </button>
               );
@@ -158,7 +158,7 @@ export function PayrollClient() {
                   const isSelected = selectedRow?.id === r.id;
                   return (
                     <button key={r.id} onClick={() => setSelectedRow(r.id === selectedRow?.id ? null : r)}
-                      className={`w-full grid px-6 py-3 border-b border-[#1c1c1e] text-left transition-colors ${isSelected ? "bg-[#00ff88]/5" : "hover:bg-white/2"}`}
+                      className={`w-full grid px-6 py-3 border-b border-[#1c1c1e] text-left transition-colors ${isSelected ? "bg-[#c4f036]/5" : "hover:bg-white/2"}`}
                       style={{ gridTemplateColumns: "1fr 80px 80px 100px 80px" }}>
                       <div className="flex items-center gap-3 min-w-0">
                         {/* Multi-location color bar */}
@@ -179,7 +179,7 @@ export function PayrollClient() {
                       </div>
                       <div className="text-right text-sm font-semibold text-[#909098] self-center">{r.session_count}</div>
                       <div className="text-right text-sm text-[#505055] self-center">${r.pay_rate_per_half_hour}/30m</div>
-                      <div className="text-right text-sm font-extrabold text-[#00ff88] self-center">{fmt(r.gross_pay_cents)}</div>
+                      <div className="text-right text-sm font-extrabold text-[#c4f036] self-center">{fmt(r.gross_pay_cents)}</div>
                       <div className="text-right self-center">
                         {r.w9_completed_at ? (
                           <span className="text-[10px] font-semibold text-[#22c55e]">✓ W-9</span>
@@ -198,7 +198,7 @@ export function PayrollClient() {
                   <div className="text-xs font-bold uppercase tracking-widest text-[#505055]">Total</div>
                   <div className="text-right text-sm font-bold text-white">{filteredSessions}</div>
                   <div />
-                  <div className="text-right text-sm font-extrabold text-[#00ff88]">{fmt(filteredGross)}</div>
+                  <div className="text-right text-sm font-extrabold text-[#c4f036]">{fmt(filteredGross)}</div>
                   <div />
                 </div>
               </>
@@ -241,7 +241,7 @@ function PayrollDetailPanel({ row, onClose }: { row: PayrollRow; onClose: () => 
       </div>
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         <div className="rounded-xl border border-[#1c1c1e] bg-[#111113] p-4">
-          <div className="text-2xl font-extrabold text-[#00ff88]">{fmt(row.gross_pay_cents)}</div>
+          <div className="text-2xl font-extrabold text-[#c4f036]">{fmt(row.gross_pay_cents)}</div>
           <div className="text-xs text-[#505055]">Gross pay this period</div>
           <div className="mt-2 text-xs text-[#909098]">{row.session_count} sessions × ${row.pay_rate_per_half_hour}/30min</div>
         </div>

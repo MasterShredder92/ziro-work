@@ -38,7 +38,7 @@ export function ObjectiveList({
                 </span>
               ) : null}
               {obj.is_met ? (
-                <span className="rounded-full border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-0.5 text-[#00ff88]">
+                <span className="rounded-full border border-[#c4f036]/30 bg-[#c4f036]/10 px-2 py-0.5 text-[#c4f036]">
                   Met
                 </span>
               ) : null}

@@ -5,7 +5,7 @@ import { saveTeacherAvailabilityAction } from "./actions";
 export const dynamic = "force-dynamic";
 
 const INPUT_CLASS =
-  "rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/50 focus:outline-none";
+  "rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#c4f036]/50 focus:outline-none";
 
 const DAY_LABELS = [
   "Sunday",
@@ -136,7 +136,7 @@ export default async function TeacherAvailabilityPage({
           {ctx.canWrite ? (
             <button
               type="submit"
-              className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-medium text-[#00ff88] hover:bg-[#00ff88]/20"
+              className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-medium text-[#c4f036] hover:bg-[#c4f036]/20"
             >
               Save availability
             </button>

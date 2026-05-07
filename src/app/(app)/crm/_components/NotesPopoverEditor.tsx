@@ -60,7 +60,7 @@ export function NotesPopoverEditor({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={6}
-        className="w-full resize-y rounded border border-[var(--z-border,#1c1c1e)] bg-black px-2 py-1.5 text-sm text-[var(--z-fg,#f0f0f0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--z-accent,#00ff88)]"
+        className="w-full resize-y rounded border border-[var(--z-border,#1c1c1e)] bg-black px-2 py-1.5 text-sm text-[var(--z-fg,#f0f0f0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--z-accent,#c4f036)]"
       />
       <div className="mt-2 flex items-center justify-end gap-2">
         <button
@@ -73,7 +73,7 @@ export function NotesPopoverEditor({
         <button
           type="button"
           onClick={onSave}
-          className="rounded bg-[var(--z-accent,#00ff88)]/15 px-2 py-1 text-xs font-semibold text-[var(--z-accent,#00ff88)]"
+          className="rounded bg-[var(--z-accent,#c4f036)]/15 px-2 py-1 text-xs font-semibold text-[var(--z-accent,#c4f036)]"
         >
           Save
         </button>

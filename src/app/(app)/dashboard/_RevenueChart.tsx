@@ -95,7 +95,7 @@ export function RevenueChart() {
   const scheduledPct = Math.max(0, 100 - collectedPct - outstandingPct);
 
   const segments = [
-    { pct: collectedPct, color: "#00ff88", label: "Collected", value: usd(m.collectedCents) },
+    { pct: collectedPct, color: "#c4f036", label: "Collected", value: usd(m.collectedCents) },
     { pct: outstandingPct, color: "#ef4444", label: "Outstanding", value: usd(m.outstandingCents) },
     { pct: scheduledPct, color: "#d97706", label: "Scheduled", value: usd(m.scheduledCents) },
   ];

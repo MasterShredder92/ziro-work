@@ -42,7 +42,7 @@ export function ProgramList({
               className={
                 "text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 border " +
                 (program.is_active
-                  ? "border-[#00ff88]/40 text-[#00ff88] bg-[#00ff88]/10"
+                  ? "border-[#c4f036]/40 text-[#c4f036] bg-[#c4f036]/10"
                   : "border-[var(--z-border)] text-[var(--z-muted)] bg-[var(--z-surface-2)]")
               }
             >

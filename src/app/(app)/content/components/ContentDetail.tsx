@@ -63,7 +63,7 @@ export function ContentDetail({ surface, canWrite }: ContentDetailProps) {
                 href={file.fileUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-[var(--z-fg)] hover:text-[#00ff88]"
+                className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-[var(--z-fg)] hover:text-[#c4f036]"
               >
                 Download / open
               </a>
@@ -73,7 +73,7 @@ export function ContentDetail({ surface, canWrite }: ContentDetailProps) {
                 href={file.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-[var(--z-fg)] hover:text-[#00ff88]"
+                className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-[var(--z-fg)] hover:text-[#c4f036]"
               >
                 Source
               </a>
@@ -112,7 +112,7 @@ export function ContentDetail({ surface, canWrite }: ContentDetailProps) {
                   <li key={c.id}>
                     <Link
                       href={`/content/collections/${c.id}`}
-                      className="text-[var(--z-fg)] hover:text-[#00ff88]"
+                      className="text-[var(--z-fg)] hover:text-[#c4f036]"
                     >
                       {c.title}
                     </Link>
@@ -178,7 +178,7 @@ export function ContentDetail({ surface, canWrite }: ContentDetailProps) {
               >
                 <Link
                   href={`/content/${r.id}`}
-                  className="text-[var(--z-fg)] hover:text-[#00ff88]"
+                  className="text-[var(--z-fg)] hover:text-[#c4f036]"
                 >
                   {r.title}
                 </Link>

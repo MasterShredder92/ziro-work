@@ -229,7 +229,7 @@ export function ContactsListClient({ contacts }: { contacts: Contact[] }) {
             >
               <Link
                 href={crmProfileHref(c.kind, c.sourceId)}
-                className="hover:text-[#00ff88]"
+                className="hover:text-[#c4f036]"
               >
                 {c.fullName}
               </Link>

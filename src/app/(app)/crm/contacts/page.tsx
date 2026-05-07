@@ -104,7 +104,7 @@ export default async function ContactListPage({ searchParams }: ContactListProps
         </label>
         <button
           type="submit"
-          className="h-9 rounded-md bg-[#00ff88]/10 px-3 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20"
+          className="h-9 rounded-md bg-[#c4f036]/10 px-3 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20"
         >
           Search
         </button>

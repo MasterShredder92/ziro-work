@@ -333,7 +333,7 @@ export function FormEditor({ initial, canWrite }: FormEditorProps) {
             type="button"
             onClick={handleSave}
             disabled={!canWrite || saving || !state.name.trim()}
-            className="rounded-[var(--z-radius-md)] bg-[#00ff88] text-black font-semibold px-4 py-2 text-sm hover:bg-[#00e679] disabled:opacity-60"
+            className="rounded-[var(--z-radius-md)] bg-[#c4f036] text-black font-semibold px-4 py-2 text-sm hover:bg-[#00e679] disabled:opacity-60"
           >
             {saving ? "Saving…" : isEditing ? "Save changes" : "Create form"}
           </button>

@@ -176,7 +176,7 @@ export default async function InvoicesPage({
     return {
       locationId: sqLocId,
       locationName: loc?.name ?? "All Schools",
-      color: loc?.color ?? "#00ff88",
+      color: loc?.color ?? "#c4f036",
       collectedThisMonth,
       totalInvoicedThisMonth,
       discountedThisMonth,

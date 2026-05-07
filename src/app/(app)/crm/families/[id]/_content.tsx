@@ -1109,7 +1109,7 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
     <button
       onClick={() => setShowAdd(true)}
       className="rounded-lg px-4 py-2 text-xs font-bold"
-      style={{ background: "#00ff88", color: "#000", border: "none", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,255,136,0.35)" }}
+      style={{ background: "#c4f036", color: "#000", border: "none", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,255,136,0.35)" }}
     >
       + Add Student
     </button>

@@ -56,7 +56,7 @@ export function ContentSearch({ tenantId, initialQuery = "" }: ContentSearchProp
         <button
           type="submit"
           disabled={status === "pending"}
-          className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-sm font-semibold text-[var(--z-fg)] hover:text-[#00ff88] disabled:opacity-50"
+          className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-sm font-semibold text-[var(--z-fg)] hover:text-[#c4f036] disabled:opacity-50"
         >
           {status === "pending" ? "Searching…" : "Search"}
         </button>
@@ -76,7 +76,7 @@ export function ContentSearch({ tenantId, initialQuery = "" }: ContentSearchProp
               <div className="flex items-center justify-between gap-2">
                 <Link
                   href={`/content/${r.item.id}`}
-                  className="text-sm font-semibold text-[var(--z-fg)] hover:text-[#00ff88]"
+                  className="text-sm font-semibold text-[var(--z-fg)] hover:text-[#c4f036]"
                 >
                   {r.item.title}
                 </Link>

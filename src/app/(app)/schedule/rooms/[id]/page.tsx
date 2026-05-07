@@ -12,7 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/50 focus:outline-none";
+  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#c4f036]/50 focus:outline-none";
 
 export default async function RoomDetailPage({
   params,
@@ -119,7 +119,7 @@ export default async function RoomDetailPage({
           </div>
           <button
             type="submit"
-            className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-medium text-[#00ff88] hover:bg-[#00ff88]/20"
+            className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-medium text-[#c4f036] hover:bg-[#c4f036]/20"
           >
             Save room
           </button>
@@ -148,7 +148,7 @@ export default async function RoomDetailPage({
           <ul className="divide-y divide-[var(--z-border)]">
             {bookings.map((b) => (
               <li key={b.id} className="px-4 py-3 flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-[#00ff88]" />
+                <span className="h-2 w-2 rounded-full bg-[#c4f036]" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-[var(--z-fg)] truncate">
                     {b.purpose ?? "Booking"}
@@ -162,7 +162,7 @@ export default async function RoomDetailPage({
                         ·{" "}
                         <Link
                           href={`/schedule/events/${b.eventId}`}
-                          className="text-[#00ff88] hover:underline"
+                          className="text-[#c4f036] hover:underline"
                         >
                           event
                         </Link>
@@ -195,7 +195,7 @@ export default async function RoomDetailPage({
           </div>
           <button
             type="submit"
-            className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-medium text-[#00ff88] hover:bg-[#00ff88]/20"
+            className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-medium text-[#c4f036] hover:bg-[#c4f036]/20"
           >
             Book event
           </button>

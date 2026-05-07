@@ -144,7 +144,7 @@ export function EmailIdentityForm({
             type="button"
             onClick={save}
             disabled={!canWrite || isPending}
-            className="h-9 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+            className="h-9 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
           >
             {isPending ? "Saving…" : "Save identity"}
           </button>

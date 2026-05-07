@@ -36,7 +36,7 @@ export default async function TeacherProfilePage({
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/messages?teacherId=${encodeURIComponent(id)}`}
-            className="rounded-md bg-[var(--z-accent,#00ff88)]/10 px-3 py-1.5 text-sm font-semibold text-[var(--z-accent,#00ff88)] hover:bg-[var(--z-accent,#00ff88)]/20"
+            className="rounded-md bg-[var(--z-accent,#c4f036)]/10 px-3 py-1.5 text-sm font-semibold text-[var(--z-accent,#c4f036)] hover:bg-[var(--z-accent,#c4f036)]/20"
           >
             Message teacher
           </Link>
@@ -94,7 +94,7 @@ export default async function TeacherProfilePage({
                   <td className="px-4 py-2 text-[#909098]">
                     <Link
                       href={`/crm/students/${e.student_id}`}
-                      className="hover:text-[#00ff88]"
+                      className="hover:text-[#c4f036]"
                     >
                       {e.student_id}
                     </Link>

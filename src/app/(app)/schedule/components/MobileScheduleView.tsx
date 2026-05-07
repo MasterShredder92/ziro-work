@@ -178,7 +178,7 @@ function ActionSheet({
         <div className="flex items-center gap-3 px-4 py-2.5 border-b"
           style={{ borderColor: "var(--z-border)", background: "var(--z-surface)" }}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-            style={{ background: "rgba(0,255,136,0.12)", border: "1px solid rgba(0,255,136,0.3)", color: "#00ff88" }}>
+            style={{ background: "rgba(0,255,136,0.12)", border: "1px solid rgba(0,255,136,0.3)", color: "#c4f036" }}>
             {(studentFirstName(student)[0] ?? "?").toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -200,8 +200,8 @@ function ActionSheet({
           <button key={t} onClick={() => setTab(t)}
             className="flex-1 py-2.5 text-xs font-semibold capitalize"
             style={{
-              color: tab === t ? "#00ff88" : "var(--z-muted)",
-              borderBottom: tab === t ? "2px solid #00ff88" : "2px solid transparent",
+              color: tab === t ? "#c4f036" : "var(--z-muted)",
+              borderBottom: tab === t ? "2px solid #c4f036" : "2px solid transparent",
             }}>
             {t}
           </button>
@@ -335,7 +335,7 @@ function ActionSheet({
                 })}
                 disabled={saving}
                 className="flex flex-1 items-center justify-center rounded-xl py-3 text-sm font-bold disabled:opacity-50"
-                style={{ background: "#00ff88", color: "#0a0a0c" }}>
+                style={{ background: "#c4f036", color: "#0a0a0c" }}>
                 {saving ? "Saving…" : "Save Changes"}
               </button>
               <button onClick={onClose}
@@ -587,7 +587,7 @@ export function MobileScheduleView({
                   style={{
                     borderColor: locationConfig?.border ?? "var(--z-border)",
                     background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
-                    color: locationConfig?.textColor ?? "#00ff88",
+                    color: locationConfig?.textColor ?? "#c4f036",
                   }}>
                   {teacherInitials(teacher)}
                 </div>

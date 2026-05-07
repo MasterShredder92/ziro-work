@@ -65,7 +65,7 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
               <td className="px-4 py-2 text-right">
                 <Link
                   href={`/forms/submission/${s.id}`}
-                  className="text-xs text-[#00ff88] hover:text-[#00e679]"
+                  className="text-xs text-[#c4f036] hover:text-[#00e679]"
                 >
                   View
                 </Link>

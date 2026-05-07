@@ -56,7 +56,7 @@ type StudentRaw = {
 
 function invoiceStatusBadge(s: string) {
   const l = s.toLowerCase();
-  if (l === "paid") return "bg-[#00ff88]/10 text-[#00ff88]";
+  if (l === "paid") return "bg-[#c4f036]/10 text-[#c4f036]";
   if (l === "overdue") return "bg-red-500/10 text-red-400";
   if (l === "pending") return "bg-amber-400/10 text-amber-400";
   return "bg-white/5 text-[#909098]";
@@ -155,7 +155,7 @@ function SessionsTab({ studentId }: { studentId: string }) {
         </div>
         <div className="rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-3">
           <div className="text-xs text-[#505055]">Total Paid</div>
-          <div className="text-xl font-bold text-[#00ff88]">${totalPaid.toFixed(2)}</div>
+          <div className="text-xl font-bold text-[#c4f036]">${totalPaid.toFixed(2)}</div>
         </div>
         <div className="rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] p-3">
           <div className="text-xs text-[#505055]">Outstanding</div>
@@ -355,7 +355,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
     return <div className="text-sm text-red-400">Could not load student data.</div>;
   }
 
-  const inputCls = "w-full rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none";
+  const inputCls = "w-full rounded-lg border border-[#1c1c1e] bg-[#111113] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#c4f036]/30 focus:outline-none";
   const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[#505055] mb-1";
   const sectionCls = "rounded-xl border border-[#1c1c1e] bg-[#0a0a0c] p-4 space-y-3";
 
@@ -443,7 +443,7 @@ function StudentEditForm({ studentId, tenantId, onSaved }: { studentId: string; 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50"
+          className="flex-1 rounded-xl bg-[#c4f036] py-3 text-sm font-bold text-black disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save Profile"}
         </button>
@@ -503,7 +503,7 @@ function StudentDetailLoaded({ studentId }: { studentId: string }) {
                   onClick={() => setTab(t.id)}
                   className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${
                     tab === t.id
-                      ? "border-b-2 border-[#00ff88] text-[#00ff88]"
+                      ? "border-b-2 border-[#c4f036] text-[#c4f036]"
                       : "text-[#505055] hover:text-[#909098]"
                   }`}
                 >

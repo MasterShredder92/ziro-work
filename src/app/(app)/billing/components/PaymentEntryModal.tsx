@@ -129,7 +129,7 @@ export function PaymentEntryModal({
             type="button"
             onClick={submit}
             disabled={submitting || amountCents <= 0}
-            className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 text-sm font-semibold text-[#00ff88] disabled:opacity-40"
+            className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 text-sm font-semibold text-[#c4f036] disabled:opacity-40"
           >
             {submitting ? "Recording…" : "Record payment"}
           </button>

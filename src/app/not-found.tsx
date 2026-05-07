@@ -11,7 +11,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/dashboard"
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-[#00ff88] text-black text-sm font-semibold"
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-[#c4f036] text-black text-sm font-semibold"
         >
           Go to Dashboard
         </Link>

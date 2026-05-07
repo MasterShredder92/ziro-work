@@ -30,7 +30,7 @@ export default async function LeadDetailPage({
           </Link>
           <Link
             href={`/schedule?intent=followup&leadId=${encodeURIComponent(lead.id)}`}
-            className="rounded-md bg-[#00ff88]/10 px-3 py-1.5 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20"
+            className="rounded-md bg-[#c4f036]/10 px-3 py-1.5 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20"
           >
             Schedule follow-up
           </Link>
@@ -56,7 +56,7 @@ export default async function LeadDetailPage({
             <div className="text-sm">
               <Link
                 href={`/crm/students/${lead.converted_student_id}`}
-                className="font-semibold text-[#00ff88] hover:underline"
+                className="font-semibold text-[#c4f036] hover:underline"
               >
                 View student profile →
               </Link>

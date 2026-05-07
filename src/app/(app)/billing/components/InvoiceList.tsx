@@ -73,7 +73,7 @@ export function InvoiceList({ invoices, tenantId }: Props) {
         </select>
         <Link
           href={`/billing/invoices/new?tenantId=${tenantId}`}
-          className="ml-auto inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-sm font-semibold text-[#00ff88]"
+          className="ml-auto inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-sm font-semibold text-[#c4f036]"
         >
           + New invoice
         </Link>

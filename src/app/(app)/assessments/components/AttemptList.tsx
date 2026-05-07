@@ -54,7 +54,7 @@ export function AttemptList({
                 <td className="px-3 py-2 text-right">
                   <Link
                     href={`/assessments/attempt/${att.id}`}
-                    className="text-xs font-semibold text-[#00ff88] hover:underline"
+                    className="text-xs font-semibold text-[#c4f036] hover:underline"
                   >
                     {canGrade ? "Grade" : "View"}
                   </Link>

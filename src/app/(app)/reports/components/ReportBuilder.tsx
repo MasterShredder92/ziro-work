@@ -307,7 +307,7 @@ export function ReportBuilder({ tenantId, sources }: ReportBuilderProps) {
             type="button"
             onClick={onRun}
             disabled={running}
-            className="rounded-md bg-[#00ff88] px-3 py-1.5 text-xs font-semibold text-black hover:bg-[#00e077] disabled:opacity-50"
+            className="rounded-md bg-[#c4f036] px-3 py-1.5 text-xs font-semibold text-black hover:bg-[#00e077] disabled:opacity-50"
           >
             {running ? "Running…" : "Run preview"}
           </button>

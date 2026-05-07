@@ -252,7 +252,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/zw-logo.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
               <div className="text-2xl tracking-tighter whitespace-nowrap select-none">
-                <span className="text-[#00ff88] font-extrabold">ZIRO</span>
+                <span className="text-[#c4f036] font-extrabold">ZIRO</span>
                 <span className="text-white ml-1 font-light">WORK</span>
               </div>
             </div>
@@ -292,7 +292,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={clsx(
                     "group relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
-                    active ? "bg-[#00ff88]/15 text-[#00ff88]" : "text-[#505055] hover:bg-white/5 hover:text-[#909098]",
+                    active ? "bg-[#c4f036]/15 text-[#c4f036]" : "text-[#505055] hover:bg-white/5 hover:text-[#909098]",
                   )}
                 >
                   {ICONS[item.href] ?? <Icon><circle cx="10" cy="10" r="6" stroke="currentColor" strokeWidth="1.5"/></Icon>}
@@ -324,10 +324,10 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                             onClick={onClose}
                             className={clsx(
                               "flex flex-1 items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
-                              active ? "bg-[#00ff88]/10 text-[#00ff88]" : "text-white hover:text-white hover:bg-white/5",
+                              active ? "bg-[#c4f036]/10 text-[#c4f036]" : "text-white hover:text-white hover:bg-white/5",
                             )}
                           >
-                            <span className={clsx("shrink-0", active ? "text-[#00ff88]" : "text-[#505055]")}>
+                            <span className={clsx("shrink-0", active ? "text-[#c4f036]" : "text-[#505055]")}>
                               {ICONS[item.href]}
                             </span>
                             {item.label}
@@ -355,7 +355,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                                   onClick={onClose}
                                   className={clsx(
                                     "flex items-center px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap",
-                                    subActive ? "text-[#00ff88]" : "text-[#404048] hover:text-[#909098] hover:bg-white/3",
+                                    subActive ? "text-[#c4f036]" : "text-[#404048] hover:text-[#909098] hover:bg-white/3",
                                   )}
                                 >
                                   {sub.label}
@@ -375,10 +375,10 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                       onClick={onClose}
                       className={clsx(
                         "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
-                        active ? "bg-[#00ff88]/10 text-[#00ff88]" : "text-[#909098] hover:text-white hover:bg-white/5",
+                        active ? "bg-[#c4f036]/10 text-[#c4f036]" : "text-[#909098] hover:text-white hover:bg-white/5",
                       )}
                     >
-                      <span className={clsx("shrink-0", active ? "text-[#00ff88]" : "text-[#505055]")}>
+                      <span className={clsx("shrink-0", active ? "text-[#c4f036]" : "text-[#505055]")}>
                         {ICONS[item.href] ?? <Icon><circle cx="10" cy="10" r="6" stroke="currentColor" strokeWidth="1.5"/></Icon>}
                       </span>
                       {item.label}

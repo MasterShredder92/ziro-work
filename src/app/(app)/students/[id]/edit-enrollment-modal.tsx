@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
-const ZIRO_GREEN = "#00ff88";
+const ZIRO_GREEN = "#c4f036";
 const SURFACE = "#111113";
 const BORDER = "#1c1c1e";
 const TEXT_MUTED = "#7a7a7d";

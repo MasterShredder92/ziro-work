@@ -55,7 +55,7 @@ export function BillingSummaryBar({ metrics }: Props) {
   const locations = metrics.filter((m) => m.locationId !== null);
 
   const tabs = [
-    { id: null, label: "All Locations", color: "#00ff88" },
+    { id: null, label: "All Locations", color: "#c4f036" },
     ...locations.map((l) => ({ id: l.locationId, label: l.locationName, color: l.color })),
   ];
 

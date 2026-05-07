@@ -5,7 +5,7 @@ import { createEventAction } from "../actions";
 export const dynamic = "force-dynamic";
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/50 focus:outline-none";
+  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#c4f036]/50 focus:outline-none";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -116,7 +116,7 @@ export default async function NewEventPage() {
             <input name="locationId" className={INPUT_CLASS} placeholder="uuid" />
           </Field>
           <Field label="Color">
-            <input name="color" className={INPUT_CLASS} placeholder="#00ff88" />
+            <input name="color" className={INPUT_CLASS} placeholder="#c4f036" />
           </Field>
         </Grid>
 
@@ -172,7 +172,7 @@ export default async function NewEventPage() {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-medium text-[#00ff88] hover:bg-[#00ff88]/20"
+            className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-medium text-[#c4f036] hover:bg-[#c4f036]/20"
           >
             Create event
           </button>

@@ -54,7 +54,7 @@ export function TeacherLoadChart({
                     style={{
                       width: `${pct}%`,
                       background:
-                        "linear-gradient(90deg, #00ff88, color-mix(in oklab, #00ff88, #0094ff 45%))",
+                        "linear-gradient(90deg, #c4f036, color-mix(in oklab, #c4f036, #0094ff 45%))",
                     }}
                   />
                 </div>

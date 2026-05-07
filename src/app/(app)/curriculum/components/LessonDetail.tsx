@@ -15,7 +15,7 @@ function Stat({
     tone === "warning"
       ? "text-amber-300"
       : tone === "success"
-        ? "text-[#00ff88]"
+        ? "text-[#c4f036]"
         : "text-[var(--z-fg)]";
   return (
     <div className="rounded-[var(--z-radius-lg)] border border-[var(--z-border)] bg-[var(--z-surface)] px-4 py-3">

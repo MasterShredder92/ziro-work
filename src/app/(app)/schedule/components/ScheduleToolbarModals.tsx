@@ -244,7 +244,7 @@ export function SubModal({ locationId, selectedDate, teachers, blocks, onClose, 
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-50 hover:bg-[#00ff88]/25 transition-colors"
+            className="flex-1 rounded-xl border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 py-2.5 text-sm font-semibold text-[#c4f036] disabled:opacity-50 hover:bg-[#c4f036]/25 transition-colors"
           >
             {saving ? "Adding…" : "Add Sub Block"}
           </button>

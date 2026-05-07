@@ -48,7 +48,7 @@ const STATUSES = [
   { key: "new", label: "New", color: "#0EA5E9", bg: "#0EA5E910" },
   { key: "screening", label: "Screening", color: "#7C3AED", bg: "#7C3AED10" },
   { key: "interview", label: "Interview", color: "#F59E0B", bg: "#F59E0B10" },
-  { key: "offer", label: "Offer", color: "#00ff88", bg: "#00ff8810" },
+  { key: "offer", label: "Offer", color: "#c4f036", bg: "#c4f03610" },
   { key: "hired", label: "Hired", color: "#22C55E", bg: "#22C55E10" },
   { key: "rejected", label: "Rejected", color: "#EF4444", bg: "#EF444410" },
 ];
@@ -70,7 +70,7 @@ function statusCfg(key: string) {
   return STATUSES.find(s => s.key === key) ?? { key, label: key, color: "#505055", bg: "#50505510" };
 }
 
-const inputCls = "w-full rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#00ff88]/30 focus:outline-none";
+const inputCls = "w-full rounded-lg border border-[#1c1c1e] bg-[#0a0a0c] px-3 py-2 text-sm text-white placeholder-[#404048] focus:border-[#c4f036]/30 focus:outline-none";
 const labelCls = "block text-[10px] font-semibold uppercase tracking-widest text-[#505055] mb-1";
 
 function AddProspectModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: Omit<Prospect, "id" | "created_at">) => void }) {
@@ -106,7 +106,7 @@ function AddProspectModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
           <textarea placeholder="Notes…" value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} rows={2} className={inputCls + " resize-none"} />
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-[#1c1c1e] py-2 text-sm font-semibold text-[#505055] hover:text-white transition-colors">Cancel</button>
-            <button type="submit" className="flex-1 rounded-lg bg-[#00ff88]/10 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">Add Candidate</button>
+            <button type="submit" className="flex-1 rounded-lg bg-[#c4f036]/10 py-2 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors">Add Candidate</button>
           </div>
         </form>
       </div>
@@ -118,7 +118,7 @@ function ProspectCard({ prospect, onStatusChange, onSelect, isSelected }: { pros
   const sc = statusCfg(prospect.status);
   const lc = prospect.location_id ? LOCATION_MAP[prospect.location_id] : null;
   return (
-    <div onClick={() => onSelect(prospect)} className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${isSelected ? "border-[#00ff88]/40 bg-[#00ff88]/5" : "border-[#1c1c1e] bg-[#0a0a0c] hover:border-[#2b2b2f]"}`}>
+    <div onClick={() => onSelect(prospect)} className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${isSelected ? "border-[#c4f036]/40 bg-[#c4f036]/5" : "border-[#1c1c1e] bg-[#0a0a0c] hover:border-[#2b2b2f]"}`}>
       {lc && <div className="h-0.5 w-full" style={{ backgroundColor: lc.color }} />}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
@@ -230,7 +230,7 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onUpdate }: {
       <div className="flex border-b border-[#1c1c1e] px-5 gap-4">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === t.id ? "border-[#00ff88] text-white" : "border-transparent text-[#505055] hover:text-[#909098]"}`}>
+            className={`py-2.5 text-xs font-semibold border-b-2 transition-colors ${tab === t.id ? "border-[#c4f036] text-white" : "border-transparent text-[#505055] hover:text-[#909098]"}`}>
             {t.label}
           </button>
         ))}
@@ -281,7 +281,7 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onUpdate }: {
             )}
             <div className="flex gap-2 pt-2">
               <button onClick={() => setEditing(false)} className="flex-1 rounded-lg border border-[#1c1c1e] py-2 text-sm font-semibold text-[#505055] hover:text-white transition-colors">Cancel</button>
-              <button onClick={saveEdit} disabled={saving} className="flex-1 rounded-lg bg-[#00ff88]/10 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors disabled:opacity-50">{saving ? "Saving…" : "Save Profile"}</button>
+              <button onClick={saveEdit} disabled={saving} className="flex-1 rounded-lg bg-[#c4f036]/10 py-2 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors disabled:opacity-50">{saving ? "Saving…" : "Save Profile"}</button>
             </div>
           </div>
         ) : (
@@ -330,7 +330,7 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onUpdate }: {
                 {(prospect.primary_instruments || prospect.secondary_instruments) && (
                   <section>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-[#303035] mb-2">Instruments</div>
-                    {prospect.primary_instruments && <div className="mb-2"><div className="text-[10px] text-[#505055] mb-1">Primary</div><div className="flex flex-wrap gap-1">{prospect.primary_instruments.split(",").map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 text-xs text-[#00ff88]">{i}</span>)}</div></div>}
+                    {prospect.primary_instruments && <div className="mb-2"><div className="text-[10px] text-[#505055] mb-1">Primary</div><div className="flex flex-wrap gap-1">{prospect.primary_instruments.split(",").map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#c4f036]/30 bg-[#c4f036]/5 px-2 py-0.5 text-xs text-[#c4f036]">{i}</span>)}</div></div>}
                     {prospect.secondary_instruments && <div><div className="text-[10px] text-[#505055] mb-1">Secondary</div><div className="flex flex-wrap gap-1">{prospect.secondary_instruments.split(",").map(i => i.trim()).filter(Boolean).map(i => <span key={i} className="rounded-full border border-[#1c1c1e] bg-[#0a0a0c] px-2 py-0.5 text-xs text-[#909098]">{i}</span>)}</div></div>}
                   </section>
                 )}
@@ -434,7 +434,7 @@ export function RecruitmentClient() {
         <div className="shrink-0 border-b border-[#1c1c1e] px-6 py-4">
           <div className="flex items-center justify-between gap-4 mb-3">
             <div><h1 className="text-xl font-extrabold text-white">Recruitment</h1><p className="text-xs text-[#505055]">Teacher pipeline — {activeCount} active candidates</p></div>
-            <button onClick={() => setShowAdd(true)} className="rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ Add Candidate</button>
+            <button onClick={() => setShowAdd(true)} className="rounded-lg bg-[#c4f036]/10 px-4 py-2 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors">+ Add Candidate</button>
           </div>
           <div className="flex gap-1 overflow-x-auto pb-1">
             <button onClick={() => setStatusFilter("all")} className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${statusFilter === "all" ? "bg-white/8 text-white border-white/10" : "text-[#505055] border-[#1c1c1e] hover:text-[#909098]"}`}>All ({prospects.length})</button>
@@ -454,7 +454,7 @@ export function RecruitmentClient() {
               <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
                 <div className="text-4xl">📋</div>
                 <div className="text-sm font-semibold text-[#909098]">No candidates in this stage</div>
-                <button onClick={() => setShowAdd(true)} className="rounded-lg bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">+ Add First Candidate</button>
+                <button onClick={() => setShowAdd(true)} className="rounded-lg bg-[#c4f036]/10 px-4 py-2 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors">+ Add First Candidate</button>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">

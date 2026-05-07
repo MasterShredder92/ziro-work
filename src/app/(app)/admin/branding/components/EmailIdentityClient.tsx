@@ -107,7 +107,7 @@ export function EmailIdentityClient({
         type="button"
         disabled={!canWrite || busy}
         onClick={save}
-        className="rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] disabled:opacity-50"
+        className="rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-semibold text-[#c4f036] disabled:opacity-50"
       >
         {busy ? "Saving…" : "Save"}
       </button>

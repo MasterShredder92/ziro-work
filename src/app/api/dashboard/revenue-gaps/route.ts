@@ -112,7 +112,7 @@ export async function GET() {
     return {
       locationId: loc.id,
       locationName: loc.name,
-      locationColor: loc.color ?? "#00ff88",
+      locationColor: loc.color ?? "#c4f036",
       totalRooms: locRooms.length,
       totalCapacity,
       occupied,

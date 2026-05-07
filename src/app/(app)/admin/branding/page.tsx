@@ -105,31 +105,31 @@ export default async function BrandingDashboardPage({
       <div className="flex flex-wrap gap-2">
         <Link
           href="/admin/branding/theme"
-          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40"
+          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#c4f036]/40"
         >
           Theme editor
         </Link>
         <Link
           href="/admin/branding/domain"
-          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40"
+          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#c4f036]/40"
         >
           Domains
         </Link>
         <Link
           href="/admin/branding/email"
-          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40"
+          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#c4f036]/40"
         >
           Email identity
         </Link>
         <Link
           href="/admin/branding/layouts"
-          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40"
+          className="rounded-[var(--z-radius-md)] border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#c4f036]/40"
         >
           Portal layouts
         </Link>
         <Link
           href="/admin/branding/preview"
-          className="rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 py-1.5 text-xs font-semibold text-[#00ff88]"
+          className="rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 py-1.5 text-xs font-semibold text-[#c4f036]"
         >
           Live preview
         </Link>

@@ -18,7 +18,7 @@ type ThemeState = {
 };
 
 const ACCENTS: Record<ThemeState["accent"], string> = {
-  green: "#00ff88",
+  green: "#c4f036",
   blue: "#4dabff",
   purple: "#c56bff",
 };

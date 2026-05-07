@@ -95,7 +95,7 @@ export function NewInvoiceForm({ tenantId }: { tenantId: string }) {
                 { description: "", quantity: 1, unit_amount_cents: 0, taxable: false },
               ])
             }
-            className="text-xs font-semibold text-[#00ff88] hover:underline"
+            className="text-xs font-semibold text-[#c4f036] hover:underline"
           >
             + Add line
           </button>
@@ -179,7 +179,7 @@ export function NewInvoiceForm({ tenantId }: { tenantId: string }) {
           type="button"
           onClick={submit}
           disabled={submitting}
-          className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 text-sm font-semibold text-[#00ff88] disabled:opacity-40"
+          className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 text-sm font-semibold text-[#c4f036] disabled:opacity-40"
         >
           {submitting ? "Creating…" : "Create invoice"}
         </button>

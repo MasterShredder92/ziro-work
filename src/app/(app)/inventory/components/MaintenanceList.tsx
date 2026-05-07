@@ -75,7 +75,7 @@ export function MaintenanceList({
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                     m.status === "completed"
-                      ? "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30"
+                      ? "text-[#c4f036] bg-[#c4f036]/10 border-[#c4f036]/30"
                       : m.status === "in_progress"
                         ? "text-sky-300 bg-sky-400/10 border-sky-400/30"
                         : m.status === "cancelled"

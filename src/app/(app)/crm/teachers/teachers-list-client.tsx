@@ -262,7 +262,7 @@ export function TeachersListClient({
               >
                 <Link
                   href={`/crm/teachers/${tid}`}
-                  className="hover:text-[var(--z-accent,#00ff88)]"
+                  className="hover:text-[var(--z-accent,#c4f036)]"
                 >
                   {name}
                 </Link>

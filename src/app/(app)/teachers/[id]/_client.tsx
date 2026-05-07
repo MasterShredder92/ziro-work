@@ -45,12 +45,12 @@ type W9Record = {
   signed_at: string; status: string; pdf_url?: string | null;
 };
 
-const inputCls = "w-full rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] px-3 py-2.5 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/40 focus:outline-none transition-colors";
+const inputCls = "w-full rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] px-3 py-2.5 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#c4f036]/40 focus:outline-none transition-colors";
 const labelCls = "block text-xs font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1";
 const sectionCls = "rounded-xl border border-[var(--z-border)] bg-[var(--z-surface,#101012)] p-4 space-y-3";
 // Premium card with Ziro Green left-edge highlight
 const premiumCardCls = "rounded-xl border border-[var(--z-border)] bg-[var(--z-surface,#101012)] overflow-hidden";
-const premiumCardStyle = { borderLeftColor: "#00ff88", borderLeftWidth: 3 } as React.CSSProperties;
+const premiumCardStyle = { borderLeftColor: "#c4f036", borderLeftWidth: 3 } as React.CSSProperties;
 
 /** Parse "HH:MM:SS" or "HH:MM" into total minutes */
 function timeToMinutes(t: string | null | undefined): number {
@@ -95,7 +95,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
       <div style={{
         display: "flex", alignItems: "center", gap: 16,
         borderRadius: 12, border: "1px solid var(--z-border)",
-        borderLeft: "3px solid #00ff88",
+        borderLeft: "3px solid #c4f036",
         background: "var(--z-surface, #101012)",
         padding: 16,
         boxShadow: "0 4px 20px rgba(0,255,136,0.06)",
@@ -112,7 +112,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
             // eslint-disable-next-line @next/next/no-img-element
             <img src={teacher.photo_url} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
-            <span style={{ fontSize: 22, fontWeight: 800, color: "#00ff88" }}>{displayName.charAt(0).toUpperCase()}</span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: "#c4f036" }}>{displayName.charAt(0).toUpperCase()}</span>
           )}
         </div>
         <div style={{ minWidth: 0 }}>
@@ -123,7 +123,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
               {locations.map(l => (
                 <span key={l.id} style={{
                   fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
-                  background: "rgba(0,255,136,0.1)", color: "#00ff88",
+                  background: "rgba(0,255,136,0.1)", color: "#c4f036",
                 }}>{l.name.replace(/music lessons?/i, "").trim()}</span>
               ))}
             </div>
@@ -132,7 +132,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
       </div>
 
       {/* Data rows */}
-      <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+      <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
         {rows.map(({ label, value }, i) => (
           <div key={label} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -147,17 +147,17 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
 
       {/* Instruments */}
       {(teacher.instruments?.length || teacher.primary_instruments || teacher.secondary_instruments) && (
-        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>Instruments</div>
           {(teacher.instruments?.length || teacher.primary_instruments) && (
             <div>
               <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Primary</div>
               <div className="flex flex-wrap gap-2">
                 {(teacher.instruments ?? []).map(inst => (
-                  <span key={inst} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.1)", color: "#00ff88" }}>{inst}</span>
+                  <span key={inst} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.1)", color: "#c4f036" }}>{inst}</span>
                 ))}
                 {teacher.primary_instruments && teacher.primary_instruments.split(',').map(i => i.trim()).filter(Boolean).map(i => (
-                  <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.08)", color: "#00ff88" }}>{i}</span>
+                  <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "rgba(0,255,136,0.08)", color: "#c4f036" }}>{i}</span>
                 ))}
               </div>
             </div>
@@ -190,7 +190,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
 
       {/* Teaching Profile */}
       {(teacher.bio || teacher.personality || teacher.lesson_style || teacher.teaching_strengths || teacher.musical_strengths_background) && (
-        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>Teaching Profile</div>
           {teacher.bio && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Bio</div><div style={{ fontSize: 13, color: "var(--z-fg)", lineHeight: 1.55 }}>{teacher.bio}</div></div>}
           {teacher.personality && (
@@ -211,7 +211,7 @@ function TeacherProfileView({ teacher, locations, capacitySlots, studentCount }:
 
       {/* Student Matching */}
       {(teacher.preferred_age_range || teacher.acceptable_age_range || teacher.best_first_lesson_fit || teacher.best_match_students || teacher.customer_facing_match_summary) && (
-        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>Student Matching</div>
           {teacher.customer_facing_match_summary && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Summary</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.customer_facing_match_summary}</div></div>}
           {teacher.preferred_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Preferred Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{teacher.preferred_age_range}</div></div>}
@@ -255,20 +255,20 @@ function ContractModule({ teacher }: { teacher: TeacherRaw }) {
   return (
     <div className="space-y-4">
       {/* Status banner */}
-      <div className={`rounded-xl border p-4 ${contractSigned ? "border-[#00ff88]/30 bg-[#00ff88]/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+      <div className={`rounded-xl border p-4 ${contractSigned ? "border-[#c4f036]/30 bg-[#c4f036]/5" : "border-amber-500/30 bg-amber-500/5"}`}>
         <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${contractSigned ? "bg-[#00ff88]" : "bg-amber-400"}`} />
-          <span className="text-sm font-semibold text-white">Contract Status: <span className={contractSigned ? "text-[#00ff88]" : "text-amber-400"}>{teacher.contract_status ?? "Not on file"}</span></span>
+          <div className={`h-2 w-2 rounded-full ${contractSigned ? "bg-[#c4f036]" : "bg-amber-400"}`} />
+          <span className="text-sm font-semibold text-white">Contract Status: <span className={contractSigned ? "text-[#c4f036]" : "text-amber-400"}>{teacher.contract_status ?? "Not on file"}</span></span>
         </div>
         {teacher.contract_pdf_url && (
           <a href={teacher.contract_pdf_url} target="_blank" rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 px-4 py-2 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#c4f036]/10 border border-[#c4f036]/20 px-4 py-2 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors">
             View Contract PDF →
           </a>
         )}
       </div>
       {/* Info rows */}
-      <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+      <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
         {[
           { label: "Contract Status", value: teacher.contract_status ?? "Not on file" },
           { label: "Tax Classification", value: "1099 Independent Contractor" },
@@ -433,10 +433,10 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
           <input className={inputCls} type="number" min="0" step="0.01" value={ratePerBlock} onChange={e => setRatePerBlock(e.target.value)} placeholder="0.00" />
         </div>
         <div className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] px-3 py-2.5 text-xs text-[var(--z-muted)]">
-          All teachers are <span className="font-semibold text-[#00ff88]">1099 independent contractors</span>. Capacity is auto-calculated from their weekly availability schedule.
+          All teachers are <span className="font-semibold text-[#c4f036]">1099 independent contractors</span>. Capacity is auto-calculated from their weekly availability schedule.
         </div>
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={isSubAvailable} onChange={e => setIsSubAvailable(e.target.checked)} className="h-4 w-4 accent-[#00ff88]" />
+          <input type="checkbox" checked={isSubAvailable} onChange={e => setIsSubAvailable(e.target.checked)} className="h-4 w-4 accent-[#c4f036]" />
           <span className="text-sm text-white">Available for sub coverage</span>
         </label>
       </div>
@@ -446,7 +446,7 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
           <div className="flex flex-wrap gap-2">
             {allLocations.map(loc => (
               <button key={loc.id} type="button" onClick={() => toggleLocation(loc.id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${selectedLocations.includes(loc.id) ? "bg-[#00ff88] text-black" : "border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] text-[var(--z-muted)] hover:border-[#00ff88]/30"}`}>
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${selectedLocations.includes(loc.id) ? "bg-[#c4f036] text-black" : "border border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] text-[var(--z-muted)] hover:border-[#c4f036]/30"}`}>
                 {loc.name}
               </button>
             ))}
@@ -465,7 +465,7 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
           <label className={labelCls}>Profile Photo</label>
           {/* Avatar upload zone */}
           <div
-            className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] p-5 transition-colors hover:border-[#00ff88]/40 cursor-pointer"
+            className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--z-border)] bg-[var(--z-surface-2,#0a0a0c)] p-5 transition-colors hover:border-[#c4f036]/40 cursor-pointer"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -485,7 +485,7 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
           >
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt="Teacher avatar" className="h-24 w-24 rounded-full object-cover border-2 border-[#00ff88]/40" />
+              <img src={photoUrl} alt="Teacher avatar" className="h-24 w-24 rounded-full object-cover border-2 border-[#c4f036]/40" />
             ) : (
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--z-surface)] border-2 border-[var(--z-border)]">
                 <svg className="h-10 w-10 text-[var(--z-border-2,#2a2a2e)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
@@ -494,7 +494,7 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
               </div>
             )}
             {uploading ? (
-              <div className="text-xs text-[#00ff88] animate-pulse">Uploading…</div>
+              <div className="text-xs text-[#c4f036] animate-pulse">Uploading…</div>
             ) : (
               <div className="text-center">
                 <div className="text-xs font-semibold text-[var(--z-muted)]">Drag & drop or click to upload</div>
@@ -520,7 +520,7 @@ function TeacherEditForm({ teacher, allLocations, assignedLocationIds, onSaved }
       </div>
       {saveStatus === "success" && <p className="text-sm text-green-500">Teacher profile saved successfully.</p>}
       {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
-      <button onClick={handleSave} disabled={saving} className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
+      <button onClick={handleSave} disabled={saving} className="w-full rounded-xl bg-[#c4f036] py-3 text-sm font-bold text-black disabled:opacity-50">
         {saving ? "Saving…" : "Save Profile"}
       </button>
     </div>
@@ -624,23 +624,23 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
   return (
     <div className="space-y-4">
       {/* Status banner */}
-      <div className={`rounded-xl border p-4 ${w9Complete ? "border-[#00ff88]/30 bg-[#00ff88]/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+      <div className={`rounded-xl border p-4 ${w9Complete ? "border-[#c4f036]/30 bg-[#c4f036]/5" : "border-amber-500/30 bg-amber-500/5"}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className={`h-2 w-2 rounded-full ${w9Complete ? "bg-[#00ff88]" : "bg-amber-400"}`} />
-            <span className="text-sm font-semibold text-white">W9 Status: <span className={w9Complete ? "text-[#00ff88]" : "text-amber-400"}>{teacher.w9_status ?? "Not submitted"}</span></span>
+            <div className={`h-2 w-2 rounded-full ${w9Complete ? "bg-[#c4f036]" : "bg-amber-400"}`} />
+            <span className="text-sm font-semibold text-white">W9 Status: <span className={w9Complete ? "text-[#c4f036]" : "text-amber-400"}>{teacher.w9_status ?? "Not submitted"}</span></span>
           </div>
           {existingW9 && !showForm && (
             <button onClick={() => setShowForm(true)} className="text-xs text-[#505055] hover:text-white underline">Update W9</button>
           )}
         </div>
         {teacher.w9_completed_at && <div className="mt-1 text-xs text-[#505055]">Completed: {new Date(teacher.w9_completed_at).toLocaleDateString()}</div>}
-        {existingW9?.pdf_url && <a href={existingW9.pdf_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-[#00ff88] underline">View W9 PDF →</a>}
+        {existingW9?.pdf_url && <a href={existingW9.pdf_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-[#c4f036] underline">View W9 PDF →</a>}
       </div>
 
       {/* Existing W9 summary (read-only) */}
       {existingW9 && !showForm && (
-        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
           <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--z-border)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--z-muted)" }}>W-9 on File</div>
           {[
             { label: "Legal Name", value: existingW9.legal_name },
@@ -708,7 +708,7 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
             <p className="text-xs text-[var(--z-muted)]">Under penalties of perjury, I certify that the TIN shown is my correct taxpayer identification number, I am not subject to backup withholding, and I am a U.S. citizen or other U.S. person.</p>
             <div><label className={labelCls}>Signature (type full legal name) *</label><input className={inputCls} value={signatureName} onChange={e => setSignatureName(e.target.value)} placeholder="Type your full legal name to sign" /></div>
             <label className="flex items-start gap-2 cursor-pointer">
-              <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#00ff88]" />
+              <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c4f036]" />
               <span className="text-xs text-[var(--z-muted)]">I certify under penalties of perjury that the information provided is true, correct, and complete.</span>
             </label>
           </div>
@@ -720,7 +720,7 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
                 Cancel
               </button>
             )}
-            <button onClick={handleSubmit} disabled={saving || !agreed} className="flex-1 rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
+            <button onClick={handleSubmit} disabled={saving || !agreed} className="flex-1 rounded-xl bg-[#c4f036] py-3 text-sm font-bold text-black disabled:opacity-50">
               {saving ? "Submitting…" : existingW9 ? "Update W9" : "Submit W9"}
             </button>
           </div>
@@ -729,7 +729,7 @@ function W9Module({ teacher }: { teacher: TeacherRaw }) {
 
       {/* No W9 yet and form not shown — shouldn't happen but fallback */}
       {!existingW9 && !showForm && (
-        <button onClick={() => setShowForm(true)} className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black">
+        <button onClick={() => setShowForm(true)} className="w-full rounded-xl bg-[#c4f036] py-3 text-sm font-bold text-black">
           Complete W9
         </button>
       )}
@@ -791,7 +791,7 @@ function TeacherStudentsTab({ teacherId }: { teacherId: string }) {
               </div>
               {s.student_status && (
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                  isActive ? "bg-[#00ff88]/10 text-[#00ff88]" : "bg-white/5 text-[var(--z-muted)]"
+                  isActive ? "bg-[#c4f036]/10 text-[#c4f036]" : "bg-white/5 text-[var(--z-muted)]"
                 }`}>{s.student_status}</span>
               )}
             </div>
@@ -862,7 +862,7 @@ function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onCha
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.4 : 1,
         background: checked
-          ? "linear-gradient(135deg, #00ff88, #00cc6e)"
+          ? "linear-gradient(135deg, #c4f036, #9ec42a)"
           : "var(--z-border-2, #2a2a2e)",
         boxShadow: checked ? "0 0 12px rgba(0,255,136,0.35)" : "none",
         transition: "background 0.2s ease, box-shadow 0.2s ease",
@@ -1098,7 +1098,7 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
       {allLocations.map(loc => {
         const assignment = assignmentMap[loc.id];
         const locName = loc.name;
-        const locColor = loc.color ?? "#00ff88";
+        const locColor = loc.color ?? "#c4f036";
         const isPatching = patchingLoc === loc.id;
         const masterOn = masterToggles[loc.id] ?? false;
         const dayMap = schedule[loc.id] ?? emptyDaySlots();
@@ -1151,8 +1151,8 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
                       style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                        border: `1.5px solid ${isRegular ? "#00ff88" : "var(--z-border-2, #2a2a2e)"}`,
-                        background: isRegular ? "#00ff88" : "transparent",
+                        border: `1.5px solid ${isRegular ? "#c4f036" : "var(--z-border-2, #2a2a2e)"}`,
+                        background: isRegular ? "#c4f036" : "transparent",
                         transition: "all 0.15s ease",
                         cursor: isPatching ? "not-allowed" : "pointer",
                       }}
@@ -1168,8 +1168,8 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
                       style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                        border: `1.5px solid ${canSub ? "#00ff88" : "var(--z-border-2, #2a2a2e)"}`,
-                        background: canSub ? "#00ff88" : "transparent",
+                        border: `1.5px solid ${canSub ? "#c4f036" : "var(--z-border-2, #2a2a2e)"}`,
+                        background: canSub ? "#c4f036" : "transparent",
                         transition: "all 0.15s ease",
                         cursor: isPatching ? "not-allowed" : "pointer",
                       }}
@@ -1214,8 +1214,8 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
                           style={{
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
                             width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                            border: `1.5px solid ${dayOn && !locked ? "#00ff88" : "var(--z-border-2, #2a2a2e)"}`,
-                            background: dayOn && !locked ? "#00ff88" : "transparent",
+                            border: `1.5px solid ${dayOn && !locked ? "#c4f036" : "var(--z-border-2, #2a2a2e)"}`,
+                            background: dayOn && !locked ? "#c4f036" : "transparent",
                             transition: "all 0.15s ease",
                             cursor: locked ? "not-allowed" : "pointer",
                           }}
@@ -1275,7 +1275,7 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
                             <button
                               type="button"
                               onClick={() => addBlock(loc.id, day)}
-                              style={{ fontSize: 11, color: "#00ff88", background: "none", border: "none", cursor: "pointer", fontWeight: 700, textAlign: "left", padding: 0, marginTop: 2 }}
+                              style={{ fontSize: 11, color: "#c4f036", background: "none", border: "none", cursor: "pointer", fontWeight: 700, textAlign: "left", padding: 0, marginTop: 2 }}
                             >+ Add Hours</button>
                           </div>
                         )}
@@ -1291,10 +1291,10 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
 
       {/* Save button */}
       <>
-        {saveStatus === "success" && <p className="text-sm text-[#00ff88]">Schedule saved.</p>}
+        {saveStatus === "success" && <p className="text-sm text-[#c4f036]">Schedule saved.</p>}
         {saveStatus === "error" && saveError && <p className="text-sm text-red-400">Error: {saveError}</p>}
         <button onClick={() => void handleSave()} disabled={saving}
-          className="w-full rounded-xl bg-[#00ff88] py-3 text-sm font-bold text-black disabled:opacity-50">
+          className="w-full rounded-xl bg-[#c4f036] py-3 text-sm font-bold text-black disabled:opacity-50">
           {saving ? "Saving…" : "Save Schedule"}
         </button>
       </>
@@ -1400,8 +1400,8 @@ function PayrollTab({ teacherId, payRatePerHalfHour }: { teacherId: string; payR
       {!loading && data && (
         <>
           {/* Summary Card */}
-          <div className="rounded-xl border border-[rgba(0,255,136,0.2)] bg-[#0a0f0d] p-4" style={{ borderLeft: "3px solid #00ff88" }}>
-            <div className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#00ff88]">Month Summary</div>
+          <div className="rounded-xl border border-[rgba(0,255,136,0.2)] bg-[#0a0f0d] p-4" style={{ borderLeft: "3px solid #c4f036" }}>
+            <div className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#c4f036]">Month Summary</div>
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)]">Sessions</div>
@@ -1413,7 +1413,7 @@ function PayrollTab({ teacherId, payRatePerHalfHour }: { teacherId: string; payR
               </div>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--z-muted)]">Earned</div>
-                <div className="mt-1 text-2xl font-black" style={{ color: "#00ff88" }}>
+                <div className="mt-1 text-2xl font-black" style={{ color: "#c4f036" }}>
                   ${data.total_earned.toFixed(2)}
                 </div>
               </div>
@@ -1429,10 +1429,10 @@ function PayrollTab({ teacherId, payRatePerHalfHour }: { teacherId: string; payR
               <div className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">By Location</div>
               {data.by_location.map(loc => (
                 <div key={loc.location_id} className="rounded-xl border border-[var(--z-border)] bg-[#111113] p-3"
-                  style={{ borderLeft: `3px solid ${loc.location_color ?? "#00ff88"}` }}>
+                  style={{ borderLeft: `3px solid ${loc.location_color ?? "#c4f036"}` }}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[var(--z-fg)]">{loc.location_name}</span>
-                    <span className="text-sm font-black" style={{ color: "#00ff88" }}>${loc.earned.toFixed(2)}</span>
+                    <span className="text-sm font-black" style={{ color: "#c4f036" }}>${loc.earned.toFixed(2)}</span>
                   </div>
                   <div className="mt-1 flex gap-4 text-[10px] text-[var(--z-muted)]">
                     <span><span className="font-bold text-[var(--z-fg)]">{loc.session_count}</span> sessions</span>
@@ -1452,10 +1452,10 @@ function PayrollTab({ teacherId, payRatePerHalfHour }: { teacherId: string; payR
             <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Block Type Reference</div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="mb-1 text-[9px] font-black uppercase tracking-widest" style={{ color: "#00ff88" }}>Counts Toward Tally</div>
+                <div className="mb-1 text-[9px] font-black uppercase tracking-widest" style={{ color: "#c4f036" }}>Counts Toward Tally</div>
                 {Object.entries(BILLABLE_LABELS).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-1.5 py-0.5">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#00ff88" }} />
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c4f036" }} />
                     <span className="text-[11px] text-[var(--z-fg)]">{v}</span>
                   </div>
                 ))}
@@ -1564,7 +1564,7 @@ function ProfileTabWithEdit({
               <div style={{
                 display: "flex", alignItems: "center", gap: 16,
                 borderRadius: 12, border: "1px solid var(--z-border)",
-                borderLeft: "3px solid #00ff88",
+                borderLeft: "3px solid #c4f036",
                 background: "var(--z-surface, #101012)",
                 padding: 16,
                 boxShadow: "0 4px 20px rgba(0,255,136,0.06)",
@@ -1580,7 +1580,7 @@ function ProfileTabWithEdit({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={t.photo_url} alt={teacher.display_name ?? ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <span style={{ fontSize: 22, fontWeight: 800, color: "#00ff88" }}>{(teacher.display_name ?? teacher.first_name ?? "?").charAt(0).toUpperCase()}</span>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: "#c4f036" }}>{(teacher.display_name ?? teacher.first_name ?? "?").charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <div style={{ minWidth: 0 }}>
@@ -1598,7 +1598,7 @@ function ProfileTabWithEdit({
                 </div>
               </div>
               {/* Data rows */}
-              <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
+              <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", overflow: "hidden" }}>
                 {([
                   { label: "Status", value: t.status ?? (t.is_active ? "active" : "inactive") },
                   { label: "Role", value: t.teacher_role },
@@ -1623,7 +1623,7 @@ function ProfileTabWithEdit({
 
           {/* Sub-tab: Instruments */}
           {subTab === "instruments" && (
-            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
               {(t.instruments?.length || t.primary_instruments) && (
                 <div>
                   <div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 6 }}>Primary</div>
@@ -1668,7 +1668,7 @@ function ProfileTabWithEdit({
 
           {/* Sub-tab: Teaching */}
           {subTab === "teaching" && (
-            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
               {t.bio && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Bio</div><div style={{ fontSize: 13, color: "var(--z-fg)", lineHeight: 1.55 }}>{t.bio}</div></div>}
               {t.personality && (
                 <div>
@@ -1691,7 +1691,7 @@ function ProfileTabWithEdit({
 
           {/* Sub-tab: Matching */}
           {subTab === "matching" && (
-            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #00ff88", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
+            <div style={{ borderRadius: 12, border: "1px solid var(--z-border)", borderLeft: "3px solid #c4f036", background: "var(--z-surface, #101012)", padding: 16 }} className="space-y-3">
               {t.customer_facing_match_summary && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Summary</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.customer_facing_match_summary}</div></div>}
               {t.preferred_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Preferred Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.preferred_age_range}</div></div>}
               {t.acceptable_age_range && <div><div style={{ fontSize: 10, color: "var(--z-muted)", marginBottom: 4 }}>Acceptable Age Range</div><div style={{ fontSize: 13, color: "var(--z-fg)" }}>{t.acceptable_age_range}</div></div>}
@@ -1817,7 +1817,7 @@ export function TeacherDetailClient() {
               <div className="flex gap-1 border-b border-[var(--z-border)] overflow-x-auto">
                 {TABS.map(t => (
                   <button key={t.id} onClick={() => setTab(t.id as Tab)}
-                    className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${tab === t.id ? "border-b-2 border-[#00ff88] text-[#00ff88]" : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"}`}>
+                    className={`shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors ${tab === t.id ? "border-b-2 border-[#c4f036] text-[#c4f036]" : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"}`}>
                     {t.label}
                     {t.id === "contract_w9" && teacher.w9_status !== "complete" && teacher.w9_status !== "signed" && (
                       <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-400 align-middle" />

@@ -40,7 +40,7 @@ export async function CRMRecentContacts({ tenantId }: { tenantId: string }) {
           <td className="px-4 py-2 font-semibold text-[#f0f0f0]">
             <Link
               href={crmProfileHref(c.kind, c.sourceId)}
-              className="hover:text-[#00ff88]"
+              className="hover:text-[#c4f036]"
             >
               {c.fullName}
             </Link>

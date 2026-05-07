@@ -3,7 +3,7 @@
 [data-theme="dark"],
 .dark-theme {
   /* Primary Colors */
-  --z-accent: #00ff88;
+  --z-accent: #c4f036;
   --z-on-accent: #000000;
   
   /* Surfaces */
@@ -36,9 +36,17 @@
   --z-danger: #ef4444;
   --z-kpi-inset: rgba(255, 255, 255, 0.05);
   --z-kpi-track: rgba(255, 255, 255, 0.04);
-  --z-accent-readable: #00ff88;
-  --z-accent-glow: rgba(0, 255, 136, 0.25);
-  --z-accent-bg: rgba(0, 255, 136, 0.10);
+  --z-accent-readable: #c4f036;
+  --z-accent-glow: rgba(196, 240, 54, 0.25);
+  --z-accent-bg: rgba(196, 240, 54, 0.10);
+  /* Secondary accent — Electric Purple */
+  --z-purple: #bf36f8;
+  --z-purple-dim: #9a28cc;
+  --z-purple-glow: rgba(191, 54, 248, 0.25);
+  --z-purple-bg: rgba(191, 54, 248, 0.10);
+  --z-on-purple: #1a0026;
+  /* Gradient — green → purple */
+  --z-gradient: linear-gradient(135deg, #c4f036, #bf36f8);
 }
 
 /* Light Theme */
@@ -337,53 +345,53 @@
 
 /* ── Light mode: fix neon green and orange/amber on white backgrounds ─ */
 
-/* The dark theme uses #00ff88 (neon green) at /10 opacity — invisible on white.
+/* The dark theme uses #c4f036 (neon green) at /10 opacity — invisible on white.
    In light mode we replace all neon-green accent tints with solid dark green. */
 
 /* Active nav item and accent text */
-[data-theme="light"] [class*="text-[#00ff88]"],
-.light-theme [class*="text-[#00ff88]"] {
+[data-theme="light"] [class*="text-[#c4f036]"],
+.light-theme [class*="text-[#c4f036]"] {
   color: #007a38 !important;
 }
 
 /* Accent borders */
-[data-theme="light"] [class*="border-[#00ff88]"],
-.light-theme [class*="border-[#00ff88]"] {
+[data-theme="light"] [class*="border-[#c4f036]"],
+.light-theme [class*="border-[#c4f036]"] {
   border-color: #007a38 !important;
 }
 
 /* Accent backgrounds (solid) */
-[data-theme="light"] [class*="bg-[#00ff88]"],
-.light-theme [class*="bg-[#00ff88]"] {
+[data-theme="light"] [class*="bg-[#c4f036]"],
+.light-theme [class*="bg-[#c4f036]"] {
   background-color: #007a38 !important;
   color: #ffffff !important;
 }
 
-/* Active nav highlight: bg-[#00ff88]/10 and bg-[#00ff88]/15 */
-[data-theme="light"] [class*="bg-[#00ff88]/"],
-.light-theme [class*="bg-[#00ff88]/"] {
+/* Active nav highlight: bg-[#c4f036]/10 and bg-[#c4f036]/15 */
+[data-theme="light"] [class*="bg-[#c4f036]/"],
+.light-theme [class*="bg-[#c4f036]/"] {
   background-color: #e6f5ed !important;
 }
-[data-theme="light"] [class*="bg-[#00ff88]/"] [class*="text-[#00ff88]"],
-.light-theme [class*="bg-[#00ff88]/"] [class*="text-[#00ff88]"] {
+[data-theme="light"] [class*="bg-[#c4f036]/"] [class*="text-[#c4f036]"],
+.light-theme [class*="bg-[#c4f036]/"] [class*="text-[#c4f036]"] {
   color: #007a38 !important;
 }
 
-/* Hover accent: hover:bg-[#00ff88]/25 */
-[data-theme="light"] [class*="hover:bg-[#00ff88]/"]:hover,
-.light-theme [class*="hover:bg-[#00ff88]/"]:hover {
+/* Hover accent: hover:bg-[#c4f036]/25 */
+[data-theme="light"] [class*="hover:bg-[#c4f036]/"]:hover,
+.light-theme [class*="hover:bg-[#c4f036]/"]:hover {
   background-color: #d0eddc !important;
 }
 
-/* border-[#00ff88]/40 and similar opacity variants */
-[data-theme="light"] [class*="border-[#00ff88]/"],
-.light-theme [class*="border-[#00ff88]/"] {
+/* border-[#c4f036]/40 and similar opacity variants */
+[data-theme="light"] [class*="border-[#c4f036]/"],
+.light-theme [class*="border-[#c4f036]/"] {
   border-color: #007a38 !important;
 }
 
-/* focus:border-[#00ff88]/50 */
-[data-theme="light"] [class*="focus:border-[#00ff88]/"]:focus,
-.light-theme [class*="focus:border-[#00ff88]/"]:focus {
+/* focus:border-[#c4f036]/50 */
+[data-theme="light"] [class*="focus:border-[#c4f036]/"]:focus,
+.light-theme [class*="focus:border-[#c4f036]/"]:focus {
   border-color: #007a38 !important;
   outline-color: #007a38 !important;
 }

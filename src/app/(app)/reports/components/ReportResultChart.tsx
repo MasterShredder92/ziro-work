@@ -6,7 +6,7 @@ export type ReportResultChartProps = {
 };
 
 const SERIES_COLORS = [
-  "#00ff88",
+  "#c4f036",
   "#00b0ff",
   "#f59e0b",
   "#ef4444",

@@ -130,7 +130,7 @@ export default async function InventoryItemPage({
           label="% value remaining"
           value={`${surface.depreciation.percentRemaining}%`}
           sublabel={`${surface.depreciation.monthsElapsed} mo elapsed`}
-          accent="text-[#00ff88]"
+          accent="text-[#c4f036]"
         />
       </section>
 

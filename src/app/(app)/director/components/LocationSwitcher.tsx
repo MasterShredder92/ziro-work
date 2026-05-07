@@ -35,7 +35,7 @@ export function LocationSwitcher({
         value={activeLocationId}
         onChange={(e) => onChange(e.target.value)}
         disabled={pending}
-        className="bg-[var(--z-surface)] border border-[var(--z-border)] rounded-[var(--z-radius-md)] px-3 py-1.5 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-2 focus:ring-[#00ff88]/60 disabled:opacity-60"
+        className="bg-[var(--z-surface)] border border-[var(--z-border)] rounded-[var(--z-radius-md)] px-3 py-1.5 text-sm text-[var(--z-fg)] focus:outline-none focus:ring-2 focus:ring-[#c4f036]/60 disabled:opacity-60"
       >
         {locations.length === 0 ? (
           <option value={activeLocationId}>All Locations</option>

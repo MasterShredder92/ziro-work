@@ -120,7 +120,7 @@ function SquareSyncButton() {
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="flex h-full items-center gap-2 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-4 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] hover:border-[#00ff88]/30 disabled:opacity-50 transition-colors"
+        className="flex h-full items-center gap-2 rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-4 text-sm font-semibold text-[var(--z-muted)] hover:text-[var(--z-fg)] hover:border-[#c4f036]/30 disabled:opacity-50 transition-colors"
       >
         <span className={syncing ? "animate-spin" : ""}>⟳</span>
         {syncing ? "Syncing…" : "Sync Square"}
@@ -226,7 +226,7 @@ export function InvoicesClient({
             ? allSchools
             : locationMetrics.find(l => l.locationId === summaryTab);
           const fmtM = (cents: number) => cents ? `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "$0";
-          const activeColor = summaryTab === null ? "#00ff88" : (locationMetrics.find(l => l.locationId === summaryTab)?.color ?? "#00ff88");
+          const activeColor = summaryTab === null ? "#c4f036" : (locationMetrics.find(l => l.locationId === summaryTab)?.color ?? "#c4f036");
           return (
             <div className="space-y-3">
               {/* Location dropdown */}

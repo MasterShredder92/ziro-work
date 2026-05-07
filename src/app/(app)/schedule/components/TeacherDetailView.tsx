@@ -143,8 +143,8 @@ function DetailActionSheet({
           <button key={t} onClick={() => setTab(t)}
             className="flex-1 py-2 text-[10px] font-semibold capitalize"
             style={{
-              color: tab === t ? "#00ff88" : "var(--z-muted)",
-              borderBottom: tab === t ? "2px solid #00ff88" : "2px solid transparent",
+              color: tab === t ? "#c4f036" : "var(--z-muted)",
+              borderBottom: tab === t ? "2px solid #c4f036" : "2px solid transparent",
             }}>
             {t}
           </button>
@@ -278,7 +278,7 @@ function DetailActionSheet({
                 })}
                 disabled={saving}
                 className="flex flex-1 items-center justify-center rounded-lg py-2.5 text-xs font-bold disabled:opacity-50"
-                style={{ background: "#00ff88", color: "#0a0a0c" }}>
+                style={{ background: "#c4f036", color: "#0a0a0c" }}>
                 {saving ? "Saving…" : "Save Changes"}
               </button>
               <button onClick={onClose}
@@ -354,7 +354,7 @@ export function TeacherDetailView({
           style={{
             borderColor: locationConfig?.border ?? "var(--z-border)",
             background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
-            color: locationConfig?.textColor ?? "#00ff88",
+            color: locationConfig?.textColor ?? "#c4f036",
           }}>
           {teacherInitials(teacher)}
         </div>

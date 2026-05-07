@@ -36,7 +36,7 @@ export function AssessmentDetail({
             {canRun ? (
               <Link
                 href={`/assessments/run/${assessment.id}`}
-                className="rounded-md border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 py-1.5 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20"
+                className="rounded-md border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 py-1.5 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20"
               >
                 Run assessment
               </Link>

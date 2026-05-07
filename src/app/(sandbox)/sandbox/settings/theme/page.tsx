@@ -20,7 +20,7 @@ const DENSITY = [
 ];
 
 const ACCENT_HEX: Record<string, string> = {
-  green: "#00ff88",
+  green: "#c4f036",
   blue: "#4dabff",
   purple: "#c56bff",
 };

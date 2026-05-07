@@ -105,7 +105,7 @@ export default async function TeacherHomePage() {
             </div>
             <Link
               href="/assessments"
-              className="text-xs font-medium text-[#00ff88] hover:underline"
+              className="text-xs font-medium text-[#c4f036] hover:underline"
             >
               Open assessments OS →
             </Link>

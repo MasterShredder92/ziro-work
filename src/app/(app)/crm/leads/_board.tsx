@@ -103,7 +103,7 @@ export function LeadPipelineBoard({ leads }: { leads: Lead[] }) {
                 >
                   <Link
                     href={`/crm/leads/${encodeURIComponent(l.id)}`}
-                    className="block font-semibold text-[#f0f0f0] hover:text-[#00ff88]"
+                    className="block font-semibold text-[#f0f0f0] hover:text-[#c4f036]"
                   >
                     {l.first_name} {l.last_name ?? ""}
                   </Link>
@@ -137,14 +137,14 @@ export function LeadPipelineBoard({ leads }: { leads: Lead[] }) {
                           type="button"
                           disabled={busy === l.id}
                           onClick={() => convertLead(l.id)}
-                          className="rounded bg-[#00ff88]/10 py-1 text-[11px] font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+                          className="rounded bg-[#c4f036]/10 py-1 text-[11px] font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
                         >
                           Convert to student
                         </button>
                       ) : (
                         <Link
                           href={`/crm/students/${l.converted_student_id}`}
-                          className="text-center text-[11px] text-[#00ff88] hover:underline"
+                          className="text-center text-[11px] text-[#c4f036] hover:underline"
                         >
                           View student
                         </Link>

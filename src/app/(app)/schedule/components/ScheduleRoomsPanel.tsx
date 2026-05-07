@@ -191,7 +191,7 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-[#00ff88]/30 bg-[#00ff88]/10 px-3 py-1.5 text-[11px] font-bold text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg border border-[#c4f036]/30 bg-[#c4f036]/10 px-3 py-1.5 text-[11px] font-bold text-[#c4f036] hover:bg-[#c4f036]/20 transition-colors"
         >
           <svg viewBox="0 0 14 14" fill="none" className="h-3 w-3" aria-hidden>
             <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -202,8 +202,8 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
 
       {/* Create room form */}
       {creating && (
-        <div className="rounded-xl border border-[#00ff88]/25 bg-[#00ff88]/5 p-4 space-y-3">
-          <div className="text-xs font-semibold text-[#00ff88]">New Room</div>
+        <div className="rounded-xl border border-[#c4f036]/25 bg-[#c4f036]/5 p-4 space-y-3">
+          <div className="text-xs font-semibold text-[#c4f036]">New Room</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)] mb-1">Name *</label>
@@ -243,7 +243,7 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
               type="button"
               onClick={createRoom}
               disabled={!newRoomName.trim()}
-              className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/15 px-4 py-1.5 text-xs font-bold text-[#00ff88] hover:bg-[#00ff88]/25 disabled:opacity-40 transition-colors"
+              className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/15 px-4 py-1.5 text-xs font-bold text-[#c4f036] hover:bg-[#c4f036]/25 disabled:opacity-40 transition-colors"
             >
               Create
             </button>

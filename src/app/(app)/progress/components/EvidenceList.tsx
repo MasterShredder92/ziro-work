@@ -65,7 +65,7 @@ export function EvidenceList({
                     href={e.file_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 text-xs text-[#00ff88] hover:underline mt-1"
+                    className="inline-flex items-center gap-2 text-xs text-[#c4f036] hover:underline mt-1"
                   >
                     {e.file_name ?? e.file_url}
                   </a>

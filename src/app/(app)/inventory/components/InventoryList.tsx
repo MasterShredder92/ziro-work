@@ -19,7 +19,7 @@ function formatCurrency(value: number | null | undefined): string {
 function StatusPill({ status }: { status: string }) {
   const color =
     status === "available"
-      ? "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30"
+      ? "text-[#c4f036] bg-[#c4f036]/10 border-[#c4f036]/30"
       : status === "in_use"
         ? "text-sky-300 bg-sky-400/10 border-sky-400/30"
         : status === "maintenance"
@@ -59,7 +59,7 @@ export function InventoryList({
           <Link
             key={item.id}
             href={`/inventory/${item.id}`}
-            className="block rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] p-4 hover:border-[#00ff88]/40 hover:bg-[color-mix(in_oklab,var(--z-surface),var(--z-accent)_4%)] transition-colors"
+            className="block rounded-lg border border-[var(--z-border)] bg-[var(--z-surface)] p-4 hover:border-[#c4f036]/40 hover:bg-[color-mix(in_oklab,var(--z-surface),var(--z-accent)_4%)] transition-colors"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">

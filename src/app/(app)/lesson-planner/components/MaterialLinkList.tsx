@@ -36,7 +36,7 @@ export function MaterialLinkList({
                 href={m.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-[11px] font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40 hover:text-[#00ff88]"
+                className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-[11px] font-semibold text-[var(--z-fg)] hover:border-[#c4f036]/40 hover:text-[#c4f036]"
               >
                 Open
               </a>

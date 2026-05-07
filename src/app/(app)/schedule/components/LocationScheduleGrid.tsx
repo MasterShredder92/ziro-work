@@ -618,7 +618,7 @@ export function LocationScheduleGrid({
     return rl.day_of_week === dow;
   }).length;
   const utilPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
-  const utilColor = utilPct >= 80 ? "#00ff88" : utilPct >= 50 ? "#eab308" : "#ef4444";
+  const utilColor = utilPct >= 80 ? "#c4f036" : utilPct >= 50 ? "#eab308" : "#ef4444";
 
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
@@ -635,7 +635,7 @@ export function LocationScheduleGrid({
           />
         </div>
         <div className="flex items-center gap-3 text-[10px] font-bold">
-          <span style={{ color: "#00ff88" }}>{bookedSlots} booked</span>
+          <span style={{ color: "#c4f036" }}>{bookedSlots} booked</span>
           <span className="text-[var(--z-muted)]">{totalSlots - bookedSlots} open</span>
           <span className="text-[var(--z-muted)]">{sortedRooms.length} rooms</span>
         </div>
@@ -852,10 +852,10 @@ export function LocationScheduleGrid({
             {/* Now indicator line */}
             {selectedDate === nowDate && nowMinute >= startMin && nowMinute <= endMin && (
               <div
-                className="absolute left-0 right-0 z-10 border-t-2 border-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.4)]"
+                className="absolute left-0 right-0 z-10 border-t-2 border-[#c4f036] shadow-[0_0_8px_rgba(0,255,136,0.4)]"
                 style={{ top: `${((nowMinute - startMin) / 30) * SLOT_H}px` }}
               >
-                <div className="absolute -left-1 -top-1.5 h-3 w-3 rounded-full bg-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.6)]" />
+                <div className="absolute -left-1 -top-1.5 h-3 w-3 rounded-full bg-[#c4f036] shadow-[0_0_8px_rgba(0,255,136,0.6)]" />
               </div>
             )}
 
@@ -1226,7 +1226,7 @@ export function LocationScheduleGrid({
                             endTime: slotEndStr,
                           });
                         }}
-                        className="absolute left-1 right-1 flex items-center justify-center gap-1 rounded border border-dashed transition-all hover:border-[#00ff88] hover:bg-[rgba(0,255,136,0.06)] group"
+                        className="absolute left-1 right-1 flex items-center justify-center gap-1 rounded border border-dashed transition-all hover:border-[#c4f036] hover:bg-[rgba(0,255,136,0.06)] group"
                         style={{
                           top: `${slotTop + 1}px`,
                           height: `${SLOT_H - 2}px`,
@@ -1236,7 +1236,7 @@ export function LocationScheduleGrid({
                       >
                         <span
                           style={{ fontSize: 13, fontWeight: 700, color: "rgba(0,255,136,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}
-                          className="group-hover:text-[#00ff88] transition-colors"
+                          className="group-hover:text-[#c4f036] transition-colors"
                         >
                           + Open
                         </span>
@@ -1302,13 +1302,13 @@ export function LocationScheduleGrid({
                 {/* Green half-fade top accent bar */}
                 <div
                   className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl"
-                  style={{ background: "linear-gradient(90deg, #00ff88 0%, rgba(0,255,136,0.3) 50%, transparent 100%)" }}
+                  style={{ background: "linear-gradient(90deg, #c4f036 0%, rgba(0,255,136,0.3) 50%, transparent 100%)" }}
                 />
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-3">
                   <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-[#00ff88] shadow-[0_0_6px_#00ff88]" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#c4f036] shadow-[0_0_6px_#c4f036]" />
                     <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[var(--z-fg)]">Session Detail</h3>
                   </div>
                   <button
@@ -1329,8 +1329,8 @@ export function LocationScheduleGrid({
                     {formatBlockTime(displayStartTime)} – {formatBlockTime(displayEndTime)}
                   </div>
                   {isOpenSlotModal && (
-                    <div className="inline-flex items-center gap-1 rounded-full border border-[#00ff88]/20 bg-[#00ff88]/8 px-2 py-0.5">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-[#00ff88]">Open Slot</span>
+                    <div className="inline-flex items-center gap-1 rounded-full border border-[#c4f036]/20 bg-[#c4f036]/8 px-2 py-0.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[#c4f036]">Open Slot</span>
                     </div>
                   )}
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -1443,7 +1443,7 @@ export function LocationScheduleGrid({
                         type="button"
                         disabled={saving}
                         onClick={() => bookStudent(isOpenSlotModal ? null : (selectedBlock ?? null))}
-                        className="w-full rounded-xl border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 py-2.5 text-sm font-semibold text-[#00ff88] disabled:opacity-50 hover:bg-[#00ff88]/25 transition-colors"
+                        className="w-full rounded-xl border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 py-2.5 text-sm font-semibold text-[#c4f036] disabled:opacity-50 hover:bg-[#c4f036]/25 transition-colors"
                       >
                         {saving ? "Booking…" : bookingFirstDay ? "Book as First Lesson" : bookingRecurring ? "🔄 Book Recurring" : "Book Session"}
                       </button>

@@ -74,7 +74,7 @@ export function SuggestedSlots({
                     {room?.name ?? (s.roomId ? s.roomId : "Any room")}
                   </div>
                 </div>
-                <span className="inline-flex items-center rounded-full border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-0.5 text-[10px] font-semibold text-[#00ff88]">
+                <span className="inline-flex items-center rounded-full border border-[#c4f036]/30 bg-[#c4f036]/10 px-2 py-0.5 text-[10px] font-semibold text-[#c4f036]">
                   {s.score}
                 </span>
               </div>

@@ -145,14 +145,14 @@ export default function LiveInvoicePage() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const accent = tenant?.accent_color ?? "#00ff88";
+  const accent = tenant?.accent_color ?? "#c4f036";
   const primaryColor = tenant?.primary_color ?? "#D4226A";
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#060608" }}>
         <div className="space-y-3 text-center">
-          <div className="w-10 h-10 rounded-full border-2 border-[#00ff88]/30 border-t-[#00ff88] animate-spin mx-auto" />
+          <div className="w-10 h-10 rounded-full border-2 border-[#c4f036]/30 border-t-[#c4f036] animate-spin mx-auto" />
           <div className="text-sm text-[#606068]">Loading invoice…</div>
         </div>
       </div>

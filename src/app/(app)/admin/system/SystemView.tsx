@@ -12,7 +12,7 @@ interface Props {
 }
 
 const STATUS_COLOR: Record<HealthStatus, string> = {
-  ok: "#00ff88",
+  ok: "#c4f036",
   degraded: "#f4c430",
   down: "#ff5566",
 };

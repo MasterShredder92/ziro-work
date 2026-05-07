@@ -25,7 +25,7 @@ function Bar({ pct }: { pct: number }) {
       ? "bg-red-500/70"
       : clamped >= 65
         ? "bg-amber-500/70"
-        : "bg-[#00ff88]/70";
+        : "bg-[#c4f036]/70";
   return (
     <div className="h-1.5 w-full rounded-full bg-[var(--z-surface-2)] overflow-hidden">
       <div

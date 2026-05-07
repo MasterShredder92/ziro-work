@@ -77,7 +77,7 @@ export function ScheduleHeatmap({ schedule }: ScheduleHeatmapProps) {
                       backgroundColor:
                         count === 0
                           ? "color-mix(in oklab, var(--z-surface), transparent 60%)"
-                          : `color-mix(in oklab, #00ff88, transparent ${Math.round(
+                          : `color-mix(in oklab, #c4f036, transparent ${Math.round(
                               (1 - intensity) * 100,
                             )}%)`,
                     }}
@@ -95,7 +95,7 @@ export function ScheduleHeatmap({ schedule }: ScheduleHeatmapProps) {
             key={v}
             className="h-3 w-5 rounded-sm border border-[var(--z-border)]"
             style={{
-              backgroundColor: `color-mix(in oklab, #00ff88, transparent ${Math.round(
+              backgroundColor: `color-mix(in oklab, #c4f036, transparent ${Math.round(
                 (1 - v) * 100,
               )}%)`,
             }}

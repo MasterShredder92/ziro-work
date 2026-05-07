@@ -22,9 +22,9 @@ export function ThemeEditorClient({
   activeThemeKey: string | null;
 }) {
   const initial = profile?.colors;
-  const [primary, setPrimary] = useState(initial?.primary ?? "#00ff88");
-  const [secondary, setSecondary] = useState(initial?.secondary ?? "#00cc6e");
-  const [accent, setAccent] = useState(initial?.accent ?? "#00ff88");
+  const [primary, setPrimary] = useState(initial?.primary ?? "#c4f036");
+  const [secondary, setSecondary] = useState(initial?.secondary ?? "#9ec42a");
+  const [accent, setAccent] = useState(initial?.accent ?? "#c4f036");
   const [background, setBackground] = useState(initial?.background ?? "#080808");
   const [surface, setSurface] = useState(initial?.surface ?? "#101012");
   const [msg, setMsg] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export function ThemeEditorClient({
           type="button"
           disabled={!canWrite || !profile || busy}
           onClick={saveColors}
-          className="rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-semibold text-[#00ff88] disabled:opacity-50"
+          className="rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-semibold text-[#c4f036] disabled:opacity-50"
         >
           {busy ? "Saving…" : "Save palette to profile"}
         </button>

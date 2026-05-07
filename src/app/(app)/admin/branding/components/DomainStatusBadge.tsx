@@ -16,8 +16,8 @@ const STATUS_CLASSES: Record<BrandingDomainStatus, string> = {
   pending:
     "border-[var(--z-border)] bg-[var(--z-surface)] text-[var(--z-muted)]",
   verifying: "border-[#ffcc33]/40 bg-[#ffcc33]/10 text-[#ffcc33]",
-  verified: "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88]",
-  active: "border-[#00ff88]/50 bg-[#00ff88]/15 text-[#00ff88]",
+  verified: "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036]",
+  active: "border-[#c4f036]/50 bg-[#c4f036]/15 text-[#c4f036]",
   failed: "border-[#ff3b6b]/40 bg-[#ff3b6b]/10 text-[#ff3b6b]",
 };
 

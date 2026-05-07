@@ -150,7 +150,7 @@ export function EvidenceUploader({
           type="button"
           disabled={disabled || pending}
           onClick={submit}
-          className="rounded-md bg-[#00ff88] px-3 py-1.5 text-sm font-semibold text-black hover:brightness-110 disabled:opacity-60"
+          className="rounded-md bg-[#c4f036] px-3 py-1.5 text-sm font-semibold text-black hover:brightness-110 disabled:opacity-60"
         >
           {pending ? "Submitting…" : "Submit evidence"}
         </button>

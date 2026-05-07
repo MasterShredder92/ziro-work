@@ -260,7 +260,7 @@ export function FieldEditor({
           <button
             type="button"
             onClick={addOption}
-            className="text-xs text-[#00ff88] hover:text-[#00e679]"
+            className="text-xs text-[#c4f036] hover:text-[#00e679]"
           >
             + Add option
           </button>

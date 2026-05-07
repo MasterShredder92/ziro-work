@@ -150,7 +150,7 @@ export function ContentUploader({ tenantId, onUploaded }: ContentUploaderProps) 
           {status === "pending" ? (
             <span className="text-[var(--z-muted)]">Uploading…</span>
           ) : status === "success" ? (
-            <span className="text-[#00ff88]">Uploaded</span>
+            <span className="text-[#c4f036]">Uploaded</span>
           ) : error ? (
             <span className="text-[var(--z-danger)]">{error}</span>
           ) : null}
@@ -158,7 +158,7 @@ export function ContentUploader({ tenantId, onUploaded }: ContentUploaderProps) 
         <button
           type="submit"
           disabled={status === "pending"}
-          className="rounded-md bg-[#00ff88]/15 border border-[#00ff88]/40 px-3 py-1.5 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/25 disabled:opacity-50"
+          className="rounded-md bg-[#c4f036]/15 border border-[#c4f036]/40 px-3 py-1.5 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/25 disabled:opacity-50"
         >
           Upload
         </button>

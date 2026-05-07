@@ -91,7 +91,7 @@ export function CheckoutList({
                       overdue
                         ? "text-rose-300 bg-rose-400/10 border-rose-400/30"
                         : c.returned_at
-                          ? "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30"
+                          ? "text-[#c4f036] bg-[#c4f036]/10 border-[#c4f036]/30"
                           : "text-sky-300 bg-sky-400/10 border-sky-400/30"
                     }`}
                   >

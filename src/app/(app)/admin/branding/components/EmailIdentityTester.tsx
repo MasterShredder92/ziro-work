@@ -73,7 +73,7 @@ export function EmailIdentityTester({
           type="button"
           onClick={send}
           disabled={disabled || status === "sending"}
-          className="h-9 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+          className="h-9 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
         >
           {status === "sending" ? "Sending…" : "Send test"}
         </button>
@@ -82,7 +82,7 @@ export function EmailIdentityTester({
         <div
           className={`text-xs ${
             status === "ok"
-              ? "text-[#00ff88]"
+              ? "text-[#c4f036]"
               : status === "error"
                 ? "text-[#ff3b6b]"
                 : "text-[var(--z-muted)]"

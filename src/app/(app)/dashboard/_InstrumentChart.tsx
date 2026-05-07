@@ -6,7 +6,7 @@ import { useDashboardTasks } from "./_useDashboardTasks";
 // Instrument accent colors — consistent brand palette
 const INSTRUMENT_COLORS: Record<string, string> = {
   piano:     "#7c3aed",
-  guitar:    "#00ff88",
+  guitar:    "#c4f036",
   drums:     "#ef4444",
   vocals:    "#ec4899",
   violin:    "#2563eb",

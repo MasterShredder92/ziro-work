@@ -37,7 +37,7 @@ function initials(name: string): string {
 // Deterministic color from name
 function avatarColor(name: string): [string, string] {
   const palette: [string, string][] = [
-    ["#00ff88", "rgba(0,255,136,0.15)"],
+    ["#c4f036", "rgba(0,255,136,0.15)"],
     ["#2563eb", "rgba(37,99,235,0.15)"],
     ["#7c3aed", "rgba(124,58,237,0.15)"],
     ["#d97706", "rgba(217,119,6,0.15)"],

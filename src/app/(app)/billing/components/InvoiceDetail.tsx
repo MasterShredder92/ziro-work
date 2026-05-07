@@ -70,7 +70,7 @@ export function InvoiceDetail({ invoice, tenantId }: Props) {
             type="button"
             onClick={() => setOpenPayment(true)}
             disabled={balance <= 0}
-            className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#00ff88]/40 bg-[#00ff88]/15 px-3 text-sm font-semibold text-[#00ff88] disabled:opacity-40"
+            className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 text-sm font-semibold text-[#c4f036] disabled:opacity-40"
           >
             Record payment
           </button>
@@ -207,7 +207,7 @@ export function InvoiceDetail({ invoice, tenantId }: Props) {
           <ol className="space-y-2 text-sm">
             {timeline.map((e, i) => (
               <li key={i} className="flex items-start gap-2">
-                <span className="mt-1 inline-block h-2 w-2 rounded-full bg-[#00ff88]" />
+                <span className="mt-1 inline-block h-2 w-2 rounded-full bg-[#c4f036]" />
                 <div>
                   <div className="text-[var(--z-fg)]">{e.text}</div>
                   <div className="text-[11px] text-[var(--z-muted)]">
@@ -225,7 +225,7 @@ export function InvoiceDetail({ invoice, tenantId }: Props) {
             <div className="mt-3">
               <Link
                 href={`/api/billing/invoices/${invoice.id}?tenantId=${tenantId}`}
-                className="text-[#00ff88] hover:underline"
+                className="text-[#c4f036] hover:underline"
               >
                 Download JSON
               </Link>

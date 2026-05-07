@@ -173,7 +173,7 @@ export function DashboardClient() {
             <Panel
               title="Revenue · This Month"
               description="Collected vs outstanding vs scheduled"
-              accentColor="#00ff88"
+              accentColor="#c4f036"
             >
               <RevenueChart />
             </Panel>

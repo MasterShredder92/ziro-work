@@ -23,7 +23,7 @@ export function ThemePreviewCard({
     <div
       className={`flex flex-col gap-2 rounded-[var(--z-radius-lg)] border p-3 ${
         active
-          ? "border-[#00ff88] ring-1 ring-[#00ff88]/60"
+          ? "border-[#c4f036] ring-1 ring-[#c4f036]/60"
           : "border-[var(--z-border)]"
       } bg-[var(--z-surface)]`}
     >
@@ -90,7 +90,7 @@ export function ThemePreviewCard({
             type="button"
             disabled={disabled || active}
             onClick={() => onSelect(theme.theme_key)}
-            className="h-8 flex-1 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+            className="h-8 flex-1 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
           >
             {active ? "Applied" : "Apply"}
           </button>

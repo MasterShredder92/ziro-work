@@ -220,7 +220,7 @@ export function KpiStrip() {
         value={String(animatedStudents)}
         sub={`${m.activeFamilies} families`}
         icon={<Users className="h-3.5 w-3.5" />}
-        accent="#00ff88"
+        accent="#c4f036"
         fillPct={Math.min(100, (m.activeStudents / 200) * 100)}
         href="/crm/families"
         animate={ready}
@@ -230,7 +230,7 @@ export function KpiStrip() {
         value={usd(m.collectedCents)}
         sub={`${collectionPct}% of invoiced`}
         icon={<Banknote className="h-3.5 w-3.5" />}
-        accent="#00ff88"
+        accent="#c4f036"
         fillPct={collectionPct}
         href="/invoices?status=PAID"
       />

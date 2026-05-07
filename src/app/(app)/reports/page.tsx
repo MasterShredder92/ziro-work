@@ -76,7 +76,7 @@ export default async function ReportsIndexPage() {
           </div>
           <Link
             href="/reports/builder"
-            className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] bg-[#00ff88] px-3 text-xs font-semibold text-black hover:bg-[#00e077]"
+            className="inline-flex h-9 items-center rounded-[var(--z-radius-md)] bg-[#c4f036] px-3 text-xs font-semibold text-black hover:bg-[#00e077]"
           >
             New custom report
           </Link>

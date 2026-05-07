@@ -55,7 +55,7 @@ export function CRMNav({ current }: { current: string }) {
           href={it.href}
           className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
             it.id === current
-              ? "bg-[var(--z-accent,#00ff88)]/10 text-[var(--z-accent,#00ff88)]"
+              ? "bg-[var(--z-accent,#c4f036)]/10 text-[var(--z-accent,#c4f036)]"
               : "text-[var(--z-muted,#909098)] hover:bg-white/5 hover:text-white"
           }`}
         >
@@ -176,7 +176,7 @@ export function PageErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-md bg-[var(--z-accent,#00ff88)]/15 px-4 py-2 text-sm font-semibold text-[var(--z-accent,#00ff88)] hover:bg-[var(--z-accent,#00ff88)]/25"
+          className="rounded-md bg-[var(--z-accent,#c4f036)]/15 px-4 py-2 text-sm font-semibold text-[var(--z-accent,#c4f036)] hover:bg-[var(--z-accent,#c4f036)]/25"
         >
           Try again
         </button>

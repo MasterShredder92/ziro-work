@@ -108,7 +108,7 @@ export function CheckoutForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-[#00ff88]/20 px-3 py-1.5 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/30 disabled:opacity-60"
+        className="rounded-md bg-[#c4f036]/20 px-3 py-1.5 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/30 disabled:opacity-60"
       >
         {pending ? "Checking out…" : "Check out"}
       </button>
@@ -116,7 +116,7 @@ export function CheckoutForm({
         <div className="text-xs text-rose-300">{error}</div>
       ) : null}
       {success ? (
-        <div className="text-xs text-[#00ff88]">{success}</div>
+        <div className="text-xs text-[#c4f036]">{success}</div>
       ) : null}
     </form>
   );

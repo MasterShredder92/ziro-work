@@ -57,7 +57,7 @@ export default async function DirectorLayout({
     <div className="flex h-full min-h-0 flex-col pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
       <div className="flex shrink-0 flex-col gap-3 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] px-4 py-3 sm:flex-row sm:items-center sm:px-6">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-8 w-8 rounded-full bg-[#00ff88]/15 border border-[#00ff88]/30 flex items-center justify-center text-[#00ff88] font-bold text-sm">
+          <div className="h-8 w-8 rounded-full bg-[#c4f036]/15 border border-[#c4f036]/30 flex items-center justify-center text-[#c4f036] font-bold text-sm">
             D
           </div>
           <div className="min-w-0">

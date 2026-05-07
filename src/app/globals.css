@@ -19,18 +19,24 @@
   --z-fg: #d4d4d4;
   --z-muted: color-mix(in oklab, var(--z-fg), transparent 35%);
   /* Theme controls (see settings/theme + globals) */
-  --z-accent-color: #00ff88;
+  /* Primary accent — Neon Green */
+  --z-accent-color: #c4f036;
   --z-neon-strength: 1;
   --z-density-scale: 1;
   --z-accent: var(--z-accent-color);
-  --z-accent-dim: #00cc6e;
+  --z-accent-dim: #9ec42a;
+  --z-on-accent: #0d1400;
+  /* Secondary accent — Electric Purple */
+  --z-purple: #bf36f8;
+  --z-purple-dim: #9a28cc;
+  --z-purple-glow: color-mix(in oklab, #bf36f8, transparent 55%);
+  --z-on-purple: #1a0026;
   --z-surface: #101012;
   --z-surface-2: #0b0b0d;
   --z-border: #1c1c1e;
   --z-border-2: #2a2a2e;
   --z-danger: #ff3b6b;
   --z-warning: #ffcc33;
-  --z-on-accent: #00130a;
   --z-content-max: 1400px;
   --z-leading-tight: 1.25;
   --z-leading-body: 1.55;
@@ -54,12 +60,21 @@
 
   --z-agent-accent: var(--z-accent);
   --z-agent-glow: color-mix(in oklab, var(--z-accent), transparent 60%);
+  /* Gradient utility — green → purple */
+  --z-gradient: linear-gradient(135deg, var(--z-accent), var(--z-purple));
+  --z-gradient-glow: linear-gradient(135deg,
+    color-mix(in oklab, var(--z-accent), transparent 50%),
+    color-mix(in oklab, var(--z-purple), transparent 50%)
+  );
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--z-accent);
+  --color-accent-dim: var(--z-accent-dim);
+  --color-purple: var(--z-purple);
+  --color-purple-dim: var(--z-purple-dim);
   --font-sans: var(--z-font-sans);
 }
 

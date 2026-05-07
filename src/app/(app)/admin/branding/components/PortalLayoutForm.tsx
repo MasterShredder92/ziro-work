@@ -143,7 +143,7 @@ export function PortalLayoutForm({
             type="button"
             onClick={save}
             disabled={!canWrite || isPending}
-            className="h-9 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+            className="h-9 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
           >
             {isPending ? "Saving…" : "Save layout"}
           </button>
@@ -164,7 +164,7 @@ export function PortalLayoutForm({
             onClick={() => setActiveScope(s)}
             className={`h-8 rounded-[var(--z-radius-sm)] border px-3 text-xs capitalize ${
               activeScope === s
-                ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88] font-semibold"
+                ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036] font-semibold"
                 : "border-[var(--z-border)] bg-[var(--z-surface)] text-[var(--z-muted)] hover:text-[var(--z-fg)]"
             }`}
           >
@@ -188,7 +188,7 @@ export function PortalLayoutForm({
                   disabled={!canWrite}
                   className={`h-8 rounded-[var(--z-radius-sm)] border px-3 text-xs capitalize ${
                     active.preset === p
-                      ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88] font-semibold"
+                      ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036] font-semibold"
                       : "border-[var(--z-border)] bg-[var(--z-surface-2)] text-[var(--z-muted)] hover:text-[var(--z-fg)]"
                   }`}
                 >
@@ -210,7 +210,7 @@ export function PortalLayoutForm({
                   disabled={!canWrite}
                   className={`h-8 rounded-[var(--z-radius-sm)] border px-3 text-xs ${
                     active.sidebar_variant === p
-                      ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88] font-semibold"
+                      ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036] font-semibold"
                       : "border-[var(--z-border)] bg-[var(--z-surface-2)] text-[var(--z-muted)] hover:text-[var(--z-fg)]"
                   }`}
                 >
@@ -232,7 +232,7 @@ export function PortalLayoutForm({
                   disabled={!canWrite}
                   className={`h-8 rounded-[var(--z-radius-sm)] border px-3 text-xs capitalize ${
                     active.dashboard_preset === p
-                      ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88] font-semibold"
+                      ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036] font-semibold"
                       : "border-[var(--z-border)] bg-[var(--z-surface-2)] text-[var(--z-muted)] hover:text-[var(--z-fg)]"
                   }`}
                 >

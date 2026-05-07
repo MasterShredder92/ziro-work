@@ -49,7 +49,7 @@ export function FormPreview({ form, fields }: FormPreviewProps) {
         <button
           type="button"
           disabled
-          className="rounded-[var(--z-radius-md)] bg-[#00ff88] text-black font-semibold px-4 py-2 text-sm opacity-80"
+          className="rounded-[var(--z-radius-md)] bg-[#c4f036] text-black font-semibold px-4 py-2 text-sm opacity-80"
         >
           {form.submitLabel || "Submit"}
         </button>

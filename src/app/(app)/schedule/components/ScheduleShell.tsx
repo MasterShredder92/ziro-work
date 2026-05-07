@@ -75,7 +75,7 @@ export function ScheduleShell({
               className={clsx(
                 "flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap",
                 active
-                  ? "border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88]"
+                  ? "border-[#c4f036]/40 bg-[#c4f036]/10 text-[#c4f036]"
                   : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]",
               )}
             >

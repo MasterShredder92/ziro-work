@@ -79,7 +79,7 @@ export function AttemptDetail({
                     <span>Manual: {ans.manual_score}</span>
                   ) : null}
                   {ans.is_correct != null ? (
-                    <span className={ans.is_correct ? "text-[#00ff88]" : "text-red-300"}>
+                    <span className={ans.is_correct ? "text-[#c4f036]" : "text-red-300"}>
                       {ans.is_correct ? "Correct" : "Incorrect"}
                     </span>
                   ) : null}

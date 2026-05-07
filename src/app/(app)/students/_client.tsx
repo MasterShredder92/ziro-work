@@ -54,7 +54,7 @@ export function StudentsClient() {
                   <div className="min-w-0">
                     <Link
                       href={`/crm/students/${encodeURIComponent(r.id)}`}
-                      className="font-medium text-[var(--z-accent,#00ff88)] hover:underline"
+                      className="font-medium text-[var(--z-accent,#c4f036)] hover:underline"
                     >
                       {name}
                     </Link>

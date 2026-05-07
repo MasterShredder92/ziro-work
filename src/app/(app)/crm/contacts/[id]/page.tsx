@@ -38,7 +38,7 @@ export default async function ContactDetailPage({
         typedLink ? (
           <Link
             href={typedLink}
-            className="rounded-md bg-[#00ff88]/10 px-3 py-1.5 text-sm font-semibold text-[#00ff88] hover:bg-[#00ff88]/20"
+            className="rounded-md bg-[#c4f036]/10 px-3 py-1.5 text-sm font-semibold text-[#c4f036] hover:bg-[#c4f036]/20"
           >
             Open full profile
           </Link>
@@ -98,7 +98,7 @@ export default async function ContactDetailPage({
               <li>
                 <Link
                   href={`/crm/families/${contact.familyId}`}
-                  className="text-[#00ff88] hover:underline"
+                  className="text-[#c4f036] hover:underline"
                 >
                   View family →
                 </Link>
@@ -110,7 +110,7 @@ export default async function ContactDetailPage({
               <li>
                 <Link
                   href={`/crm/teachers/${contact.teacherId}`}
-                  className="text-[#00ff88] hover:underline"
+                  className="text-[#c4f036] hover:underline"
                 >
                   View teacher →
                 </Link>

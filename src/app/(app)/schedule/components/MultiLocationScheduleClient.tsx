@@ -268,7 +268,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               onClick={() => setActiveView("schedule")}
               className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                 activeView === "schedule"
-                  ? "bg-[#00ff88]/15 text-[#00ff88]"
+                  ? "bg-[#c4f036]/15 text-[#c4f036]"
                   : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
               }`}
             >
@@ -279,7 +279,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               onClick={() => setActiveView("rooms")}
               className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                 activeView === "rooms"
-                  ? "bg-[#00ff88]/15 text-[#00ff88]"
+                  ? "bg-[#c4f036]/15 text-[#c4f036]"
                   : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
               }`}
             >
@@ -371,7 +371,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
             <div className="flex shrink-0 flex-col justify-center px-1">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Util</span>
-                <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#00ff88]"}`}>
+                <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#c4f036]"}`}>
                   {utilization.pct}%
                 </span>
               </div>

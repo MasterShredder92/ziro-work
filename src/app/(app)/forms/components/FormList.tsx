@@ -76,7 +76,7 @@ export function FormList({ forms, submissionsByForm, kpis }: FormListProps) {
                 <td className="px-4 py-2">
                   <Link
                     href={`/forms/${form.id}`}
-                    className="text-[var(--z-fg)] font-medium hover:text-[#00ff88]"
+                    className="text-[var(--z-fg)] font-medium hover:text-[#c4f036]"
                   >
                     {form.name}
                   </Link>
@@ -118,7 +118,7 @@ function KpiCard({
 }) {
   const toneClass =
     tone === "positive"
-      ? "text-[#00ff88]"
+      ? "text-[#c4f036]"
       : tone === "warning"
         ? "text-amber-400"
         : "text-[var(--z-fg)]";

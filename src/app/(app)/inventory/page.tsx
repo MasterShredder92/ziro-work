@@ -115,7 +115,7 @@ export default async function InventoryDashboardPage() {
           sublabel={`Depreciated ${formatCurrency(
             data.kpis.depreciationToDate,
           )}`}
-          accent="text-[#00ff88]"
+          accent="text-[#c4f036]"
         />
       </section>
 

@@ -125,7 +125,7 @@ export function DomainManager({
             type="button"
             onClick={addDomain}
             disabled={!canWrite || isPending}
-            className="h-9 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+            className="h-9 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
           >
             {isPending ? "Adding…" : "Add domain"}
           </button>
@@ -154,7 +154,7 @@ export function DomainManager({
               <div className="sm:ml-auto flex items-center gap-2">
                 <DomainStatusBadge status={d.status} />
                 {d.is_primary ? (
-                  <span className="text-[10px] uppercase tracking-wider text-[#00ff88] border border-[#00ff88]/40 rounded px-1.5 py-0.5">
+                  <span className="text-[10px] uppercase tracking-wider text-[#c4f036] border border-[#c4f036]/40 rounded px-1.5 py-0.5">
                     Primary
                   </span>
                 ) : null}
@@ -202,7 +202,7 @@ export function DomainManager({
                   isPending ||
                   (d.status !== "verified" && d.status !== "active")
                 }
-                className="h-8 rounded-[var(--z-radius-sm)] border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+                className="h-8 rounded-[var(--z-radius-sm)] border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
               >
                 {d.status === "active" ? "Active" : "Activate"}
               </button>

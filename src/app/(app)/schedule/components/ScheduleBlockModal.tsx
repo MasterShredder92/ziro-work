@@ -133,9 +133,9 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header bar — Ziro Green left accent ── */}
-        <div className="relative border-b border-[var(--z-border)] bg-gradient-to-r from-[#00ff88]/8 to-transparent px-5 py-4">
+        <div className="relative border-b border-[var(--z-border)] bg-gradient-to-r from-[#c4f036]/8 to-transparent px-5 py-4">
           {/* Green left border accent */}
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl bg-gradient-to-b from-[#00ff88] to-[#00ff88]/20" />
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl bg-gradient-to-b from-[#c4f036] to-[#c4f036]/20" />
 
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -190,7 +190,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
                 <Link
                   href={`/students/${block.student_id}`}
                   onClick={onClose}
-                  className="mt-0.5 block truncate text-sm font-bold text-[var(--z-fg)] transition-colors hover:text-[#00ff88] hover:underline underline-offset-2"
+                  className="mt-0.5 block truncate text-sm font-bold text-[var(--z-fg)] transition-colors hover:text-[#c4f036] hover:underline underline-offset-2"
                 >
                   {studentName(student)}
                 </Link>
@@ -204,7 +204,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
               <Link
                 href={`/students/${block.student_id}`}
                 onClick={onClose}
-                className="ml-3 shrink-0 rounded-lg border border-[var(--z-border)] px-2.5 py-1 text-[10px] font-bold text-[var(--z-muted)] transition-all hover:border-[#00ff88]/40 hover:bg-[#00ff88]/8 hover:text-[#00ff88]"
+                className="ml-3 shrink-0 rounded-lg border border-[var(--z-border)] px-2.5 py-1 text-[10px] font-bold text-[var(--z-muted)] transition-all hover:border-[#c4f036]/40 hover:bg-[#c4f036]/8 hover:text-[#c4f036]"
               >
                 View →
               </Link>
@@ -219,7 +219,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
                 <Link
                   href={`/teachers/${block.teacher_id}`}
                   onClick={onClose}
-                  className="mt-0.5 block truncate text-sm font-bold text-[var(--z-fg)] transition-colors hover:text-[#00ff88] hover:underline underline-offset-2"
+                  className="mt-0.5 block truncate text-sm font-bold text-[var(--z-fg)] transition-colors hover:text-[#c4f036] hover:underline underline-offset-2"
                 >
                   {teacherName(teacher)}
                 </Link>
@@ -231,7 +231,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
               <Link
                 href={`/teachers/${block.teacher_id}`}
                 onClick={onClose}
-                className="ml-3 shrink-0 rounded-lg border border-[var(--z-border)] px-2.5 py-1 text-[10px] font-bold text-[var(--z-muted)] transition-all hover:border-[#00ff88]/40 hover:bg-[#00ff88]/8 hover:text-[#00ff88]"
+                className="ml-3 shrink-0 rounded-lg border border-[var(--z-border)] px-2.5 py-1 text-[10px] font-bold text-[var(--z-muted)] transition-all hover:border-[#c4f036]/40 hover:bg-[#c4f036]/8 hover:text-[#c4f036]"
               >
                 View →
               </Link>
@@ -285,7 +285,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
             <button
               type="button"
               onClick={() => { onOpenEditPanel(); onClose(); }}
-              className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-xs font-bold text-[var(--z-fg)] transition-all hover:border-[#00ff88]/40 hover:bg-[#00ff88]/8 hover:text-[#00ff88]"
+              className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface)] px-3 py-1.5 text-xs font-bold text-[var(--z-fg)] transition-all hover:border-[#c4f036]/40 hover:bg-[#c4f036]/8 hover:text-[#c4f036]"
             >
               Edit Session →
             </button>

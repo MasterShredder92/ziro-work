@@ -14,7 +14,7 @@ const LOCATIONS = [
 ];
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#00ff88]/50 focus:outline-none";
+  "w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] placeholder-[var(--z-muted)] focus:border-[#c4f036]/50 focus:outline-none";
 
 // ─── Natural sort: "Room 2" < "Room 10" ──────────────────────────────────────
 function naturalSortKey(name: string): number {
@@ -107,13 +107,13 @@ export default async function RoomManagerPage() {
                           </td>
                           <td className="px-4 py-2">
                             {r.isActive ? (
-                              <span className="text-[#00ff88] text-xs font-semibold">Active</span>
+                              <span className="text-[#c4f036] text-xs font-semibold">Active</span>
                             ) : (
                               <span className="text-[var(--z-muted)] text-xs">Inactive</span>
                             )}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            <Link href={`/schedule/rooms/${r.id}`} className="text-xs text-[#00ff88] hover:underline">
+                            <Link href={`/schedule/rooms/${r.id}`} className="text-xs text-[#c4f036] hover:underline">
                               Manage →
                             </Link>
                           </td>
@@ -167,13 +167,13 @@ export default async function RoomManagerPage() {
                     </td>
                     <td className="px-4 py-2">
                       {r.isActive ? (
-                        <span className="text-[#00ff88] text-xs font-semibold">Active</span>
+                        <span className="text-[#c4f036] text-xs font-semibold">Active</span>
                       ) : (
                         <span className="text-[var(--z-muted)] text-xs">Inactive</span>
                       )}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <Link href={`/schedule/rooms/${r.id}`} className="text-xs text-[#00ff88] hover:underline">
+                      <Link href={`/schedule/rooms/${r.id}`} className="text-xs text-[#c4f036] hover:underline">
                         Manage →
                       </Link>
                     </td>
@@ -216,7 +216,7 @@ export default async function RoomManagerPage() {
           </div>
           <button
             type="submit"
-            className="rounded-lg border border-[#00ff88]/40 bg-[#00ff88]/10 px-4 py-2 text-sm font-medium text-[#00ff88] hover:bg-[#00ff88]/20"
+            className="rounded-lg border border-[#c4f036]/40 bg-[#c4f036]/10 px-4 py-2 text-sm font-medium text-[#c4f036] hover:bg-[#c4f036]/20"
           >
             Create room
           </button>

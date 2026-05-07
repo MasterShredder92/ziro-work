@@ -19,9 +19,9 @@ export default function OpenGraphImage() {
           fontFamily: "ui-sans-serif, system-ui",
         }}
       >
-        <div style={{ fontSize: 28, letterSpacing: "0.2em", color: "#00ff88", fontWeight: 800 }}>ZIROWORK</div>
+        <div style={{ fontSize: 28, letterSpacing: "0.2em", color: "#c4f036", fontWeight: 800 }}>ZIROWORK</div>
         <div style={{ marginTop: 24, fontSize: 56, fontWeight: 700, lineHeight: 1.05 }}>Charcoal console.</div>
-        <div style={{ marginTop: 12, fontSize: 56, fontWeight: 700, lineHeight: 1.05, color: "#00ff88" }}>
+        <div style={{ marginTop: 12, fontSize: 56, fontWeight: 700, lineHeight: 1.05, color: "#c4f036" }}>
           Neon signal.
         </div>
       </div>

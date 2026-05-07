@@ -9,8 +9,8 @@ const STATUS_LABEL: Record<LessonCompletionStatus, string> = {
 
 const STATUS_TONE: Record<LessonCompletionStatus, string> = {
   not_started: "border-[var(--z-border)] text-[var(--z-muted)]",
-  in_progress: "border-[#00ff88]/30 text-[#00ff88]",
-  completed: "border-[#00ff88]/50 text-[#00ff88] bg-[#00ff88]/10",
+  in_progress: "border-[#c4f036]/30 text-[#c4f036]",
+  completed: "border-[#c4f036]/50 text-[#c4f036] bg-[#c4f036]/10",
   needs_review: "border-amber-400/40 text-amber-300",
 };
 

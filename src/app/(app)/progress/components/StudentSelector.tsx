@@ -51,7 +51,7 @@ export function StudentSelector({
           return (
             <li
               key={student.id}
-              className={`px-4 py-3 ${isSelected ? "bg-[#00ff88]/10" : ""}`}
+              className={`px-4 py-3 ${isSelected ? "bg-[#c4f036]/10" : ""}`}
             >
               <Link
                 href={href}

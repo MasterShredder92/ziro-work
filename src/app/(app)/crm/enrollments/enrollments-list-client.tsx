@@ -231,7 +231,7 @@ export function EnrollmentsListClient({
             <td className="px-4 py-2 text-[var(--z-muted,#909098)]">
               <Link
                 href={`/crm/students/${r.student_id}`}
-                className="hover:text-[var(--z-accent,#00ff88)]"
+                className="hover:text-[var(--z-accent,#c4f036)]"
               >
                 {studentNameById[r.student_id] ?? r.student_id}
               </Link>
@@ -253,7 +253,7 @@ export function EnrollmentsListClient({
             >
               <Link
                 href={`/crm/teachers/${r.teacher_id}`}
-                className="hover:text-[var(--z-accent,#00ff88)]"
+                className="hover:text-[var(--z-accent,#c4f036)]"
               >
                 {teacherLabelById[r.teacher_id] ?? teacherNameById[r.teacher_id] ?? r.teacher_id}
               </Link>

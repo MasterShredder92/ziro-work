@@ -34,7 +34,7 @@ export function QuestionList({ questions }: { questions: AssessmentQuestion[] })
               {q.options.map((opt) => (
                 <li
                   key={opt.id}
-                  className={opt.is_correct ? "text-[#00ff88]" : ""}
+                  className={opt.is_correct ? "text-[#c4f036]" : ""}
                 >
                   · {opt.label}
                 </li>

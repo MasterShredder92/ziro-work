@@ -121,7 +121,7 @@ export default async function ProgressSurfacePage({
           >
             <header className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#00ff88]">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#c4f036]">
                   Goal · {goal.status}
                 </div>
                 <h2 className="mt-0.5 text-lg font-semibold text-[var(--z-fg)]">

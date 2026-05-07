@@ -130,7 +130,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             value={form.title}
             onChange={(e) => update("title", e.target.value)}
             placeholder="e.g. Intro to rhythm"
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
         <Field label="Subject">
@@ -139,7 +139,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             value={form.subject}
             onChange={(e) => update("subject", e.target.value)}
             placeholder="e.g. Music theory"
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
         <Field label="Grade level">
@@ -148,7 +148,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             value={form.gradeLevel}
             onChange={(e) => update("gradeLevel", e.target.value)}
             placeholder="e.g. Beginner"
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
         <Field label="Duration (min)">
@@ -160,7 +160,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             onChange={(e) =>
               update("durationMinutes", Number(e.target.value) || 0)
             }
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
         <Field label="Standards (comma separated)" wide>
@@ -169,7 +169,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             value={form.standards}
             onChange={(e) => update("standards", e.target.value)}
             placeholder="MU:Pr4.1, MU:Re7.2"
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
         <Field label="Focus areas (comma separated)" wide>
@@ -178,7 +178,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             value={form.focusAreas}
             onChange={(e) => update("focusAreas", e.target.value)}
             placeholder="listening, improvisation"
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
         <Field label="Prompt (optional)" wide>
@@ -187,7 +187,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
             onChange={(e) => update("prompt", e.target.value)}
             rows={3}
             placeholder="Anything specific you want the draft to cover?"
-            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#00ff88]/50"
+            className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)] focus:outline-none focus:border-[#c4f036]/50"
           />
         </Field>
       </div>
@@ -197,7 +197,7 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
           type="button"
           disabled={!canWrite || busy !== null}
           onClick={runDraft}
-          className="rounded-md border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 py-1.5 text-xs font-semibold text-[#00ff88] hover:bg-[#00ff88]/20 disabled:opacity-50"
+          className="rounded-md border border-[#c4f036]/40 bg-[#c4f036]/10 px-3 py-1.5 text-xs font-semibold text-[#c4f036] hover:bg-[#c4f036]/20 disabled:opacity-50"
         >
           {busy === "draft" ? "Drafting…" : "Generate draft"}
         </button>
@@ -205,12 +205,12 @@ export function AIDraftPanel({ tenantId, plan, canWrite }: AIDraftPanelProps) {
           type="button"
           disabled={!canWrite || !draft || busy !== null}
           onClick={saveDraft}
-          className="rounded-md border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#00ff88]/40 hover:text-[#00ff88] disabled:opacity-50"
+          className="rounded-md border border-[var(--z-border)] px-3 py-1.5 text-xs font-semibold text-[var(--z-fg)] hover:border-[#c4f036]/40 hover:text-[#c4f036] disabled:opacity-50"
         >
           {busy === "save" ? "Saving…" : "Save as new version"}
         </button>
         {message ? (
-          <span className="text-xs text-[#00ff88]">{message}</span>
+          <span className="text-xs text-[#c4f036]">{message}</span>
         ) : null}
         {error ? (
           <span className="text-xs text-[var(--z-danger)]">{error}</span>

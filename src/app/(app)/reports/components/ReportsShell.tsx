@@ -13,7 +13,7 @@ export function ReportsShell({ reports, tenantId, children }: ReportsShellProps)
     <div className="h-full flex flex-col min-h-0">
       <div className="shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-6 py-3 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)]">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-8 w-8 rounded-full bg-[#00ff88]/15 border border-[#00ff88]/30 flex items-center justify-center text-[#00ff88] font-bold text-sm">
+          <div className="h-8 w-8 rounded-full bg-[#c4f036]/15 border border-[#c4f036]/30 flex items-center justify-center text-[#c4f036] font-bold text-sm">
             R
           </div>
           <div className="min-w-0">

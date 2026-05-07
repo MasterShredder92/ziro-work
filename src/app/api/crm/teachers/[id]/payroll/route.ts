@@ -96,7 +96,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         byLocation[locId] = {
           location_id: locId,
           location_name: loc.name,
-          location_color: loc.color ?? "#00ff88",
+          location_color: loc.color ?? "#c4f036",
           session_count: 0,
           half_hour_blocks: 0,
           earned: 0,

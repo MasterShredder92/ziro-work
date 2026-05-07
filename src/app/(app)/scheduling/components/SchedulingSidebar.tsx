@@ -47,7 +47,7 @@ export function SchedulingSidebar({
               className={clsx(
                 "block shrink-0 md:shrink md:w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap md:whitespace-normal",
                 isActive
-                  ? "bg-[#00ff88]/10 text-[#00ff88]"
+                  ? "bg-[#c4f036]/10 text-[#c4f036]"
                   : "text-[var(--z-muted)] hover:text-[var(--z-fg)] hover:bg-white/5",
               )}
             >
@@ -56,7 +56,7 @@ export function SchedulingSidebar({
                 <div
                   className={clsx(
                     "hidden md:block text-[11px] mt-0.5",
-                    isActive ? "text-[#00ff88]/70" : "text-[var(--z-muted)]",
+                    isActive ? "text-[#c4f036]/70" : "text-[var(--z-muted)]",
                   )}
                 >
                   {item.description}
