@@ -823,7 +823,6 @@ function isDayLocked(day: DayKey, locationId: string): boolean {
 }
 
 // Ghost location ID from Square API sync — never render this
-const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
 
 type GlobalLocation = { id: string; name: string; color?: string | null };
 type LocAssignment = {
@@ -913,7 +912,6 @@ function AvailabilityTab({ teacherId }: { teacherId: string }) {
     ]).then(([globalRes, assignedRes, availRes]) => {
       // Filter ghost and build global location list
       const globals: GlobalLocation[] = (Array.isArray(globalRes.data) ? globalRes.data : [])
-        .filter((l: GlobalLocation) => l.id !== GHOST_LOCATION_ID);
       setAllLocations(globals);
 
       // Build assignment map keyed by location_id

@@ -15,7 +15,6 @@ import * as React from "react";
 
 const ZIRO_GREEN = "#c4f036";
 
-type LocationOpt = { id: string; name: string };
 type TeacherOpt = {
   id: string;
   display_name: string;
@@ -54,12 +53,10 @@ export function AddStudentModal({
   const [lastName, setLastName] = React.useState("");
   const [instrument, setInstrument] = React.useState("");
   const [sessionsPerMonth, setSessionsPerMonth] = React.useState("4");
-  const [locationId, setLocationId] = React.useState("");
   const [teacherId, setTeacherId] = React.useState("");
   const [startDate, setStartDate] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [locations, setLocations] = React.useState<LocationOpt[]>([]);
   const [teachers, setTeachers] = React.useState<TeacherOpt[]>([]);
 
   // Reset on close, fetch lookups on open
@@ -69,28 +66,13 @@ export function AddStudentModal({
       setLastName("");
       setInstrument("");
       setSessionsPerMonth("4");
-      setLocationId(defaultLocationId ?? "");
       setTeacherId("");
       setStartDate("");
       setSaving(false);
       setError(null);
       return;
     }
-    setLocationId(defaultLocationId ?? "");
-    // Fetch locations
-    fetch("/api/crm/locations?limit=200")
-      .then((r) => r.json())
-      .then((j) => {
-        const arr = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
-        setLocations(
-          arr.map((l: { id: string; name?: string | null }) => ({
-            id: l.id,
-            name: l.name ?? l.id,
-          })),
-        );
-      })
-      .catch(() => {});
-    // Fetch teachers
+    // Fetch teachers — filter by family's location
     // Fetch only ACTIVE teachers + include their locations + instruments
     fetch("/api/crm/teachers?limit=500&isActive=true&include_locations=true")
       .then((r) => r.json())
@@ -144,7 +126,6 @@ export function AddStudentModal({
         sessions_per_month: sessionsNum,
         // blocks_per_week defaults to roughly sessions/4, min 1
         blocks_per_week: Math.max(1, Math.round(sessionsNum / 4)),
-        location_id: locationId || null,
         teacher_id: teacherId || null,
         start_date: startDate || null,
         first_lesson_date: startDate || null,
@@ -282,28 +263,9 @@ export function AddStudentModal({
             </Field>
           </div>
 
-          <Field label="Location">
-            <select
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-              style={{ ...inputStyle, cursor: "pointer" }}
-            >
-              <option value="">— Use family location —</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-
           <Field
             label="Teacher"
-            hint={
-              instrument || locationId
-                ? `Filtered by ${[locationId && "location", instrument && instrument.toLowerCase()].filter(Boolean).join(" + ")}`
-                : undefined
-            }
+            hint={instrument ? `Filtered by ${instrument.toLowerCase()}` : undefined}
           >
             <select
               value={teacherId}
@@ -313,10 +275,10 @@ export function AddStudentModal({
               <option value="">— Unassigned —</option>
               {teachers
                 .filter((t) => {
-                  // Filter by location: must teach at the chosen location
-                  if (locationId) {
+                  // Filter by family location: must teach at this location
+                  if (defaultLocationId) {
                     const teachesHere = t.teacher_locations.some(
-                      (tl) => tl.location_id === locationId,
+                      (tl) => tl.location_id === defaultLocationId,
                     );
                     if (!teachesHere) return false;
                   }

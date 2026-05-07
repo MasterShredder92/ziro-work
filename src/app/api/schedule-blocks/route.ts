@@ -51,11 +51,7 @@ export async function GET(req: NextRequest) {
     // all 4 active studios are accessible regardless of session role.
     // assertLocationAllowed was silently redirecting cross-location requests to the
     // fallback location, causing wrong data to render on the grid.
-    const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
-    const resolvedLocationId =
-      requestedLocationId && requestedLocationId !== GHOST_LOCATION_ID
-        ? requestedLocationId
-        : null;
+    const resolvedLocationId = requestedLocationId ?? null;
     const filter: ScheduleBlockFilter = {
       teacher_id: url.searchParams.get("teacher_id") ?? undefined,
       student_id: url.searchParams.get("student_id") ?? undefined,

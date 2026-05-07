@@ -58,22 +58,6 @@ export async function listStudents(
   params: ListStudentsParams
 ): Promise<FacadeResult<ListResult<Student>>> {
   try {
-    const baseQuery = () => {
-      let q = client
-        .from("students")
-        .select("*")
-        .eq("tenant_id", params.tenantId);
-
-      if (params.includeArchived !== true) q = q.is("deactivated_at", null);
-      if (params.status) q = q.eq("status", params.status);
-      if (params.familyId) q = q.eq("family_id", params.familyId);
-      if (params.teacherId) q = q.eq("teacher_id", params.teacherId);
-      if (params.search && params.search.trim().length > 0) {
-        q = applyStudentSearch(q, params.search.trim());
-      }
-      return q;
-    };
-
     let q = client
       .from("students")
       .select("*")
@@ -84,12 +68,7 @@ export async function listStudents(
     if (params.familyId) q = q.eq("family_id", params.familyId);
     if (params.teacherId) q = q.eq("teacher_id", params.teacherId);
     if (params.locationId) {
-      q = q.or(
-        [
-          `location_id.eq.${params.locationId}`,
-          "location_id.is.null",
-        ].join(","),
-      );
+      q = q.eq("location_id", params.locationId);
     }
     if (params.search && params.search.trim().length > 0)
       q = applyStudentSearch(q, params.search.trim());
@@ -103,21 +82,6 @@ export async function listStudents(
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(from, to);
-      if (!error && params.locationId && (data ?? []).length === 0) {
-        const { data: fallbackData, error: fallbackError } = await baseQuery()
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to);
-        if (!fallbackError) {
-          return {
-            data: {
-              items: ((fallbackData ?? []) as unknown[]).map((r) => r as Student),
-              pageInfo: { mode: "offset", page, pageSize, range: { from, to } },
-            },
-            error: null,
-          };
-        }
-      }
       if (error) {
         if (isMissingStudentsTableError(error)) {
           console.error("Supabase students table missing or query failed:", error);
@@ -156,28 +120,6 @@ export async function listStudents(
     }
 
     const { data, error } = await cq;
-    if (!error && params.locationId && (data ?? []).length === 0) {
-      const fallbackCursorQuery = baseQuery()
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(limit);
-      const { data: fallbackData, error: fallbackError } = await fallbackCursorQuery;
-      if (!fallbackError) {
-        const fallbackItems = ((fallbackData ?? []) as unknown[]).map((r) => r as Student);
-        const fallbackLast = fallbackItems.at(-1);
-        const fallbackNextCursor =
-          fallbackLast?.created_at && fallbackLast?.id
-            ? encodeCursor({ created_at: fallbackLast.created_at, id: fallbackLast.id })
-            : undefined;
-        return {
-          data: {
-            items: fallbackItems,
-            pageInfo: { mode: "cursor", cursor: cursor || undefined, limit, nextCursor: fallbackNextCursor },
-          },
-          error: null,
-        };
-      }
-    }
     if (error) {
       if (isMissingStudentsTableError(error)) {
         console.error("Supabase students table missing or query failed:", error);

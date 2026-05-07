@@ -16,7 +16,6 @@ export type UserLocationAccess = {
 };
 
 // Ghost location from Square API sync — must never appear in any UI
-const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
 
 function normalizeId(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim() : "";
@@ -99,7 +98,6 @@ async function listActiveTenantLocations(tenantId: string): Promise<AccessibleLo
       .select("id,name")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
-      .neq("id", GHOST_LOCATION_ID)
       .order("name", { ascending: true });
 
     const normalizedByIsActive = (byIsActive ?? []).map((row) => ({
@@ -116,7 +114,6 @@ async function listActiveTenantLocations(tenantId: string): Promise<AccessibleLo
       .select("id,name")
       .eq("tenant_id", tenantId)
       .eq("active", true)
-      .neq("id", GHOST_LOCATION_ID)
       .order("name", { ascending: true });
 
     return dedupeLocations(

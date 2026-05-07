@@ -8,7 +8,6 @@ import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const dynamic = "force-dynamic";
 
-const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
 
 export default async function ScheduleDashboardPage() {
   let ctx;
@@ -31,7 +30,6 @@ export default async function ScheduleDashboardPage() {
     .select("id,name")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
-    .neq("id", GHOST_LOCATION_ID)
     .order("name", { ascending: true });
 
   const locations = (rawLocations ?? []).map((l) => ({

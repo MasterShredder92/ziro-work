@@ -26,18 +26,14 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       .order("created_at", { ascending: true });
     if (tlError) return serverError(tlError);
     if (!tlRows || tlRows.length === 0) return ok({ data: [] });
-    // Purge dead Square API ghost location — never surface this UUID
-    const GHOST_LOCATION_ID = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
-    const filteredRows = tlRows.filter((r) => r.location_id !== GHOST_LOCATION_ID);
-    if (filteredRows.length === 0) return ok({ data: [] });
-    const locationIds = filteredRows.map((r) => r.location_id as string);
+    const locationIds = tlRows.map((r) => r.location_id as string);
     const { data: locRows, error: locError } = await db
       .from("locations")
       .select("id, name, color, hours_json")
       .in("id", locationIds);
     if (locError) return serverError(locError);
     const locMap = new Map((locRows ?? []).map((l) => [l.id as string, l]));
-    const data = filteredRows.map((tl) => ({
+    const data = tlRows.map((tl) => ({
       id: tl.id,
       location_id: tl.location_id,
       is_regular: tl.is_regular ?? false,

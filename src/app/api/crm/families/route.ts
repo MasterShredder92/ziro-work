@@ -27,7 +27,6 @@ export async function GET(req: NextRequest) {
     if (data.length > 0) {
       const supabase = clientFor(tenantId);
       const familyIds = data.map((f) => f.id);
-      const GHOST_LOC = "3a7a997c-7c93-44ef-aec5-a6d706967e5b";
       // Pull from schedules SSOT — join students + teachers for Name • Instrument • Teacher display
       const { data: scheduleRows } = await supabase
         .from("schedules")
@@ -44,7 +43,6 @@ export async function GET(req: NextRequest) {
         `)
         .eq("tenant_id", tenantId)
         .eq("status", "active")
-        .neq("location_id", GHOST_LOC);
 
       const countMap: Record<string, number> = {};
       const studentsMap: Record<string, {
