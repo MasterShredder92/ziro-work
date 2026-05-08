@@ -12,7 +12,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TEACHER_COL_W = 72;   // px — fixed left column
-const SLOT_W = 56;           // px per 30-min slot
+const SLOT_W = 120;          // px per 30-min slot — wider for better readability
 const ROW_H = 56;            // px per row (fallback — overridden dynamically)
 const HEADER_H = 32;         // px — time header row
 

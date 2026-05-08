@@ -388,7 +388,7 @@ export function TeacherDetailView({
             return (
               <div key={slotMin} className="flex items-center gap-3 px-4 py-3 border-b"
                 style={{ borderColor: "var(--z-border)" }}>
-                <div className="w-16 shrink-0 text-right text-xs font-medium text-[var(--z-muted)]">
+                <div className="w-20 shrink-0 text-right text-xs font-medium text-[var(--z-muted)]">
                   {minToLabel(slotMin)}
                 </div>
                 <div className="flex-1 rounded-lg border py-3 px-3 text-center text-xs font-semibold"
@@ -423,7 +423,7 @@ export function TeacherDetailView({
                 className="w-full text-left"
                 style={{ background: isSelected ? bs.bg : "transparent" }}>
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-16 shrink-0 text-right">
+                  <div className="w-20 shrink-0 text-right">
                     <div className="text-xs font-semibold text-[var(--z-fg)]">{minToLabel(blockStart)}</div>
                     <div className="text-[9px] text-[var(--z-muted)]">{durationMins}m</div>
                   </div>
