@@ -610,35 +610,62 @@ export function MobileScheduleView({
     <>
       {/* Grid */}
       <div className="flex" style={{ background: "var(--z-bg)" }}>
-        {/* Fixed room label column */}
+        {/* Fixed left column: room number + teacher assigned to that room */}
         <div className="shrink-0 z-10" style={{ width: TEACHER_COL_W, background: "var(--z-bg)" }}>
           {/* Corner cell */}
           <div style={{ height: HEADER_H, borderBottom: "1px solid var(--z-border)", borderRight: "1px solid var(--z-border)" }} />
-          {/* Room label rows */}
-          {roomsForBoard.map(room => (
-            <div key={room.id}
-              className="flex w-full items-center justify-center"
-              style={{
-                height: roomRowH,
-                borderBottom: "1px solid var(--z-border)",
-                borderRight: "1px solid var(--z-border)",
-                background: "transparent",
-              }}>
-              <div className="flex flex-col items-center gap-0.5 px-1">
-                <div className="flex h-6 w-6 items-center justify-center rounded border text-[9px] font-black"
-                  style={{
-                    borderColor: room.color ?? (locationConfig?.border ?? "var(--z-border)"),
-                    background: room.color ? `${room.color}22` : (locationConfig?.accent ?? "rgba(0,255,136,0.1)"),
-                    color: room.color ?? (locationConfig?.textColor ?? "#c4f036"),
-                  }}>
-                  {room.name.replace(/[^0-9]/g, "") || room.name.slice(0, 2).toUpperCase()}
+          {/* One row per room — shows teacher assigned; tap to open teacher detail */}
+          {roomsForBoard.map(room => {
+            // Find the teacher assigned to this room for the day
+            const roomBlocks = dayBlocksWithRooms.filter(b => b.room_id === room.id && b.teacher_id);
+            const assignedTeacherId = roomBlocks[0]?.teacher_id ?? null;
+            const assignedTeacher = assignedTeacherId ? teachers.find(t => t.id === assignedTeacherId) ?? null : null;
+            return (
+              <button key={room.id}
+                onClick={() => {
+                  if (assignedTeacher) { setDetailTeacherId(assignedTeacher.id); setSelectedBlockId(null); }
+                }}
+                className="flex w-full items-center justify-center"
+                style={{
+                  height: roomRowH,
+                  borderBottom: "1px solid var(--z-border)",
+                  borderRight: "1px solid var(--z-border)",
+                  background: "transparent",
+                  cursor: assignedTeacher ? "pointer" : "default",
+                }}>
+                <div className="flex flex-col items-center gap-0.5 px-0.5">
+                  {/* Room badge */}
+                  <div className="flex h-5 w-5 items-center justify-center rounded text-[8px] font-black"
+                    style={{
+                      borderColor: room.color ?? (locationConfig?.border ?? "var(--z-border)"),
+                      border: `1px solid ${room.color ?? (locationConfig?.border ?? "var(--z-border)")}`,
+                      background: room.color ? `${room.color}22` : "rgba(0,255,136,0.08)",
+                      color: room.color ?? (locationConfig?.textColor ?? "#c4f036"),
+                    }}>
+                    {room.name.replace(/[^0-9]/g, "") || room.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  {/* Teacher avatar or empty indicator */}
+                  {assignedTeacher ? (
+                    <>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full border text-[9px] font-bold"
+                        style={{
+                          borderColor: locationConfig?.border ?? "var(--z-border)",
+                          background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
+                          color: locationConfig?.textColor ?? "#c4f036",
+                        }}>
+                        {teacherInitials(assignedTeacher)}
+                      </div>
+                      <div className="max-w-[60px] truncate text-center text-[7px] text-[var(--z-muted)] leading-tight">
+                        {teacherDisplayName(assignedTeacher).split(" ")[0]}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-[7px] text-[var(--z-muted)] leading-tight opacity-50">open</div>
+                  )}
                 </div>
-                <div className="max-w-[60px] truncate text-center text-[7px] text-[var(--z-muted)] leading-tight">
-                  {room.name}
-                </div>
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
         </div>
         {/* Scrollable timeline */}
         <div ref={scrollRef} className="flex-1 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
