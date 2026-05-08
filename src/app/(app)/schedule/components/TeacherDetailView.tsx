@@ -432,25 +432,28 @@ export function TeacherDetailView({
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         {student ? (
-                          <>
-                            <div className="flex items-center gap-1.5">
-                              {instr && <span className="text-sm">{instrumentEmoji(instr)}</span>}
-                              <span className="text-sm font-bold truncate" style={{ color: bs.text }}>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[15px] font-black truncate" style={{ color: bs.text }}>
                                 {studentFirstName(student)} {String((student as unknown as Record<string, unknown>).last_name ?? "")}
                               </span>
                               {isNow && (
-                                <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                                <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black"
                                   style={{ background: "rgba(168,85,247,0.2)", color: "#c084fc" }}>NOW</span>
                               )}
                             </div>
-                            {family && (
-                              <div className="text-[10px] truncate" style={{ color: bs.text, opacity: 0.7 }}>
-                                {String((family as unknown as Record<string, unknown>).name ?? "")}
-                              </div>
-                            )}
-                          </>
+                            <div className="flex items-center gap-1.5 opacity-80">
+                              {instr && <span className="text-base">{instrumentEmoji(instr)}</span>}
+                              {instr && <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: bs.text }}>{instr}</span>}
+                              {family && (
+                                <span className="text-[11px] font-bold truncate opacity-60" style={{ color: bs.text }}>
+                                  · {String((family as unknown as Record<string, unknown>).name ?? "")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         ) : (
-                          <span className="text-sm font-semibold" style={{ color: bs.text }}>
+                          <span className="text-[15px] font-black" style={{ color: bs.text }}>
                             {bs.label || "Open"}
                           </span>
                         )}

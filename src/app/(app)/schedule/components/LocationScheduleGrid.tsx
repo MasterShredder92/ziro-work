@@ -1060,7 +1060,7 @@ export function LocationScheduleGrid({
                             setBookingFirstDay(null);
                             setBookingStudentHasBlocks(null);
                           }}
-                          className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left transition-all hover:scale-[1.02] hover:z-20 ${
+                          className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-center transition-all hover:scale-[1.02] hover:z-20 ${
                             isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : "z-10"
                           }`}
                           style={{
@@ -1072,47 +1072,46 @@ export function LocationScheduleGrid({
                             opacity: block.checked_in ? 0.45 : 1,
                           }}
                         >
-                          <div className="flex items-start justify-between gap-1">
-                            <span className="truncate text-[14px] font-black leading-tight" style={{ color: display.text }}>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="w-full truncate text-[15px] font-black leading-tight" style={{ color: display.text }}>
                               {block.student_id ? (() => {
                                 const s = studentsById.get(block.student_id);
-                                if (s) {
-                                  const instr = s.instrument as string | null | undefined;
-                                  return <>{instr ? `${instrumentEmoji(instr)} ${studentName(s)}` : `- ${studentName(s)}`}</>;
-                                }
-                                // Fallback: look up from recurring rules (student not in SSR props)
+                                if (s) return studentName(s);
                                 const rl = clientRecurringLessons.find(r => r.student_id === block.student_id);
-                                const rlName = rl ? [rl.student_first_name, rl.student_last_name].filter(Boolean).join(" ") : null;
-                                const rlInstr = rl?.instrument ?? null;
-                                return rlName
-                                  ? <>{rlInstr ? `${instrumentEmoji(rlInstr)} ${rlName}` : `- ${rlName}`}</>
-                                  : <>{display.label}</>;
+                                return rl ? [rl.student_first_name, rl.student_last_name].filter(Boolean).join(" ") : display.label;
                               })() : display.label}
                             </span>
-                            <div className="flex items-center gap-0.5 shrink-0">
+                            
+                            <div className="flex items-center justify-center gap-1.5">
+                              {block.student_id && (() => {
+                                const s = studentsById.get(block.student_id);
+                                const instr = s?.instrument || clientRecurringLessons.find(r => r.student_id === block.student_id)?.instrument;
+                                return instr ? (
+                                  <>
+                                    <span className="text-base">{instrumentEmoji(instr as string)}</span>
+                                    <span className="text-[11px] font-black uppercase tracking-wider opacity-80" style={{ color: display.text }}>{instr as string}</span>
+                                  </>
+                                ) : null;
+                              })()}
                               {block.checked_in && (
                                 <span
                                   title="Checked In"
-                                  style={{ fontSize: 8, fontWeight: 900, color: "#000", background: "#22c55e", borderRadius: 3, padding: "0 3px", lineHeight: "13px", userSelect: "none" }}
+                                  style={{ fontSize: 9, fontWeight: 900, color: "#000", background: "#22c55e", borderRadius: 3, padding: "0 4px", lineHeight: "14px", userSelect: "none" }}
                                 >✓</span>
                               )}
                               {isConflict && (
                                 <span
-                                  title="Schedule Conflict: outside teacher availability"
-                                  style={{ fontSize: 8, fontWeight: 900, color: "#fff", background: "#ef4444", borderRadius: 3, padding: "0 3px", lineHeight: "13px", letterSpacing: "0.05em", userSelect: "none" }}
+                                  title="Schedule Conflict"
+                                  style={{ fontSize: 9, fontWeight: 900, color: "#fff", background: "#ef4444", borderRadius: 3, padding: "0 4px", lineHeight: "14px", userSelect: "none" }}
                                 >!</span>
                               )}
-                              {block.is_virtual && <span className="text-[10px]">🌐</span>}
                             </div>
                           </div>
-                          <div className="mt-0.5 text-[13px] font-bold" style={{ color: display.text }}>
+                          <div className="mt-1 text-[14px] font-bold opacity-90" style={{ color: display.text }}>
                             {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
                           </div>
-                          {isConflict && (
-                            <div className="mt-0.5 text-[12px] font-bold" style={{ color: "#fca5a5" }}>Conflict</div>
-                          )}
                           {block.notes && (
-                            <div className="mt-1 truncate text-[12px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
+                            <div className="mt-1 truncate text-[13px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
                           )}
                         </button>
                       );

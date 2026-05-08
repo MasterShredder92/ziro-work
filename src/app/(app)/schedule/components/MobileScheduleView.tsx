@@ -740,7 +740,7 @@ export function MobileScheduleView({
                         <button
                           key={block.id}
                           onClick={() => setSelectedBlockId(isSelected ? null : (block.source_block_id || block.id))}
-                          className="absolute top-1 bottom-1 rounded overflow-hidden text-left transition-all"
+                          className="absolute top-1 bottom-1 rounded overflow-hidden text-center transition-all"
                           style={{
                             left,
                             width,
@@ -751,15 +751,16 @@ export function MobileScheduleView({
                             outlineOffset: 1,
                             zIndex: isSelected ? 5 : 2,
                           }}>
-                          <div className="flex h-full flex-col justify-center px-1">
+                          <div className="flex h-full flex-col items-center justify-center px-1 gap-0.5">
                             {width > 30 && (
-                              <div className="truncate text-[9px] font-semibold leading-tight">
-                                {student ? `${instrumentEmoji(instr)}${studentFirstName(student)}` : (bs.label || "Open")}
+                              <div className="w-full truncate text-[10px] font-black leading-tight">
+                                {student ? studentFirstName(student) : (bs.label || "Open")}
                               </div>
                             )}
                             {width > 50 && (
-                              <div className="truncate text-[8px] opacity-75 leading-tight">
-                                {minToLabel(toMin(block.start_time))}
+                              <div className="flex items-center justify-center gap-1 truncate text-[9px] font-black uppercase tracking-tighter opacity-80">
+                                {instr && <span>{instrumentEmoji(instr)}</span>}
+                                {instr && <span>{instr}</span>}
                               </div>
                             )}
                           </div>
