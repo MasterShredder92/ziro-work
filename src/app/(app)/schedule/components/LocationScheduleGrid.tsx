@@ -606,38 +606,68 @@ export function LocationScheduleGrid({
     );
   }
 
-  // ── Utilization math: all rooms count toward denominator ─────────────────
-  const totalSlots = sortedRooms.length > 0
-    ? sortedRooms.length * timeLabels.length
-    : filteredTeachers.length * timeLabels.length;
+  // ── Utilization & Revenue Math ──────────────────────────────────────────
+  // Denominator: Total potential slots across ALL rooms (even if no teacher assigned)
+  const totalSlots = sortedRooms.length * timeLabels.length;
+  
+  // Numerator: Booked blocks + projected recurring lessons
   const bookedSlots = projectedBlocks.filter(b =>
     b.student_id && b.block_type !== "open_time"
   ).length + clientRecurringLessons.filter(rl => {
-    // Count recurring lessons that project onto the selected date
     const dow = new Date(selectedDate + "T00:00:00.000Z").getUTCDay();
     return rl.day_of_week === dow;
   }).length;
+
+  const openSlots = totalSlots - bookedSlots;
   const utilPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
   const utilColor = utilPct >= 80 ? "#c4f036" : utilPct >= 50 ? "#eab308" : "#ef4444";
+  
+  // Revenue Gap: Every open slot is $160/month potential
+  const revenueGap = openSlots * 160;
+  const totalPotential = totalSlots * 160;
 
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
-      {/* ── Utilization Bar ── */}
-      <div className="flex shrink-0 items-center gap-4 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Utilization</span>
-          <span className="text-sm font-black" style={{ color: utilColor }}>{utilPct}%</span>
+      {/* ── Utilization & Revenue Bar ── */}
+      <div className="flex shrink-0 items-center gap-6 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-5 py-3">
+        {/* Left: Progress & Pct */}
+        <div className="flex flex-1 items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--z-muted)]">Efficiency</span>
+            <span className="text-lg font-black" style={{ color: utilColor }}>{utilPct}%</span>
+          </div>
+          <div className="relative flex-1 h-2 rounded-full bg-[var(--z-border)] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${utilPct}%`, backgroundColor: utilColor }}
+            />
+          </div>
         </div>
-        <div className="flex-1 h-1.5 rounded-full bg-[var(--z-border)]">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${utilPct}%`, backgroundColor: utilColor }}
-          />
-        </div>
-        <div className="flex items-center gap-3 text-[10px] font-bold">
-          <span style={{ color: "#c4f036" }}>{bookedSlots} booked</span>
-          <span className="text-[var(--z-muted)]">{totalSlots - bookedSlots} open</span>
-          <span className="text-[var(--z-muted)]">{sortedRooms.length} rooms</span>
+
+        {/* Right: Revenue Potential & Gap */}
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col items-end">
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Monthly Leak</span>
+            <span className="text-sm font-black text-[#ef4444]">
+              -${revenueGap.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+            </span>
+          </div>
+          <div className="h-8 w-px bg-[var(--z-border)] opacity-50" />
+          <div className="flex flex-col items-end">
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Total Potential</span>
+            <span className="text-sm font-black text-[#c4f036]">
+              {totalPotential.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+            </span>
+          </div>
+          <div className="h-8 w-px bg-[var(--z-border)] opacity-50" />
+          <div className="flex flex-col items-end">
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Capacity</span>
+            <div className="flex items-center gap-2 text-[11px] font-bold">
+              <span style={{ color: "#c4f036" }}>{bookedSlots} Booked</span>
+              <span className="text-[var(--z-muted)]">/</span>
+              <span className="text-[var(--z-muted)]">{totalSlots} Total</span>
+            </div>
+          </div>
         </div>
       </div>
       {/* ── Main grid row ── */}
