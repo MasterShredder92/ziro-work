@@ -62,29 +62,30 @@ function instrumentEmoji(instr: string | null | undefined): string {
 // ─── Block styling ────────────────────────────────────────────────────────────
 type BStyle = { bg: string; border: string; text: string; label: string };
 function blockStyle(b: ScheduleBlock | ProjectedBlock): BStyle {
+  // Colors match desktop BLOCK_DISPLAY exactly
   if (b.checked_in)
-    return { bg: "rgba(34,197,94,0.22)", border: "rgba(34,197,94,0.6)", text: "#86efac", label: "✓ In" };
+    return { bg: "rgba(34,197,94,0.3)", border: "rgba(34,197,94,0.6)", text: "#86efac", label: "✓ In" };
   if (b.is_family_callout || b.block_type === "call_out")
-    return { bg: "rgba(249,115,22,0.2)", border: "#ea580c", text: "#fb923c", label: "Call Out" };
+    return { bg: "rgba(249,115,22,0.85)", border: "#ea580c", text: "#fff", label: "Call Out" };
   if (b.is_makeup_session || b.block_type === "makeup_session")
-    return { bg: "rgba(236,72,153,0.2)", border: "#db2777", text: "#f472b6", label: "Makeup" };
+    return { bg: "rgba(236,72,153,0.85)", border: "#db2777", text: "#fff", label: "Makeup" };
   if (b.is_virtual || b.block_type === "virtual")
-    return { bg: "rgba(14,165,233,0.2)", border: "#0284c7", text: "#38bdf8", label: "Virtual" };
+    return { bg: "rgba(14,165,233,0.85)", border: "#0284c7", text: "#fff", label: "Virtual" };
   if (b.block_type === "first_day")
-    return { bg: "rgba(59,130,246,0.2)", border: "#2563eb", text: "#60a5fa", label: "1st Day" };
+    return { bg: "rgba(59,130,246,0.85)", border: "#2563eb", text: "#fff", label: "1st Day" };
   if (b.block_type === "last_day")
-    return { bg: "rgba(239,68,68,0.2)", border: "#dc2626", text: "#f87171", label: "Last Day" };
+    return { bg: "rgba(239,68,68,0.85)", border: "#dc2626", text: "#fff", label: "Last Day" };
   if (b.block_type === "meet_greet")
-    return { bg: "rgba(20,184,166,0.2)", border: "#0d9488", text: "#2dd4bf", label: "M&G" };
+    return { bg: "rgba(20,184,166,0.85)", border: "#0d9488", text: "#fff", label: "M&G" };
   if (b.block_type === "sub")
-    return { bg: "rgba(34,197,94,0.18)", border: "#16a34a", text: "#4ade80", label: "Sub" };
+    return { bg: "rgba(34,197,94,0.85)", border: "#16a34a", text: "#fff", label: "Sub" };
   if (b.block_type === "teacher_training")
-    return { bg: "rgba(139,92,246,0.2)", border: "#7c3aed", text: "#a78bfa", label: "Training" };
+    return { bg: "rgba(139,92,246,0.85)", border: "#7c3aed", text: "#fff", label: "Training" };
   if (b.block_type === "not_bookable")
-    return { bg: "rgba(107,114,128,0.18)", border: "#6b7280", text: "#9ca3af", label: "Locked" };
+    return { bg: "rgba(107,114,128,0.7)", border: "#6b7280", text: "#fff", label: "Locked" };
   if (b.block_type === "open_time" || !b.student_id)
-    return { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.35)", text: "rgba(16,185,129,0.9)", label: "Open" };
-  return { bg: "rgba(234,179,8,0.2)", border: "#ca8a04", text: "#fbbf24", label: "" };
+    return { bg: "rgba(16,185,129,0.2)", border: "rgba(16,185,129,0.4)", text: "rgba(16,185,129,0.9)", label: "Open" };
+  return { bg: "rgba(234,179,8,0.9)", border: "#ca8a04", text: "#000", label: "" };
 }
 
 const BLOCK_TYPES = [
