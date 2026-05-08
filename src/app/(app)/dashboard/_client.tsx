@@ -104,7 +104,7 @@ export function DashboardClient() {
           <div className="flex items-end justify-between" style={{ animation: "fadeInUp 0.4s ease both" }}>
             <div>
               <h1
-                className="text-2xl font-extrabold tracking-tight sm:text-3xl"
+                className="text-xl font-extrabold tracking-tight sm:text-3xl"
                 style={{
                   background: "linear-gradient(135deg, #c4f036 0%, #bf36f8 100%)",
                   WebkitBackgroundClip: "text",
@@ -154,7 +154,7 @@ export function DashboardClient() {
               </span>
               <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, var(--z-border), transparent)" }} />
             </div>
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.4fr]">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_1.4fr]">
               <Panel title="Instrument Demand" description="Active students by instrument — most to least" accentColor="#bf36f8">
                 <InstrumentChart />
               </Panel>
