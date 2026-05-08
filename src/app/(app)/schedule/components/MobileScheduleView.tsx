@@ -135,7 +135,8 @@ function ActionSheet({
   saving: boolean;
   error: string | null;
 }) {
-  const [tab, setTab] = React.useState<"actions" | "edit">("actions");
+  const isOpen = block.block_type === "open_time" || !block.student_id;
+  const [tab, setTab] = React.useState<"actions" | "edit">(isOpen ? "edit" : "actions");
   const [blockType, setBlockType] = React.useState(block.block_type ?? "student_session");
   const [assignedStudentId, setAssignedStudentId] = React.useState(block.student_id ?? "");
   const [assignedTeacherId, setAssignedTeacherId] = React.useState(block.teacher_id ?? "");
@@ -198,18 +199,20 @@ function ActionSheet({
       )}
 
       {/* Tabs */}
-      <div className="flex border-b" style={{ borderColor: "var(--z-border)" }}>
-        {(["actions", "edit"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className="flex-1 py-2.5 text-xs font-semibold capitalize"
-            style={{
-              color: tab === t ? "#c4f036" : "var(--z-muted)",
-              borderBottom: tab === t ? "2px solid #c4f036" : "2px solid transparent",
-            }}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {!isOpen && (
+        <div className="flex border-b" style={{ borderColor: "var(--z-border)" }}>
+          {(["actions", "edit"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className="flex-1 py-2.5 text-xs font-semibold capitalize"
+              style={{
+                color: tab === t ? "#c4f036" : "var(--z-muted)",
+                borderBottom: tab === t ? "2px solid #c4f036" : "2px solid transparent",
+              }}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="px-4 py-3 space-y-2">
         {error && (
