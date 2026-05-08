@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/navigation/Sidebar";
@@ -13,6 +13,13 @@ import { RouteLoadingBoundary } from "@/components/system/RouteLoadingBoundary";
 export function CleanLayout({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
+
+  // Listen for custom nav toggle event dispatched by schedule mobile header
+  useEffect(() => {
+    const handler = () => setMobileNavOpen((open) => !open);
+    window.addEventListener("zw:toggle-nav", handler);
+    return () => window.removeEventListener("zw:toggle-nav", handler);
+  }, []);
   const isSchedulePage = pathname?.startsWith("/schedule") ?? false;
 
   return (
@@ -29,10 +36,13 @@ export function CleanLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-1 flex-col min-h-0 relative">
           <Suspense
             fallback={
-              <div className="h-[65px] shrink-0 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)]" />
+              <div className={`h-[65px] shrink-0 border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] ${isSchedulePage ? "hidden sm:flex" : ""}`} />
             }
           >
-            <TopBar onMenuToggle={() => setMobileNavOpen((open) => !open)} />
+            <TopBar
+              onMenuToggle={() => setMobileNavOpen((open) => !open)}
+              hideMobile={isSchedulePage}
+            />
           </Suspense>
           <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto relative">
             <ErrorBoundary>

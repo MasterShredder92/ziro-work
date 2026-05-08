@@ -32,9 +32,10 @@ function titleForPath(pathname: string): string {
 
 type TopBarProps = {
   onMenuToggle?: () => void;
+  hideMobile?: boolean;
 };
 
-export function TopBar({ onMenuToggle }: TopBarProps) {
+export function TopBar({ onMenuToggle, hideMobile }: TopBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { tenantId } = useTenantUi();
@@ -54,7 +55,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
 
   return (
     <>
-      <header className="flex shrink-0 items-center justify-between gap-[var(--z-space-3)] border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] px-[var(--z-space-4)] py-[var(--z-space-3)] backdrop-blur-md sm:px-[var(--z-space-5)]">
+      <header className={cn("flex shrink-0 items-center justify-between gap-[var(--z-space-3)] border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] px-[var(--z-space-4)] py-[var(--z-space-3)] backdrop-blur-md sm:px-[var(--z-space-5)]", hideMobile && "hidden sm:flex")}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {/* Hamburger — visible only on mobile */}
           <button

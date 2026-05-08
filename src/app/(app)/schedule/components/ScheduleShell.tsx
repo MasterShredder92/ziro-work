@@ -63,7 +63,7 @@ export function ScheduleShell({
     <div className="flex h-full min-h-0 flex-col">
       {/* ── Horizontal top strip: nav pills ── */}
       <div
-        className="shrink-0 flex items-center gap-1 overflow-x-auto border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] px-3 py-2 scrollbar-none"
+        className="hidden sm:flex shrink-0 items-center gap-1 overflow-x-auto border-b border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_12%)] px-3 py-2 scrollbar-none"
         aria-label="Schedule navigation"
       >
         {NAV.filter((n) => !n.requiresWrite || canWrite).map((item) => {

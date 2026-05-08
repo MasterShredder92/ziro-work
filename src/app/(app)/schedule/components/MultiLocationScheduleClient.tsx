@@ -210,179 +210,263 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
 
   return (
     <div className="space-y-0">
-      {/* Unified compact header */}
+      {/* ─── Unified compact header ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-40 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        {/* Row 1: location selector | view toggle | toolbar actions */}
-        <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
-          {/* Mobile: location dropdown */}
-          <div className="relative sm:hidden shrink-0">
-            <select
-              value={activeLocationId}
-              onChange={(e) => { setActiveLocationId(e.target.value); setActiveView("schedule"); }}
-              className="appearance-none rounded-lg border px-3 py-1.5 pr-7 text-xs font-semibold bg-[var(--z-surface-2)] focus:outline-none cursor-pointer"
-              style={{
-                borderColor: LOCATION_CONFIG[activeLocationId]?.border ?? "var(--z-border)",
-                color: LOCATION_CONFIG[activeLocationId]?.textColor ?? "var(--z-fg)",
+
+        {/* ══════════ MOBILE HEADER (hidden sm+) ══════════════════════════════ */}
+        <div className="flex sm:hidden flex-col">
+          {/* Mobile Row 1: hamburger | location | ◀ date ▶ | 📅 | +Sub */}
+          <div className="flex items-center gap-1.5 px-2 py-1.5" style={{ height: 44 }}>
+            {/* Hamburger — triggers global sidebar via data attribute */}
+            <button
+              type="button"
+              aria-label="Open navigation menu"
+              onClick={() => {
+                // Dispatch a custom event that CleanLayout listens to
+                window.dispatchEvent(new CustomEvent("zw:toggle-nav"));
               }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] text-[var(--z-fg)] active:scale-95"
             >
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id} style={{ background: "#0a0a0c", color: "#e0e0e6" }}>
-                  {loc.name}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: LOCATION_CONFIG[activeLocationId]?.textColor ?? "var(--z-muted)" }}>&#9662;</span>
-          </div>
-          {/* Desktop: location pills */}
-          {locations.map((loc) => {
-            const cfg = LOCATION_CONFIG[loc.id];
-            const isActive = loc.id === activeLocationId;
-            return (
-              <button
-                key={loc.id}
-                type="button"
-                onClick={() => {
-                  setActiveLocationId(loc.id);
-                  setActiveView("schedule");
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+            </button>
+
+            {/* Location dropdown */}
+            <div className="relative flex-1 min-w-0">
+              <select
+                value={activeLocationId}
+                onChange={(e) => { setActiveLocationId(e.target.value); setActiveView("schedule"); }}
+                className="w-full appearance-none rounded-lg border px-2.5 py-1 pr-6 text-[11px] font-bold bg-[var(--z-surface-2)] focus:outline-none cursor-pointer truncate"
+                style={{
+                  borderColor: LOCATION_CONFIG[activeLocationId]?.border ?? "var(--z-border)",
+                  color: LOCATION_CONFIG[activeLocationId]?.textColor ?? "var(--z-fg)",
                 }}
-                style={isActive ? {
-                  borderColor: cfg?.border ?? "transparent",
-                  backgroundColor: cfg?.accent ?? "transparent",
-                  color: cfg?.textColor ?? "inherit",
-                } : {}}
-                className={`hidden sm:block shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
-                  isActive
-                    ? "border"
-                    : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
-                }`}
               >
-                {loc.name}
-              </button>
-            );
-          })}
-          <div className="mx-1 h-5 w-[1px] bg-[var(--z-border)] opacity-60 shrink-0" />
-          {/* Schedule / Rooms toggle */}
-          <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5">
-            <button
-              type="button"
-              onClick={() => setActiveView("schedule")}
-              className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                activeView === "schedule"
-                  ? "bg-[#c4f036]/15 text-[#c4f036]"
-                  : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
-              }`}
-            >
-              Schedule
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveView("rooms")}
-              className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                activeView === "rooms"
-                  ? "bg-[#c4f036]/15 text-[#c4f036]"
-                  : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
-              }`}
-            >
-              Rooms
-            </button>
-          </div>
-          <div className="flex-1" />
-          {/* Toolbar actions (schedule view only) */}
-          {activeView === "schedule" && (
-            <div className="flex shrink-0 items-center gap-1.5">
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id} style={{ background: "#0a0a0c", color: "#e0e0e6" }}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px]"
+                style={{ color: LOCATION_CONFIG[activeLocationId]?.textColor ?? "var(--z-muted)" }}>▾</span>
+            </div>
+
+            {/* Date nav: ◀ selected date ▶ */}
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button type="button"
+                onClick={() => {
+                  const d = new Date(`${selectedDate}T00:00:00Z`);
+                  d.setUTCDate(d.getUTCDate() - 1);
+                  const prev = d.toISOString().slice(0, 10);
+                  if (!weekDays.includes(prev)) goWeek(-1);
+                  setSelectedDate(prev);
+                }}
+                className="flex h-7 w-6 items-center justify-center rounded border border-[var(--z-border)] text-[var(--z-muted)] active:scale-95 text-sm font-bold"
+              >‹</button>
+              <div className="flex flex-col items-center px-1 min-w-[40px]">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--z-muted)] leading-none">
+                  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(`${selectedDate}T00:00:00Z`).getUTCDay()]}
+                </span>
+                <span className="text-[13px] font-black text-[var(--z-fg)] leading-none">
+                  {new Date(`${selectedDate}T00:00:00Z`).getUTCDate()}
+                </span>
+              </div>
+              <button type="button"
+                onClick={() => {
+                  const d = new Date(`${selectedDate}T00:00:00Z`);
+                  d.setUTCDate(d.getUTCDate() + 1);
+                  const next = d.toISOString().slice(0, 10);
+                  if (!weekDays.includes(next)) goWeek(1);
+                  setSelectedDate(next);
+                }}
+                className="flex h-7 w-6 items-center justify-center rounded border border-[var(--z-border)] text-[var(--z-muted)] active:scale-95 text-sm font-bold"
+              >›</button>
+            </div>
+
+            {/* Calendar jump */}
+            <label className="relative shrink-0 cursor-pointer">
+              <span className="pointer-events-none flex h-7 w-7 items-center justify-center rounded border border-[var(--z-border)] text-[var(--z-muted)] text-sm">📅</span>
+              <input type="date" value={selectedDate}
+                onChange={(e) => { if (e.target.value) { jumpToWeek(e.target.value); setSelectedDate(e.target.value); } }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+            </label>
+
+            {/* +Sub button */}
+            {activeView === "schedule" && (
               <button type="button" onClick={() => setActiveModal("sub")}
-                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-[var(--z-accent)]/50 hover:bg-[var(--z-accent)]/5 transition-all">
-                + Sub
+                className="shrink-0 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-2 py-1 text-[10px] font-black text-[#c4f036] active:scale-95 whitespace-nowrap"
+                style={{ borderColor: "rgba(196,240,54,0.3)" }}>
+                +Sub
               </button>
-              <button type="button" onClick={() => setActiveModal("callout")}
-                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-red-500/50 hover:bg-red-500/5 transition-all">
-                Call Out
+            )}
+          </div>
+
+          {/* Mobile Row 2: Schedule | Rooms toggle + util pill */}
+          <div className="flex items-center gap-1.5 px-2 pb-1.5" style={{ borderTop: "1px solid var(--z-border)" }}>
+            {/* Schedule / Rooms pill toggle */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5">
+              <button type="button" onClick={() => setActiveView("schedule")}
+                className={`rounded-md px-2.5 py-0.5 text-[10px] font-bold transition-colors ${
+                  activeView === "schedule" ? "bg-[#c4f036]/15 text-[#c4f036]" : "text-[var(--z-muted)]"
+                }`}>
+                Schedule
               </button>
-              <button type="button" onClick={() => setActiveModal("virtual")}
-                className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all">
-                Virtual
+              <button type="button" onClick={() => setActiveView("rooms")}
+                className={`rounded-md px-2.5 py-0.5 text-[10px] font-bold transition-colors ${
+                  activeView === "rooms" ? "bg-[#c4f036]/15 text-[#c4f036]" : "text-[var(--z-muted)]"
+                }`}>
+                Rooms
               </button>
             </div>
-          )}
-        </div>
-        {/* Row 2: week nav inline + day pills + utilization */}
-        {activeView === "schedule" && activeLocationId && activeData && (
-          <div
-            className="flex items-center gap-1 overflow-x-auto px-3 pb-1.5 pt-0.5 scrollbar-none"
-            style={{ borderTop: `1px solid ${activeLocConfig?.border ?? "var(--z-border)"}40` }}
-          >
-            {/* Week navigator — inline left of day pills */}
-            <button
-              type="button"
-              onClick={() => goWeek(-1)}
-              className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-bold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
-              aria-label="Previous week"
-            >&#8249;</button>
-            <span className="shrink-0 text-[11px] font-semibold text-[var(--z-fg)] px-1 whitespace-nowrap">
-              {formatWeekLabel(window.start, window.end)}
-            </span>
-            <button
-              type="button"
-              onClick={() => goWeek(1)}
-              className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-bold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
-              aria-label="Next week"
-            >&#8250;</button>
-            {/* Compact date jump */}
-            <label className="relative shrink-0 cursor-pointer" title="Jump to date">
-              <span className="pointer-events-none flex h-7 w-7 items-center justify-center rounded-md border border-[var(--z-border)] text-sm select-none text-[var(--z-muted)]">&#128197;</span>
-              <input
-                type="date"
-                value={window.start}
-                onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                title="Jump to week"
-              />
-            </label>
-            <div className="mx-1.5 h-6 w-[1px] bg-[var(--z-border)] opacity-50 shrink-0" />
-            {/* Day pills */}
-            {weekDays.map((day) => {
-              const hours = activeData.locationHours ?? {};
-              const { label, sub, isClosed } = formatDayTab(day, hours);
-              const isSelected = selectedDate === day;
-              const isToday = day === new Date().toISOString().slice(0, 10);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  disabled={isClosed}
-                  onClick={() => setSelectedDate(day)}
-                  className={`flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1.5 transition-all ${
-                    isSelected
-                      ? "bg-[var(--z-accent)] text-black"
-                      : isClosed
-                        ? "opacity-20 cursor-not-allowed"
-                        : isToday
-                          ? "bg-[var(--z-surface-2)] text-[var(--z-accent)] border border-[var(--z-accent)]/30"
-                          : "text-[var(--z-muted)] hover:bg-white/5 hover:text-[var(--z-fg)]"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
-                  <span className="text-sm font-black leading-none">{sub}</span>
-                </button>
-              );
-            })}
-            {/* Utilization */}
-            <div className="mx-2 h-8 w-[1px] bg-[var(--z-border)] opacity-50 shrink-0" />
-            <div className="flex shrink-0 flex-col justify-center px-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Util</span>
+
+            {/* Util pill */}
+            {activeView === "schedule" && (
+              <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Util</span>
                 <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#c4f036]"}`}>
                   {utilization.pct}%
                 </span>
+                <span className="text-[9px] text-[var(--z-muted)]">·</span>
+                <span className="text-[9px] font-bold text-[var(--z-fg)]">{utilization.booked} booked</span>
               </div>
-              <div className="text-[11px] font-bold text-[var(--z-fg)]">
-                {utilization.booked} <span className="text-[var(--z-muted)] font-medium">booked</span>{" "}
-                <span className="text-[var(--z-muted)]">&middot;</span>{" "}
-                {utilization.open} <span className="text-[var(--z-muted)] font-medium">open</span>
+            )}
+
+            {/* Call Out + Virtual — icon-only on mobile */}
+            {activeView === "schedule" && (
+              <div className="flex items-center gap-1 ml-1">
+                <button type="button" onClick={() => setActiveModal("callout")}
+                  className="flex h-6 w-6 items-center justify-center rounded border border-[var(--z-border)] bg-[var(--z-surface-2)] text-[10px] active:scale-95"
+                  title="Call Out">📵</button>
+                <button type="button" onClick={() => setActiveModal("virtual")}
+                  className="flex h-6 w-6 items-center justify-center rounded border border-[var(--z-border)] bg-[var(--z-surface-2)] text-[10px] active:scale-95"
+                  title="Go Virtual">💻</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ══════════ DESKTOP HEADER (hidden on mobile) ════════════════════════ */}
+        <div className="hidden sm:block">
+          {/* Row 1: location selector | view toggle | toolbar actions */}
+          <div className="flex items-center gap-1 overflow-x-auto px-3 py-1.5 scrollbar-none">
+            {/* Desktop: location pills */}
+            {locations.map((loc) => {
+              const cfg = LOCATION_CONFIG[loc.id];
+              const isActive = loc.id === activeLocationId;
+              return (
+                <button
+                  key={loc.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveLocationId(loc.id);
+                    setActiveView("schedule");
+                  }}
+                  style={isActive ? {
+                    borderColor: cfg?.border ?? "transparent",
+                    backgroundColor: cfg?.accent ?? "transparent",
+                    color: cfg?.textColor ?? "inherit",
+                  } : {}}
+                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                    isActive
+                      ? "border"
+                      : "border-transparent text-[var(--z-muted)] hover:border-[var(--z-border)] hover:text-[var(--z-fg)]"
+                  }`}
+                >
+                  {loc.name}
+                </button>
+              );
+            })}
+            <div className="mx-1 h-5 w-[1px] bg-[var(--z-border)] opacity-60 shrink-0" />
+            {/* Schedule / Rooms toggle */}
+            <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] p-0.5">
+              <button type="button" onClick={() => setActiveView("schedule")}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  activeView === "schedule" ? "bg-[#c4f036]/15 text-[#c4f036]" : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+                }`}>Schedule</button>
+              <button type="button" onClick={() => setActiveView("rooms")}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  activeView === "rooms" ? "bg-[#c4f036]/15 text-[#c4f036]" : "text-[var(--z-muted)] hover:text-[var(--z-fg)]"
+                }`}>Rooms</button>
+            </div>
+            <div className="flex-1" />
+            {/* Toolbar actions */}
+            {activeView === "schedule" && (
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button type="button" onClick={() => setActiveModal("sub")}
+                  className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-[var(--z-accent)]/50 hover:bg-[var(--z-accent)]/5 transition-all">
+                  + Sub
+                </button>
+                <button type="button" onClick={() => setActiveModal("callout")}
+                  className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                  Call Out
+                </button>
+                <button type="button" onClick={() => setActiveModal("virtual")}
+                  className="rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1.5 text-[11px] font-bold text-[var(--z-fg)] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all">
+                  Virtual
+                </button>
+              </div>
+            )}
+          </div>
+          {/* Row 2: week nav inline + day pills + utilization */}
+          {activeView === "schedule" && activeLocationId && activeData && (
+            <div
+              className="flex items-center gap-1 overflow-x-auto px-3 pb-1.5 pt-0.5 scrollbar-none"
+              style={{ borderTop: `1px solid ${activeLocConfig?.border ?? "var(--z-border)"}40` }}
+            >
+              <button type="button" onClick={() => goWeek(-1)}
+                className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-bold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+                aria-label="Previous week">&#8249;</button>
+              <span className="shrink-0 text-[11px] font-semibold text-[var(--z-fg)] px-1 whitespace-nowrap">
+                {formatWeekLabel(window.start, window.end)}
+              </span>
+              <button type="button" onClick={() => goWeek(1)}
+                className="shrink-0 rounded-md border border-[var(--z-border)] px-2 py-1 text-xs font-bold text-[var(--z-muted)] hover:text-[var(--z-fg)] transition-colors"
+                aria-label="Next week">&#8250;</button>
+              <label className="relative shrink-0 cursor-pointer" title="Jump to date">
+                <span className="pointer-events-none flex h-7 w-7 items-center justify-center rounded-md border border-[var(--z-border)] text-sm select-none text-[var(--z-muted)]">&#128197;</span>
+                <input type="date" value={window.start}
+                  onChange={(e) => e.target.value && jumpToWeek(e.target.value)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0" title="Jump to week" />
+              </label>
+              <div className="mx-1.5 h-6 w-[1px] bg-[var(--z-border)] opacity-50 shrink-0" />
+              {weekDays.map((day) => {
+                const hours = activeData.locationHours ?? {};
+                const { label, sub, isClosed } = formatDayTab(day, hours);
+                const isSelected = selectedDate === day;
+                const isToday = day === new Date().toISOString().slice(0, 10);
+                return (
+                  <button key={day} type="button" disabled={isClosed} onClick={() => setSelectedDate(day)}
+                    className={`flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1.5 transition-all ${
+                      isSelected ? "bg-[var(--z-accent)] text-black"
+                        : isClosed ? "opacity-20 cursor-not-allowed"
+                        : isToday ? "bg-[var(--z-surface-2)] text-[var(--z-accent)] border border-[var(--z-accent)]/30"
+                        : "text-[var(--z-muted)] hover:bg-white/5 hover:text-[var(--z-fg)]"
+                    }`}>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                    <span className="text-sm font-black leading-none">{sub}</span>
+                  </button>
+                );
+              })}
+              <div className="mx-2 h-8 w-[1px] bg-[var(--z-border)] opacity-50 shrink-0" />
+              <div className="flex shrink-0 flex-col justify-center px-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--z-muted)]">Util</span>
+                  <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#c4f036]"}`}>
+                    {utilization.pct}%
+                  </span>
+                </div>
+                <div className="text-[11px] font-bold text-[var(--z-fg)]">
+                  {utilization.booked} <span className="text-[var(--z-muted)] font-medium">booked</span>{" "}
+                  <span className="text-[var(--z-muted)]">&middot;</span>{" "}
+                  {utilization.open} <span className="text-[var(--z-muted)] font-medium">open</span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
       </div>
       {/* Main content area */}
       <div className="relative">
