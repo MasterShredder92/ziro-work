@@ -987,7 +987,7 @@ export function LocationScheduleGrid({
                           setBookingFirstDay(null);
                           setBookingStudentHasBlocks(null);
                           setOpenSlotContext({
-                            teacherId: "",
+                            teacherId: "00000000-0000-0000-0000-000000000000", // Explicitly flag as missing teacher
                             roomId: col.isRoom ? col.id : null,
                             date: selectedDate,
                             startTime: `${String(Math.floor(slotMin / 60)).padStart(2, "0")}:${String(slotMin % 60).padStart(2, "0")}`,
@@ -995,9 +995,14 @@ export function LocationScheduleGrid({
                           });
                         }}
                       >
-                        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,255,136,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}>
-                          + Room Available
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span style={{ fontSize: 9, fontWeight: 800, color: "rgba(239,68,68,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", userSelect: "none" }}>
+                            Missing Teacher
+                          </span>
+                          <span style={{ fontSize: 8, fontWeight: 700, color: "rgba(0,255,136,0.25)", letterSpacing: "0.06em", textTransform: "uppercase", userSelect: "none" }}>
+                            $160 Potential
+                          </span>
+                        </div>
                       </button>
                     );
                   })}

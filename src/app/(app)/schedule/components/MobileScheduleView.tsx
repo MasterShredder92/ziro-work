@@ -720,46 +720,67 @@ export function MobileScheduleView({
                   )}
 
                   {/* Blocks */}
-                  {rBlocks.map(b => {
-                    const startSlot = (toMin(b.start_time) - openMinute) / 30;
-                    const endSlot = (toMin(b.end_time) - openMinute) / 30;
-                    const left = startSlot * SLOT_W;
-                    const width = Math.max((endSlot - startSlot) * SLOT_W - 2, 10);
-                    const bs = blockStyle(b as ScheduleBlock);
-                    const student = b.student_id ? studentsById.get(b.student_id) : null;
-                    const instr = student
-                      ? (student as unknown as Record<string, unknown>).instrument as string | undefined
-                      : undefined;
-                    const isSelected = b.id === selectedBlockId || b.source_block_id === selectedBlockId;
-                    return (
-                      <button
-                        key={b.id}
-                        onClick={() => setSelectedBlockId(isSelected ? null : (b.source_block_id || b.id))}
-                        className="absolute top-1 bottom-1 rounded overflow-hidden text-left transition-all"
-                        style={{
-                          left,
-                          width,
-                          background: bs.bg,
-                          border: `1px solid ${bs.border}`,
-                          color: bs.text,
-                          outline: isSelected ? `2px solid ${bs.border}` : "none",
-                          outlineOffset: 1,
-                          zIndex: isSelected ? 5 : 2,
-                        }}>
-                        <div className="flex h-full flex-col justify-center px-1">
-                          {width > 30 && (
-                            <div className="truncate text-[9px] font-semibold leading-tight">
-                              {student ? `${instrumentEmoji(instr)}${studentFirstName(student)}` : (bs.label || "Open")}
-                            </div>
-                          )}
-                          {width > 50 && (
-                            <div className="truncate text-[8px] opacity-75 leading-tight">
-                              {minToLabel(toMin(b.start_time))}
-                            </div>
-                          )}
+                  {Array.from({ length: totalSlots }).map((_, i) => {
+                    const slotMin = openMinute + i * 30;
+                    const block = rBlocks.find(b => toMin(b.start_time) === slotMin);
+                    
+                    // If there's a block, render it
+                    if (block) {
+                      const startSlot = (toMin(block.start_time) - openMinute) / 30;
+                      const endSlot = (toMin(block.end_time) - openMinute) / 30;
+                      const left = startSlot * SLOT_W;
+                      const width = Math.max((endSlot - startSlot) * SLOT_W - 2, 10);
+                      const bs = blockStyle(block as ScheduleBlock);
+                      const student = block.student_id ? studentsById.get(block.student_id) : null;
+                      const instr = student
+                        ? (student as unknown as Record<string, unknown>).instrument as string | undefined
+                        : undefined;
+                      const isSelected = block.id === selectedBlockId || block.source_block_id === selectedBlockId;
+                      return (
+                        <button
+                          key={block.id}
+                          onClick={() => setSelectedBlockId(isSelected ? null : (block.source_block_id || block.id))}
+                          className="absolute top-1 bottom-1 rounded overflow-hidden text-left transition-all"
+                          style={{
+                            left,
+                            width,
+                            background: bs.bg,
+                            border: `1px solid ${bs.border}`,
+                            color: bs.text,
+                            outline: isSelected ? `2px solid ${bs.border}` : "none",
+                            outlineOffset: 1,
+                            zIndex: isSelected ? 5 : 2,
+                          }}>
+                          <div className="flex h-full flex-col justify-center px-1">
+                            {width > 30 && (
+                              <div className="truncate text-[9px] font-semibold leading-tight">
+                                {student ? `${instrumentEmoji(instr)}${studentFirstName(student)}` : (bs.label || "Open")}
+                              </div>
+                            )}
+                            {width > 50 && (
+                              <div className="truncate text-[8px] opacity-75 leading-tight">
+                                {minToLabel(toMin(block.start_time))}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    }
+
+                    // No block here. Is there a teacher assigned to this room row?
+                    const assignedTeacherId = dayBlocksWithRooms.find(b => b.room_id === room.id && b.teacher_id)?.teacher_id ?? null;
+                    
+                    if (!assignedTeacherId) {
+                      return (
+                        <div key={`empty-${slotMin}`} className="absolute top-0 bottom-0 flex flex-col items-center justify-center opacity-40"
+                          style={{ left: i * SLOT_W, width: SLOT_W, background: "rgba(239,68,68,0.03)" }}>
+                          <span className="text-[6px] font-black text-red-500 uppercase leading-none">Missing</span>
+                          <span className="text-[6px] font-black text-red-500 uppercase leading-none">Teacher</span>
                         </div>
-                      </button>
-                    );
+                      );
+                    }
+
+                    return null;
                   })}
                 </div>
               );
