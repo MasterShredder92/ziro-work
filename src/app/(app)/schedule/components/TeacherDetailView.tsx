@@ -111,7 +111,6 @@ function DetailActionSheet({
   const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("single");
   const [cancelReason, setCancelReason] = React.useState("");
   const bs = getBlockStyle(block);
-  const isOpen = block.block_type === "open_time" || !block.student_id;
 
   return (
     <div className="border-t mt-1 rounded-xl overflow-hidden"

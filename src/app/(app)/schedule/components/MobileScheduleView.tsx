@@ -145,7 +145,6 @@ function ActionSheet({
   const [cancelScope, setCancelScope] = React.useState<"single" | "recurring">("single");
   const [cancelReason, setCancelReason] = React.useState("");
   const bs = blockStyle(block);
-  const isOpen = block.block_type === "open_time" || !block.student_id;
 
   return (
     <div
