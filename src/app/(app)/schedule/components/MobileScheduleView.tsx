@@ -2,6 +2,7 @@
 import * as React from "react";
 import { TeacherDetailView } from "./TeacherDetailView";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
+import type { ScheduleRoom } from "@/lib/schedule/types";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { getHoursForDate } from "@/lib/schedule/locationHoursUtils";
 import {
@@ -12,7 +13,7 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TEACHER_COL_W = 72;   // px — fixed left column
 const SLOT_W = 56;           // px per 30-min slot
-const ROW_H = 56;            // px per teacher row
+const ROW_H = 56;            // px per row (fallback — overridden dynamically)
 const HEADER_H = 32;         // px — time header row
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -111,6 +112,7 @@ type Props = {
   teachers: Teacher[];
   students: Student[];
   families: Family[];
+  rooms: ScheduleRoom[];
   locationHours: LocationHoursMap;
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
 };
@@ -361,6 +363,7 @@ export function MobileScheduleView({
   teachers,
   students,
   families,
+  rooms,
   locationHours,
   onBlocksChange,
 }: Props) {
@@ -408,13 +411,52 @@ export function MobileScheduleView({
     return m;
   }, [families]);
 
-  const teachersForBoard = React.useMemo(() => {
-    const ids = new Set(dayBlocks.map(b => b.teacher_id).filter(Boolean) as string[]);
-    const withBlocks = teachers.filter(t => ids.has(t.id)).sort((a, b) =>
-      teacherDisplayName(a).localeCompare(teacherDisplayName(b)),
-    );
-    return withBlocks.length > 0 ? withBlocks : teachers.slice(0, 8);
-  }, [teachers, dayBlocks]);
+  // Always show all rooms — sorted by displayOrder then name
+  const roomsForBoard = React.useMemo(() => {
+    const active = rooms.filter(r => r.isActive);
+    return active.sort((a, b) => {
+      const oa = a.displayOrder ?? 999;
+      const ob = b.displayOrder ?? 999;
+      if (oa !== ob) return oa - ob;
+      return a.name.localeCompare(b.name);
+    });
+  }, [rooms]);
+  // Dynamic row height: fill viewport minus header/toolbar (~140px), min 44px, max 80px
+  const roomRowH = React.useMemo(() => {
+    if (roomsForBoard.length === 0) return ROW_H;
+    const available = (typeof window !== "undefined" ? window.innerHeight : 700) - 140 - HEADER_H;
+    const h = Math.floor(available / roomsForBoard.length);
+    return Math.max(44, Math.min(80, h));
+  }, [roomsForBoard.length]);
+  // Map: room_id → blocks on this day (by explicit room_id on block)
+  const roomBlocksMap = React.useMemo(() => {
+    const map = new Map<string, typeof dayBlocks>();
+    for (const b of dayBlocks) {
+      if (b.room_id) {
+        if (!map.has(b.room_id)) map.set(b.room_id, []);
+        map.get(b.room_id)!.push(b);
+      }
+    }
+    return map;
+  }, [dayBlocks]);
+  // Map: teacher_id → room_id via roomBlocksMap (fallback for blocks without room_id)
+  const teacherRoomMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [roomId, rBlocks] of roomBlocksMap.entries()) {
+      for (const b of rBlocks) {
+        if (b.teacher_id) map.set(b.teacher_id, roomId);
+      }
+    }
+    return map;
+  }, [roomBlocksMap]);
+  // Augmented dayBlocks: blocks without room_id get one via teacherRoomMap
+  const dayBlocksWithRooms = React.useMemo(() => {
+    return dayBlocks.map(b => {
+      if (b.room_id) return b;
+      const inferredRoom = b.teacher_id ? teacherRoomMap.get(b.teacher_id) : undefined;
+      return inferredRoom ? { ...b, room_id: inferredRoom } : b;
+    });
+  }, [dayBlocks, teacherRoomMap]);
 
   // Scroll to current time on mount
   React.useEffect(() => {
@@ -568,35 +610,34 @@ export function MobileScheduleView({
     <>
       {/* Grid */}
       <div className="flex" style={{ background: "var(--z-bg)" }}>
-        {/* Fixed teacher column */}
+        {/* Fixed room label column */}
         <div className="shrink-0 z-10" style={{ width: TEACHER_COL_W, background: "var(--z-bg)" }}>
           {/* Corner cell */}
           <div style={{ height: HEADER_H, borderBottom: "1px solid var(--z-border)", borderRight: "1px solid var(--z-border)" }} />
-          {/* Teacher rows — tap to open detail view */}
-          {teachersForBoard.map(teacher => (
-            <button key={teacher.id}
-              onClick={() => { setDetailTeacherId(teacher.id); setSelectedBlockId(null); }}
+          {/* Room label rows */}
+          {roomsForBoard.map(room => (
+            <div key={room.id}
               className="flex w-full items-center justify-center"
               style={{
-                height: ROW_H,
+                height: roomRowH,
                 borderBottom: "1px solid var(--z-border)",
                 borderRight: "1px solid var(--z-border)",
                 background: "transparent",
               }}>
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold"
+              <div className="flex flex-col items-center gap-0.5 px-1">
+                <div className="flex h-6 w-6 items-center justify-center rounded border text-[9px] font-black"
                   style={{
-                    borderColor: locationConfig?.border ?? "var(--z-border)",
-                    background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
-                    color: locationConfig?.textColor ?? "#c4f036",
+                    borderColor: room.color ?? (locationConfig?.border ?? "var(--z-border)"),
+                    background: room.color ? `${room.color}22` : (locationConfig?.accent ?? "rgba(0,255,136,0.1)"),
+                    color: room.color ?? (locationConfig?.textColor ?? "#c4f036"),
                   }}>
-                  {teacherInitials(teacher)}
+                  {room.name.replace(/[^0-9]/g, "") || room.name.slice(0, 2).toUpperCase()}
                 </div>
-                <div className="max-w-[60px] truncate text-center text-[8px] text-[var(--z-muted)] leading-tight">
-                  {teacherDisplayName(teacher).split(" ")[0]}
+                <div className="max-w-[60px] truncate text-center text-[7px] text-[var(--z-muted)] leading-tight">
+                  {room.name}
                 </div>
-               </div>
-            </button>
+              </div>
+            </div>
           ))}
         </div>
         {/* Scrollable timeline */}
@@ -626,12 +667,12 @@ export function MobileScheduleView({
               )}
             </div>
 
-            {/* Teacher rows */}
-            {teachersForBoard.map(teacher => {
-              const tBlocks = dayBlocks.filter(b => b.teacher_id === teacher.id);
+            {/* Room rows — every room always shown, sized to fill screen */}
+            {roomsForBoard.map(room => {
+              const rBlocks = dayBlocksWithRooms.filter(b => b.room_id === room.id);
               return (
-                <div key={teacher.id} className="relative"
-                  style={{ height: ROW_H, borderBottom: "1px solid var(--z-border)" }}>
+                <div key={room.id} className="relative"
+                  style={{ height: roomRowH, borderBottom: "1px solid var(--z-border)" }}>
                   {/* Slot dividers */}
                   {Array.from({ length: totalSlots }).map((_, i) => (
                     <div key={i} className="absolute top-0 bottom-0"
@@ -650,7 +691,7 @@ export function MobileScheduleView({
                   )}
 
                   {/* Blocks */}
-                  {tBlocks.map(b => {
+                  {rBlocks.map(b => {
                     const startSlot = (toMin(b.start_time) - openMinute) / 30;
                     const endSlot = (toMin(b.end_time) - openMinute) / 30;
                     const left = startSlot * SLOT_W;
@@ -661,7 +702,6 @@ export function MobileScheduleView({
                       ? (student as unknown as Record<string, unknown>).instrument as string | undefined
                       : undefined;
                     const isSelected = b.id === selectedBlockId || b.source_block_id === selectedBlockId;
-
                     return (
                       <button
                         key={b.id}

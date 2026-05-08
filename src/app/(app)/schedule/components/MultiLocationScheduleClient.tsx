@@ -419,6 +419,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
                 teachers={activeData?.teachers ?? []}
                 students={activeData?.students ?? []}
                 families={activeData?.families ?? []}
+                rooms={activeData?.rooms ?? []}
                 locationHours={activeData?.locationHours ?? {}}
                 onBlocksChange={handleBlocksChange}
               />
