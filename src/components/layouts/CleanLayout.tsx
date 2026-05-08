@@ -17,8 +17,8 @@ export function CleanLayout({ children }: { children: ReactNode }) {
   // Listen for custom nav toggle event dispatched by schedule mobile header
   useEffect(() => {
     const handler = () => setMobileNavOpen((open) => !open);
-    window.addEventListener("zw:toggle-nav", handler);
-    return () => window.removeEventListener("zw:toggle-nav", handler);
+    globalThis.addEventListener("zw:toggle-nav", handler);
+    return () => globalThis.removeEventListener("zw:toggle-nav", handler);
   }, []);
   const isSchedulePage = pathname?.startsWith("/schedule") ?? false;
 

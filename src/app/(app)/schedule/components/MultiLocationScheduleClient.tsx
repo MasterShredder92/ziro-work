@@ -223,7 +223,7 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               aria-label="Open navigation menu"
               onClick={() => {
                 // Dispatch a custom event that CleanLayout listens to
-                window.dispatchEvent(new CustomEvent("zw:toggle-nav"));
+                globalThis.dispatchEvent(new CustomEvent("zw:toggle-nav"));
               }}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] text-[var(--z-fg)] active:scale-95"
             >
