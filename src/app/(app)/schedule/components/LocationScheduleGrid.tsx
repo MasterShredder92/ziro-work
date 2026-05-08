@@ -1380,10 +1380,16 @@ export function LocationScheduleGrid({
                                 onClick={async () => {
                                   setBookingStudentId(s.id);
                                   setBookingStudentQuery(studentName(s));
-                                  // Check if they have other blocks to determine first lesson
+                                  // Default to recurring and student_session
+                                  setBookingRecurring(true);
+                                  setBookingFirstDay(false); // Default to regular student session
+                                  
+                                  // Check if they have other blocks to determine if they are truly new
                                   const hasBlocks = blocks.some(b => b.student_id === s.id);
                                   setBookingStudentHasBlocks(hasBlocks);
-                                  if (hasBlocks) setBookingFirstDay(false);
+                                  
+                                  // If they have NO blocks, we might want to prompt them about first day,
+                                  // but we still default to student_session (yellow) as requested.
                                 }}
                                 className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[var(--z-fg)] hover:bg-[var(--z-accent)]/10 hover:text-[var(--z-accent)]"
                               >
@@ -1437,15 +1443,46 @@ export function LocationScheduleGrid({
                       </label>
                     )}
 
+                    {/* Session Type Selection (Matching UI Colors) */}
+                    {bookingStudentId && (
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-bold text-[var(--z-muted)] uppercase tracking-wider">Session Type</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBookingFirstDay(false)}
+                            className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                              !bookingFirstDay 
+                                ? "bg-[rgba(234,179,8,0.9)] text-black border-[#ca8a04]" 
+                                : "bg-white/5 text-[var(--z-muted)] border-[var(--z-border)]"
+                            }`}
+                          >
+                            Student Session
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBookingFirstDay(true)}
+                            className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                              bookingFirstDay 
+                                ? "bg-[rgba(59,130,246,0.85)] text-white border-[#2563eb]" 
+                                : "bg-white/5 text-[var(--z-muted)] border-[var(--z-border)]"
+                            }`}
+                          >
+                            First Day
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Book button */}
-                    {bookingStudentId && (bookingFirstDay !== null || bookingStudentHasBlocks === true) && (
+                    {bookingStudentId && (
                       <button
                         type="button"
                         disabled={saving}
                         onClick={() => bookStudent(isOpenSlotModal ? null : (selectedBlock ?? null))}
                         className="w-full rounded-xl border border-[#c4f036]/40 bg-[#c4f036]/15 px-3 py-2.5 text-sm font-semibold text-[#c4f036] disabled:opacity-50 hover:bg-[#c4f036]/25 transition-colors"
                       >
-                        {saving ? "Booking…" : bookingFirstDay ? "Book as First Lesson" : bookingRecurring ? "🔄 Book Recurring" : "Book Session"}
+                        {saving ? "Booking…" : bookingRecurring ? `🔄 Book Recurring ${bookingFirstDay ? "First Day" : "Session"}` : `Book ${bookingFirstDay ? "First Day" : "Session"}`}
                       </button>
                     )}
                   </div>
