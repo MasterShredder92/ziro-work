@@ -200,16 +200,16 @@ export function CommandStrip() {
         {!m ? (
           <div style={{ ...cardBase, animation: "shimmer 1.6s infinite", backgroundImage: "linear-gradient(90deg, var(--z-surface) 25%, var(--z-surface-hover, rgba(255,255,255,0.04)) 50%, var(--z-surface) 75%)", backgroundSize: "200% 100%" }} />
         ) : (
-          <div style={{ ...cardBase, background: "radial-gradient(ellipse 80% 60% at 30% 0%, rgba(196,240,54,0.06), transparent 60%), var(--z-surface)", padding: "14px 18px" }}>
+          <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 6, position: "relative", overflow: "hidden", background: "transparent" }}>
             <div style={{ ...label, marginBottom: 2 }}>Collected · {month}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
               <div style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", flexShrink: 0 }}>{animatedCollected}</div>
               <Lifeline />
               <RevenueDonut collected={m.collectedCents} outstanding={m.outstandingCents} scheduled={m.scheduledCents} animated={ready} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", borderTop: "1px solid var(--z-border)", paddingTop: 8, marginTop: 2, gap: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 10, gap: 0 }}>
               {legendItems.map((item, i) => (
-                <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, justifyContent: "center", borderRight: i < 2 ? "1px solid var(--z-border)" : "none" }}>
+                <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, justifyContent: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: item.color, flexShrink: 0, boxShadow: `0 0 6px ${item.color}` }} />
                   <span style={{ fontSize: 10, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif" }}>{item.label}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: item.color, fontFamily: "Space Grotesk, sans-serif" }}>{item.value}</span>
@@ -256,17 +256,17 @@ export function CommandStrip() {
       <div className="cs-mobile">
         {/* HERO: Collected full-width */}
         {!m ? (
-          <div style={{ ...cardBase, height: 260, animation: "shimmer 1.6s infinite", backgroundImage: "linear-gradient(90deg, var(--z-surface) 25%, rgba(255,255,255,0.04) 50%, var(--z-surface) 75%)", backgroundSize: "200% 100%" }} />
+          <div style={{ height: 260, animation: "shimmer 1.6s infinite", backgroundImage: "linear-gradient(90deg, var(--z-surface) 25%, rgba(255,255,255,0.04) 50%, var(--z-surface) 75%)", backgroundSize: "200% 100%", borderRadius: 16 }} />
         ) : (
-          <div style={{ ...cardBase, background: "radial-gradient(ellipse 80% 60% at 30% 0%, rgba(196,240,54,0.06), transparent 60%), var(--z-surface)", borderLeft: "3px solid #c4f036", padding: "16px 18px" }}>
+          <div style={{ padding: "16px 18px", background: "transparent", position: "relative" }}>
             <div style={{ ...label, marginBottom: 4 }}>Collected · {month}</div>
             <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}>{animatedCollected}</div>
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
               <RevenueDonut collected={m.collectedCents} outstanding={m.outstandingCents} scheduled={m.scheduledCents} animated={ready} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", borderTop: "1px solid var(--z-border)", paddingTop: 10, gap: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 10, gap: 0 }}>
               {legendItems.map((item, i) => (
-                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, borderRight: i < 2 ? "1px solid var(--z-border)" : "none", padding: "0 4px" }}>
+                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, borderRight: i < 2 ? "1px solid rgba(255,255,255,0.05)" : "none", padding: "0 4px" }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: item.color, boxShadow: `0 0 6px ${item.color}` }} />
                   <span style={{ fontSize: 9, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif", textAlign: "center" }}>{item.label}</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: item.color, fontFamily: "Space Grotesk, sans-serif" }}>{item.value}</span>
