@@ -151,3 +151,49 @@ h3 {
     animation: none;
   }
 }
+
+/* Floating Box Depth & Elevation */
+.z-float-1 {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(196, 240, 54, 0.1);
+}
+
+.z-float-2 {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 2px rgba(196, 240, 54, 0.15);
+}
+
+.z-float-3 {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 4px rgba(196, 240, 54, 0.2);
+}
+
+.z-float-elevated {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 8px rgba(196, 240, 54, 0.25);
+}
+
+/* Premium card elevation with subtle neon glow */
+.z-card-premium {
+  background: var(--z-surface);
+  border: 1px solid var(--z-border);
+  border-radius: var(--z-radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 
+              0 0 1px rgba(196, 240, 54, 0.15),
+              inset 0 0 1px rgba(196, 240, 54, 0.05);
+  transition: all 0.2s ease;
+}
+
+.z-card-premium:hover {
+  border-color: rgba(196, 240, 54, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5),
+              0 0 2px rgba(196, 240, 54, 0.2),
+              inset 0 0 1px rgba(196, 240, 54, 0.1);
+}
+
+/* Modal depth */
+.z-modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.z-modal-content {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7),
+              0 0 4px rgba(196, 240, 54, 0.2);
+}
