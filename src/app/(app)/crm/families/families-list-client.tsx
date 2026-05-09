@@ -1,7 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AddFamilyModal } from "./add-family-modal";;
+import { AddFamilyModal } from "./add-family-modal";
+import { SmartBackButton } from "@/components/navigation/SmartBackButton";;
 
 /* ─── Types ──────────────────────────────────────────────── */
 type FamilyRow = {
@@ -217,8 +218,9 @@ export function FamiliesListClient({
         flexDirection: isMobile ? "column" : "row",
         flexWrap: isMobile ? "nowrap" : "wrap",
       }}>
-        {/* Tabs + New Family (mobile: same row) */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        {/* Back Button + Tabs + New Family */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8 }}>
+          <SmartBackButton />
           <div style={{ display: "flex", gap: 2, background: "var(--z-surface)", borderRadius: 8, padding: 3, border: "1px solid var(--z-border)" }}>
             {(["active","inactive"] as TabId[]).map(t => {
               const cnt = t === "active" ? (tab === "active" ? filtered.length : activeRows.length) : (tab === "inactive" ? filtered.length : inactiveRows.length);

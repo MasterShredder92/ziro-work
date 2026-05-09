@@ -8,6 +8,7 @@ import { NavigationProgress } from "@/components/system/NavigationProgress";
 import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { NavigationProvider } from "@/lib/navigation/navigationContext";
 
 type SystemProvidersProps = {
   children: React.ReactNode;
@@ -22,17 +23,19 @@ function NotificationsBridge({ children }: { children: React.ReactNode }) {
 export function SystemProviders({ children, defaultTenantId }: SystemProvidersProps) {
   return (
     <ThemeProvider>
-      <TenantUiProvider defaultTenantId={defaultTenantId}>
-        <NotificationsBridge>
-          <AnalyticsProvider>
-            <Suspense fallback={null}>
-              <NavigationProgress />
-            </Suspense>
-            <DemoBanner />
-            {children}
-          </AnalyticsProvider>
-        </NotificationsBridge>
-      </TenantUiProvider>
+      <NavigationProvider>
+        <TenantUiProvider defaultTenantId={defaultTenantId}>
+          <NotificationsBridge>
+            <AnalyticsProvider>
+              <Suspense fallback={null}>
+                <NavigationProgress />
+              </Suspense>
+              <DemoBanner />
+              {children}
+            </AnalyticsProvider>
+          </NotificationsBridge>
+        </TenantUiProvider>
+      </NavigationProvider>
     </ThemeProvider>
   );
 }
