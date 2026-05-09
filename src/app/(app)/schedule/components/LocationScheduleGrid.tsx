@@ -1250,7 +1250,8 @@ export function LocationScheduleGrid({
                           setSelectedBlockId(null);
                           setBookingStudentId(null);
                           setBookingStudentQuery("");
-                          setBookingFirstDay(null);
+                          setBookingFirstDay(false); // Default to regular student session
+                          setBookingRecurring(true); // Default to recurring
                           setBookingStudentHasBlocks(null);
                           setOpenSlotContext({
                             teacherId: colTeacherId,
@@ -1414,9 +1415,6 @@ export function LocationScheduleGrid({
                                 onClick={async () => {
                                   setBookingStudentId(s.id);
                                   setBookingStudentQuery(studentName(s));
-                                  // Default to recurring and student_session
-                                  setBookingRecurring(true);
-                                  setBookingFirstDay(false); // Default to regular student session
                                   
                                   // Check if they have other blocks to determine if they are truly new
                                   const hasBlocks = blocks.some(b => b.student_id === s.id);
@@ -1565,15 +1563,29 @@ export function LocationScheduleGrid({
                       <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
                         Session Type
                       </label>
-                      <select
-                        value={sessionType}
-                        onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
-                        className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm text-[var(--z-fg)]"
-                      >
-                        {BLOCK_TYPE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={sessionType}
+                          onChange={(e) => setSessionType(e.target.value as ScheduleBlock["block_type"])}
+                          className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-surface-2)] pl-9 pr-3 py-2 text-sm text-[var(--z-fg)] appearance-none focus:outline-none focus:border-[var(--z-accent)]/50"
+                        >
+                          {BLOCK_TYPE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                        <div 
+                          className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full border shadow-sm pointer-events-none"
+                          style={{ 
+                            backgroundColor: BLOCK_DISPLAY[sessionType]?.bg ?? "transparent",
+                            borderColor: BLOCK_DISPLAY[sessionType]?.border ?? "transparent"
+                          }}
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--z-muted)]">
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                            <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Actions */}

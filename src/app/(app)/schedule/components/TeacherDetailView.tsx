@@ -102,7 +102,7 @@ function DetailActionSheet({
   error: string | null;
 }) {
   const isOpen = block.block_type === "open_time" || !block.student_id;
-  const [tab, setTab] = React.useState<"actions" | "edit">(isOpen ? "edit" : "actions");
+  const [tab, setTab] = React.useState<"actions" | "edit">("edit");
   const [blockType, setBlockType] = React.useState(block.block_type ?? "student_session");
   const [assignedStudentId, setAssignedStudentId] = React.useState(block.student_id ?? "");
   const [assignedTeacherId, setAssignedTeacherId] = React.useState(block.teacher_id ?? "");
@@ -227,12 +227,26 @@ function DetailActionSheet({
               <label className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
                 Block Type
               </label>
-              <select value={blockType}
-                onChange={e => setBlockType(e.target.value as ScheduleBlock["block_type"])}
-                className="w-full rounded border bg-[var(--z-surface)] px-2 py-1.5 text-xs text-[var(--z-fg)] focus:outline-none"
-                style={{ borderColor: "var(--z-border)" }}>
-                {BLOCK_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
-              </select>
+              <div className="relative">
+                <select value={blockType}
+                  onChange={e => setBlockType(e.target.value as ScheduleBlock["block_type"])}
+                  className="w-full rounded border bg-[var(--z-surface)] pl-9 pr-2 py-1.5 text-xs text-[var(--z-fg)] focus:outline-none appearance-none"
+                  style={{ borderColor: "var(--z-border)" }}>
+                  {BLOCK_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
+                </select>
+                <div 
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full border shadow-sm pointer-events-none"
+                  style={{ 
+                    backgroundColor: getBlockStyle({ ...block, block_type: blockType as any }).bg,
+                    borderColor: getBlockStyle({ ...block, block_type: blockType as any }).border
+                  }}
+                />
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--z-muted)]">
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
             </div>
             <div>
               <label className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">

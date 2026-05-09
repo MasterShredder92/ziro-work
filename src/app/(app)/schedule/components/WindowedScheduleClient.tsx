@@ -985,17 +985,27 @@ export function WindowedScheduleClient({
             <div className="space-y-3">
               <label className="block text-xs">
                 <span className="mb-1 block text-[var(--z-muted)]">Session type</span>
-                <select
-                  value={sessionType}
-                  onChange={(event) => setSessionType(event.target.value as ScheduleBlock["block_type"])}
-                  className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-sm"
-                >
-                  {BLOCK_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={sessionType}
+                    onChange={(event) => setSessionType(event.target.value as ScheduleBlock["block_type"])}
+                    className="w-full rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] pl-9 pr-3 py-2 text-sm appearance-none focus:outline-none focus:border-yellow-400/50"
+                  >
+                    {BLOCK_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div 
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full border shadow-sm pointer-events-none ${blockCardClass({ block_type: sessionType } as any)}`}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--z-muted)]">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
               </label>
 
               <label className="block text-xs">
