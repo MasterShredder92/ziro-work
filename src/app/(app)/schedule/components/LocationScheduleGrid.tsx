@@ -1532,7 +1532,11 @@ export function LocationScheduleGrid({
                           {studentName(student)}
                         </Link>
                         {family && (
-                          <div className="text-[var(--z-muted)]">{family.name ?? family.primary_contact_name ?? ""}</div>
+                          <a href={`/app/families/${family.id}`}
+                            className="text-[#c4f036] hover:text-[#e4ff36] transition-colors"
+                            title="Go to family profile">
+                            {family.name ?? family.primary_contact_name ?? ""}
+                          </a>
                         )}
                         {family?.primary_phone && (
                           <div className="text-[var(--z-muted)]">{family.primary_phone}</div>

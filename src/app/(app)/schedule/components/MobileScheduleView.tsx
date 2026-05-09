@@ -189,9 +189,11 @@ function ActionSheet({
               {studentFirstName(student)} {String((student as unknown as Record<string, unknown>).last_name ?? "")}
             </div>
             {family && (
-              <div className="text-xs text-[var(--z-muted)] truncate">
+              <a href={`/app/families/${family.id}`}
+                className="text-xs text-[#c4f036] hover:text-[#e4ff36] truncate block transition-colors"
+                title="Go to family profile">
                 {String((family as unknown as Record<string, unknown>).name ?? "")}
-              </div>
+              </a>
             )}
           </div>
         </div>

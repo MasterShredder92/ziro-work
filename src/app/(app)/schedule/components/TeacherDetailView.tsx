@@ -460,9 +460,12 @@ export function TeacherDetailView({
                               {instr && <span className="text-base">{instrumentEmoji(instr)}</span>}
                               {instr && <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: bs.text }}>{instr}</span>}
                               {family && (
-                                <span className="text-[11px] font-bold truncate opacity-60" style={{ color: bs.text }}>
+                                <a href={`/app/families/${family.id}`}
+                                  className="text-[11px] font-bold truncate opacity-60 hover:opacity-100 transition-opacity"
+                                  style={{ color: bs.text }}
+                                  title="Go to family profile">
                                   · {String((family as unknown as Record<string, unknown>).name ?? "")}
-                                </span>
+                                </a>
                               )}
                             </div>
                           </div>
