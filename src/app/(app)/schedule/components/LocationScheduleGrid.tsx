@@ -1,5 +1,6 @@
-"use client";
+'use client';
 import * as React from "react";
+import { useVFX } from "@/hooks/useVFX";
 import Link from "next/link";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
 
@@ -171,7 +172,8 @@ export function LocationScheduleGrid({
   locationHours,
   onBlocksChange,
 }: Props) {
-   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
+  const { triggerClickFlare, triggerSparks } = useVFX();
+  const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [sessionType, setSessionType] = React.useState<ScheduleBlock["block_type"]>("student_session");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -1598,7 +1600,7 @@ export function LocationScheduleGrid({
                         <button
                           type="button"
                           disabled={saving}
-                          onClick={() => checkIn(selectedBlock!)}
+                          onClick={(e) => { triggerClickFlare(e); checkIn(selectedBlock!); }}
                           className="col-span-2 rounded-xl border border-emerald-400/60 bg-emerald-500/20 px-3 py-2.5 text-sm font-semibold text-emerald-100 disabled:opacity-50 hover:bg-emerald-500/30 transition-colors"
                         >
                           {saving ? "Saving..." : "✓ Check In"}
@@ -1607,7 +1609,8 @@ export function LocationScheduleGrid({
                       <button
                         type="button"
                         disabled={saving}
-                          onClick={() => {
+                          onClick={(e) => {
+                          triggerClickFlare(e);
                           // Build patch: clear flag overrides so color re-derives from block_type
                           const patch: Partial<ScheduleBlock> = {
                             block_type: sessionType,
@@ -1626,7 +1629,7 @@ export function LocationScheduleGrid({
                       <button
                         type="button"
                         disabled={saving}
-                        onClick={() => callOut(selectedBlock!)}
+                        onClick={(e) => { triggerClickFlare(e); callOut(selectedBlock!); }}
                         className="rounded-xl border border-red-400/60 bg-red-500/20 px-3 py-2.5 text-sm font-semibold text-red-200 disabled:opacity-50 hover:bg-red-500/30 transition-colors"
                       >
                         Call Out
@@ -1635,7 +1638,7 @@ export function LocationScheduleGrid({
                         <button
                           type="button"
                           disabled={saving}
-                          onClick={() => { setCancelTarget(selectedBlock!); setCancelReason(""); }}
+                          onClick={(e) => { triggerClickFlare(e); setCancelTarget(selectedBlock!); setCancelReason(""); }}
                           className="col-span-2 rounded-xl border border-orange-400/60 bg-orange-500/15 px-3 py-2.5 text-sm font-semibold text-orange-200 disabled:opacity-50 hover:bg-orange-500/25 transition-colors"
                         >
                           Cancel Session

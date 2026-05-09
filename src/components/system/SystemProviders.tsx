@@ -10,6 +10,7 @@ import { DemoBanner } from "@/components/demo/DemoBanner";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { NavigationProvider } from "@/lib/navigation/navigationContext";
 import { VFXCanvas } from "@/components/vfx/VFXCanvas";
+import { ZiroHUD } from "@/components/vfx/ZiroHUD";
 
 type SystemProvidersProps = {
   children: React.ReactNode;
@@ -33,6 +34,7 @@ export function SystemProviders({ children, defaultTenantId }: SystemProvidersPr
               </Suspense>
               <DemoBanner />
               <VFXCanvas />
+              <ZiroHUD />
               {children}
             </AnalyticsProvider>
           </NotificationsBridge>
