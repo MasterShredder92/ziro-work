@@ -643,42 +643,47 @@ export function MobileScheduleView({
                 onClick={() => {
                   if (assignedTeacher) { setDetailTeacherId(assignedTeacher.id); setSelectedBlockId(null); }
                 }}
-                className="flex w-full items-center justify-center"
+                className="flex w-full items-center justify-center transition-all hover:scale-105 active:scale-95"
                 style={{
                   height: roomRowH,
-                  borderBottom: "1px solid var(--z-border)",
-                  borderRight: "1px solid var(--z-border)",
-                  background: "transparent",
+                  borderBottom: "2px solid #333",
+                  borderRight: "2px solid #333",
+                  background: assignedTeacher ? "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(0,255,136,0.08) 100%)" : "rgba(0,0,0,0.4)",
                   cursor: assignedTeacher ? "pointer" : "default",
                 }}>
-                <div className="flex flex-col items-center gap-0.5 px-0.5">
-                  {/* Room badge */}
-                  <div className="flex h-5 w-5 items-center justify-center rounded text-[8px] font-black"
+                <div className="flex flex-col items-center gap-1.5 px-1">
+                  {/* Room badge — COMIC BOOK POP */}
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black"
                     style={{
-                      borderColor: room.color ?? (locationConfig?.border ?? "var(--z-border)"),
-                      border: `1px solid ${room.color ?? (locationConfig?.border ?? "var(--z-border)")}`,
-                      background: room.color ? `${room.color}22` : "rgba(0,255,136,0.08)",
-                      color: room.color ?? (locationConfig?.textColor ?? "#c4f036"),
+                      borderColor: "#c4f036",
+                      border: "2.5px solid #c4f036",
+                      background: "rgba(196,240,54,0.2)",
+                      color: "#c4f036",
+                      boxShadow: "0 0 16px rgba(196,240,54,0.5), inset 0 0 8px rgba(196,240,54,0.2)",
+                      textShadow: "0 0 4px rgba(0,0,0,0.9)",
                     }}>
                     {room.name.replace(/[^0-9]/g, "") || room.name.slice(0, 2).toUpperCase()}
                   </div>
                   {/* Teacher avatar or empty indicator */}
                   {assignedTeacher ? (
                     <>
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full border text-[9px] font-bold"
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black"
                         style={{
-                          borderColor: locationConfig?.border ?? "var(--z-border)",
-                          background: locationConfig?.accent ?? "rgba(0,255,136,0.1)",
-                          color: locationConfig?.textColor ?? "#c4f036",
+                          borderColor: "#a855f7",
+                          border: "2.5px solid #a855f7",
+                          background: "rgba(168,85,247,0.25)",
+                          color: "#e9d5ff",
+                          boxShadow: "0 0 16px rgba(168,85,247,0.6), inset 0 0 8px rgba(168,85,247,0.2)",
+                          textShadow: "0 0 4px rgba(0,0,0,0.9)",
                         }}>
                         {teacherInitials(assignedTeacher)}
                       </div>
-                      <div className="max-w-[60px] truncate text-center text-[7px] text-[var(--z-muted)] leading-tight">
+                      <div className="max-w-[65px] truncate text-center text-[8px] font-bold text-[#c4f036] leading-tight drop-shadow-lg">
                         {teacherDisplayName(assignedTeacher).split(" ")[0]}
                       </div>
                     </>
                   ) : (
-                    <div className="text-[7px] text-[var(--z-muted)] leading-tight opacity-50">open</div>
+                    <div className="text-[8px] text-[#666] leading-tight font-semibold">open</div>
                   )}
                 </div>
               </button>

@@ -321,15 +321,15 @@ export function MultiLocationScheduleClient({ locations, locationDataMap, initia
               </button>
             </div>
 
-            {/* Util pill */}
+            {/* Util pill — COMIC BOOK POP */}
             {activeView === "schedule" && (
-              <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Util</span>
-                <span className={`text-[10px] font-black ${utilization.pct > 85 ? "text-orange-400" : "text-[#c4f036]"}`}>
+              <div className="flex items-center gap-2 ml-auto shrink-0 px-3 py-1.5 rounded-lg border-2 border-[#c4f036] bg-gradient-to-r from-[rgba(196,240,54,0.1)] to-[rgba(168,85,247,0.08)] shadow-[0_0_16px_rgba(196,240,54,0.3)]">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[#c4f036] drop-shadow-lg">Util</span>
+                <span className={`text-[11px] font-black drop-shadow-lg ${utilization.pct > 85 ? "text-orange-400" : "text-[#c4f036]"}`}>
                   {utilization.pct}%
                 </span>
-                <span className="text-[9px] text-[var(--z-muted)]">·</span>
-                <span className="text-[9px] font-bold text-[var(--z-fg)]">{utilization.booked} booked</span>
+                <span className="text-[9px] text-[#666]">·</span>
+                <span className="text-[10px] font-bold text-[#c4f036] drop-shadow-lg">{utilization.booked} booked</span>
               </div>
             )}
 
