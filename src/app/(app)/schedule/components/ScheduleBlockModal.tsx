@@ -188,7 +188,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
               <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--z-muted)]">Student</div>
               {hasStudent ? (
                 <Link
-                  href={`/students/${block.student_id}`}
+                  href={`/app/students/${block.student_id}`}
                   onClick={onClose}
                   className="mt-0.5 block truncate text-sm font-bold text-[var(--z-fg)] transition-colors hover:text-[#c4f036] hover:underline underline-offset-2"
                 >
@@ -202,7 +202,7 @@ export function ScheduleBlockModal({ data, onClose, onOpenEditPanel }: Props) {
             </div>
             {hasStudent && (
               <Link
-                href={`/students/${block.student_id}`}
+                href={`/app/students/${block.student_id}`}
                 onClick={onClose}
                 className="ml-3 shrink-0 rounded-lg border border-[var(--z-border)] px-2.5 py-1 text-[10px] font-bold text-[var(--z-muted)] transition-all hover:border-[#c4f036]/40 hover:bg-[#c4f036]/8 hover:text-[#c4f036]"
               >

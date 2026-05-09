@@ -1044,7 +1044,7 @@ export function WindowedScheduleClient({
               <div className="grid grid-cols-1 gap-2 text-xs">
                 {selectedBlock.student_id ? (
                   <Link
-                    href={`/students/${selectedBlock.student_id}`}
+                    href={`/app/students/${selectedBlock.student_id}`}
                     className="rounded-md border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-2 text-[var(--z-fg)] hover:bg-white/5"
                   >
                     Open student profile

@@ -1019,7 +1019,7 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
   const inits = [student.first_name[0], student.last_name[0]].filter(Boolean).join("").toUpperCase();
   return (
     <BrandCard brandColor={brandColor} className="group transition-all hover:shadow-md" style={{ cursor: "pointer" }}>
-      <a href={`/students/${student.id}`} className="flex items-center gap-4 px-5 py-4">
+      <a href={`/app/students/${student.id}`} className="flex items-center gap-4 px-5 py-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"
           style={{ background: T.surface2, color: T.muted }}>
           {inits}

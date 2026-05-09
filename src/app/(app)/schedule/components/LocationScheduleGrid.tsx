@@ -1525,7 +1525,7 @@ export function LocationScheduleGrid({
                     {student && (
                       <div className="rounded-xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-3 text-xs space-y-1">
                         <Link
-                          href={`/students/${selectedBlock!.student_id}`}
+                          href={`/app/students/${selectedBlock!.student_id}`}
                           className="block font-semibold text-[var(--z-fg)] text-sm hover:text-[var(--z-accent)] hover:underline transition-colors"
                           onClick={closeModal}
                         >
@@ -1543,7 +1543,7 @@ export function LocationScheduleGrid({
                         )}
                         <div className="flex gap-2 pt-1">
                           <Link
-                            href={`/students/${selectedBlock!.student_id}`}
+                            href={`/app/students/${selectedBlock!.student_id}`}
                             className="rounded border border-[var(--z-border)] px-2 py-1 text-[var(--z-fg)] hover:bg-white/5"
                             onClick={closeModal}
                           >
