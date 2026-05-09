@@ -1,0 +1,202 @@
+/* ─── VFX Animations ─────────────────────────────────────── */
+/* Duke Nukem inspired arcade transitions and robot interactions */
+
+/* Code Flare Pulse */
+@keyframes codeFlare {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 10px rgba(196, 240, 54, 0.8), 0 0 20px rgba(168, 85, 247, 0.4);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    box-shadow: 0 0 20px rgba(196, 240, 54, 1), 0 0 40px rgba(168, 85, 247, 0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(360deg);
+    box-shadow: 0 0 0px rgba(196, 240, 54, 0);
+  }
+}
+
+/* Robot Eye Blink */
+@keyframes robotEyeBlink {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* Electricity Arc */
+@keyframes electricityArc {
+  0% {
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(0.5);
+  }
+}
+
+/* Spark Burst */
+@keyframes sparkBurst {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* Button Click Bounce */
+@keyframes clickBounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Hover Glow */
+@keyframes hoverGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(196, 240, 54, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(196, 240, 54, 0.6), 0 0 30px rgba(168, 85, 247, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(196, 240, 54, 0.3);
+  }
+}
+
+/* Scan Line Effect */
+@keyframes scanLines {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 10px;
+  }
+}
+
+/* Interactive Element Pulse */
+@keyframes interactivePulse {
+  0% {
+    border-color: rgba(196, 240, 54, 0.3);
+  }
+  50% {
+    border-color: rgba(196, 240, 54, 0.8);
+  }
+  100% {
+    border-color: rgba(196, 240, 54, 0.3);
+  }
+}
+
+/* ─── Utility Classes ─────────────────────────────────────── */
+
+.vfx-code-flare {
+  animation: codeFlare 0.6s ease-out forwards;
+}
+
+.vfx-robot-eye {
+  animation: robotEyeBlink 0.8s ease-in-out forwards;
+}
+
+.vfx-electricity {
+  animation: electricityArc 0.4s ease-out forwards;
+}
+
+.vfx-spark {
+  animation: sparkBurst 0.4s ease-out forwards;
+}
+
+.vfx-click-bounce {
+  animation: clickBounce 0.3s ease-in-out;
+}
+
+.vfx-hover-glow {
+  animation: hoverGlow 1.5s ease-in-out infinite;
+}
+
+.vfx-scan-lines {
+  animation: scanLines 0.1s linear infinite;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+.vfx-interactive-pulse {
+  animation: interactivePulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Interactive Button States ─────────────────────────────── */
+
+.vfx-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.vfx-button:hover {
+  animation: hoverGlow 1.5s ease-in-out infinite;
+}
+
+.vfx-button:active {
+  animation: clickBounce 0.3s ease-in-out;
+}
+
+/* ─── Card Hover Effects ─────────────────────────────────── */
+
+.vfx-card {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.vfx-card:hover {
+  border-color: rgba(196, 240, 54, 0.6);
+  box-shadow: 0 0 15px rgba(196, 240, 54, 0.3), 0 0 30px rgba(168, 85, 247, 0.15);
+}
+
+.vfx-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(196, 240, 54, 0.1), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.vfx-card:hover::before {
+  left: 100%;
+}

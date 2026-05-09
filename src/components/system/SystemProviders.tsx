@@ -9,6 +9,7 @@ import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { NavigationProvider } from "@/lib/navigation/navigationContext";
+import { VFXCanvas } from "@/components/vfx/VFXCanvas";
 
 type SystemProvidersProps = {
   children: React.ReactNode;
@@ -31,6 +32,7 @@ export function SystemProviders({ children, defaultTenantId }: SystemProvidersPr
                 <NavigationProgress />
               </Suspense>
               <DemoBanner />
+              <VFXCanvas />
               {children}
             </AnalyticsProvider>
           </NotificationsBridge>
