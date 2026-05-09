@@ -52,7 +52,7 @@ export function ZiroHUD() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [];
+  }, []);
 
   return (
     <>
