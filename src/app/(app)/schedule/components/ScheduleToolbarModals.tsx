@@ -289,6 +289,17 @@ export function CallOutModal({
   const [assignments, setAssignments] = React.useState<CoverageAssignment[]>([]);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [allTeachers, setAllTeachers] = React.useState<Teacher[]>([]);
+
+  // Fetch all teachers with location/sub data for the fallback pool
+  React.useEffect(() => {
+    if (step === "pick") {
+      fetch("/api/crm/teachers?include_locations=true&isActive=true")
+        .then(res => res.json())
+        .then(j => setAllTeachers(j.data ?? []))
+        .catch(() => {});
+    }
+  }, [step]);
 
   const studentsById = React.useMemo(() => {
     const m = new Map<string, Student>();
@@ -314,33 +325,92 @@ export function CallOutModal({
     );
   }, [blocks, calledOutTeacherId, selectedDate]);
 
-  // Other teachers on the same day (potential coverage)
-  const coverageTeachers = React.useMemo(() => {
-    const otherIds = new Set(
+  // Primary Pool: Teachers working at this location today
+  const workingToday = React.useMemo(() => {
+    const ids = new Set(
       blocks
-        .filter((b) => b.block_date === selectedDate && b.teacher_id && b.teacher_id !== calledOutTeacherId)
-        .map((b) => b.teacher_id as string),
+        .filter(b => b.block_date === selectedDate && b.teacher_id && b.teacher_id !== calledOutTeacherId)
+        .map(b => b.teacher_id as string)
     );
-    return teachers.filter((t) => otherIds.has(t.id));
+    return teachers.filter(t => ids.has(t.id));
   }, [blocks, teachers, calledOutTeacherId, selectedDate]);
+
+  // Secondary Pool: Off-duty teachers who can sub at this location
+  const fallbackPool = React.useMemo(() => {
+    const workingIds = new Set(workingToday.map(t => t.id));
+    return allTeachers.filter(t => {
+      if (t.id === calledOutTeacherId || workingIds.has(t.id)) return false;
+      const locs = (t as any).teacher_locations || [];
+      return locs.some((l: any) => l.location_id === locationId && (l.can_sub || l.is_regular));
+    });
+  }, [allTeachers, workingToday, locationId, calledOutTeacherId]);
+
+  const allCoverageOptions = React.useMemo(() => [...workingToday, ...fallbackPool], [workingToday, fallbackPool]);
 
   function buildAssignments() {
     const asgn: CoverageAssignment[] = calledOutBlocks.map((b) => {
       const student = b.student_id ? studentsById.get(b.student_id) : null;
-      const instr = student ? String((student as unknown as Record<string,unknown>).instrument ?? "") : "";
-      // Auto-suggest: first coverage teacher with matching instrument
-      const suggested = coverageTeachers.find((t) => {
-        const instrs = (t as unknown as Record<string,unknown>).instruments;
-        return Array.isArray(instrs) && instrs.some((i: unknown) => typeof i === "string" && /guitar|bass|piano|drum|violin|voice/i.test(i) && new RegExp(instr.split(" ")[0] ?? "", "i").test(i));
-      });
+      const studentInstr = student ? String((student as any).instrument ?? "").toLowerCase() : "";
+      const bStart = toMinute(b.start_time);
+      const bEnd = toMinute(b.end_time);
+
+      // Weighted Matching Engine
+      let bestTeacherId = "";
+      let highestScore = -1;
+
+      for (const t of allCoverageOptions) {
+        let score = 0;
+        const isWorking = workingToday.some(w => w.id === t.id);
+        const tInstrs = ((t as any).instruments || []).map((i: string) => i.toLowerCase());
+        
+        // 1. Instrument Match (Required)
+        const hasInstr = tInstrs.some((ti: string) => studentInstr.includes(ti) || ti.includes(studentInstr.split(" ")[0]));
+        if (!hasInstr) continue;
+        score += 100;
+
+        // 2. Location & Working Status
+        if (isWorking) score += 50; // Already in the building
+
+        // 3. Time Slot Match (If working today)
+        if (isWorking) {
+          const tBlocks = blocks.filter(bl => bl.teacher_id === t.id && bl.block_date === selectedDate);
+          const hasOpenSlot = !tBlocks.some(bl => {
+            const s = toMinute(bl.start_time);
+            const e = toMinute(bl.end_time);
+            return s < bEnd && e > bStart;
+          });
+
+          if (hasOpenSlot) {
+            score += 100; // Perfect time match
+          } else {
+            // Check for nearby open slots (within 30-60 mins)
+            const nearbySlot = tBlocks.find(bl => {
+              if (bl.student_id) return false; // Must be an open slot
+              const s = toMinute(bl.start_time);
+              const diff = Math.abs(s - bStart);
+              return diff <= 60;
+            });
+            if (nearbySlot) score += (60 - Math.abs(toMinute(nearbySlot.start_time) - bStart));
+          }
+        } else {
+          // Off-duty sub: Check is_sub_available flag
+          if ((t as any).is_sub_available) score += 30;
+        }
+
+        if (score > highestScore) {
+          highestScore = score;
+          bestTeacherId = t.id;
+        }
+      }
+
       return {
         blockId: b.id,
         studentId: b.student_id ?? "",
         studentName: student ? studentFullName(student) : "Student",
-        instrument: instr,
+        instrument: studentInstr,
         startTime: b.start_time,
         endTime: b.end_time,
-        coverTeacherId: suggested?.id ?? coverageTeachers[0]?.id ?? "",
+        coverTeacherId: bestTeacherId,
       };
     });
     setAssignments(asgn);
@@ -454,20 +524,27 @@ export function CallOutModal({
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
                     Assign to
                   </label>
-                  <select
-                    value={asgn.coverTeacherId}
-                    onChange={(e) => {
-                      const updated = [...assignments];
-                      updated[i] = { ...asgn, coverTeacherId: e.target.value };
-                      setAssignments(updated);
-                    }}
-                    className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)]"
-                  >
-                    <option value="">Skip (no coverage)</option>
-                    {coverageTeachers.map((t) => (
-                      <option key={t.id} value={t.id}>{teacherFullName(t)}</option>
-                    ))}
-                  </select>
+                    <select
+                      value={asgn.coverTeacherId}
+                      onChange={(e) => {
+                        const updated = [...assignments];
+                        updated[i] = { ...asgn, coverTeacherId: e.target.value };
+                        setAssignments(updated);
+                      }}
+                      className="w-full rounded-lg border border-[var(--z-border)] bg-[var(--z-bg)] px-3 py-2 text-sm text-[var(--z-fg)]"
+                    >
+                      <option value="">Skip (no coverage)</option>
+                      <optgroup label="Working Today">
+                        {workingToday.map((t) => (
+                          <option key={t.id} value={t.id}>{teacherFullName(t)}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Off-Duty Subs">
+                        {fallbackPool.map((t) => (
+                          <option key={t.id} value={t.id}>{teacherFullName(t)}</option>
+                        ))}
+                      </optgroup>
+                    </select>
                 </div>
               </div>
             ))
