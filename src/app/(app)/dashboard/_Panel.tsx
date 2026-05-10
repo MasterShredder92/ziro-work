@@ -10,7 +10,7 @@ type PanelProps = {
   featured?: boolean;
 };
 
-export function Panel({ title, description, children, accentColor = "#c4f036", className = "", featured = false }: PanelProps) {
+export function Panel({ title, description, children, accentColor = "#00ff88", className = "", featured = false }: PanelProps) {
   const inner = (
     <div
       className={`flex flex-col gap-4 rounded-2xl p-5 ${className}`}

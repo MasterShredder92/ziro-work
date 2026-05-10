@@ -118,8 +118,8 @@ export function PlatformCards() {
                   <span style={{ fontSize: 13, fontWeight: 800, color: "var(--z-fg)", fontFamily: "Space Grotesk, sans-serif" }}>{p.name}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#c4f036", boxShadow: "0 0 6px rgba(196,240,54,0.6)", animation: "livePulse 2s ease-in-out infinite" }} />
-                  <span style={{ fontSize: 10, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", fontWeight: 700 }}>Connected</span>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00ff88", boxShadow: "0 0 6px rgba(0,255,136,0.6)", animation: "livePulse 2s ease-in-out infinite" }} />
+                  <span style={{ fontSize: 10, color: "#00ff88", fontFamily: "Space Grotesk, sans-serif", fontWeight: 700 }}>Connected</span>
                 </div>
               </div>
               {/* stats */}
@@ -141,7 +141,7 @@ export function PlatformCards() {
                       padding: "8px 12px",
                       borderRadius: 8,
                       border: a.primary ? "none" : `1px solid var(--z-border)`,
-                      background: a.primary ? "#c4f036" : "transparent",
+                      background: a.primary ? "#00ff88" : "transparent",
                       color: a.primary ? "#000" : "var(--z-muted)",
                       fontSize: 11,
                       fontWeight: a.primary ? 800 : 600,
@@ -149,13 +149,13 @@ export function PlatformCards() {
                       cursor: "pointer",
                       textAlign: "left",
                       transition: "all 0.15s",
-                      boxShadow: a.primary ? "0 0 12px rgba(196,240,54,0.3)" : "none",
+                      boxShadow: a.primary ? "0 0 12px rgba(0,255,136,0.3)" : "none",
                       flex: a.primary ? 1 : undefined,
                       minHeight: 36,
                     }}
                     onMouseEnter={e => {
                       if (a.primary) {
-                        e.currentTarget.style.boxShadow = "0 0 20px rgba(196,240,54,0.5)";
+                        e.currentTarget.style.boxShadow = "0 0 20px rgba(0,255,136,0.5)";
                       } else {
                         e.currentTarget.style.borderColor = p.color;
                         e.currentTarget.style.color = p.color;
@@ -163,7 +163,7 @@ export function PlatformCards() {
                     }}
                     onMouseLeave={e => {
                       if (a.primary) {
-                        e.currentTarget.style.boxShadow = "0 0 12px rgba(196,240,54,0.3)";
+                        e.currentTarget.style.boxShadow = "0 0 12px rgba(0,255,136,0.3)";
                       } else {
                         e.currentTarget.style.borderColor = "var(--z-border)";
                         e.currentTarget.style.color = "var(--z-muted)";

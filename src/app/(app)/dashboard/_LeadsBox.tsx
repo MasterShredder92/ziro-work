@@ -32,7 +32,7 @@ function isUrgent(iso: string): boolean {
 
 const INSTRUMENT_COLORS: Record<string, string> = {
   piano:    "#7c3aed",
-  guitar:   "#c4f036",
+  guitar:   "#00ff88",
   drums:    "#ef4444",
   vocals:   "#ec4899",
   violin:   "#2563eb",

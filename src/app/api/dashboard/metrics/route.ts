@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { ok, serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
+import { getBrandingProfile } from "@/lib/branding";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +40,9 @@ export async function GET(_req: NextRequest) {
     const mtdEnd = toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     const nextStart = toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 1));
     const nextEnd = toDateStr(new Date(now.getFullYear(), now.getMonth() + 2, 0));
+
+    const branding = await getBrandingProfile(tenantId).catch(() => null);
+    const schoolName = branding?.name?.trim() || "Adkins Music Lessons";
 
     // ── Student counts ─────────────────────────────────────────────
     const { data: studentCounts, error: scErr } = await db
@@ -130,6 +134,7 @@ export async function GET(_req: NextRequest) {
       overdueCount,
       scheduledCents,
       projectedMonthlyCents,
+      schoolName,
       mtd: { start: mtdStart, end: mtdEnd, today },
     });
   } catch (err) {

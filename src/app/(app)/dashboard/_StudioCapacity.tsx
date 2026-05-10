@@ -44,7 +44,7 @@ function CapacityMeter({ pct, color }: { pct: number; color: string }) {
     const t = setTimeout(() => setAnimated(true), 200);
     return () => clearTimeout(t);
   }, []);
-  const barColor = pct >= 75 ? "#c4f036" : pct >= 50 ? "#f59e0b" : pct >= 30 ? color : "#ef4444";
+  const barColor = pct >= 75 ? "#00ff88" : pct >= 50 ? "#f59e0b" : pct >= 30 ? color : "#ef4444";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{ position: "relative", height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "visible" }}>
@@ -59,7 +59,7 @@ function CapacityMeter({ pct, color }: { pct: number; color: string }) {
   );
 }
 function LocationCard({ gap, rev }: { gap: LocationGap; rev?: LocationRevenue }) {
-  const color = gap.locationColor || "#c4f036";
+  const color = gap.locationColor || "#00ff88";
   const currentRev = rev?.collectedCents ?? 0;
   const potential75 = Math.round((gap.totalCapacity * 0.75) * (gap.avgMonthlyPerStudentCents / (4.33 * 1)));
   return (
@@ -89,7 +89,7 @@ function LocationCard({ gap, rev }: { gap: LocationGap; rev?: LocationRevenue })
       <CapacityMeter pct={gap.fillPct} color={color} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--z-border)", paddingTop: 10, gap: 4 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif" }}>{usd(currentRev)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#00ff88", fontFamily: "Space Grotesk, sans-serif" }}>{usd(currentRev)}</div>
           <div style={{ fontSize: 9, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif" }}>collected this month</div>
         </div>
         <div style={{ fontSize: 16, color: "var(--z-muted)" }}>→</div>
@@ -138,7 +138,7 @@ export function StudioCapacity() {
       <div>
         {/* section header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-          <div style={{ width: 3, height: 22, background: "linear-gradient(180deg, #c4f036, #bf36f8)", borderRadius: 2, flexShrink: 0, boxShadow: "0 0 8px rgba(196,240,54,0.4)" }} />
+          <div style={{ width: 3, height: 22, background: "linear-gradient(180deg, #00ff88, #bf36f8)", borderRadius: 2, flexShrink: 0, boxShadow: "0 0 8px rgba(0,255,136,0.4)" }} />
           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--z-fg)", fontFamily: "Space Grotesk, sans-serif" }}>Studio Capacity</span>
           <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, var(--z-border), transparent)" }} />
           {gapData && (

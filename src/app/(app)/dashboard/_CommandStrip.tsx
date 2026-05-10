@@ -68,12 +68,12 @@ function RevenueDonut({ collected, outstanding, scheduled, animated }: {
           strokeDasharray={`${outstandingDash} ${circ - outstandingDash}`} strokeDashoffset={outstandingOffset}
           strokeLinecap="butt" transform="rotate(-90 70 70)"
           style={{ filter: "drop-shadow(0 0 6px rgba(239,68,68,0.5))", transition: animated ? "stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1) 0.2s" : "none" }} />
-        <circle cx={70} cy={70} r={r} fill="none" stroke="#c4f036" strokeWidth={10}
+        <circle cx={70} cy={70} r={r} fill="none" stroke="#00ff88" strokeWidth={10}
           strokeDasharray={`${collectedDash} ${circ - collectedDash}`} strokeDashoffset={collectedOffset}
           strokeLinecap="butt" transform="rotate(-90 70 70)"
-          style={{ filter: "drop-shadow(0 0 8px rgba(196,240,54,0.6))", transition: animated ? "stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1)" : "none" }} />
-        <text x={70} y={65} textAnchor="middle" fill="#c4f036" fontSize={22} fontWeight={800} fontFamily="Space Grotesk, sans-serif"
-          style={{ filter: "drop-shadow(0 0 6px rgba(196,240,54,0.5))" }}>{collectedPctNum}%</text>
+          style={{ filter: "drop-shadow(0 0 8px rgba(0,255,136,0.6))", transition: animated ? "stroke-dasharray 1.2s cubic-bezier(0.16,1,0.3,1)" : "none" }} />
+        <text x={70} y={65} textAnchor="middle" fill="#00ff88" fontSize={22} fontWeight={800} fontFamily="Space Grotesk, sans-serif"
+          style={{ filter: "drop-shadow(0 0 6px rgba(0,255,136,0.5))" }}>{collectedPctNum}%</text>
         <text x={70} y={82} textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize={9} fontWeight={600} fontFamily="Space Grotesk, sans-serif" letterSpacing="0.08em">COLLECTED</text>
       </svg>
     </div>
@@ -83,15 +83,15 @@ function Lifeline() {
   return (
     <svg viewBox="0 0 70 40" preserveAspectRatio="none" className="cs-lifeline"
       style={{ width: 60, height: 40, flexShrink: 0, overflow: "visible" }}>
-      <path d="M0 20 Q35 20 70 20" fill="none" stroke="rgba(196,240,54,0.1)" strokeWidth={1.5} />
-      <path d="M0 20 Q35 20 70 20" fill="none" stroke="#c4f036" strokeWidth={1.5}
-        strokeDasharray="12 60" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 3px #c4f036)" }}>
+      <path d="M0 20 Q35 20 70 20" fill="none" stroke="rgba(0,255,136,0.1)" strokeWidth={1.5} />
+      <path d="M0 20 Q35 20 70 20" fill="none" stroke="#00ff88" strokeWidth={1.5}
+        strokeDasharray="12 60" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 3px #00ff88)" }}>
         <animate attributeName="stroke-dashoffset" from="72" to="-72" dur="1.4s" repeatCount="indefinite" />
       </path>
-      <path d="M0 20 Q35 20 70 20" fill="none" stroke="rgba(196,240,54,0.45)" strokeWidth={1} strokeDasharray="5 80" strokeLinecap="round">
+      <path d="M0 20 Q35 20 70 20" fill="none" stroke="rgba(0,255,136,0.45)" strokeWidth={1} strokeDasharray="5 80" strokeLinecap="round">
         <animate attributeName="stroke-dashoffset" from="85" to="-85" dur="2.1s" repeatCount="indefinite" />
       </path>
-      <circle r="2.5" fill="#c4f036" style={{ filter: "drop-shadow(0 0 4px #c4f036)" }}>
+      <circle r="2.5" fill="#00ff88" style={{ filter: "drop-shadow(0 0 4px #00ff88)" }}>
         <animateMotion dur="1.4s" repeatCount="indefinite"><mpath href="#ll-path" /></animateMotion>
       </circle>
       <path id="ll-path" d="M0 20 Q35 20 70 20" fill="none" />
@@ -143,7 +143,7 @@ export function CommandStrip() {
       backgroundSize: "200% 100%" }} />
   );
   const legendItems = m ? [
-    { label: "Collected", value: usd(m.collectedCents), color: "#c4f036" },
+    { label: "Collected", value: usd(m.collectedCents), color: "#00ff88" },
     { label: "Outstanding", value: usd(m.outstandingCents), color: "#ef4444" },
     { label: "Scheduled", value: usd(m.scheduledCents), color: "var(--z-muted)" },
   ] : [];
@@ -176,17 +176,17 @@ export function CommandStrip() {
         </Link>
         {/* 2 STUDIO HEALTH */}
         {!m ? shimmer : (
-          <div style={{ ...cardBase, borderLeft: "3px solid #c4f036" }}>
+          <div style={{ ...cardBase, borderLeft: "3px solid #00ff88" }}>
             <div style={label}>Studio Health</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
               <svg width={52} height={52} viewBox="0 0 52 52" style={{ flexShrink: 0 }}>
                 <circle cx={26} cy={26} r={20} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
                 <circle cx={26} cy={26} r={20} fill="none"
-                  stroke={collectionPct >= 75 ? "#c4f036" : collectionPct >= 50 ? "#f59e0b" : "#ef4444"}
+                  stroke={collectionPct >= 75 ? "#00ff88" : collectionPct >= 50 ? "#f59e0b" : "#ef4444"}
                   strokeWidth={6} strokeDasharray={`${(collectionPct / 100) * 125.7} 125.7`}
                   strokeLinecap="round" transform="rotate(-90 26 26)"
-                  style={{ filter: `drop-shadow(0 0 6px ${collectionPct >= 75 ? "rgba(196,240,54,0.5)" : collectionPct >= 50 ? "rgba(245,158,11,0.5)" : "rgba(239,68,68,0.5)"})`, transition: ready ? "stroke-dasharray 1s ease" : "none" }} />
-                <text x={26} y={30} textAnchor="middle" fill="#c4f036" fontSize={11} fontWeight={800} fontFamily="Space Grotesk, sans-serif">{collectionPct}</text>
+                  style={{ filter: `drop-shadow(0 0 6px ${collectionPct >= 75 ? "rgba(0,255,136,0.5)" : collectionPct >= 50 ? "rgba(245,158,11,0.5)" : "rgba(239,68,68,0.5)"})`, transition: ready ? "stroke-dasharray 1s ease" : "none" }} />
+                <text x={26} y={30} textAnchor="middle" fill="#00ff88" fontSize={11} fontWeight={800} fontFamily="Space Grotesk, sans-serif">{collectionPct}</text>
               </svg>
               <div>
                 <div style={{ fontSize: 11, color: "var(--z-fg)", fontWeight: 700, fontFamily: "Space Grotesk, sans-serif" }}>{collectionPct >= 75 ? "Healthy" : collectionPct >= 50 ? "Moderate" : "Needs Work"}</div>
@@ -203,7 +203,7 @@ export function CommandStrip() {
           <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 6, position: "relative", overflow: "hidden", background: "transparent" }}>
             <div style={{ ...label, marginBottom: 2 }}>Collected · {month}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-              <div style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", flexShrink: 0 }}>{animatedCollected}</div>
+              <div style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, color: "#00ff88", fontFamily: "Space Grotesk, sans-serif", flexShrink: 0 }}>{animatedCollected}</div>
               <Lifeline />
               <RevenueDonut collected={m.collectedCents} outstanding={m.outstandingCents} scheduled={m.scheduledCents} animated={ready} />
             </div>
@@ -222,7 +222,7 @@ export function CommandStrip() {
         <Link href="/invoices" style={{ textDecoration: "none" }}>
           {!m ? shimmer : (
             <div style={{ ...cardBase, cursor: "pointer", height: "100%", boxSizing: "border-box", transition: "box-shadow 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 0 20px rgba(196,240,54,0.1)")}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 0 20px rgba(0,255,136,0.1)")}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}>
               <div style={label}>Billing Snapshot</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
@@ -248,7 +248,7 @@ export function CommandStrip() {
           <div style={label}>Needs Attention</div>
           <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif" }}>0</div>
           <div style={{ fontSize: 11, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif" }}>retention agent monitoring</div>
-          <div style={{ marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(196,240,54,0.08)", border: "1px solid rgba(196,240,54,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 700, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", width: "fit-content" }}>✓ All Clear</div>
+          <div style={{ marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 700, color: "#00ff88", fontFamily: "Space Grotesk, sans-serif", width: "fit-content" }}>✓ All Clear</div>
         </div>
       </div>
 
@@ -260,7 +260,7 @@ export function CommandStrip() {
         ) : (
           <div style={{ padding: "16px 18px", background: "transparent", position: "relative" }}>
             <div style={{ ...label, marginBottom: 4 }}>Collected · {month}</div>
-            <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}>{animatedCollected}</div>
+            <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, color: "#00ff88", fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}>{animatedCollected}</div>
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
               <RevenueDonut collected={m.collectedCents} outstanding={m.outstandingCents} scheduled={m.scheduledCents} animated={ready} />
             </div>
@@ -290,17 +290,17 @@ export function CommandStrip() {
           {!m ? (
             <div style={{ ...cardBase, minHeight: 110, animation: "shimmer 1.6s infinite", backgroundImage: "linear-gradient(90deg, var(--z-surface) 25%, rgba(255,255,255,0.04) 50%, var(--z-surface) 75%)", backgroundSize: "200% 100%" }} />
           ) : (
-            <div style={{ ...cardBase, borderLeft: "3px solid #c4f036", minHeight: 110 }}>
+            <div style={{ ...cardBase, borderLeft: "3px solid #00ff88", minHeight: 110 }}>
               <div style={label}>Studio Health</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
                 <svg width={44} height={44} viewBox="0 0 52 52" style={{ flexShrink: 0 }}>
                   <circle cx={26} cy={26} r={20} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} />
                   <circle cx={26} cy={26} r={20} fill="none"
-                    stroke={collectionPct >= 75 ? "#c4f036" : collectionPct >= 50 ? "#f59e0b" : "#ef4444"}
+                    stroke={collectionPct >= 75 ? "#00ff88" : collectionPct >= 50 ? "#f59e0b" : "#ef4444"}
                     strokeWidth={6} strokeDasharray={`${(collectionPct / 100) * 125.7} 125.7`}
                     strokeLinecap="round" transform="rotate(-90 26 26)"
-                    style={{ filter: `drop-shadow(0 0 6px rgba(196,240,54,0.5))`, transition: ready ? "stroke-dasharray 1s ease" : "none" }} />
-                  <text x={26} y={30} textAnchor="middle" fill="#c4f036" fontSize={11} fontWeight={800} fontFamily="Space Grotesk, sans-serif">{collectionPct}</text>
+                    style={{ filter: `drop-shadow(0 0 6px rgba(0,255,136,0.5))`, transition: ready ? "stroke-dasharray 1s ease" : "none" }} />
+                  <text x={26} y={30} textAnchor="middle" fill="#00ff88" fontSize={11} fontWeight={800} fontFamily="Space Grotesk, sans-serif">{collectionPct}</text>
                 </svg>
                 <div>
                   <div style={{ fontSize: 12, color: "var(--z-fg)", fontWeight: 700, fontFamily: "Space Grotesk, sans-serif" }}>{collectionPct >= 75 ? "Healthy" : collectionPct >= 50 ? "Moderate" : "Needs Work"}</div>
@@ -337,7 +337,7 @@ export function CommandStrip() {
           <div style={{ ...cardBase, borderLeft: "3px solid rgba(191,54,248,0.3)", minHeight: 110 }}>
             <div style={label}>Attention</div>
             <div style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, color: "var(--z-muted)", fontFamily: "Space Grotesk, sans-serif" }}>0</div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(196,240,54,0.08)", border: "1px solid rgba(196,240,54,0.2)", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#c4f036", fontFamily: "Space Grotesk, sans-serif", width: "fit-content", marginTop: 4 }}>✓ All Clear</div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.2)", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#00ff88", fontFamily: "Space Grotesk, sans-serif", width: "fit-content", marginTop: 4 }}>✓ All Clear</div>
           </div>
         </div>
       </div>
