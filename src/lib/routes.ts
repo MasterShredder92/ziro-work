@@ -27,7 +27,7 @@ export const ROUTE_GROUPS: AppRouteGroup[] = [
     id: "people",
     label: "PEOPLE",
     items: [
-      { id: "crm",      label: "Families & Students", href: "/crm",      group: "people" },
+      { id: "crm",      label: "Families & Students", href: "/crm/families", group: "people" },
       { id: "teachers", label: "Teachers",             href: "/teachers", group: "people" },
     ],
   },

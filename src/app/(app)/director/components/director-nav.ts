@@ -11,7 +11,7 @@ export type DirectorNavItem = {
 
 export const DIRECTOR_NAV: DirectorNavItem[] = [
   { id: "overview", label: "Overview", href: "#overview", description: "KPIs and summary" },
-  { id: "crm", label: "CRM", href: "/crm", description: "Contacts, students, families", scope: "crm.read" },
+  { id: "crm", label: "CRM", href: "/crm/families", description: "Contacts, students, families", scope: "crm.read" },
   { id: "leads", label: "Leads", href: "#leads", description: "Pipeline", scope: "leads.read" },
   { id: "students", label: "Students", href: "#students", description: "Enrollment", scope: "students.read" },
   { id: "teachers", label: "Teachers", href: "#teachers", description: "Load & roster", scope: "students.read" },

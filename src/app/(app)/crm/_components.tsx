@@ -40,9 +40,8 @@ export function CRMLayout({
 
 export function CRMNav({ current }: { current: string }) {
   const items: Array<{ href: string; label: string; id: string }> = [
-    { id: "home", href: "/crm", label: "Dashboard" },
-    { id: "contacts", href: "/crm/contacts", label: "Contacts" },
     { id: "families", href: "/crm/families", label: "Families" },
+    { id: "contacts", href: "/crm/contacts", label: "Contacts" },
     { id: "teachers", href: "/crm/teachers", label: "Teachers" },
     { id: "enrollments", href: "/crm/enrollments", label: "Enrollments" },
     { id: "leads", href: "/crm/leads", label: "Leads" },

@@ -22,7 +22,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     match: (p) => p === "/admin",
   },
   {
-    href: "/crm",
+    href: "/crm/families",
     label: "CRM",
     icon: "◎",
     match: (p) => p === "/crm" || p.startsWith("/crm/"),
