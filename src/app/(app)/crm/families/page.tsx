@@ -4,7 +4,8 @@ import { listTeachers } from "@data/teachers";
 import { listLocations } from "@data/locations";
 import type { Family as FamilyRow } from "@/lib/types/entities";
 import { getCRMTenantId } from "../_tenant";
-import { FamiliesListClient } from "./families-list-client";
+import { FamiliesMissionControl } from "./families-mission-control-client";
+import { deriveKpi, deriveInsights } from "./_insights";
 
 export const dynamic = "force-dynamic";
 
@@ -69,15 +70,23 @@ export default async function FamiliesIndexPage() {
     if (unique.length > 0) teacherByFamily[famId] = unique.join(", ");
   }
 
+  const insightInput = { rows, counts, locationNameById, studentsByFamily, teacherByFamily };
+  const kpi = deriveKpi(insightInput);
+  const insights = deriveInsights(insightInput);
+  const nowMs = Date.now();
+
   return (
     <div className="flex flex-col h-full">
-      <FamiliesListClient
+      <FamiliesMissionControl
         rows={rows}
         counts={counts}
         locationNameById={locationNameById}
         locationOptions={locations.map((l) => ({ id: l.id, name: l.name ?? l.id }))}
         studentsByFamily={studentsByFamily}
         teacherByFamily={teacherByFamily}
+        kpi={kpi}
+        insights={insights}
+        nowMs={nowMs}
       />
     </div>
   );
