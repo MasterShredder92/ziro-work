@@ -29,6 +29,7 @@ const HUB_CSS = `
   @keyframes famFloat3 { 0%,100%{transform:translate(-50%,-50%) translateY(-5px)} 50%{transform:translate(-50%,-50%) translateY(4px)} }
   @keyframes famFloat4 { 0%,100%{transform:translate(-50%,-50%) translateY(2px)} 50%{transform:translate(-50%,-50%) translateY(-7px)} }
   @keyframes famFloat5 { 0%,100%{transform:translate(-50%,-50%) translateY(-3px)} 50%{transform:translate(-50%,-50%) translateY(6px)} }
+  @keyframes famFloat6 { 0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-6px)} }
 `;
 
 export const FAMILY_HUB_MODULES: {
@@ -41,14 +42,15 @@ export const FAMILY_HUB_MODULES: {
   leftPct: number;
   topPct: number;
   dotEdge: "top" | "bottom" | "left" | "right";
-  float: "famFloat0" | "famFloat1" | "famFloat2" | "famFloat3" | "famFloat4" | "famFloat5";
+  float: "famFloat0" | "famFloat1" | "famFloat2" | "famFloat3" | "famFloat4" | "famFloat5" | "famFloat6";
 }[] = [
-  { id: "overview",  label: "Overview",  sub: "Students & account",     num: "01", color: "#22d3ee", color2: "#0ea5e9", leftPct: 50, topPct: 14, dotEdge: "bottom", float: "famFloat0" },
-  { id: "teachers",  label: "Teachers",  sub: "Meet the team",          num: "02", color: "#00e5cc", color2: "#22d3ee", leftPct: 82, topPct: 30, dotEdge: "left",   float: "famFloat1" },
-  { id: "billing",   label: "Billing",   sub: "Plans & ledger",         num: "03", color: "#f59e0b", color2: "#ef4444", leftPct: 82, topPct: 70, dotEdge: "left",   float: "famFloat2" },
-  { id: "timeline",  label: "Timeline",  sub: "Activity stream",        num: "04", color: GREEN,     color2: "#22c55e", leftPct: 50, topPct: 86, dotEdge: "top",    float: "famFloat3" },
-  { id: "documents", label: "Documents", sub: "Files & uploads",        num: "05", color: "#a78bfa", color2: "#9900ff", leftPct: 18, topPct: 70, dotEdge: "right",  float: "famFloat4" },
-  { id: "notes",     label: "Notes",     sub: "Internal log",           num: "06", color: "#ff00cc", color2: "#9900ff", leftPct: 18, topPct: 30, dotEdge: "right",  float: "famFloat5" },
+  { id: "overview",  label: "Students",  sub: "Roster, goals & learning style", num: "01", color: "#22d3ee", color2: "#0ea5e9", leftPct: 50, topPct: 14, dotEdge: "bottom", float: "famFloat0" },
+  { id: "household", label: "Household", sub: "Parents, address & phones", num: "02", color: "#ec4899", color2: "#a855f7", leftPct: 18, topPct: 14, dotEdge: "right", float: "famFloat6" },
+  { id: "teachers",  label: "Teachers",  sub: "Meet the team",          num: "03", color: "#00e5cc", color2: "#22d3ee", leftPct: 82, topPct: 30, dotEdge: "left",   float: "famFloat1" },
+  { id: "billing",   label: "Billing",   sub: "Plans & ledger",         num: "04", color: "#f59e0b", color2: "#ef4444", leftPct: 82, topPct: 70, dotEdge: "left",   float: "famFloat2" },
+  { id: "timeline",  label: "Timeline",  sub: "Activity stream",        num: "05", color: GREEN,     color2: "#22c55e", leftPct: 50, topPct: 86, dotEdge: "top",    float: "famFloat3" },
+  { id: "documents", label: "Documents", sub: "Files & uploads",        num: "06", color: "#a78bfa", color2: "#9900ff", leftPct: 18, topPct: 70, dotEdge: "right",  float: "famFloat4" },
+  { id: "notes",     label: "Notes",     sub: "Internal log",           num: "07", color: "#ff00cc", color2: "#9900ff", leftPct: 18, topPct: 30, dotEdge: "right",  float: "famFloat5" },
 ];
 
 function connectorStyle(dotEdge: (typeof FAMILY_HUB_MODULES)[number]["dotEdge"], color: string): CSSProperties {

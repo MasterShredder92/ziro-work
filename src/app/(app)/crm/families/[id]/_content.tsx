@@ -68,7 +68,7 @@ type FamilyDetail = {
   primary_location_id: string | null;
 };
 
-const TAB_IDS = ["overview", "teachers", "billing", "documents", "notes", "timeline"] as const;
+const TAB_IDS = ["overview", "household", "teachers", "billing", "documents", "notes", "timeline"] as const;
 type Tab = (typeof TAB_IDS)[number];
 export type FamilyWorkspaceTab = Tab;
 
@@ -905,6 +905,17 @@ function MeetTeachersCard({ familyId, brandColor }: { familyId: string; brandCol
   );
 }
 function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-xs leading-relaxed" style={{ color: T.muted }}>
+        Who studies here. Cards preview goals, bio, or learning style when those fields are set; open a student for the full profile.
+      </p>
+      <StudentsTabInline familyId={familyId} brandColor={brandColor} />
+    </div>
+  );
+}
+
+function HouseholdTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -952,7 +963,9 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
 
   return (
     <div className="flex flex-col gap-4">
-      <StudentsTabInline familyId={familyId} brandColor={brandColor} />
+      <p className="text-xs leading-relaxed" style={{ color: T.muted }}>
+        Primary parent or guardian, mailing address, and notification preferences for this household.
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
         <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
@@ -969,6 +982,9 @@ type FamilyStudent = {
   instrument: string | null;
   status: string | null;
   teacher_id: string | null;
+  goals?: string | null;
+  bio?: string | null;
+  learning_style?: string | null;
 };
 
 /* ─── Student status badge ───────────────────────────────── */
@@ -989,6 +1005,8 @@ function StudentStatusBadge({ status }: { status: string | null }) {
 /* ─── Student card with fading brand border ──────────────── */
 function StudentCard({ student, brandColor }: { student: FamilyStudent & { teacherName?: string }; brandColor: string }) {
   const inits = [student.first_name[0], student.last_name[0]].filter(Boolean).join("").toUpperCase();
+  const profileLine =
+    [student.goals, student.bio, student.learning_style].find((s) => typeof s === "string" && s.trim().length > 0) ?? null;
   return (
     <BrandCard brandColor={brandColor} className="group transition-all hover:shadow-md" style={{ cursor: "pointer" }}>
       <a href={`/app/students/${student.id}`} className="flex items-center gap-4 px-5 py-4">
@@ -1005,6 +1023,11 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
             {student.instrument && student.teacherName && <span style={{ color: T.muted }}>·</span>}
             {student.teacherName && <span className="text-xs" style={{ color: T.muted }}>{student.teacherName}</span>}
           </div>
+          {profileLine ? (
+            <p className="mt-2 line-clamp-2 text-xs leading-snug" style={{ color: T.muted }} title={profileLine}>
+              {profileLine}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <StudentStatusBadge status={student.status} />
@@ -2019,6 +2042,7 @@ export function FamilySectionPanel({
   return (
     <div className="pt-1">
       {tab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
+      {tab === "household"  && <HouseholdTab  familyId={familyId} brandColor={brandColor} />}
       {tab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
       {tab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
       {tab === "documents"  && <DocumentsTab  familyId={familyId} brandColor={brandColor} />}

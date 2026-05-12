@@ -8,7 +8,8 @@ export function parseFamilyIdFromPath(pathname: string | null): string | null {
 }
 
 const FAMILY_TAB_IDS = [
-  ["overview", "Overview"],
+  ["overview", "Students"],
+  ["household", "Household"],
   ["teachers", "Teachers"],
   ["billing", "Billing"],
   ["documents", "Documents"],

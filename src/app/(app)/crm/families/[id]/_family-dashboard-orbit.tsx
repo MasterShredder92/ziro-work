@@ -60,14 +60,13 @@ interface ModDef {
 
 /** Same geometry + animation keys as dashboard `MODULE_DEFS`; labels/subs only renamed for family. */
 const FAMILY_MODULE_DEFS: ModDef[] = [
-  { id: "ov", tab: "overview", label: "Overview", num: "01", sub: "Students & account", color: BLUE, color2: "#0ea5e9", float: "float0", leftPct: 50, topPct: 19, pathStyle: "S", dotEdge: "bottom" },
+  { id: "ov", tab: "overview", label: "Students", num: "01", sub: "Roster, goals & learning style", color: BLUE, color2: "#0ea5e9", float: "float0", leftPct: 50, topPct: 19, pathStyle: "S", dotEdge: "bottom" },
   { id: "th", tab: "teachers", label: "Teachers", num: "02", sub: "Meet the team", color: GREEN, color2: "#22c55e", float: "float1", leftPct: 84, topPct: 18, pathStyle: "H", dotEdge: "left" },
   { id: "bi", tab: "billing", label: "Billing", num: "03", sub: "Plans & ledger", color: AMBER, color2: "#ef4444", float: "float2", leftPct: 85, topPct: 50, pathStyle: "S", dotEdge: "left" },
   { id: "dc", tab: "documents", label: "Documents", num: "04", sub: "Files & uploads", color: PURPLE, color2: PINK, float: "float3", leftPct: 84, topPct: 82, pathStyle: "H", dotEdge: "left" },
   { id: "nt", tab: "notes", label: "Notes", num: "05", sub: "Internal log", color: RED, color2: PINK, float: "float4", leftPct: 50, topPct: 84, pathStyle: "S", dotEdge: "top" },
   { id: "tl", tab: "timeline", label: "Timeline", num: "06", sub: "Activity stream", color: GREEN, color2: "#22c55e", float: "float5", leftPct: 16, topPct: 82, pathStyle: "H", dotEdge: "right" },
-  { id: "hb", tab: "overview", label: "Household", num: "07", sub: "Contact & settings", color: PINK, color2: PURPLE, float: "float6", leftPct: 15, topPct: 50, pathStyle: "S", dotEdge: "right" },
-  { id: "rs", tab: "overview", label: "Roster", num: "08", sub: "Students at a glance", color: TEAL, color2: BLUE, float: "float7", leftPct: 16, topPct: 18, pathStyle: "H", dotEdge: "right" },
+  { id: "hb", tab: "household", label: "Household", num: "07", sub: "Parents, address & phones", color: PINK, color2: PURPLE, float: "float6", leftPct: 15, topPct: 50, pathStyle: "S", dotEdge: "right" },
 ];
 
 const CSS = `
@@ -96,7 +95,6 @@ const CSS = `
   @keyframes float4 { 0%,100%{transform:translate(-50%,-50%) translateY(-7px)}  50%{transform:translate(-50%,-50%) translateY(4px)}  }
   @keyframes float5 { 0%,100%{transform:translate(-50%,-50%) translateY(2px)}   50%{transform:translate(-50%,-50%) translateY(-8px)} }
   @keyframes float6 { 0%,100%{transform:translate(-50%,-50%) translateY(-4px)}  50%{transform:translate(-50%,-50%) translateY(6px)}  }
-  @keyframes float7 { 0%,100%{transform:translate(-50%,-50%) translateY(3px)}   50%{transform:translate(-50%,-50%) translateY(-9px)} }
 `;
 
 function px(n: number) {
