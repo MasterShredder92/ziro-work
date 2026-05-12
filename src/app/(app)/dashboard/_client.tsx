@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useId } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
@@ -657,15 +657,18 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
   const h = Math.round(hRaw);
   const ringColor = healthStrokeColor(h);
   const ringGlow = healthGlowRgba(h, 0.5);
-  /** Interior reads as health tint (not a flat grey). */
-  const heartFillOpacity = 0.1 + (hRaw / 100) * 0.22;
-  /** Same dash math as the circle ring: dash = (h/100)*perimeter, gap = full perimeter (pathLength=100). */
+  /** Normalized path length for stroke math (matches `pathLength` on paths). */
   const len = 100;
-  const dash = (hRaw / 100) * len;
+  /** Solid fill uses a bottom-up clip so % filled matches the center number. */
+  const fillClipId = useId().replace(/:/g, "_");
+  const fillY = len * (1 - hRaw / 100);
+  const fillH = len * (hRaw / 100);
 
   const heartMeasureRef = useRef<SVGPathElement | null>(null);
-  /** Align dash pattern so progress starts at the heart crown and runs clockwise (same role as rotate(-90) on the circle). */
+  /** Align stroke dash so the meter starts at the heart crown and runs clockwise. */
   const [heartDashOffset, setHeartDashOffset] = useState(0);
+  /** One full-length dash + offset reveals `hRaw%` of the outline (same trick as circular meters). */
+  const progressRingOffset = heartDashOffset + len * (1 - hRaw / 100);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -750,7 +753,13 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
         <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${ringGlow})` }}>
-          <path d={BRAIN_HEART_D} fill={ringColor} fillOpacity={heartFillOpacity} stroke="none" style={{ transition: "fill-opacity 0.7s ease" }} />
+          <defs>
+            <clipPath id={fillClipId}>
+              <rect x={0} y={fillY} width={len} height={Math.max(0, fillH)} />
+            </clipPath>
+          </defs>
+          <path d={BRAIN_HEART_D} fill="rgba(255,255,255,0.07)" stroke="none" />
+          <path d={BRAIN_HEART_D} fill={ringColor} clipPath={`url(#${fillClipId})`} stroke="none" style={{ transition: "fill 0.7s ease" }} />
           <path
             ref={heartMeasureRef}
             d={BRAIN_HEART_D}
@@ -769,9 +778,9 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
             pathLength={len}
             strokeLinejoin="round"
             strokeLinecap="round"
-            strokeDasharray={`${dash} ${len}`}
-            strokeDashoffset={heartDashOffset}
-            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease, stroke-dashoffset 0.35s ease" }}
+            strokeDasharray={`${len} ${len}`}
+            strokeDashoffset={progressRingOffset}
+            style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
           />
         </svg>
         {/* Health score */}
