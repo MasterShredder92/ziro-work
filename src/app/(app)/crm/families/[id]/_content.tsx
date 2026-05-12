@@ -1167,11 +1167,28 @@ function StudentsTab({
       <FamilyStudentsAccountBanner familyName={familyName.trim()} brandColor={brandColor} />
     ) : null;
 
+  const studentsToolbar = (left: React.ReactNode) => (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="min-w-0 flex-1">{left}</div>
+      <div className="shrink-0">{addBtn}</div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex flex-col gap-3 animate-pulse">
+      <div className="flex flex-col gap-3">
         {accountBanner}
-        {[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl" style={{ background: T.surface }} />)}
+        {studentsToolbar(
+          <p className="text-xs font-medium animate-pulse" style={{ color: T.muted }}>
+            Loading students…
+          </p>
+        )}
+        <div className="flex flex-col gap-3 animate-pulse">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="h-20 rounded-xl" style={{ background: T.surface }} />
+          ))}
+        </div>
+        {modal}
       </div>
     );
   }
@@ -1179,7 +1196,13 @@ function StudentsTab({
     return (
       <div className="flex flex-col gap-3">
         {accountBanner}
+        {studentsToolbar(
+          <p className="text-xs font-medium" style={{ color: T.muted }}>
+            Could not refresh the list
+          </p>
+        )}
         <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>
+        {modal}
       </div>
     );
   }
@@ -1198,12 +1221,11 @@ function StudentsTab({
   return (
     <div className="flex flex-col gap-3">
       {accountBanner}
-      <div className="flex items-center justify-between">
+      {studentsToolbar(
         <p className="text-xs font-medium" style={{ color: T.muted }}>
           {students.length} student{students.length !== 1 ? "s" : ""} enrolled
         </p>
-        {addBtn}
-      </div>
+      )}
       {students.map(s => <StudentCard key={s.id} student={s} brandColor={brandColor} />)}
       {modal}
     </div>
