@@ -52,6 +52,10 @@ interface FamiliesOverview {
   familiesPastDueBalance: number;
   openLeads: number;
   leadsNeedingFirstTouch: number;
+  /** Active students with a `family_id` (same scope as location filter on `students.location_id`). */
+  activeStudentsLinked: number;
+  /** Distinct `family_id` values among those students — denominator for the average. */
+  familiesWithActiveStudent: number;
   newFamiliesByWeek: number[];
   weekLabels: string[];
   range: { mtdStart: string; mtdEnd: string };
@@ -466,10 +470,10 @@ function FamiliesContent({ data, locId }: { data: AllData; locId: string | null 
     );
   }
   const scope = locId ? "Primary studio on file" : "All locations";
-  const sPerFam =
-    locId || fam.activeFamilies === 0
-      ? "—"
-      : (data.metrics.activeStudents / fam.activeFamilies).toFixed(1);
+  const avgStudentsPerFamily =
+    fam.familiesWithActiveStudent > 0
+      ? (fam.activeStudentsLinked / fam.familiesWithActiveStudent).toFixed(1)
+      : "—";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <IC>
@@ -485,7 +489,13 @@ function FamiliesContent({ data, locId }: { data: AllData; locId: string | null 
         <IC><SL>Open leads</SL><SV color={BLUE}>{fam.openLeads}</SV></IC>
         <IC><SL>Needs first touch</SL><SV color={fam.leadsNeedingFirstTouch > 0 ? AMBER : "rgba(255,255,255,.35)"}>{fam.leadsNeedingFirstTouch}</SV></IC>
         <IC><SL>Families past-due</SL><SV color={fam.familiesPastDueBalance > 0 ? AMBER : "rgba(255,255,255,.35)"}>{fam.familiesPastDueBalance}</SV></IC>
-        <IC><SL>Students / family</SL><SV>{sPerFam}</SV></IC>
+        <IC>
+          <SL>Avg students / family</SL>
+          <SV>{avgStudentsPerFamily}</SV>
+          <div style={{ fontFamily: FONT, fontSize: 6, color: "rgba(255,255,255,.18)", marginTop: 3, lineHeight: 1.2 }}>
+            Among families with ≥1 active student{locId ? " at this location" : ""}
+          </div>
+        </IC>
       </div>
     </div>
   );

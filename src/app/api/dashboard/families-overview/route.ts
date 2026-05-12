@@ -30,6 +30,9 @@ function parseYmd(s: string): Date {
  *
  * CRM signals for the Families dashboard tile (location = `families.primary_location_id`
  * and `leads.location_id` when scoped).
+ *
+ * Students / family = active students with a family_id ÷ distinct family_ids among those rows
+ * (optionally filtered by `students.location_id`), not `activeStudents / activeFamilies`.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -78,12 +81,21 @@ export async function GET(req: NextRequest) {
       .is("archived_at", null)
       .gte("created_at", oldestMonday.toISOString());
 
+    const studBase = () =>
+      db
+        .from("students")
+        .select("family_id")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active")
+        .not("family_id", "is", null);
+
     const [
       activeHead,
       newMtdHead,
       overdueHead,
       createdRows,
       leadsRows,
+      studentRows,
     ] = await Promise.all([
       locationId ? activeQ.eq("primary_location_id", locationId) : activeQ,
       locationId ? newMtdQ.eq("primary_location_id", locationId) : newMtdQ,
@@ -94,6 +106,7 @@ export async function GET(req: NextRequest) {
         .select("id, stage, status, converted_student_id, last_contact_at, location_id")
         .eq("tenant_id", tenantId)
         .limit(12000),
+      locationId ? studBase().eq("location_id", locationId) : studBase(),
     ]);
 
     if (activeHead.error) throw activeHead.error;
@@ -101,6 +114,7 @@ export async function GET(req: NextRequest) {
     if (overdueHead.error) throw overdueHead.error;
     if (createdRows.error) throw createdRows.error;
     if (leadsRows.error) throw leadsRows.error;
+    if (studentRows.error) throw studentRows.error;
 
     const newFamiliesByWeek = [0, 0, 0, 0, 0, 0, 0, 0];
     for (const row of createdRows.data ?? []) {
@@ -131,12 +145,20 @@ export async function GET(req: NextRequest) {
       if (neverContacted) leadsNeedingFirstTouch++;
     }
 
+    const linked = studentRows.data ?? [];
+    const activeStudentsLinked = linked.length;
+    const familiesWithActiveStudent = new Set(
+      linked.map((r) => String(r.family_id ?? "")).filter((id) => id.length > 0),
+    ).size;
+
     return ok({
       activeFamilies: activeHead.count ?? 0,
       newFamiliesMtd: newMtdHead.count ?? 0,
       familiesPastDueBalance: overdueHead.count ?? 0,
       openLeads,
       leadsNeedingFirstTouch,
+      activeStudentsLinked,
+      familiesWithActiveStudent,
       newFamiliesByWeek,
       weekLabels: ["−7", "−6", "−5", "−4", "−3", "−2", "−1", "•"],
       range: { mtdStart, mtdEnd: toYmd(new Date(now.getFullYear(), now.getMonth() + 1, 0)) },
