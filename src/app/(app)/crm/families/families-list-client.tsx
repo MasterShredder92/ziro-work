@@ -22,7 +22,9 @@ type StudentEntry = {
   name: string;
   instrument?: string | null;
   status?: string | null;
+  teacherId?: string | null;
   teacherName?: string | null;
+  teacherPhotoUrl?: string | null;
 };
 
 type LocationOpt = { id: string; name: string };
@@ -122,6 +124,107 @@ function initials(name: string | null | undefined): string {
 function firstName(fullName: string | null | undefined): string {
   if (!fullName) return "";
   return fullName.split(/\s+/)[0] ?? fullName;
+}
+
+function MiniTeacherLineAvatar({
+  photoUrl,
+  teacherName,
+  needsAssignment,
+  hasTeacher,
+  size = 18,
+}: {
+  photoUrl?: string | null;
+  teacherName: string | null;
+  needsAssignment: boolean;
+  hasTeacher: boolean;
+  size?: number;
+}) {
+  const border = "1px solid var(--z-border)";
+  if (needsAssignment) {
+    return (
+      <div
+        title="Needs teacher"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "rgba(245,158,11,0.12)",
+          border: "1px dashed rgba(245,158,11,0.45)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: Math.round(size * 0.45),
+          fontWeight: 700,
+          color: "#f59e0b",
+        }}
+      >
+        ?
+      </div>
+    );
+  }
+  if (hasTeacher && photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={teacherName ? `Teacher: ${teacherName}` : "Teacher"}
+        width={size}
+        height={size}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          flexShrink: 0,
+          border,
+        }}
+      />
+    );
+  }
+  if (hasTeacher) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.06)",
+          border,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: Math.round(size * 0.38),
+          fontWeight: 700,
+          color: "var(--z-muted)",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {initials(teacherName)}
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        flexShrink: 0,
+        background: "rgba(255,255,255,0.04)",
+        border: "1px dashed var(--z-border)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: Math.round(size * 0.32),
+        fontWeight: 600,
+        color: "var(--z-muted)",
+      }}
+    >
+      —
+    </div>
+  );
 }
 
 type TabId = "active" | "inactive";
@@ -363,6 +466,9 @@ export function FamiliesListClient({
               name: firstName(s.name),
               instrument: s.instrument ? normInst(s.instrument) : null,
               teacher: s.teacherName ?? null,
+              teacherPhotoUrl: s.teacherPhotoUrl ?? null,
+              teacherId: s.teacherId ?? null,
+              status: s.status ?? null,
             }));
             const extraCount = students.length > 6 ? students.length - 6 : 0;
 
@@ -458,8 +564,18 @@ export function FamiliesListClient({
                   {/* Row 4+: Students */}
                   {studentLines.length > 0 && (
                     <div style={{ paddingLeft: 58, marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
-                      {studentLines.map((sl, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                      {studentLines.map((sl, i) => {
+                        const isActive = (sl.status ?? "").toLowerCase() === "active";
+                        const hasTeacher = !!(sl.teacherId || sl.teacher);
+                        const needsAssign = isActive && !sl.teacherId && !sl.teacher;
+                        return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <MiniTeacherLineAvatar
+                            photoUrl={sl.teacherPhotoUrl}
+                            teacherName={sl.teacher}
+                            needsAssignment={needsAssign}
+                            hasTeacher={hasTeacher}
+                          />
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--z-fg)" }}>{sl.name}</span>
                           {sl.instrument && (
                             <span style={{
@@ -474,7 +590,8 @@ export function FamiliesListClient({
                             </span>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                       {extraCount > 0 && (
                         <span style={{ fontSize: 10, color: "var(--z-muted)", fontWeight: 500 }}>+{extraCount} more</span>
                       )}
@@ -512,6 +629,9 @@ export function FamiliesListClient({
               name: firstName(s.name),
               instrument: s.instrument ? normInst(s.instrument) : null,
               teacher: s.teacherName ?? null,
+              teacherPhotoUrl: s.teacherPhotoUrl ?? null,
+              teacherId: s.teacherId ?? null,
+              status: s.status ?? null,
             }));
             const extraCount = students.length > 5 ? students.length - 5 : 0;
 
@@ -612,8 +732,19 @@ export function FamiliesListClient({
                   <div style={{ display: "flex", flexDirection: "column", gap: 1, overflow: "hidden" }}>
                     {studentLines.length > 0 ? (
                       <>
-                        {studentLines.map((sl, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden", whiteSpace: "nowrap" }}>
+                        {studentLines.map((sl, i) => {
+                          const isActive = (sl.status ?? "").toLowerCase() === "active";
+                          const hasTeacher = !!(sl.teacherId || sl.teacher);
+                          const needsAssign = isActive && !sl.teacherId && !sl.teacher;
+                          return (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden", whiteSpace: "nowrap" }}>
+                            <MiniTeacherLineAvatar
+                              photoUrl={sl.teacherPhotoUrl}
+                              teacherName={sl.teacher}
+                              needsAssignment={needsAssign}
+                              hasTeacher={hasTeacher}
+                              size={16}
+                            />
                             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--z-fg)", flexShrink: 0 }}>{sl.name}</span>
                             {sl.instrument && (
                               <>
@@ -628,7 +759,8 @@ export function FamiliesListClient({
                               </>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                         {extraCount > 0 && (
                           <span style={{ fontSize: 10, color: "var(--z-border)", fontWeight: 500 }}>+{extraCount} more</span>
                         )}

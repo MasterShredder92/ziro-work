@@ -34,6 +34,7 @@ type StudentEntry = {
   status?: string | null;
   teacherId?: string | null;
   teacherName?: string | null;
+  teacherPhotoUrl?: string | null;
   locationId?: string | null;
 };
 
@@ -1401,6 +1402,111 @@ function TableRow({
   );
 }
 
+function InlineStudentTeacherAvatar({
+  photoUrl,
+  teacherName,
+  needsAssignment,
+  hasTeacher,
+  size = 22,
+}: {
+  photoUrl?: string | null;
+  teacherName: string | null;
+  needsAssignment: boolean;
+  hasTeacher: boolean;
+  size?: number;
+}) {
+  const border = `1px solid ${SURFACE_BORDER}`;
+  if (needsAssignment) {
+    return (
+      <div
+        title="Needs teacher"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "rgba(245,158,11,0.12)",
+          border: `1px dashed ${OPP}66`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: FONT,
+          fontSize: Math.round(size * 0.45),
+          fontWeight: 700,
+          color: OPP,
+        }}
+      >
+        ?
+      </div>
+    );
+  }
+  if (hasTeacher && photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={teacherName ? `Teacher: ${teacherName}` : "Teacher"}
+        width={size}
+        height={size}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          flexShrink: 0,
+          border,
+        }}
+      />
+    );
+  }
+  if (hasTeacher) {
+    const ini = initials(teacherName);
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.06)",
+          border,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: FONT,
+          fontSize: Math.round(size * 0.38),
+          fontWeight: 700,
+          color: FG_SECONDARY,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {ini}
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        flexShrink: 0,
+        background: "rgba(255,255,255,0.04)",
+        border: `1px dashed ${FG_QUIET}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: FONT,
+        fontSize: Math.round(size * 0.32),
+        fontWeight: 600,
+        color: FG_QUIET,
+      }}
+    >
+      —
+    </div>
+  );
+}
+
 function ExpandedFamilyRow({
   students,
   onOpenFamily,
@@ -1442,6 +1548,7 @@ function ExpandedFamilyRow({
       {sorted.map((s) => {
         const isActive = (s.status ?? "").toLowerCase() === "active";
         const isUnassigned = !s.teacherName && !s.teacherId;
+        const hasTeacher = !!(s.teacherId || s.teacherName);
         return (
           <div
             key={s.id}
@@ -1456,14 +1563,22 @@ function ExpandedFamilyRow({
               opacity: isActive ? 1 : 0.55,
             }}
           >
-            <span style={{
-              fontFamily: FONT,
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: FG,
-              letterSpacing: "-0.005em",
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            }}>{s.name}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              <InlineStudentTeacherAvatar
+                photoUrl={s.teacherPhotoUrl}
+                teacherName={s.teacherName ?? null}
+                needsAssignment={isUnassigned && isActive}
+                hasTeacher={hasTeacher}
+              />
+              <span style={{
+                fontFamily: FONT,
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: FG,
+                letterSpacing: "-0.005em",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>{s.name}</span>
+            </div>
             <span style={{
               fontFamily: FONT,
               fontSize: 11.5,

@@ -48,12 +48,21 @@ export default async function FamiliesIndexPage() {
   );
 
   const teacherNameById: Record<string, string> = {};
+  const teacherPhotoById: Record<string, string | null> = {};
   for (const t of allTeachers) {
-    const raw = t as { id: string; display_name?: string | null; first_name?: string | null; last_name?: string | null };
+    const raw = t as {
+      id: string;
+      display_name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      photo_url?: string | null;
+    };
     const name =
       raw.display_name?.trim() ||
       [raw.first_name, raw.last_name].filter(Boolean).join(" ").trim();
     if (name) teacherNameById[raw.id] = name;
+    const photo = raw.photo_url?.trim();
+    teacherPhotoById[raw.id] = photo && photo.length > 0 ? photo : null;
   }
 
   const counts = await countStudentsByFamilyIds(
@@ -70,6 +79,7 @@ export default async function FamiliesIndexPage() {
     status?: string | null;
     teacherId?: string | null;
     teacherName?: string | null;
+    teacherPhotoUrl?: string | null;
     locationId?: string | null;
   }[]> = {};
 
@@ -82,6 +92,7 @@ export default async function FamiliesIndexPage() {
       location_id?: string | null;
     };
     const teacherName = raw.teacher_id ? (teacherNameById[raw.teacher_id] ?? null) : null;
+    const teacherPhotoUrl = raw.teacher_id ? (teacherPhotoById[raw.teacher_id] ?? null) : null;
     studentsByFamily[s.family_id]!.push({
       id: s.id,
       name: [s.first_name, s.last_name].filter(Boolean).join(" ") || s.id,
@@ -89,6 +100,7 @@ export default async function FamiliesIndexPage() {
       status: s.status ?? null,
       teacherId: raw.teacher_id ?? null,
       teacherName,
+      teacherPhotoUrl,
       locationId: raw.location_id ?? null,
     });
   }
