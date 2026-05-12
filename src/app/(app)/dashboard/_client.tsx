@@ -52,6 +52,9 @@ const TEAL    = "#00e5cc";
 const FONT    = "'Inter', system-ui, sans-serif";
 const NUMFONT = "'Plus Jakarta Sans', system-ui, sans-serif";
 
+/** Matches `AppLocationRail` aside width so fixed dashboard layers leave the rail visible. */
+const WORKSPACE_LOCATION_RAIL_PX = 88;
+
 // ── Module definitions — center-anchored percentage coordinates ───────────────
 //
 // left/top are the CENTER of each box (translate(-50%,-50%) anchors to center).
@@ -862,12 +865,29 @@ export function DashboardClient() {
     <>
       <style>{CSS}</style>
 
-      {/* Scanlines */}
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.08) 3px, rgba(0,0,0,.08) 4px)" }} />
+      {/* Scanlines — inset from left so they do not cover `AppLocationRail` */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: WORKSPACE_LOCATION_RAIL_PX,
+          pointerEvents: "none",
+          zIndex: 9999,
+          background:
+            "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.08) 3px, rgba(0,0,0,.08) 4px)",
+        }}
+      />
 
-      {/* Full-screen canvas */}
+      {/* Full-screen canvas — inset from left so `AppLocationRail` stays visible */}
       <div style={{
-        position: "fixed", inset: 0, zIndex: 100,
+        position: "fixed",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: WORKSPACE_LOCATION_RAIL_PX,
+        zIndex: 100,
         backgroundColor: "#0a0c10",
         backgroundImage: "radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px)",
         backgroundSize: "24px 24px",
