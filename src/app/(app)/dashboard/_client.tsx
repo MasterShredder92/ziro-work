@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
@@ -641,90 +641,16 @@ function TopBar({ focusLabel, scopeLabel }: { focusLabel: string; scopeLabel: st
   );
 }
 
-const BRAIN_HEART_D =
-  "M 50 88" +
-  " C 30 80 12 62 12 44" +
-  " C 12 28 26 16 40 22" +
-  " C 46 24 49 30 50 36" +
-  " C 51 30 54 24 60 22" +
-  " C 74 16 88 28 88 44" +
-  " C 88 62 70 80 50 88" +
-  " Z";
-
 function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
   const hRaw = Math.min(100, Math.max(0, healthScore));
   const h = Math.round(hRaw);
-  const heartColor = healthStrokeColor(h);
-  const heartGlow = healthGlowRgba(h, 0.5);
-  const heartFill = healthGlowRgba(h, 0.07);
-
-  const heartMeasureRef = useRef<SVGPathElement | null>(null);
-  /** strokeDashoffset (pathLength=100 units): pattern origin sits at 12 o’clock; dash grows clockwise. */
-  const [heartDashOffset, setHeartDashOffset] = useState(0);
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = heartMeasureRef.current;
-      if (!el || typeof el.getTotalLength !== "function") return;
-      const len = el.getTotalLength();
-      if (!(len > 1e-6)) return;
-
-      const steps = 720;
-      const cx = 50;
-      const cy = 54;
-
-      // Crown = center-strip saddle (not lobe tips): deepest y in upper band (lobes sit higher / smaller y).
-      let crownS = 0;
-      let crownY = -1e9;
-      let foundCrown = false;
-      for (let i = 0; i <= steps; i++) {
-        const s = (i / steps) * len;
-        const p = el.getPointAtLength(s);
-        if (Math.abs(p.x - cx) > 14) continue;
-        if (p.y < 10 || p.y > 44) continue;
-        if (p.y > crownY) {
-          crownY = p.y;
-          crownS = s;
-          foundCrown = true;
-        }
-      }
-      if (!foundCrown) {
-        let bestD = Infinity;
-        for (let i = 0; i <= steps; i++) {
-          const s = (i / steps) * len;
-          const p = el.getPointAtLength(s);
-          const d = (p.x - cx) ** 2 + (p.y - 28) ** 2;
-          if (d < bestD) {
-            bestD = d;
-            crownS = s;
-          }
-        }
-      }
-
-      const eps = Math.max(0.18, len * 0.008);
-      const p0 = el.getPointAtLength(crownS);
-      const p1 = el.getPointAtLength((crownS + eps) % len);
-      const radx = p0.x - cx;
-      const rady = p0.y - cy;
-      const tx = p1.x - p0.x;
-      const ty = p1.y - p0.y;
-      const cross = radx * ty - rady * tx;
-      const forwardIsCw = cross > 0;
-      // Negative offset aligns the dash pattern so the first stroke begins at the crown (same idea as rotate(-90) on circles).
-      const off = forwardIsCw ? -crownS : crownS - len;
-      setHeartDashOffset(off);
-    };
-
-    let raf1 = 0;
-    let raf2 = 0;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(measure);
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, []);
+  const ringColor = healthStrokeColor(h);
+  const ringGlow = healthGlowRgba(h, 0.5);
+  const cx = 50;
+  const cy = 50;
+  const r = 38;
+  const circ = 2 * Math.PI * r;
+  const dash = (hRaw / 100) * circ;
 
   return (
     <button
@@ -742,35 +668,33 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
           boxShadow: `inset 0 -6px 18px rgba(180,255,0,.08), inset 2px 4px 14px rgba(255,255,255,.08), 0 0 36px ${healthGlowRgba(h, 0.35)}`,
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
-        {/* Heart progress: pathLength 100; dash grows clockwise from crown (offset from measured s). */}
-        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${heartGlow})` }}>
-          <path d={BRAIN_HEART_D} fill={heartFill} stroke="none" />
-          <path
-            ref={heartMeasureRef}
-            d={BRAIN_HEART_D}
+        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${ringGlow})` }}>
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
             fill="none"
             stroke="rgba(255,255,255,0.1)"
             strokeWidth={6}
-            pathLength={100}
-            strokeLinejoin="round"
-            strokeLinecap="round"
+            transform={`rotate(-90 ${cx} ${cy})`}
           />
-          <path
-            d={BRAIN_HEART_D}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
             fill="none"
-            stroke={heartColor}
+            stroke={ringColor}
             strokeWidth={4.5}
-            pathLength={100}
-            strokeLinejoin="round"
             strokeLinecap="round"
-            strokeDasharray={`${hRaw} ${Math.max(1e-4, 100 - hRaw)}`}
-            strokeDashoffset={heartDashOffset}
-            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease, stroke-dashoffset 0.35s ease" }}
+            strokeDasharray={`${dash} ${circ}`}
+            strokeDashoffset={0}
+            transform={`rotate(-90 ${cx} ${cy})`}
+            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
           />
         </svg>
         {/* Health score */}
         <div style={{ position: "absolute", top: "59%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2, pointerEvents: "none" }}>
-          <span style={{ fontFamily: NUMFONT, fontSize: 18, fontWeight: 700, color: heartColor, letterSpacing: "-.01em", textShadow: `0 0 12px ${heartGlow}` }}>{h}</span>
+          <span style={{ fontFamily: NUMFONT, fontSize: 18, fontWeight: 700, color: ringColor, letterSpacing: "-.01em", textShadow: `0 0 12px ${ringGlow}` }}>{h}</span>
         </div>
         {flash && (
           <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 3, background: "radial-gradient(circle, rgba(255,255,255,.5) 0%, rgba(180,255,0,.18) 50%, transparent 70%)", animation: "flashIn .35s ease-out forwards", pointerEvents: "none" }} />
