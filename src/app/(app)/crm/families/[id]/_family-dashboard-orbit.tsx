@@ -58,15 +58,15 @@ interface ModDef {
   dotEdge: "top" | "bottom" | "left" | "right";
 }
 
-/** Same geometry + animation keys as dashboard `MODULE_DEFS`; labels/subs only renamed for family. */
+/** Seven modules on a loose ellipse around the orb (even angular spacing). */
 const FAMILY_MODULE_DEFS: ModDef[] = [
-  { id: "ov", tab: "overview", label: "Students", num: "01", sub: "Roster, goals & learning style", color: BLUE, color2: "#0ea5e9", float: "float0", leftPct: 50, topPct: 19, pathStyle: "S", dotEdge: "bottom" },
-  { id: "th", tab: "teachers", label: "Teachers", num: "02", sub: "Meet the team", color: GREEN, color2: "#22c55e", float: "float1", leftPct: 84, topPct: 18, pathStyle: "H", dotEdge: "left" },
-  { id: "bi", tab: "billing", label: "Billing", num: "03", sub: "Plans & ledger", color: AMBER, color2: "#ef4444", float: "float2", leftPct: 85, topPct: 50, pathStyle: "S", dotEdge: "left" },
-  { id: "dc", tab: "documents", label: "Documents", num: "04", sub: "Files & uploads", color: PURPLE, color2: PINK, float: "float3", leftPct: 84, topPct: 82, pathStyle: "H", dotEdge: "left" },
-  { id: "nt", tab: "notes", label: "Notes", num: "05", sub: "Internal log", color: RED, color2: PINK, float: "float4", leftPct: 50, topPct: 84, pathStyle: "S", dotEdge: "top" },
-  { id: "tl", tab: "timeline", label: "Timeline", num: "06", sub: "Activity stream", color: GREEN, color2: "#22c55e", float: "float5", leftPct: 16, topPct: 82, pathStyle: "H", dotEdge: "right" },
-  { id: "hb", tab: "household", label: "Household", num: "07", sub: "Parents, address & phones", color: PINK, color2: PURPLE, float: "float6", leftPct: 15, topPct: 50, pathStyle: "S", dotEdge: "right" },
+  { id: "ov", tab: "overview", label: "Students", num: "01", sub: "Roster, goals & learning style", color: BLUE, color2: "#0ea5e9", float: "float0", leftPct: 50, topPct: 16, pathStyle: "S", dotEdge: "bottom" },
+  { id: "th", tab: "teachers", label: "Teachers", num: "02", sub: "Meet the team", color: GREEN, color2: "#22c55e", float: "float1", leftPct: 77, topPct: 29, pathStyle: "H", dotEdge: "left" },
+  { id: "bi", tab: "billing", label: "Billing", num: "03", sub: "Plans & ledger", color: AMBER, color2: "#ef4444", float: "float2", leftPct: 84, topPct: 58, pathStyle: "S", dotEdge: "left" },
+  { id: "dc", tab: "documents", label: "Documents", num: "04", sub: "Files & uploads", color: PURPLE, color2: PINK, float: "float3", leftPct: 65, topPct: 81, pathStyle: "H", dotEdge: "top" },
+  { id: "nt", tab: "notes", label: "Notes", num: "05", sub: "Internal log", color: RED, color2: PINK, float: "float4", leftPct: 35, topPct: 81, pathStyle: "S", dotEdge: "top" },
+  { id: "tl", tab: "timeline", label: "Timeline", num: "06", sub: "Activity stream", color: GREEN, color2: "#22c55e", float: "float5", leftPct: 16, topPct: 58, pathStyle: "H", dotEdge: "right" },
+  { id: "hb", tab: "household", label: "Household", num: "07", sub: "Parents, address & phones", color: PINK, color2: PURPLE, float: "float6", leftPct: 23, topPct: 29, pathStyle: "S", dotEdge: "right" },
 ];
 
 const CSS = `
