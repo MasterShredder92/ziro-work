@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { AddStudentModal } from "./add-student-modal";
 
@@ -14,7 +14,7 @@ const LOCATION_COLORS: Record<string, string> = {
   omaha:    "#b91c1c",
   elkhorn:  "#1d4ed8",
 };
-function locationBrandColor(name: string | null): string {
+export function locationBrandColor(name: string | null): string {
   if (!name) return "#00D16C";
   const n = name.toLowerCase();
   for (const [key, val] of Object.entries(LOCATION_COLORS)) {
@@ -70,8 +70,9 @@ type FamilyDetail = {
 
 const TAB_IDS = ["overview", "teachers", "billing", "documents", "notes", "timeline"] as const;
 type Tab = (typeof TAB_IDS)[number];
+export type FamilyWorkspaceTab = Tab;
 
-function parseTabParam(raw: string | null): Tab {
+export function parseTabParam(raw: string | null): Tab {
   if (!raw) return "overview";
   if (raw === "docs_notes") return "documents";
   if ((TAB_IDS as readonly string[]).includes(raw)) return raw as Tab;
@@ -140,59 +141,6 @@ function BrandCard({
         }}
       />
       {children}
-    </div>
-  );
-}
-
-/* ─── Tab nav ────────────────────────────────────────────── */
-const TABS: { id: Tab; label: string }[] = [
-  { id: "overview",  label: "Overview"   },
-  { id: "teachers",  label: "Teachers"   },
-  { id: "billing",   label: "Billing"    },
-  { id: "documents", label: "Documents"  },
-  { id: "notes",     label: "Notes"      },
-  { id: "timeline",  label: "Timeline"   },
-];
-
-function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: Tab) => void; brandColor: string }) {
-  return (
-    <div className="min-w-0 p-1.5">
-      <nav
-        className="flex gap-1 overflow-x-auto overflow-y-hidden rounded-2xl border border-white/[0.06] bg-black/40 p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.45)] backdrop-blur-xl light-theme:border-[var(--z-border)] light-theme:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_6%)] light-theme:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-        aria-label="Family tabs"
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
-        {TABS.map((tab) => {
-          const isActive = tab.id === active;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              className={`shrink-0 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all duration-200 sm:px-4 sm:py-3 ${
-                isActive ? "" : "hover:bg-[color-mix(in_oklab,var(--z-fg),transparent_94%)] dark:hover:bg-white/[0.04]"
-              }`}
-              style={
-                isActive
-                  ? {
-                      color: "var(--z-fg)",
-                      background: "color-mix(in oklab, var(--z-surface), transparent 2%)",
-                      boxShadow: `0 0 0 1px ${brandColor}55, 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)`,
-                    }
-                  : {
-                      color: "var(--z-fg-secondary, var(--z-muted))",
-                      background: "transparent",
-                      boxShadow: "none",
-                    }
-              }
-              aria-selected={isActive}
-              role="tab"
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </nav>
     </div>
   );
 }
@@ -2058,65 +2006,24 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
   );
 }
 
-/* ─── Main export ────────────────────────────────────────── */
-export function FamilyAccountContent() {
-  const params = useParams<{ id: string }>();
-  const familyId = params?.id ?? "";
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const activeTab = useMemo(
-    () => parseTabParam(searchParams.get("tab")),
-    [searchParams]
-  );
-
-  const setTab = (t: Tab) => {
-    const paramsNext = new URLSearchParams(searchParams.toString());
-    paramsNext.set("tab", t);
-    router.replace(`${pathname}?${paramsNext.toString()}`, { scroll: false });
-  };
-
-  const [brandColor, setBrandColor] = useState<string>("#00D16C");
-
-  useEffect(() => {
-    if (!familyId) return;
-    async function resolveColor() {
-      try {
-        const res = await fetch(`/api/crm/families/${familyId}`, {
-          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
-        });
-        if (!res.ok) return;
-        const json = await res.json();
-        const f = json.data ?? json;
-        if (f.primary_location_id) {
-          const lr = await fetch(`/api/crm/locations/${f.primary_location_id}`, {
-            headers: { "x-tenant-id": DEFAULT_TENANT_ID },
-          });
-          if (lr.ok) {
-            const lj = await lr.json();
-            const loc = lj.data ?? lj;
-            setBrandColor(locationBrandColor(loc.name ?? null));
-          }
-        }
-      } catch { /* non-blocking */ }
-    }
-    resolveColor();
-  }, [familyId]);
-
+/* ─── Section body (hub workspace + deep links use ?tab=) ─── */
+export function FamilySectionPanel({
+  tab,
+  familyId,
+  brandColor,
+}: {
+  tab: FamilyWorkspaceTab;
+  familyId: string;
+  brandColor: string;
+}) {
   return (
-    <div className="flex flex-col gap-0">
-      <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-[1.35rem] border border-white/[0.08] bg-black/30 p-1 shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl light-theme:border-[var(--z-border)] light-theme:bg-[color-mix(in_oklab,var(--z-bg),transparent_18%)] light-theme:shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
-        <TabNav active={activeTab} onChange={setTab} brandColor={brandColor} />
-      </div>
-      <div className="pt-1">
-        {activeTab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "documents"  && <DocumentsTab  familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "notes"     && <NotesTab      familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "timeline"  && <TimelineTab   familyId={familyId} brandColor={brandColor} />}
-      </div>
+    <div className="pt-1">
+      {tab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
+      {tab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
+      {tab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
+      {tab === "documents"  && <DocumentsTab  familyId={familyId} brandColor={brandColor} />}
+      {tab === "notes"      && <NotesTab      familyId={familyId} brandColor={brandColor} />}
+      {tab === "timeline"   && <TimelineTab   familyId={familyId} brandColor={brandColor} />}
     </div>
   );
 }

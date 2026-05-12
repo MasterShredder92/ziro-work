@@ -1,5 +1,4 @@
-import { FamilyAccountHeader } from "./_header";
-import { FamilyAccountContent } from "./_content";
+import { FamilyWorkspace } from "./_family-workspace";
 import { OBSIDIAN_DARK_BACKDROP } from "@/lib/ui/obsidianShellBackdrop";
 
 export default function FamilyAccountPage() {
@@ -28,11 +27,8 @@ export default function FamilyAccountPage() {
         }}
         aria-hidden
       />
-      <div className="relative">
-        <FamilyAccountHeader />
-        <div className="mt-10 lg:mt-14">
-          <FamilyAccountContent />
-        </div>
+      <div className="relative mt-2 lg:mt-4">
+        <FamilyWorkspace />
       </div>
     </div>
   );

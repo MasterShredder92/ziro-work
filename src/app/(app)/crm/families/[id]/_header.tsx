@@ -23,7 +23,7 @@ function locationColor(name: string) {
 }
 
 /* ─── Types ──────────────────────────────────────────────── */
-type FamilyHeader = {
+export type FamilyHeader = {
   id: string;
   name: string;
   status: string | null;
@@ -44,13 +44,13 @@ function formatBalance(amount: number): string {
   return amount < 0 ? `-${formatted}` : formatted;
 }
 
-function familyDisplayName(name: string): string {
+export function familyDisplayName(name: string): string {
   const trimmed = name.trim();
   if (/family$/i.test(trimmed)) return trimmed;
   return `The ${trimmed} Family`;
 }
 
-function initials(name: string): string {
+export function initials(name: string): string {
   return name.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("");
 }
 
@@ -126,11 +126,18 @@ function HeaderSkeleton() {
   );
 }
 
-/* ─── Main component ─────────────────────────────────────── */
-export function FamilyAccountHeader() {
-  const params = useParams<{ id: string }>();
-  const familyId = params?.id ?? "";
+export type FamilyAccountDerived = {
+  displayName: string;
+  initialsStr: string;
+  shortId: string;
+  locC: { text: string; stripe: string; bg: string } | null;
+  avatarBg: string;
+  avatarFg: string;
+  accent: string;
+};
 
+/** Shared CRM family header + hub data (single fetch for workspace + legacy header). */
+export function useFamilyAccountSummary(familyId: string) {
   const [family, setFamily] = useState<FamilyHeader | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,9 +188,34 @@ export function FamilyAccountHeader() {
     load();
   }, [familyId]);
 
+  const derived: FamilyAccountDerived | null =
+    family == null
+      ? null
+      : (() => {
+          const locC = locationName ? locationColor(locationName) : null;
+          return {
+            displayName: familyDisplayName(family.name),
+            initialsStr: initials(family.name),
+            shortId: `${family.id.slice(0, 8)}…${family.id.slice(-4)}`,
+            locC,
+            avatarBg: locC?.bg ?? "rgba(99,102,241,0.12)",
+            avatarFg: locC?.text ?? "#6366f1",
+            accent: locC?.stripe ?? "#6366f1",
+          };
+        })();
+
+  return { loading, error, family, locationName, derived };
+}
+
+/* ─── Main component ─────────────────────────────────────── */
+export function FamilyAccountHeader() {
+  const params = useParams<{ id: string }>();
+  const familyId = params?.id ?? "";
+  const { loading, error, family, locationName, derived } = useFamilyAccountSummary(familyId);
+
   if (loading) return <HeaderSkeleton />;
 
-  if (error || !family) {
+  if (error || !family || !derived) {
     return (
       <div
         className="rounded-2xl border px-5 py-4 text-sm"
@@ -198,11 +230,7 @@ export function FamilyAccountHeader() {
     );
   }
 
-  const locC = locationName ? locationColor(locationName) : null;
-  const avatarBg = locC?.bg ?? "rgba(99,102,241,0.12)";
-  const avatarFg = locC?.text ?? "#6366f1";
-  const accent = locC?.stripe ?? "#6366f1";
-  const shortId = `${family.id.slice(0, 8)}…${family.id.slice(-4)}`;
+  const { locC, avatarBg, avatarFg, accent, shortId, displayName } = derived;
 
   return (
     <div className="relative">
@@ -263,14 +291,14 @@ export function FamilyAccountHeader() {
                 boxShadow: `0 0 0 1px rgba(255,255,255,0.06) inset, 0 16px 48px ${avatarFg}33`,
               }}
             >
-              {initials(family.name)}
+              {derived.initialsStr}
             </div>
             <div className="min-w-0 pb-0.5">
               <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-[var(--z-muted)]">
                 Family account
               </p>
               <h1 className="mt-2 max-w-[18ch] text-balance font-black leading-[0.95] tracking-[-0.04em] text-[var(--z-fg)] sm:max-w-none sm:text-5xl lg:text-6xl">
-                {familyDisplayName(family.name)}
+                {displayName}
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 {locationName && locC && (
