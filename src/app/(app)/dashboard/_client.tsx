@@ -142,6 +142,92 @@ function computeHealthScore(d: AllData): number {
 function fmt$(cents: number) { return `$${Math.round(cents / 100).toLocaleString()}`; }
 function px(n: number) { return Math.round(n * 10) / 10; }
 
+function strHash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/** 45° chamfer on orthogonal bends — reads like a PCB trace, not a plain L. */
+function circuitChamferSize(legA: number, legB: number) {
+  const m = Math.min(Math.abs(legA), Math.abs(legB));
+  if (m < 2) return 0;
+  return Math.min(22, Math.max(9, m * 0.11));
+}
+
+/** Horizontal-first bend: orb → … → (ftx, fty), corner at (ftx, ey). */
+function circuitPathHFirst(ex: number, ey: number, ftx: number, fty: number) {
+  const legH = ftx - ex;
+  const legV = fty - ey;
+  let c = circuitChamferSize(legH, legV);
+  c = Math.min(c, Math.abs(legH) * 0.48, Math.abs(legV) * 0.48);
+  const sx = legH >= 0 ? 1 : -1;
+  const sy = legV >= 0 ? 1 : -1;
+  if (c < 5) {
+    return {
+      d: `M ${px(ex)} ${px(ey)} L ${px(ftx)} ${px(ey)} L ${px(ftx)} ${px(fty)}`,
+      jx: ftx,
+      jy: ey,
+    };
+  }
+  const jx = ftx - sx * c * 0.55;
+  const jy = ey + sy * c * 0.55;
+  return {
+    d: `M ${px(ex)} ${px(ey)} L ${px(ftx - sx * c)} ${px(ey)} L ${px(ftx)} ${px(ey + sy * c)} L ${px(ftx)} ${px(fty)}`,
+    jx,
+    jy,
+  };
+}
+
+/** Vertical-first bend: corner at (ex, fty). */
+function circuitPathVFirst(ex: number, ey: number, ftx: number, fty: number) {
+  const legV = fty - ey;
+  const legH = ftx - ex;
+  let c = circuitChamferSize(legH, legV);
+  c = Math.min(c, Math.abs(legH) * 0.48, Math.abs(legV) * 0.48);
+  const sx = legH >= 0 ? 1 : -1;
+  const sy = legV >= 0 ? 1 : -1;
+  if (c < 5) {
+    return {
+      d: `M ${px(ex)} ${px(ey)} L ${px(ex)} ${px(fty)} L ${px(ftx)} ${px(fty)}`,
+      jx: ex,
+      jy: fty,
+    };
+  }
+  const jx = ex + sx * c * 0.55;
+  const jy = fty - sy * c * 0.55;
+  return {
+    d: `M ${px(ex)} ${px(ey)} L ${px(ex)} ${px(fty - sy * c)} L ${px(ex + sx * c)} ${px(fty)} L ${px(ftx)} ${px(fty)}`,
+    jx,
+    jy,
+  };
+}
+
+/** Diagonal “bus” — soft cubic bend instead of a dead straight wire. */
+function circuitPathCurved(ex: number, ey: number, ftx: number, fty: number, seed: string) {
+  const dx = ftx - ex;
+  const dy = fty - ey;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const pxv = -uy;
+  const pyv = ux;
+  const h = strHash(seed);
+  const polarity = (h & 1) === 0 ? 1 : -1;
+  const amp = Math.min(len * 0.085, 34) * polarity;
+  const c1x = ex + ux * len * 0.32 + pxv * amp;
+  const c1y = ey + uy * len * 0.32 + pyv * amp;
+  const c2x = ex + ux * len * 0.68 - pxv * amp * 0.85;
+  const c2y = ey + uy * len * 0.68 - pyv * amp * 0.85;
+  const mx = ex + dx * 0.5 + pxv * amp * 0.22;
+  const my = ey + dy * 0.5 + pyv * amp * 0.22;
+  return {
+    d: `M ${px(ex)} ${px(ey)} C ${px(c1x)} ${px(c1y)} ${px(c2x)} ${px(c2y)} ${px(ftx)} ${px(fty)}`,
+    jx: mx,
+    jy: my,
+  };
+}
+
 // ── Chart primitives ─────────────────────────────────────────────────────────
 
 function DonutChart({ pct, color, color2, size = 88, gid }: {
@@ -557,7 +643,7 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
   );
 }
 
-// ── SVG circuit traces — 90° L-bends, percentage coordinates ─────────────────
+// ── SVG circuit traces — chamfered bends + curved diagonals (PCB-ish) ────────
 // Lines run from the orb surface to the connector dot on each box edge.
 
 function StaticCircuitSVG({ w, h, onNavigate }: { w: number; h: number; onNavigate: (href: string) => void }) {
@@ -568,6 +654,11 @@ function StaticCircuitSVG({ w, h, onNavigate }: { w: number; h: number; onNaviga
   const ORB_R      = 62;
   const BOX_HALF_W = 145;
   const BOX_HALF_H = 120;
+
+  const traceStroke = {
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
 
   return (
     <svg
@@ -595,31 +686,43 @@ function StaticCircuitSVG({ w, h, onNavigate }: { w: number; h: number; onNaviga
         let bendX = 0, bendY = 0, hasBend = true;
 
         if (mod.pathStyle === "S") {
-          d = `M ${px(ex)} ${px(ey)} L ${px(ftx)} ${px(fty)}`;
-          hasBend = false;
+          const curved = circuitPathCurved(ex, ey, ftx, fty, mod.id);
+          d = curved.d;
+          bendX = curved.jx;
+          bendY = curved.jy;
+          hasBend = true;
         } else if (mod.pathStyle === "H") {
-          bendX = ftx; bendY = ey;
-          d = `M ${px(ex)} ${px(ey)} L ${px(ftx)} ${px(ey)} L ${px(ftx)} ${px(fty)}`;
+          const p = circuitPathHFirst(ex, ey, ftx, fty);
+          d = p.d;
+          bendX = p.jx;
+          bendY = p.jy;
         } else {
-          bendX = ex; bendY = fty;
-          d = `M ${px(ex)} ${px(ey)} L ${px(ex)} ${px(fty)} L ${px(ftx)} ${px(fty)}`;
+          const p = circuitPathVFirst(ex, ey, ftx, fty);
+          d = p.d;
+          bendX = p.jx;
+          bendY = p.jy;
         }
 
         const href = MODULE_WIRE_HREFS[mod.id];
 
         return (
           <g key={mod.id}>
-            <path d={d} fill="none" stroke={mod.color} strokeWidth={3} strokeOpacity={0.06} />
-            <path d={d} fill="none" stroke={mod.color} strokeWidth={1} strokeOpacity={0.4}
-              style={{ filter: `drop-shadow(0 0 3px ${mod.color}60)` }} />
+            <path d={d} fill="none" stroke={mod.color} strokeWidth={3} strokeOpacity={0.06} {...traceStroke} />
+            <path d={d} fill="none" stroke={mod.color} strokeWidth={1} strokeOpacity={0.42}
+              style={{ filter: `drop-shadow(0 0 3px ${mod.color}60)` }}
+              {...traceStroke}
+            />
             <circle cx={px(ex)} cy={px(ey)} r={2.5} fill={mod.color} fillOpacity={0.7} />
-            {hasBend && <rect x={px(bendX - 2)} y={px(bendY - 2)} width={4} height={4} fill={mod.color} fillOpacity={0.5} />}
+            {hasBend && (
+              <rect x={px(bendX - 2)} y={px(bendY - 2)} width={4} height={4} fill={mod.color} fillOpacity={0.45} transform={`rotate(45 ${px(bendX)} ${px(bendY)})`} />
+            )}
             <circle cx={px(ftx)} cy={px(fty)} r={3} fill={mod.color} fillOpacity={0.6}
               style={{ filter: `drop-shadow(0 0 4px ${mod.color})` }} />
             {/* Invisible wide hit path for click */}
             {href && (
               <path d={d} fill="none" stroke="transparent" strokeWidth={22}
                 pointerEvents="stroke" style={{ cursor: "pointer" }}
+                {...traceStroke}
                 onClick={() => onNavigate(href)} />
             )}
           </g>
