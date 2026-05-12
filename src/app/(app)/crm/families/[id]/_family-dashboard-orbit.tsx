@@ -4,11 +4,11 @@
  * Pixel-identical clone of `src/app/(app)/dashboard/_client.tsx` orbit shell:
  * same rail inset, backdrop, scanlines, CSS keyframes, circuit SVG math,
  * BrainOrb rings replaced by `FamilyNameOrb` (family label, larger diameter);
- * Module labels/subs match the family workspace; tile bodies use the same loading
- * skeleton as dashboard `data === null`. Clicks open the family full-page overlay tab.
+ * Module tiles load `/api/crm/families/[id]/workspace-summary`. Clicks set `?tab=`
+ * and open the section in the in-grid detail dock (not full-screen).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { CSSProperties } from "react";
 import type { FamilyWorkspaceTab } from "./_content";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
@@ -459,6 +459,247 @@ type FamilyTeacherRow = {
   teaches_students?: string[];
 };
 
+/** Mirrors `GET /api/crm/families/[id]/workspace-summary` payload.data */
+type FamilyWorkspaceSummaryData = {
+  students_active_count: number;
+  student_previews: { first_name: string; last_name: string; instrument: string | null }[];
+  household: {
+    primary_contact_name: string | null;
+    primary_phone: string | null;
+    primary_email: string | null;
+    city: string | null;
+    state: string | null;
+    address_line1: string | null;
+  };
+  billing: { balance: number; billing_status: string; autopay_enabled: boolean | null };
+  teachers: FamilyTeacherRow[];
+  documents_count: number;
+  timeline_event_count: number;
+  notes_preview: string | null;
+};
+
+function formatMoney(n: number) {
+  return n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+}
+
+function cityStateLine(h: FamilyWorkspaceSummaryData["household"]): string | null {
+  const cs = [h.city, h.state].filter(Boolean).join(", ");
+  return cs.length > 0 ? cs : null;
+}
+
+function FamilyOrbitDetailDock({
+  title,
+  sub,
+  brandColor,
+  onClose,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  brandColor: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        maxHeight: "min(42vh, 460px)",
+        borderTop: "1px solid rgba(180,255,0,.14)",
+        background: "linear-gradient(180deg, rgba(10,10,12,.97) 0%, rgba(4,4,6,.99) 100%)",
+        boxShadow: "0 -12px 40px rgba(0,0,0,.45)",
+      }}
+    >
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          borderBottom: "1px solid rgba(255,255,255,.06)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,.12)",
+            background: "rgba(255,255,255,.04)",
+            color: "#e4e4ee",
+            fontFamily: FONT,
+            fontSize: 12,
+            fontWeight: 600,
+            padding: "6px 12px",
+            cursor: "pointer",
+          }}
+        >
+          Close
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: FONT, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "rgba(255,255,255,.35)", textTransform: "uppercase" }}>
+            Section
+          </div>
+          <div style={{ fontFamily: FONT, fontSize: 15, fontWeight: 700, color: "#f4f4f8", letterSpacing: ".02em" }}>{title}</div>
+          {sub ? (
+            <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,.38)", marginTop: 2 }}>{sub}</div>
+          ) : null}
+        </div>
+        <div
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: brandColor,
+            boxShadow: `0 0 12px ${brandColor}`,
+            flexShrink: 0,
+          }}
+        />
+      </div>
+      <div
+        className="family-orbit-detail-scroll"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+          padding: "14px 16px 18px",
+          color: "#e8e8ef",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModuleSummaryBody({
+  mod,
+  summary,
+  summaryLoading,
+  accent,
+}: {
+  mod: ModDef;
+  summary: FamilyWorkspaceSummaryData | null;
+  summaryLoading: boolean;
+  accent: string;
+}) {
+  if (summaryLoading) {
+    return <ModuleSkeletonBody />;
+  }
+  if (!summary) {
+    return (
+      <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,.28)", padding: "4px 0" }}>
+        Could not load summary
+      </div>
+    );
+  }
+
+  const muted = "rgba(255,255,255,.38)";
+  const line = (text: string, opts?: { small?: boolean; bold?: boolean }) => (
+    <div
+      style={{
+        fontFamily: FONT,
+        fontSize: opts?.small ? 10 : 11,
+        fontWeight: opts?.bold ? 700 : 500,
+        color: opts?.bold ? "#ececf4" : muted,
+        lineHeight: 1.35,
+        wordBreak: "break-word",
+      }}
+    >
+      {text}
+    </div>
+  );
+
+  switch (mod.tab) {
+    case "overview": {
+      const n = summary.students_active_count;
+      const names = summary.student_previews
+        .map((s) => `${s.first_name} ${s.last_name}`.trim())
+        .filter(Boolean)
+        .join(" · ");
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {line(`${n} active student${n === 1 ? "" : "s"}`, { bold: true })}
+          {names ? line(names) : line("No active students on roster", { small: true })}
+        </div>
+      );
+    }
+    case "household": {
+      const h = summary.household;
+      const contact = h.primary_contact_name?.trim() || "—";
+      const phone = h.primary_phone?.trim() || h.primary_email?.trim() || null;
+      const addr = h.address_line1?.trim() || null;
+      const cs = cityStateLine(h);
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {line(contact, { bold: true })}
+          {phone ? line(phone) : null}
+          {addr ? line(addr, { small: true }) : null}
+          {cs ? line(cs, { small: true }) : null}
+        </div>
+      );
+    }
+    case "teachers":
+      return <TeachersTileBody loading={false} teachers={summary.teachers} accent={accent} />;
+    case "billing": {
+      const b = summary.billing;
+      const ap = b.autopay_enabled === true ? "Autopay on" : b.autopay_enabled === false ? "Autopay off" : "Autopay —";
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {line(formatMoney(b.balance), { bold: true })}
+          {line(`${(b.billing_status ?? "unknown").replace(/_/g, " ")} · ${ap}`, { small: true })}
+        </div>
+      );
+    }
+    case "documents":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {line(`${summary.documents_count} file${summary.documents_count === 1 ? "" : "s"} on record`, { bold: true })}
+          {line("Contracts, uploads, and signables", { small: true })}
+        </div>
+      );
+    case "notes":
+      return summary.notes_preview ? (
+        <div
+          style={{
+            fontFamily: FONT,
+            fontSize: 10,
+            color: muted,
+            lineHeight: 1.45,
+            maxHeight: 72,
+            overflow: "hidden",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {summary.notes_preview}
+        </div>
+      ) : (
+        line("No family CRM notes yet", { small: true })
+      );
+    case "timeline":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {line(`${summary.timeline_event_count} timeline event${summary.timeline_event_count === 1 ? "" : "s"}`, { bold: true })}
+          {line("Family + student activity", { small: true })}
+        </div>
+      );
+    default:
+      return <ModuleSkeletonBody />;
+  }
+}
+
 function formatInstrumentLine(t: FamilyTeacherRow): string {
   const raw = t.instruments?.filter((s): s is string => typeof s === "string" && s.trim().length > 0) ?? [];
   return raw.map((s) => s.trim().toUpperCase()).join(", ");
@@ -605,12 +846,14 @@ function ModuleBox({
   mod,
   activeTab,
   onActivate,
-  teachersTile,
+  summary,
+  summaryLoading,
 }: {
   mod: ModDef;
   activeTab: FamilyWorkspaceTab | null;
   onActivate: (tab: FamilyWorkspaceTab, rect: DOMRect) => void;
-  teachersTile?: { loading: boolean; teachers: FamilyTeacherRow[] };
+  summary: FamilyWorkspaceSummaryData | null;
+  summaryLoading: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const idx = FAMILY_MODULE_DEFS.indexOf(mod);
@@ -699,11 +942,7 @@ function ModuleBox({
         <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${mod.color}18, transparent)` }} />
 
         <div style={{ padding: "8px 10px" }}>
-          {mod.tab === "teachers" && teachersTile ? (
-            <TeachersTileBody loading={teachersTile.loading} teachers={teachersTile.teachers} accent={mod.color} />
-          ) : (
-            <ModuleSkeletonBody />
-          )}
+          <ModuleSummaryBody mod={mod} summary={summary} summaryLoading={summaryLoading} accent={mod.color} />
         </div>
 
         <div style={{ padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,.04)", display: "flex", alignItems: "center" }}>
@@ -863,6 +1102,11 @@ export function FamilyDashboardOrbit({
   balance,
   activeTab,
   onOpenTab,
+  brandColor,
+  detailPanel,
+  detailTitle,
+  detailSub,
+  onCloseDetail,
 }: {
   familyId: string;
   focusLabel: string;
@@ -871,33 +1115,38 @@ export function FamilyDashboardOrbit({
   balance: number;
   activeTab: FamilyWorkspaceTab | null;
   onOpenTab: (tab: FamilyWorkspaceTab, rect: DOMRect) => void;
+  brandColor: string;
+  detailPanel: ReactNode | null;
+  detailTitle: string | null;
+  detailSub?: string | null;
+  onCloseDetail: () => void;
 }) {
   const [brainFlash, setBrainFlash] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [familyTeachers, setFamilyTeachers] = useState<FamilyTeacherRow[]>([]);
-  const [familyTeachersLoading, setFamilyTeachersLoading] = useState(true);
+  const [summary, setSummary] = useState<FamilyWorkspaceSummaryData | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   useEffect(() => {
     if (!familyId) return;
     let cancelled = false;
-    async function loadTeachers() {
-      setFamilyTeachersLoading(true);
+    async function loadSummary() {
+      setSummaryLoading(true);
       try {
-        const res = await fetch(`/api/crm/families/${familyId}/teachers`, {
+        const res = await fetch(`/api/crm/families/${familyId}/workspace-summary`, {
           headers: { "x-tenant-id": DEFAULT_TENANT_ID },
         });
         if (!res.ok || cancelled) return;
         const json = await res.json();
-        const list: FamilyTeacherRow[] = json.data ?? [];
-        if (!cancelled) setFamilyTeachers(list);
+        const data = json.data as FamilyWorkspaceSummaryData | undefined;
+        if (!cancelled) setSummary(data ?? null);
       } catch {
-        if (!cancelled) setFamilyTeachers([]);
+        if (!cancelled) setSummary(null);
       } finally {
-        if (!cancelled) setFamilyTeachersLoading(false);
+        if (!cancelled) setSummaryLoading(false);
       }
     }
-    loadTeachers();
+    loadSummary();
     return () => {
       cancelled = true;
     };
@@ -951,38 +1200,45 @@ export function FamilyDashboardOrbit({
         <FamilyTopBar focusLabel={focusLabel} />
 
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
-          <div ref={canvasRef} style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0, isolation: "isolate" }}>
-            <StaticCircuitSVG
-              w={canvasSize.w}
-              h={canvasSize.h}
-              orbAttachRadius={FAMILY_ORB_WIRE_ATTACH_R}
-              getCanvasRect={() => canvasRef.current?.getBoundingClientRect() ?? null}
-              onWireClick={(mod, r) => onOpenTab(mod.tab, r)}
-            />
-
-            <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 35 }}>
-              <FamilyNameOrb
-                familyName={familyOrbName}
-                flash={brainFlash}
-                healthScore={healthScore}
-                onClick={() => {
-                  setBrainFlash(true);
-                  setTimeout(() => setBrainFlash(false), 480);
-                }}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
+            <div ref={canvasRef} style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0, isolation: "isolate" }}>
+              <StaticCircuitSVG
+                w={canvasSize.w}
+                h={canvasSize.h}
+                orbAttachRadius={FAMILY_ORB_WIRE_ATTACH_R}
+                getCanvasRect={() => canvasRef.current?.getBoundingClientRect() ?? null}
+                onWireClick={(mod, r) => onOpenTab(mod.tab, r)}
               />
+
+              <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 35 }}>
+                <FamilyNameOrb
+                  familyName={familyOrbName}
+                  flash={brainFlash}
+                  healthScore={healthScore}
+                  onClick={() => {
+                    setBrainFlash(true);
+                    setTimeout(() => setBrainFlash(false), 480);
+                  }}
+                />
+              </div>
+
+              {FAMILY_MODULE_DEFS.map((mod) => (
+                <ModuleBox
+                  key={mod.id}
+                  mod={mod}
+                  activeTab={activeTab}
+                  onActivate={onOpenTab}
+                  summary={summary}
+                  summaryLoading={summaryLoading}
+                />
+              ))}
             </div>
 
-            {FAMILY_MODULE_DEFS.map((mod) => (
-              <ModuleBox
-                key={mod.id}
-                mod={mod}
-                activeTab={activeTab}
-                onActivate={onOpenTab}
-                teachersTile={
-                  mod.tab === "teachers" ? { loading: familyTeachersLoading, teachers: familyTeachers } : undefined
-                }
-              />
-            ))}
+            {detailPanel && detailTitle ? (
+              <FamilyOrbitDetailDock title={detailTitle} sub={detailSub ?? undefined} brandColor={brandColor} onClose={onCloseDetail}>
+                {detailPanel}
+              </FamilyOrbitDetailDock>
+            ) : null}
           </div>
 
           <FamilyFinancialOverviewPanel />

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFamilyAccountSummary } from "./_header";
 import { FamilyDashboardOrbit } from "./_family-dashboard-orbit";
-import { FamilySectionExpandOverlay } from "./_family-section-overlay";
-import { locationBrandColor, parseTabParam, type FamilyWorkspaceTab } from "./_content";
+import { FAMILY_HUB_MODULES } from "./_family-hub-canvas";
+import { FamilySectionPanel, locationBrandColor, parseTabParam, type FamilyWorkspaceTab } from "./_content";
 
 function WorkspaceSkeleton() {
   return (
@@ -23,16 +23,15 @@ export function FamilyWorkspace() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [originRect, setOriginRect] = useState<DOMRect | null>(null);
-
   const { loading, error, family, locationName, derived } = useFamilyAccountSummary(familyId);
 
   const hasTabInUrl = useMemo(() => searchParams.has("tab"), [searchParams]);
   const activeTab = useMemo(() => parseTabParam(searchParams.get("tab")), [searchParams]);
 
-  useEffect(() => {
-    if (!hasTabInUrl) setOriginRect(null);
-  }, [hasTabInUrl]);
+  const panelMeta = useMemo(
+    () => (hasTabInUrl ? FAMILY_HUB_MODULES.find((m) => m.id === activeTab) ?? null : null),
+    [hasTabInUrl, activeTab],
+  );
 
   useEffect(() => {
     if (searchParams.get("addStudent") !== "1") return;
@@ -44,15 +43,13 @@ export function FamilyWorkspace() {
 
   const brandColor = locationBrandColor(locationName);
 
-  const handleSelectTab = (t: FamilyWorkspaceTab, rect: DOMRect) => {
-    setOriginRect(rect);
+  const handleSelectTab = (t: FamilyWorkspaceTab, _rect: DOMRect) => {
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", t);
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
-  const handleCloseOverlay = () => {
-    setOriginRect(null);
+  const handleCloseDetail = () => {
     const next = new URLSearchParams(searchParams.toString());
     next.delete("tab");
     const q = next.toString();
@@ -79,27 +76,22 @@ export function FamilyWorkspace() {
   const { displayName } = derived;
 
   return (
-    <>
-      <FamilyDashboardOrbit
-        familyId={familyId}
-        focusLabel={displayName.toUpperCase()}
-        familyOrbName={displayName}
-        balance={family.balance}
-        activeTab={hasTabInUrl ? activeTab : null}
-        onOpenTab={handleSelectTab}
-      />
-
-      {hasTabInUrl && (
-        <FamilySectionExpandOverlay
-          open
-          tab={activeTab}
-          originRect={originRect}
-          familyId={familyId}
-          familyName={family.name}
-          brandColor={brandColor}
-          onRequestClose={handleCloseOverlay}
-        />
-      )}
-    </>
+    <FamilyDashboardOrbit
+      familyId={familyId}
+      focusLabel={displayName.toUpperCase()}
+      familyOrbName={displayName}
+      balance={family.balance}
+      activeTab={hasTabInUrl ? activeTab : null}
+      onOpenTab={handleSelectTab}
+      brandColor={brandColor}
+      detailPanel={
+        hasTabInUrl ? (
+          <FamilySectionPanel tab={activeTab} familyId={familyId} brandColor={brandColor} />
+        ) : null
+      }
+      detailTitle={panelMeta?.label ?? null}
+      detailSub={panelMeta?.sub ?? null}
+      onCloseDetail={handleCloseDetail}
+    />
   );
 }
