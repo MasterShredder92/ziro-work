@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { AddStudentModal } from "./add-student-modal";
 
@@ -68,7 +68,15 @@ type FamilyDetail = {
   primary_location_id: string | null;
 };
 
-type Tab = "overview" | "teachers" | "billing" | "docs_notes";
+const TAB_IDS = ["overview", "teachers", "billing", "documents", "notes", "timeline"] as const;
+type Tab = (typeof TAB_IDS)[number];
+
+function parseTabParam(raw: string | null): Tab {
+  if (!raw) return "overview";
+  if (raw === "docs_notes") return "documents";
+  if ((TAB_IDS as readonly string[]).includes(raw)) return raw as Tab;
+  return "overview";
+}
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function formatAddress(f: FamilyDetail): string | null {
@@ -138,23 +146,29 @@ function BrandCard({
 
 /* ─── Tab nav ────────────────────────────────────────────── */
 const TABS: { id: Tab; label: string }[] = [
-  { id: "overview",   label: "Overview"    },
-  { id: "teachers",   label: "Teachers"    },
-  { id: "billing",    label: "Billing"     },
-  { id: "docs_notes", label: "Docs & Notes" },
+  { id: "overview",  label: "Overview"   },
+  { id: "teachers",  label: "Teachers"   },
+  { id: "billing",   label: "Billing"    },
+  { id: "documents", label: "Documents"  },
+  { id: "notes",     label: "Notes"      },
+  { id: "timeline",  label: "Timeline"   },
 ];
 
 function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: Tab) => void; brandColor: string }) {
   return (
-    <div style={{ borderBottom: `1px solid ${T.border}` }}>
-      <nav className="-mb-px flex gap-0" aria-label="Family tabs">
+    <div className="min-w-0" style={{ borderBottom: `1px solid ${T.border}` }}>
+      <nav
+        className="-mb-px flex gap-0 overflow-x-auto overflow-y-hidden"
+        aria-label="Family tabs"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {TABS.map((tab) => {
           const isActive = tab.id === active;
           return (
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className="px-4 py-3 text-sm whitespace-nowrap transition-colors"
+              className="shrink-0 px-4 py-3 text-sm whitespace-nowrap transition-colors"
               style={{
                 borderBottom: isActive ? `2px solid ${brandColor}` : "2px solid transparent",
                 color: isActive ? T.fg : T.muted,
@@ -1700,39 +1714,170 @@ function UploadDropzone({ onUpload, uploading, brandColor }: { onUpload: (file: 
   );
 }
 
-/* ─── Docs & Notes tab (Documents + Family Notes merged) ── */
-function DocsNotesTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+/* ─── Notes tab (family CRM notes only) ───────────────────── */
+function NotesTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!familyId) return;
     async function load() {
+      setLoading(true);
+      setError(null);
       try {
         const res = await fetch(`/api/crm/families/${familyId}`, {
           headers: { "x-tenant-id": DEFAULT_TENANT_ID },
         });
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`Failed to load family (${res.status})`);
         const json = await res.json();
         setFamily(json.data ?? json);
-      } catch { /* non-blocking */ }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load family data");
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [familyId]);
 
+  if (loading) {
+    return (
+      <div className="grid gap-4 animate-pulse">
+        <div className="h-48 rounded-xl" style={{ background: T.surface }} />
+      </div>
+    );
+  }
+  if (error || !family) {
+    return (
+      <div className="rounded-lg px-4 py-3 text-sm"
+        style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>
+        {error ?? "Could not load family data."}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <DocumentsTab familyId={familyId} brandColor={brandColor} />
-      {family && (
-        <FamilyNotesCard
-          family={family}
-          familyId={familyId}
-          brandColor={brandColor}
-          onUpdate={(patch) => setFamily(f => f ? { ...f, ...patch } : f)}
-        />
-      )}
-    </div>
+    <FamilyNotesCard
+      family={family}
+      familyId={familyId}
+      brandColor={brandColor}
+      onUpdate={(patch) => setFamily(f => f ? { ...f, ...patch } : f)}
+    />
   );
 }
+
+/* ─── Activity / timeline types + tab ───────────────────── */
+type ActivityRow = {
+  id: string;
+  created_at: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  entity_name: string | null;
+  details: string | null;
+  user_name: string | null;
+};
+
+function fmtTimelineWhen(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
+
+function TimelineTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+  const [items, setItems] = useState<ActivityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!familyId) return;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/activity-log?familyId=${encodeURIComponent(familyId)}`, {
+          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+        });
+        if (!res.ok) throw new Error(`Failed to load timeline (${res.status})`);
+        const json = await res.json();
+        const list: ActivityRow[] = json.data?.items ?? json.items ?? [];
+        setItems(list);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load timeline");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [familyId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-3 animate-pulse">
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} className="h-16 rounded-xl" style={{ background: T.surface }} />
+        ))}
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>
+        {error}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <BrandCard brandColor={brandColor}>
+        <div className="px-5 py-10 text-center">
+          <p className="text-sm" style={{ color: T.muted }}>
+            No activity entries yet for this family or its students. Cancellations and other events will appear here when logged.
+          </p>
+        </div>
+      </BrandCard>
+    );
+  }
+
+  return (
+    <BrandCard brandColor={brandColor}>
+      <ul className="flex flex-col">
+        {items.map((row, i) => (
+          <li
+            key={row.id}
+            className="px-5 py-3.5"
+            style={{ borderBottom: i < items.length - 1 ? `1px solid ${T.border}` : undefined }}
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: T.label }}>
+                {row.action.replace(/_/g, " ")}
+              </span>
+              <time className="text-xs tabular-nums" style={{ color: T.muted }} dateTime={row.created_at}>
+                {fmtTimelineWhen(row.created_at)}
+              </time>
+            </div>
+            <p className="mt-1 text-xs" style={{ color: T.muted }}>
+              {(row.entity_type ?? "").replace(/_/g, " ")}
+              {row.entity_name ? ` · ${row.entity_name}` : row.entity_id ? ` · ${row.entity_id.slice(0, 8)}…` : ""}
+              {row.user_name ? ` · ${row.user_name}` : ""}
+            </p>
+            {row.details && (
+              <p className="mt-2 text-sm whitespace-pre-wrap" style={{ color: T.fg, lineHeight: 1.55 }}>
+                {row.details}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </BrandCard>
+  );
+}
+
+/* ─── Documents tab (files only; was part of Docs & Notes) ─ */
 function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
   const [familyFiles, setFamilyFiles] = useState<FamilyFile[]>([]);
   const [studentFiles, setStudentFiles] = useState<StudentFile[]>([]);
@@ -1928,11 +2073,21 @@ function DocumentsTab({ familyId, brandColor }: { familyId: string; brandColor: 
 export function FamilyAccountContent() {
   const params = useParams<{ id: string }>();
   const familyId = params?.id ?? "";
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const rawTab = searchParams.get("tab");
-  const validTabs: Tab[] = ["overview", "teachers", "billing", "docs_notes"];
-  const initialTab: Tab = validTabs.includes(rawTab as Tab) ? (rawTab as Tab) : "overview";
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+
+  const activeTab = useMemo(
+    () => parseTabParam(searchParams.get("tab")),
+    [searchParams]
+  );
+
+  const setTab = (t: Tab) => {
+    const paramsNext = new URLSearchParams(searchParams.toString());
+    paramsNext.set("tab", t);
+    router.replace(`${pathname}?${paramsNext.toString()}`, { scroll: false });
+  };
+
   const [brandColor, setBrandColor] = useState<string>("#00D16C");
 
   useEffect(() => {
@@ -1962,12 +2117,14 @@ export function FamilyAccountContent() {
 
   return (
     <div className="flex flex-col gap-0">
-      <TabNav active={activeTab} onChange={setActiveTab} brandColor={brandColor} />
+      <TabNav active={activeTab} onChange={setTab} brandColor={brandColor} />
       <div className="pt-5">
         {activeTab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
         {activeTab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
         {activeTab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
-        {activeTab === "docs_notes" && <DocsNotesTab  familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "documents"  && <DocumentsTab  familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "notes"     && <NotesTab      familyId={familyId} brandColor={brandColor} />}
+        {activeTab === "timeline"  && <TimelineTab   familyId={familyId} brandColor={brandColor} />}
       </div>
     </div>
   );
