@@ -44,6 +44,7 @@ function StatusBadge({ status }: { status: string | null }) {
 function HeaderSkeleton() {
   return (
     <div className="animate-pulse">
+      <div className="mb-5 h-16 w-full max-w-xl rounded-xl bg-zinc-200 dark:bg-zinc-700" />
       {/* Breadcrumb skeleton */}
       <div className="flex items-center gap-2 mb-5">
         <div className="h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-700" />
@@ -130,6 +131,50 @@ export function StudentOverviewHeader() {
 
   return (
     <div>
+      {/* ── Family card (student is attached to this account) ── */}
+      {family ? (
+        <div
+          className="mb-5 rounded-xl border border-zinc-200/90 bg-gradient-to-br from-zinc-50 to-white px-4 py-3.5 shadow-sm dark:border-zinc-700/90 dark:from-zinc-900/80 dark:to-zinc-950/80 dark:shadow-none"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+            Family account
+          </p>
+          <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+            <p className="text-lg font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+              {family.name}
+            </p>
+            <Link
+              href={`/crm/families/${family.id}`}
+              className="shrink-0 text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              View family →
+            </Link>
+          </div>
+        </div>
+      ) : student.family_id ? (
+        <div
+          className="mb-5 rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3.5 dark:border-amber-900/50 dark:bg-amber-950/25"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-800/80 dark:text-amber-200/80">
+            Family account
+          </p>
+          <p className="mt-1 text-sm text-amber-950/90 dark:text-amber-100/90">
+            This student is linked to a family, but the family record could not be loaded.
+          </p>
+        </div>
+      ) : (
+        <div
+          className="mb-5 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/50 px-4 py-3.5 dark:border-zinc-600 dark:bg-zinc-900/30"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+            Family account
+          </p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            This student is not linked to a family in CRM yet.
+          </p>
+        </div>
+      )}
+
       {/* ── Breadcrumbs ─────────────────────────────────────── */}
       <nav
         aria-label="Breadcrumb"
