@@ -230,6 +230,7 @@ export function FamilyAccountHeader() {
           className="pointer-events-none absolute inset-0 opacity-90 dark:opacity-100"
             style={{
               background: [
+                "radial-gradient(circle at 82% 18%, rgba(180,255,0,0.09), transparent 42%)",
                 `radial-gradient(120% 80% at 0% 0%, ${accent}33, transparent 55%)`,
                 `radial-gradient(90% 70% at 100% 10%, color-mix(in oklab, var(--z-accent), transparent 82%), transparent 50%)`,
               `radial-gradient(70% 50% at 50% 120%, rgba(99,102,241,0.15), transparent 45%)`,

@@ -158,7 +158,7 @@ function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: T
   return (
     <div className="min-w-0 p-1.5">
       <nav
-        className="flex gap-1 overflow-x-auto overflow-y-hidden rounded-2xl border border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_6%)] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl dark:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_20%)]"
+        className="flex gap-1 overflow-x-auto overflow-y-hidden rounded-2xl border border-white/[0.06] bg-black/40 p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.45)] backdrop-blur-xl light-theme:border-[var(--z-border)] light-theme:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_6%)] light-theme:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
         aria-label="Family tabs"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
@@ -1004,7 +1004,7 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
 
   return (
     <div className="flex flex-col gap-4">
-      <StudentsTabInline familyId={familyId} brandColor={brandColor} familyName={family.name} />
+      <StudentsTabInline familyId={familyId} brandColor={brandColor} />
       <div className="grid gap-4 sm:grid-cols-2">
         <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
         <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
@@ -1071,45 +1071,21 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
 }
 
 /* ─── Students tab (inline on Overview + standalone) ────── */
-function FamilyStudentsAccountBanner({
-  familyName,
-  brandColor,
-}: {
-  familyName: string;
-  brandColor: string;
-}) {
-  return (
-    <BrandCard brandColor={brandColor}>
-      <div className="px-6 py-5 sm:px-7 sm:py-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[var(--z-muted)]">Roster anchor</p>
-        <p className="mt-2 text-2xl font-black tracking-tight text-[var(--z-fg)] sm:text-3xl">{familyName}</p>
-        <p className="mt-2 max-w-prose text-sm italic leading-relaxed text-[var(--z-fg-secondary)]">
-          Students on this account share billing and location defaults.
-        </p>
-      </div>
-    </BrandCard>
-  );
-}
-
 function StudentsTabInline({
   familyId,
   brandColor,
-  familyName,
 }: {
   familyId: string;
   brandColor: string;
-  familyName?: string;
 }) {
-  return <StudentsTab familyId={familyId} brandColor={brandColor} familyName={familyName} />;
+  return <StudentsTab familyId={familyId} brandColor={brandColor} />;
 }
 function StudentsTab({
   familyId,
   brandColor,
-  familyName,
 }: {
   familyId: string;
   brandColor: string;
-  familyName?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -1202,11 +1178,6 @@ function StudentsTab({
     />
   );
 
-  const accountBanner =
-    familyName && familyName.trim().length > 0 ? (
-      <FamilyStudentsAccountBanner familyName={familyName.trim()} brandColor={brandColor} />
-    ) : null;
-
   const studentsToolbar = (left: React.ReactNode) => (
     <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
       <div className="min-w-0 text-[var(--z-fg-secondary,#909098)]">{left}</div>
@@ -1217,7 +1188,6 @@ function StudentsTab({
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
-        {accountBanner}
         {studentsToolbar(
           <p className="text-xs font-medium animate-pulse">Loading students…</p>
         )}
@@ -1233,7 +1203,6 @@ function StudentsTab({
   if (error) {
     return (
       <div className="flex flex-col gap-3">
-        {accountBanner}
         {studentsToolbar(
           <p className="text-xs font-medium">Could not refresh the list</p>
         )}
@@ -1245,7 +1214,6 @@ function StudentsTab({
   if (students.length === 0) {
     return (
       <>
-        {accountBanner}
         <div className="flex flex-col items-center justify-center gap-3 py-14 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
           <p className="text-sm font-medium" style={{ color: T.muted }}>No students enrolled in this family yet</p>
           {addBtn}
@@ -1256,7 +1224,6 @@ function StudentsTab({
   }
   return (
     <div className="flex flex-col gap-3">
-      {accountBanner}
       {studentsToolbar(
         <p className="text-xs font-medium">
           {students.length} student{students.length !== 1 ? "s" : ""} enrolled
@@ -2139,7 +2106,7 @@ export function FamilyAccountContent() {
 
   return (
     <div className="flex flex-col gap-0">
-      <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-[1.35rem] border border-[var(--z-border)]/80 bg-[color-mix(in_oklab,var(--z-bg),transparent_18%)] p-1 shadow-[0_20px_50px_rgba(0,0,0,0.12)] backdrop-blur-xl dark:border-white/5 dark:bg-[color-mix(in_oklab,var(--z-bg),transparent_35%)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+      <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-[1.35rem] border border-white/[0.08] bg-black/30 p-1 shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl light-theme:border-[var(--z-border)] light-theme:bg-[color-mix(in_oklab,var(--z-bg),transparent_18%)] light-theme:shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
         <TabNav active={activeTab} onChange={setTab} brandColor={brandColor} />
       </div>
       <div className="pt-1">
