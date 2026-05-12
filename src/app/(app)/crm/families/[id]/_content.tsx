@@ -1158,9 +1158,14 @@ function StudentsTab({
 
   const addBtn = (
     <button
+      type="button"
       onClick={() => setShowAdd(true)}
-      className="rounded-lg px-4 py-2 text-xs font-bold"
-      style={{ background: "#c4f036", color: "#000", border: "none", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,255,136,0.35)" }}
+      className="rounded-lg border border-black/20 px-4 py-2 text-xs font-bold shadow-sm transition-opacity hover:opacity-90 dark:border-white/15"
+      style={{
+        background: "var(--z-accent, #c4f036)",
+        color: "var(--z-on-accent, #0a0a0a)",
+        cursor: "pointer",
+      }}
     >
       + Add Student
     </button>
@@ -1182,8 +1187,8 @@ function StudentsTab({
     ) : null;
 
   const studentsToolbar = (left: React.ReactNode) => (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="min-w-0 flex-1">{left}</div>
+    <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0 text-[var(--z-fg-secondary,#909098)]">{left}</div>
       <div className="shrink-0">{addBtn}</div>
     </div>
   );
@@ -1193,9 +1198,7 @@ function StudentsTab({
       <div className="flex flex-col gap-3">
         {accountBanner}
         {studentsToolbar(
-          <p className="text-xs font-medium animate-pulse" style={{ color: T.muted }}>
-            Loading students…
-          </p>
+          <p className="text-xs font-medium animate-pulse">Loading students…</p>
         )}
         <div className="flex flex-col gap-3 animate-pulse">
           {[0, 1, 2].map(i => (
@@ -1211,9 +1214,7 @@ function StudentsTab({
       <div className="flex flex-col gap-3">
         {accountBanner}
         {studentsToolbar(
-          <p className="text-xs font-medium" style={{ color: T.muted }}>
-            Could not refresh the list
-          </p>
+          <p className="text-xs font-medium">Could not refresh the list</p>
         )}
         <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>
         {modal}
@@ -1236,7 +1237,7 @@ function StudentsTab({
     <div className="flex flex-col gap-3">
       {accountBanner}
       {studentsToolbar(
-        <p className="text-xs font-medium" style={{ color: T.muted }}>
+        <p className="text-xs font-medium">
           {students.length} student{students.length !== 1 ? "s" : ""} enrolled
         </p>
       )}
