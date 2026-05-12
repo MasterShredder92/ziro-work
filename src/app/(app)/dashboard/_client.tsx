@@ -663,52 +663,67 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
   const [heartDashOffset, setHeartDashOffset] = useState(0);
 
   useLayoutEffect(() => {
-    const el = heartMeasureRef.current;
-    if (!el || typeof el.getTotalLength !== "function") return;
-    const len = el.getTotalLength();
-    if (!(len > 1e-6)) return;
+    const measure = () => {
+      const el = heartMeasureRef.current;
+      if (!el || typeof el.getTotalLength !== "function") return;
+      const len = el.getTotalLength();
+      if (!(len > 1e-6)) return;
 
-    const notchX = 50;
-    const notchY = 20;
-    const steps = 600;
-    let bestS = 0;
-    let bestD = Infinity;
-    for (let i = 0; i <= steps; i++) {
-      const s = (i / steps) * len;
-      const p = el.getPointAtLength(s);
-      if (Math.abs(p.x - notchX) > 11) continue;
-      const d = (p.x - notchX) ** 2 + (p.y - notchY) ** 2;
-      if (d < bestD) {
-        bestD = d;
-        bestS = s;
-      }
-    }
-    if (!(bestD < Infinity)) {
-      bestD = Infinity;
+      const steps = 720;
+      const cx = 50;
+      const cy = 54;
+
+      // Crown = center-strip saddle (not lobe tips): deepest y in upper band (lobes sit higher / smaller y).
+      let crownS = 0;
+      let crownY = -1e9;
+      let foundCrown = false;
       for (let i = 0; i <= steps; i++) {
         const s = (i / steps) * len;
         const p = el.getPointAtLength(s);
-        const d = (p.x - notchX) ** 2 + (p.y - notchY) ** 2;
-        if (d < bestD) {
-          bestD = d;
-          bestS = s;
+        if (Math.abs(p.x - cx) > 14) continue;
+        if (p.y < 10 || p.y > 44) continue;
+        if (p.y > crownY) {
+          crownY = p.y;
+          crownS = s;
+          foundCrown = true;
         }
       }
-    }
+      if (!foundCrown) {
+        let bestD = Infinity;
+        for (let i = 0; i <= steps; i++) {
+          const s = (i / steps) * len;
+          const p = el.getPointAtLength(s);
+          const d = (p.x - cx) ** 2 + (p.y - 28) ** 2;
+          if (d < bestD) {
+            bestD = d;
+            crownS = s;
+          }
+        }
+      }
 
-    const eps = Math.max(0.15, len * 0.007);
-    const p0 = el.getPointAtLength(bestS);
-    const p1 = el.getPointAtLength((bestS + eps) % len);
-    const cx = 50;
-    const cy = 54;
-    const radx = p0.x - cx;
-    const rady = p0.y - cy;
-    const tx = p1.x - p0.x;
-    const ty = p1.y - p0.y;
-    const cross = radx * ty - rady * tx;
-    const forwardIsCw = cross > 0;
-    const off = forwardIsCw ? -bestS : bestS - len;
-    setHeartDashOffset(off);
+      const eps = Math.max(0.18, len * 0.008);
+      const p0 = el.getPointAtLength(crownS);
+      const p1 = el.getPointAtLength((crownS + eps) % len);
+      const radx = p0.x - cx;
+      const rady = p0.y - cy;
+      const tx = p1.x - p0.x;
+      const ty = p1.y - p0.y;
+      const cross = radx * ty - rady * tx;
+      const forwardIsCw = cross > 0;
+      // Negative offset aligns the dash pattern so the first stroke begins at the crown (same idea as rotate(-90) on circles).
+      const off = forwardIsCw ? -crownS : crownS - len;
+      setHeartDashOffset(off);
+    };
+
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(measure);
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, []);
 
   return (
