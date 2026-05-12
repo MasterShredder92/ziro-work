@@ -995,7 +995,7 @@ function InlineStudentTeacherAvatar({
   teacherName,
   needsAssignment,
   hasTeacher,
-  size = 22,
+  size = 24,
 }: {
   photoUrl?: string | null;
   teacherName: string | null;
@@ -1140,7 +1140,7 @@ function FamilyTableTeacherCell({
                   teacherName={t.name}
                   needsAssignment={false}
                   hasTeacher
-                  size={20}
+                  size={22}
                 />
                 <span style={{
                   fontFamily: FONT,

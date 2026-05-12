@@ -131,7 +131,7 @@ function MiniTeacherLineAvatar({
   teacherName,
   needsAssignment,
   hasTeacher,
-  size = 18,
+  size = 20,
 }: {
   photoUrl?: string | null;
   teacherName: string | null;
@@ -743,7 +743,7 @@ export function FamiliesListClient({
                               teacherName={sl.teacher}
                               needsAssignment={needsAssign}
                               hasTeacher={hasTeacher}
-                              size={16}
+                              size={18}
                             />
                             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--z-fg)", flexShrink: 0 }}>{sl.name}</span>
                             {sl.instrument && (
