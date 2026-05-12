@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
 
@@ -54,6 +55,25 @@ const NUMFONT = "'Plus Jakarta Sans', system-ui, sans-serif";
 
 /** Matches `AppLocationRail` aside width so fixed dashboard layers leave the rail visible. */
 const WORKSPACE_LOCATION_RAIL_PX = 88;
+
+/** Deep black shell with very soft vignettes — neutral / warm, no blue-gray cast. */
+const DASHBOARD_SHELL_BACKDROP: Pick<
+  CSSProperties,
+  "backgroundColor" | "backgroundImage" | "backgroundSize" | "backgroundPosition" | "backgroundRepeat"
+> = {
+  backgroundColor: "#000000",
+  backgroundImage: [
+    "radial-gradient(circle at 50% 118%, rgba(180,255,0,0.034) 0%, transparent 48%)",
+    "radial-gradient(circle at 50% -14%, rgba(255,255,255,0.02) 0%, transparent 34%)",
+    "radial-gradient(circle at 100% 6%, rgba(52,52,52,0.14) 0%, transparent 38%)",
+    "radial-gradient(circle at 0% 94%, rgba(46,46,46,0.12) 0%, transparent 38%)",
+    "radial-gradient(ellipse 100% 78% at 50% 44%, rgba(10,10,10,0.78) 0%, transparent 72%)",
+    "radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px)",
+  ].join(", "),
+  backgroundSize: "100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 36px 36px",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat",
+};
 
 // ── Module definitions — center-anchored percentage coordinates ───────────────
 //
@@ -807,7 +827,7 @@ function ModuleBox({ mod, data, locId }: {
       <div style={connectorStyle(mod.dotEdge, mod.color)} />
 
       <div style={{
-        background: "linear-gradient(135deg, rgba(20,25,35,.95) 0%, rgba(8,8,14,.99) 100%)",
+        background: "linear-gradient(135deg, rgba(22,22,22,.96) 0%, rgba(6,6,6,.99) 100%)",
         backdropFilter: "blur(14px)",
         border: `1px solid ${hovered ? mod.color + "30" : "rgba(255,255,255,.07)"}`,
         borderRadius: 12,
@@ -875,7 +895,7 @@ function FinancialOverview({ data }: { data: AllData | null }) {
       background: "transparent",
     }}>
       <div style={{
-        background: "linear-gradient(135deg, rgba(20,25,35,.92) 0%, rgba(10,10,15,.98) 100%)",
+        background: "linear-gradient(135deg, rgba(24,24,24,.94) 0%, rgba(7,7,7,.99) 100%)",
         backdropFilter: "blur(10px)",
         border: "1px solid rgba(255,255,255,.05)",
         borderRadius: 16,
@@ -984,19 +1004,21 @@ export function DashboardClient() {
       />
 
       {/* Full-screen canvas — inset from left so `AppLocationRail` stays visible */}
-      <div style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: WORKSPACE_LOCATION_RAIL_PX,
-        zIndex: 100,
-        backgroundColor: "#0a0c10",
-        backgroundImage: "radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px)",
-        backgroundSize: "24px 24px",
-        display: "flex", flexDirection: "column",
-        overflow: "hidden", fontFamily: FONT,
-      }}>
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: WORKSPACE_LOCATION_RAIL_PX,
+          zIndex: 100,
+          ...DASHBOARD_SHELL_BACKDROP,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          fontFamily: FONT,
+        }}
+      >
         <TopBar focusLabel={headerFocusLabel} scopeLabel={selectedLocId ? headerFocusLabel : "All Locations"} />
 
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
