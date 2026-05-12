@@ -81,6 +81,7 @@ export function FamilyWorkspace() {
   return (
     <>
       <FamilyDashboardOrbit
+        familyId={familyId}
         focusLabel={displayName.toUpperCase()}
         familyOrbName={displayName}
         balance={family.balance}

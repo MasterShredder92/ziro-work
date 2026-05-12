@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { FamilyWorkspaceTab } from "./_content";
+import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 const GREEN = "#b4ff00";
 const PURPLE = "#9900ff";
@@ -452,14 +453,107 @@ function ModuleSkeletonBody() {
   );
 }
 
+type FamilyTeacherRow = { id: string; full_name: string; teacher_role?: string };
+
+function TeachersTileBody({
+  loading,
+  teachers,
+  accent,
+}: {
+  loading: boolean;
+  teachers: FamilyTeacherRow[];
+  accent: string;
+}) {
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              height: 22,
+              borderRadius: 6,
+              background: "rgba(255,255,255,.04)",
+              animation: "dotBlink 1.8s ease-in-out infinite",
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+  if (teachers.length === 0) {
+    return (
+      <div style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.28)", padding: "4px 0", lineHeight: 1.35 }}>
+        No teachers assigned yet
+      </div>
+    );
+  }
+  const show = teachers.slice(0, 4);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      {show.map((t) => (
+        <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0 }}>
+          <div
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: accent,
+              boxShadow: `0 0 6px ${accent}`,
+              flexShrink: 0,
+              marginTop: 3,
+            }}
+          />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontFamily: FONT,
+                fontSize: 9,
+                fontWeight: 700,
+                color: "#d8d8e8",
+                lineHeight: 1.2,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {t.full_name}
+            </div>
+            {t.teacher_role ? (
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 7,
+                  color: "rgba(255,255,255,.28)",
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {t.teacher_role}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ))}
+      {teachers.length > 4 ? (
+        <div style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.22)", letterSpacing: ".04em" }}>+{teachers.length - 4} more</div>
+      ) : null}
+    </div>
+  );
+}
+
 function ModuleBox({
   mod,
   activeTab,
   onActivate,
+  teachersTile,
 }: {
   mod: ModDef;
   activeTab: FamilyWorkspaceTab | null;
   onActivate: (tab: FamilyWorkspaceTab, rect: DOMRect) => void;
+  teachersTile?: { loading: boolean; teachers: FamilyTeacherRow[] };
 }) {
   const [hovered, setHovered] = useState(false);
   const idx = FAMILY_MODULE_DEFS.indexOf(mod);
@@ -548,7 +642,11 @@ function ModuleBox({
         <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${mod.color}18, transparent)` }} />
 
         <div style={{ padding: "8px 10px" }}>
-          <ModuleSkeletonBody />
+          {mod.tab === "teachers" && teachersTile ? (
+            <TeachersTileBody loading={teachersTile.loading} teachers={teachersTile.teachers} accent={mod.color} />
+          ) : (
+            <ModuleSkeletonBody />
+          )}
         </div>
 
         <div style={{ padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,.04)", display: "flex", alignItems: "center" }}>
@@ -702,12 +800,14 @@ function familyHealthFromBalance(balance: number): number {
 }
 
 export function FamilyDashboardOrbit({
+  familyId,
   focusLabel,
   familyOrbName,
   balance,
   activeTab,
   onOpenTab,
 }: {
+  familyId: string;
   focusLabel: string;
   /** Readable family name inside the center orb (not forced uppercase). */
   familyOrbName: string;
@@ -718,6 +818,33 @@ export function FamilyDashboardOrbit({
   const [brainFlash, setBrainFlash] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [familyTeachers, setFamilyTeachers] = useState<FamilyTeacherRow[]>([]);
+  const [familyTeachersLoading, setFamilyTeachersLoading] = useState(true);
+
+  useEffect(() => {
+    if (!familyId) return;
+    let cancelled = false;
+    async function loadTeachers() {
+      setFamilyTeachersLoading(true);
+      try {
+        const res = await fetch(`/api/crm/families/${familyId}/teachers`, {
+          headers: { "x-tenant-id": DEFAULT_TENANT_ID },
+        });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        const list: FamilyTeacherRow[] = json.data ?? [];
+        if (!cancelled) setFamilyTeachers(list);
+      } catch {
+        if (!cancelled) setFamilyTeachers([]);
+      } finally {
+        if (!cancelled) setFamilyTeachersLoading(false);
+      }
+    }
+    loadTeachers();
+    return () => {
+      cancelled = true;
+    };
+  }, [familyId]);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -789,7 +916,15 @@ export function FamilyDashboardOrbit({
             </div>
 
             {FAMILY_MODULE_DEFS.map((mod) => (
-              <ModuleBox key={mod.id} mod={mod} activeTab={activeTab} onActivate={onOpenTab} />
+              <ModuleBox
+                key={mod.id}
+                mod={mod}
+                activeTab={activeTab}
+                onActivate={onOpenTab}
+                teachersTile={
+                  mod.tab === "teachers" ? { loading: familyTeachersLoading, teachers: familyTeachers } : undefined
+                }
+              />
             ))}
           </div>
 
