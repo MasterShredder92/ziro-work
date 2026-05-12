@@ -82,6 +82,7 @@ export function StudentOverviewHeader() {
     async function load() {
       setLoading(true);
       setError(null);
+      setFamily(null);
       try {
         // Fetch student
         const studentRes = await fetch(
@@ -90,7 +91,8 @@ export function StudentOverviewHeader() {
         );
         if (!studentRes.ok) throw new Error(`Student not found (${studentRes.status})`);
         const studentJson = await studentRes.json();
-        const s: StudentData = studentJson.data;
+        const raw = studentJson?.data ?? studentJson;
+        const s = raw as StudentData;
         setStudent(s);
 
         // Fetch family if linked
@@ -101,8 +103,13 @@ export function StudentOverviewHeader() {
           );
           if (familyRes.ok) {
             const familyJson = await familyRes.json();
-            setFamily(familyJson.data ?? familyJson);
+            const f = familyJson?.data ?? familyJson;
+            setFamily(f as FamilyData);
+          } else {
+            setFamily(null);
           }
+        } else {
+          setFamily(null);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load student");

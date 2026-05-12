@@ -980,7 +980,7 @@ function OverviewTab({ familyId, brandColor }: { familyId: string; brandColor: s
 
   return (
     <div className="flex flex-col gap-4">
-      <StudentsTabInline familyId={familyId} brandColor={brandColor} />
+      <StudentsTabInline familyId={familyId} brandColor={brandColor} familyName={family.name} />
       <div className="grid gap-4 sm:grid-cols-2">
         <PrimaryContactCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
         <AccountSettingsCard family={family} familyId={familyId} brandColor={brandColor} onUpdate={handleUpdate} />
@@ -1047,10 +1047,47 @@ function StudentCard({ student, brandColor }: { student: FamilyStudent & { teach
 }
 
 /* ─── Students tab (inline on Overview + standalone) ────── */
-function StudentsTabInline({ familyId, brandColor }: { familyId: string; brandColor: string }) {
-  return <StudentsTab familyId={familyId} brandColor={brandColor} />;
+function FamilyStudentsAccountBanner({
+  familyName,
+  brandColor,
+}: {
+  familyName: string;
+  brandColor: string;
+}) {
+  return (
+    <BrandCard brandColor={brandColor}>
+      <div className="px-5 py-3.5">
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.muted }}>
+          Family account
+        </p>
+        <p className="mt-1 text-lg font-semibold leading-snug" style={{ color: T.fg }}>
+          {familyName}
+        </p>
+      </div>
+    </BrandCard>
+  );
 }
-function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: string }) {
+
+function StudentsTabInline({
+  familyId,
+  brandColor,
+  familyName,
+}: {
+  familyId: string;
+  brandColor: string;
+  familyName?: string;
+}) {
+  return <StudentsTab familyId={familyId} brandColor={brandColor} familyName={familyName} />;
+}
+function StudentsTab({
+  familyId,
+  brandColor,
+  familyName,
+}: {
+  familyId: string;
+  brandColor: string;
+  familyName?: string;
+}) {
   const [students, setStudents] = useState<(FamilyStudent & { teacherName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1125,19 +1162,31 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
     />
   );
 
+  const accountBanner =
+    familyName && familyName.trim().length > 0 ? (
+      <FamilyStudentsAccountBanner familyName={familyName.trim()} brandColor={brandColor} />
+    ) : null;
+
   if (loading) {
     return (
       <div className="flex flex-col gap-3 animate-pulse">
+        {accountBanner}
         {[0, 1, 2].map(i => <div key={i} className="h-20 rounded-xl" style={{ background: T.surface }} />)}
       </div>
     );
   }
   if (error) {
-    return <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>;
+    return (
+      <div className="flex flex-col gap-3">
+        {accountBanner}
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "rgba(185,28,28,0.08)", color: "#b91c1c", border: "1px solid rgba(185,28,28,0.2)" }}>{error}</div>
+      </div>
+    );
   }
   if (students.length === 0) {
     return (
       <>
+        {accountBanner}
         <div className="flex flex-col items-center justify-center gap-3 py-14 text-center rounded-xl" style={{ border: `1px dashed ${T.border}` }}>
           <p className="text-sm font-medium" style={{ color: T.muted }}>No students enrolled in this family yet</p>
           {addBtn}
@@ -1148,6 +1197,7 @@ function StudentsTab({ familyId, brandColor }: { familyId: string; brandColor: s
   }
   return (
     <div className="flex flex-col gap-3">
+      {accountBanner}
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium" style={{ color: T.muted }}>
           {students.length} student{students.length !== 1 ? "s" : ""} enrolled
