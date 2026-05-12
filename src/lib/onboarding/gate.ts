@@ -11,25 +11,30 @@ import { getSupabaseTenant } from "@/lib/data/supabaseTenant";
  * respected.
  */
 export async function isTenantOnboarded(tenantId: string): Promise<boolean> {
-  const supabase = getSupabaseTenant(tenantId);
+  try {
+    const supabase = getSupabaseTenant(tenantId);
 
-  const studentCount = await supabase
-    .from("students")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
+    const studentCount = await supabase
+      .from("students")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId);
 
-  if (!studentCount.error && (studentCount.count ?? 0) > 0) {
+    if (!studentCount.error && (studentCount.count ?? 0) > 0) {
+      return true;
+    }
+
+    const teacherCount = await supabase
+      .from("teachers")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId);
+
+    if (!teacherCount.error && (teacherCount.count ?? 0) > 0) {
+      return true;
+    }
+
+    return false;
+  } catch (err) {
+    console.error("[isTenantOnboarded] failed; assuming onboarded", err);
     return true;
   }
-
-  const teacherCount = await supabase
-    .from("teachers")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
-
-  if (!teacherCount.error && (teacherCount.count ?? 0) > 0) {
-    return true;
-  }
-
-  return false;
 }

@@ -1,4 +1,5 @@
 import type { Room, Teacher } from "@/lib/types/entities";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 import type {
   RoomAvailability,
   TeacherAvailability,
@@ -110,7 +111,7 @@ export function AvailabilityPanel({
           ) : (
             sortedRooms.slice(0, 20).map((r) => {
               const room = roomById.get(r.roomId);
-              const name = room?.name ?? r.roomId;
+              const name = roomDisplayName(room?.name ?? r.roomId);
               const roomType = (room as unknown as { room_type?: string | null })
                 ?.room_type;
               return (

@@ -8,6 +8,7 @@ import {
   deleteRoomAction,
   updateRoomAction,
 } from "../actions";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +56,13 @@ export default async function RoomDetailPage({
           Schedule OS · Room
         </div>
         <h1 className="text-xl sm:text-2xl font-semibold text-[var(--z-fg)]">
-          {room.name}
+          {roomDisplayName(room.name)}
         </h1>
+        {room.name !== roomDisplayName(room.name) ? (
+          <p className="text-[11px] text-[var(--z-muted)] mt-0.5">
+            Registry name: <span className="font-mono text-[var(--z-fg)]">{room.name}</span>
+          </p>
+        ) : null}
         <div className="text-xs text-[var(--z-muted)] mt-0.5">
           Capacity {room.capacity} ·{" "}
           {room.isActive ? "Active" : "Inactive"} ·{" "}

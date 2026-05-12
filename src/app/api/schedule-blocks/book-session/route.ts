@@ -20,7 +20,8 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
+import { requirePermission } from "@/lib/auth/guards";
+import { logStudentScheduleActivity } from "@/lib/schedule/studentActivityLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,8 +61,9 @@ export async function POST(req: NextRequest) {
     return badRequest("Missing required fields: teacher_id, location_id, block_date, start_time, end_time, student_id");
   }
 
+  const session = await requirePermission("schedule.write")();
+  const tenantId = session.tenantId;
   const supabase = getServiceClient();
-  const tenantId = DEFAULT_TENANT_ID;
 
   // Determine block_type
   const blockType = is_first_lesson ? "first_day" : "student_session";
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
       .from("students")
       .select("instrument")
       .eq("id", student_id as string)
+      .eq("tenant_id", tenantId)
       .single();
 
     // Upsert recurring rule (unique on student+teacher+location+day+start_time)
@@ -151,6 +154,23 @@ export async function POST(req: NextRequest) {
     if (createError) return serverError(createError.message);
     resultBlock = created as Record<string, unknown>;
   }
+
+  await logStudentScheduleActivity({
+    tenantId,
+    studentId: student_id as string,
+    action: "session_booked",
+    details: {
+      schedule_block_id: resultBlock?.id,
+      block_date,
+      start_time,
+      end_time,
+      teacher_id,
+      location_id,
+      is_recurring: !!is_recurring,
+      block_type: blockType,
+    },
+    locationId: location_id as string,
+  });
 
   return ok(resultBlock);
 }

@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import type { ScheduleRoom } from "@/lib/schedule/types";
+import { roomDisplayName, roomDisplayShortBadge } from "@/lib/rooms/roomDisplayName";
 
 // ─── Location room counts ─────────────────────────────────────────────────────
 // These are the canonical room counts per location. Rooms that don't yet exist
@@ -170,7 +171,7 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
       room.equipment.some((eq) => eq.toLowerCase().includes(req.toLowerCase()))
     );
     if (!hasAny) {
-      return `${room.name} doesn't have ${required[0]} — are you sure you want to teach ${instrument} here?`;
+      return `${roomDisplayName(room.name)} doesn't have ${required[0]} — are you sure you want to teach ${instrument} here?`;
     }
     return null;
   }
@@ -281,9 +282,9 @@ export function ScheduleRoomsPanel({ locationId, locationName, locationColor, ro
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-black"
                       style={{ backgroundColor: `${locationColor}20`, color: locationColor }}
                     >
-                      {room.name.replace(/[^0-9]/g, "") || room.name.slice(0, 2).toUpperCase()}
+                      {roomDisplayShortBadge(room.name)}
                     </div>
-                    <span className="text-sm font-semibold text-[var(--z-fg)]">{room.name}</span>
+                    <span className="text-sm font-semibold text-[var(--z-fg)]">{roomDisplayName(room.name)}</span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-2 pl-9">
                     <span className="text-[10px] text-[var(--z-muted)]">{room.roomType ?? "Studio"}</span>
@@ -436,9 +437,9 @@ function RoomFitChecker({ room, onCheck }: { room: ScheduleRoom; onCheck: (msg: 
       room.equipment.some((eq) => eq.toLowerCase().includes(req.toLowerCase()))
     );
     if (hasAny) {
-      setResult({ ok: true, message: `✓ ${room.name} has the right equipment for ${instrument}.` });
+      setResult({ ok: true, message: `✓ ${roomDisplayName(room.name)} has the right equipment for ${instrument}.` });
     } else {
-      const msg = `${room.name} is missing ${required[0]} for ${instrument} lessons.`;
+      const msg = `${roomDisplayName(room.name)} is missing ${required[0]} for ${instrument} lessons.`;
       setResult({ ok: false, message: msg });
       onCheck(msg);
     }

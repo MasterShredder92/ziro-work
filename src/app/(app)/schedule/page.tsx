@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { resolveScheduleContext } from "./guard";
 import { EmptyState } from "@/components/system/SurfaceStates";
+import { PageShell } from "@/components/layouts/PageShell";
 import { weekWindowFromToday } from "@/lib/schedule/window";
 import { loadWindowedScheduleData } from "@/lib/schedule/windowedData";
 import { MultiLocationScheduleClient } from "./components/MultiLocationScheduleClient";
@@ -9,7 +11,11 @@ import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 export const dynamic = "force-dynamic";
 
 
-export default async function ScheduleDashboardPage() {
+export default async function ScheduleDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ locationId?: string | string[] }>;
+}) {
   let ctx;
   try {
     ctx = await resolveScheduleContext();
@@ -48,36 +54,41 @@ export default async function ScheduleDashboardPage() {
 
   const window = weekWindowFromToday();
 
-  // Load all locations in parallel
-  const locationDataEntries = await Promise.all(
-    locations.map(async (loc) => {
-      const data = await loadWindowedScheduleData({
-        tenantId,
-        locationId: loc.id,
-        start: window.start,
-        end: window.end,
-        includeRooms: true,
-        includeStudents: true,
-      }).catch(() => ({
-        teachers: [],
-        students: [],
-        families: [],
-        availability: [],
-        blocks: [],
-        rooms: [],
-        locationHours: {},
-      }));
-      return [loc.id, data] as const;
-    }),
-  );
+  const sp = await searchParams;
+  const rawLoc = sp.locationId;
+  const urlLocId = Array.isArray(rawLoc) ? rawLoc[0] : rawLoc;
+  const ssrLocationId =
+    urlLocId && locations.some((l) => l.id === urlLocId) ? urlLocId : locations[0]!.id;
 
-  const locationDataMap = Object.fromEntries(locationDataEntries);
+  let locationDataMap: Record<string, Awaited<ReturnType<typeof loadWindowedScheduleData>>>;
+  try {
+    const data = await loadWindowedScheduleData({
+      tenantId,
+      locationId: ssrLocationId,
+      start: window.start,
+      end: window.end,
+      includeRooms: true,
+      includeStudents: true,
+    });
+    locationDataMap = { [ssrLocationId]: data };
+  } catch (e) {
+    console.error("[schedule/page] loadWindowedScheduleData", e);
+    return (
+      <EmptyState
+        title="Couldn’t load schedule"
+        description="Something went wrong loading studio data. Refresh the page or try again in a moment."
+      />
+    );
+  }
 
   return (
-    <MultiLocationScheduleClient
-      locations={locations}
-      locationDataMap={locationDataMap}
-      initialWindow={window}
-    />
+    <Suspense fallback={<PageShell />}>
+      <MultiLocationScheduleClient
+        locations={locations}
+        locationDataMap={locationDataMap}
+        initialWindow={window}
+        canWriteSchedule={ctx.canWrite}
+      />
+    </Suspense>
   );
 }

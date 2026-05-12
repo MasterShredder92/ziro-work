@@ -1,4 +1,5 @@
 import type { Room, Teacher } from "@/lib/types/entities";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 import type { SuggestedSlot } from "@/lib/scheduling/types";
 
 function teacherName(teacher: Teacher | undefined): string {
@@ -71,7 +72,7 @@ export function SuggestedSlots({
                     {teacherName(teacher)}
                   </div>
                   <div className="text-[11px] text-[var(--z-muted)] truncate">
-                    {room?.name ?? (s.roomId ? s.roomId : "Any room")}
+                    {room ? roomDisplayName(room.name) : s.roomId ? s.roomId : "Any room"}
                   </div>
                 </div>
                 <span className="inline-flex items-center rounded-full border border-[#c4f036]/30 bg-[#c4f036]/10 px-2 py-0.5 text-[10px] font-semibold text-[#c4f036]">

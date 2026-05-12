@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RoomSurfaceData } from "@/lib/locations/types";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 
 interface RoomDetailProps {
   data: RoomSurfaceData;
@@ -27,8 +28,13 @@ export function RoomDetail({ data }: RoomDetailProps) {
           Room surface
         </p>
         <h1 className="text-2xl font-semibold text-[var(--z-fg)]">
-          {room.name}
+          {roomDisplayName(room.name)}
         </h1>
+        {room.name !== roomDisplayName(room.name) ? (
+          <p className="text-[11px] text-[var(--z-muted)]">
+            Registry name: <span className="font-mono text-[var(--z-fg)]">{room.name}</span>
+          </p>
+        ) : null}
         {location ? (
           <p className="text-sm text-[var(--z-muted)]">
             At{" "}

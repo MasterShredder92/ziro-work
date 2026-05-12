@@ -14,22 +14,23 @@ export type OperatorSessionState = {
 
 export function useOperatorSession(state: OperatorSessionState) {
   const { tenantId } = useTenantUi();
-  const supabase = getBrowserSupabaseClient();
   const [userId, setUserId] = React.useState<string | null>(null);
   const lastSyncRef = React.useRef<string>("");
 
   // Get current user ID
   React.useEffect(() => {
     const getUser = async () => {
+      const supabase = getBrowserSupabaseClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
     };
     void getUser();
-  }, [supabase]);
+  }, []);
 
   // Sync state to Supabase
   const syncState = React.useCallback(async (currentState: OperatorSessionState) => {
     if (!userId || !tenantId) return;
+    const supabase = getBrowserSupabaseClient();
 
     const payload = {
       tenant_id: tenantId,
@@ -53,7 +54,7 @@ export function useOperatorSession(state: OperatorSessionState) {
     if (error) {
       console.error("[OperatorSession] Sync failed:", error);
     }
-  }, [supabase, tenantId, userId]);
+  }, [tenantId, userId]);
 
   // Effect to sync on state changes
   React.useEffect(() => {

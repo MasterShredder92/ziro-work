@@ -1,11 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { getBrowserSupabaseClient } from "@/lib/supabase.browser";
 
 export function ForgotPasswordForm({ accent }: { accent: string }) {
-  const supabase = useMemo(() => getBrowserSupabaseClient(), []);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -17,6 +16,7 @@ export function ForgotPasswordForm({ accent }: { accent: string }) {
     setBusy(true);
     setError(null);
     try {
+      const supabase = getBrowserSupabaseClient();
       const redirectTo =
         typeof window !== "undefined"
           ? `${window.location.origin}/reset-password`

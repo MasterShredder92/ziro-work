@@ -12,6 +12,12 @@ import {
   projectBlocksForWindow,
   type ProjectedBlock,
 } from "@/lib/schedule/windowedClient";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
+
+/** Sticky room header row inside the grid scroller (must subtract from viewport before ÷ slots). */
+const SCHEDULE_GRID_HEADER_PX = 80;
+/** Fallback: window chrome + grid header when row height is not measured yet. */
+const SLOT_H_FALLBACK_CHROME_PX = 248;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LocationConfig = {
@@ -36,6 +42,8 @@ type Props = {
   rooms: ScheduleRoom[];
   locationHours: LocationHoursMap;
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
+  /** Staff (schedule.write): mutations + auto check-in. */
+  canWriteSchedule?: boolean;
 };
 
 // ─── Block type display config ─────────────────────────────────────────────────
@@ -49,7 +57,7 @@ const BLOCK_DISPLAY: Record<string, { label: string; bg: string; border: string;
   sub:             { label: "Sub",          bg: "rgba(34,197,94,0.85)",  border: "#16a34a", text: "#fff" },
   teacher_training:{ label: "Training",     bg: "rgba(139,92,246,0.85)", border: "#7c3aed", text: "#fff" },
   not_bookable:    { label: "Locked",       bg: "rgba(107,114,128,0.7)", border: "#6b7280", text: "#fff" },
-  open_time:       { label: "Open",         bg: "rgba(16,185,129,0.2)",  border: "rgba(16,185,129,0.4)", text: "rgba(16,185,129,0.9)" },
+  open_time:       { label: "Open",         bg: "rgba(16,185,129,0.22)", border: "rgba(16,185,129,0.45)", text: "#ecfdf5" },
   virtual:         { label: "Virtual",      bg: "rgba(14,165,233,0.85)", border: "#0284c7", text: "#fff" },
 };
 
@@ -127,6 +135,48 @@ function studentName(student: Student | undefined | null): string {
   return `${first} ${last}`.trim() || "Student";
 }
 
+/** One-line label for grid cells: first name + last initial (tooltip uses full `studentName`). */
+function studentScheduleLabel(student: Student | undefined | null): string {
+  if (!student) return "Student";
+  const s = student as unknown as Record<string, unknown>;
+  const first = typeof s.first_name === "string" ? s.first_name.trim() : "";
+  const last = typeof s.last_name === "string" ? s.last_name.trim() : "";
+  const initial = last ? `${last[0]!.toUpperCase()}.` : "";
+  if (first && initial) return `${first} ${initial}`;
+  if (first) return first;
+  if (last) return last;
+  return "Student";
+}
+
+function recurringScheduleLabel(rl: {
+  student_first_name: string | null;
+  student_last_name: string | null;
+}): string {
+  const fi = (rl.student_first_name ?? "").trim();
+  const la = (rl.student_last_name ?? "").trim();
+  const initial = la ? `${la[0]!.toUpperCase()}.` : "";
+  if (fi && initial) return `${fi} ${initial}`;
+  if (fi) return fi;
+  if (la) return la;
+  return "Student";
+}
+
+/** Any block whose interval covers `slotMin` (fixes ghost overlays on 2nd half of 60m blocks). */
+function blockCoveringSlot(dayBlocks: ProjectedBlock[], slotMin: number): ProjectedBlock | undefined {
+  const overlapping = dayBlocks.filter((b) => {
+    const bs = toMinute(b.start_time);
+    const be = toMinute(b.end_time);
+    return slotMin >= bs && slotMin < be;
+  });
+  if (overlapping.length === 0) return undefined;
+  if (overlapping.length === 1) return overlapping[0];
+  const booked = overlapping.find(
+    (b) => b.student_id && b.block_type !== "open_time" && b.block_type !== "not_bookable",
+  );
+  if (booked) return booked;
+  return overlapping[0];
+}
+
 // ─── Block type options for the edit panel ────────────────────────────────────
 const BLOCK_TYPE_OPTIONS: Array<{ value: ScheduleBlock["block_type"]; label: string }> = [
   { value: "student_session", label: "Booked Session" },
@@ -171,6 +221,7 @@ export function LocationScheduleGrid({
   rooms,
   locationHours,
   onBlocksChange,
+  canWriteSchedule = false,
 }: Props) {
   const { triggerClickFlare, triggerSparks } = useVFX();
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
@@ -211,9 +262,11 @@ export function LocationScheduleGrid({
     return () => clearInterval(id);
   }, []);
 
-  // ── Auto check-in loop — runs every 60s, only on today's view ───────────────────────────────────────────────────────
+  // ── Auto check-in loop — runs every 60s, only on today's view (staff with schedule.write)
   const lastAutoCheckinRef = React.useRef<number>(0);
   React.useEffect(() => {
+    if (!canWriteSchedule) return;
+
     const runAutoCheckin = () => {
       // Throttle to once per 55s to be safe
       if (Date.now() - lastAutoCheckinRef.current < 55000) return;
@@ -245,7 +298,7 @@ export function LocationScheduleGrid({
     const id = setInterval(runAutoCheckin, 60_000);
     return () => clearInterval(id);
     // Remove 'blocks' from dependencies to stop the re-triggering loop
-  }, [selectedDate, onBlocksChange]);
+  }, [selectedDate, onBlocksChange, canWriteSchedule]);
 
   // ── Cancel session modal state ───────────────────────────────────────────────────────
   const [cancelTarget, setCancelTarget] = React.useState<ProjectedBlock | null>(null);
@@ -452,9 +505,59 @@ export function LocationScheduleGrid({
     return map;
   }, [projectedBlocks, roomAssignments]);
 
+  const slotMetrics = React.useMemo(() => {
+    const dh = getHoursForDate(locationHours, selectedDate);
+    if (dh.isClosed) {
+      return {
+        isClosed: true as const,
+        numSlots: 1,
+        timeLabels: [] as number[],
+        startMin: 0,
+        endMin: 0,
+      };
+    }
+    const startMin = dh.openMinute;
+    const endMin = dh.closeMinute;
+    const timeLabels: number[] = [];
+    for (let m = startMin; m < endMin; m += 30) {
+      timeLabels.push(m);
+    }
+    return {
+      isClosed: false as const,
+      numSlots: Math.max(timeLabels.length, 1),
+      timeLabels,
+      startMin,
+      endMin,
+    };
+  }, [locationHours, selectedDate]);
+
+  const gridScrollViewportRef = React.useRef<HTMLDivElement>(null);
+  const [measuredSlotH, setMeasuredSlotH] = React.useState<number | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (slotMetrics.isClosed) {
+      setMeasuredSlotH(null);
+      return;
+    }
+    const el = gridScrollViewportRef.current;
+    if (!el) return;
+    const update = () => {
+      const h = el.clientHeight;
+      if (h <= 0) return;
+      const n = Math.max(slotMetrics.numSlots, 1);
+      // Fit open→close in one view: no vertical scroll — slot height from remaining space under sticky headers.
+      const usable = Math.max(0, h - SCHEDULE_GRID_HEADER_PX);
+      const next = Math.max(1, Math.floor(usable / n));
+      setMeasuredSlotH((prev) => (prev === next ? prev : next));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [slotMetrics.isClosed, slotMetrics.numSlots]);
+
   // ── Render ──────────────────────────────────────────────────────────────────
-  const dayHours = getHoursForDate(locationHours, selectedDate);
-  if (dayHours.isClosed) {
+  if (slotMetrics.isClosed) {
     return (
       <div className="flex h-[400px] items-center justify-center text-sm font-semibold text-[var(--z-muted)]">
         Studio is closed on this date.
@@ -462,21 +565,19 @@ export function LocationScheduleGrid({
     );
   }
 
-  const startMin = dayHours.openMinute;
-  const endMin = dayHours.closeMinute;
+  const { timeLabels, startMin, endMin, numSlots } = slotMetrics;
   const totalMinutes = endMin - startMin;
-  const timeLabels: number[] = [];
-  for (let m = startMin; m < endMin; m += 30) {
-    timeLabels.push(m);
-  }
-  const numSlots = timeLabels.length;
-  // SLOT_H: fill available viewport height.
-  // Consumed above the grid: TopBar ~65px + schedule header ~88px + util bar ~40px = ~193px
-  // No upper cap — let slots grow to fill the screen naturally.
-  // Minimum 44px so text stays readable.
-  const SLOT_H = typeof window !== "undefined"
-    ? Math.max(44, Math.floor((window.innerHeight - 193) / Math.max(numSlots, 1) * 0.855))
-    : 48;
+  const SLOT_H =
+    measuredSlotH ??
+    (typeof window !== "undefined"
+      ? Math.max(
+          1,
+          Math.floor(
+            (window.innerHeight - SLOT_H_FALLBACK_CHROME_PX - SCHEDULE_GRID_HEADER_PX) /
+              Math.max(numSlots, 1),
+          ),
+        )
+      : 48);
 
   // Common patch function
   async function patchBlock(block: ScheduleBlock | ProjectedBlock, patch: Partial<ScheduleBlock>, closePanel = false) {
@@ -608,75 +709,14 @@ export function LocationScheduleGrid({
     );
   }
 
-  // ── Utilization & Revenue Math ──────────────────────────────────────────
-  // Denominator: Total potential slots across ALL rooms (even if no teacher assigned)
-  const totalSlots = sortedRooms.length * timeLabels.length;
-  
-  // Numerator: Booked blocks + projected recurring lessons
-  const bookedSlots = projectedBlocks.filter(b =>
-    b.student_id && b.block_type !== "open_time"
-  ).length + clientRecurringLessons.filter(rl => {
-    const dow = new Date(selectedDate + "T00:00:00.000Z").getUTCDay();
-    return rl.day_of_week === dow;
-  }).length;
-
-  const openSlots = totalSlots - bookedSlots;
-  const utilPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
-  const utilColor = utilPct >= 80 ? "#c4f036" : utilPct >= 50 ? "#eab308" : "#ef4444";
-  
-  // Revenue Gap: Every open slot is $160/month potential
-  const revenueGap = openSlots * 160;
-  const totalPotential = totalSlots * 160;
-
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
-      {/* ── Utilization & Revenue Bar ── */}
-      <div className="flex shrink-0 items-center gap-6 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 px-5 py-3">
-        {/* Left: Progress & Pct */}
-        <div className="flex flex-1 items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--z-muted)]">Efficiency</span>
-            <span className="text-lg font-black" style={{ color: utilColor }}>{utilPct}%</span>
-          </div>
-          <div className="relative flex-1 h-2 rounded-full bg-[var(--z-border)] overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${utilPct}%`, backgroundColor: utilColor }}
-            />
-          </div>
-        </div>
-
-        {/* Right: Revenue Potential & Gap */}
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Monthly Leak</span>
-            <span className="text-sm font-black text-[#ef4444]">
-              -${revenueGap.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
-            </span>
-          </div>
-          <div className="h-8 w-px bg-[var(--z-border)] opacity-50" />
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Total Potential</span>
-            <span className="text-sm font-black text-[#c4f036]">
-              {totalPotential.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
-            </span>
-          </div>
-          <div className="h-8 w-px bg-[var(--z-border)] opacity-50" />
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--z-muted)]">Capacity</span>
-            <div className="flex items-center gap-2 text-[11px] font-bold">
-              <span style={{ color: "#c4f036" }}>{bookedSlots} Booked</span>
-              <span className="text-[var(--z-muted)]">/</span>
-              <span className="text-[var(--z-muted)]">{totalSlots} Total</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="flex h-[calc(100dvh-6.25rem)] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--z-bg)]">
+      {/* Utilization / revenue live in MultiLocationScheduleClient — keep grid height for lesson cards. */}
       {/* ── Main grid row ── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* ── Time Column ── */}
       <div className="sticky left-0 z-20 w-16 shrink-0 border-r border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
-        <div className="h-16 border-b border-[var(--z-border)]" />
+        <div className="h-20 border-b border-[var(--z-border)]" />
         <div className="relative">
           {timeLabels.map((m) => (
             <div key={m} className="flex items-start justify-center pt-2 text-[10px] font-bold text-[var(--z-muted)]" style={{ height: `${SLOT_H}px` }}>
@@ -687,7 +727,10 @@ export function LocationScheduleGrid({
       </div>
 
       {/* ── Grid Content ── */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--z-border)]">
+      <div
+        ref={gridScrollViewportRef}
+        className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-[var(--z-border)]"
+      >
         <div className="flex min-w-full flex-col">
           {/* Room Headers */}
           <div className="sticky top-0 z-30 flex h-20 border-b border-[var(--z-border)] bg-[var(--z-bg)]/95 backdrop-blur-sm">
@@ -739,7 +782,7 @@ export function LocationScheduleGrid({
                     <div className="flex items-center justify-center gap-1">
                       <span className="text-sm">{emoji}</span>
                       <span className="truncate text-[11px] font-black uppercase tracking-wider text-[var(--z-fg)]">
-                        Room {room.name}
+                        {roomDisplayName(room.name)}
                       </span>
                     </div>
                     {assignedTeachers.length > 0 ? (
@@ -777,7 +820,7 @@ export function LocationScheduleGrid({
                         style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,255,136,0.1)" }}
                       >
                         <div className="border-b border-[rgba(0,255,136,0.1)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--z-accent)]">
-                          Assign to {room.name}
+                          Assign to {roomDisplayName(room.name)}
                         </div>
                         <div className="max-h-48 overflow-y-auto py-1">
                           {availableTeachers.length === 0 ? (
@@ -872,8 +915,8 @@ export function LocationScheduleGrid({
             )}
           </div>
 
-          {/* Main Grid Body */}
-          <div className="relative flex flex-1">
+          {/* Main Grid Body — min-h-0 keeps day rows inside the no-scroll viewport */}
+          <div className="relative flex min-h-0 flex-1">
             {/* Horizontal lines */}
             <div className="absolute inset-0 pointer-events-none">
               {timeLabels.map((m) => (
@@ -1015,9 +1058,6 @@ export function LocationScheduleGrid({
                       ? availWindows.some(w => slotMin >= w.start && slotEnd <= w.end)
                       : false;
 
-                    // Check if a booked block starts at this slot
-                    const block = dayBlocks.find(b => toMinute(b.start_time) === slotMin);
-
                     if (!inWindow) {
                       // ── Hatched Unavailable row ──
                       return (
@@ -1040,8 +1080,17 @@ export function LocationScheduleGrid({
                       );
                     }
 
+                    const covering = blockCoveringSlot(dayBlocks, slotMin);
+                    const blockStartsHere =
+                      Boolean(covering) && toMinute(covering!.start_time) === slotMin;
+                    // Continuation rows of a multi-slot block: skip so recurring / + Open never stack on it.
+                    if (covering && !blockStartsHere) {
+                      return <React.Fragment key={slotMin} />;
+                    }
+                    const block = blockStartsHere ? covering : undefined;
+
                     if (block) {
-                      // ── Booked lesson card ──
+                      // ── Block card (lesson, open, locked, …) ──
                       const blockStart = toMinute(block.start_time);
                       const blockEnd = toMinute(block.end_time);
                       const blockHeight = ((blockEnd - blockStart) / 30) * SLOT_H;
@@ -1050,6 +1099,30 @@ export function LocationScheduleGrid({
                       const isConflict = hasAvailability &&
                         block.block_type === "student_session" &&
                         (blockStart < availStart || blockEnd > availEnd);
+                      const hasStudent = Boolean(block.student_id);
+                      const studentRow = hasStudent ? studentsById.get(block.student_id!) : undefined;
+                      const rlForStudent =
+                        hasStudent && !studentRow
+                          ? clientRecurringLessons.find((r) => r.student_id === block.student_id)
+                          : undefined;
+                      const fullName = studentRow
+                        ? studentName(studentRow)
+                        : rlForStudent
+                          ? [rlForStudent.student_first_name, rlForStudent.student_last_name].filter(Boolean).join(" ")
+                          : "";
+                      const headline = hasStudent
+                        ? studentRow
+                          ? studentScheduleLabel(studentRow)
+                          : rlForStudent
+                            ? recurringScheduleLabel(rlForStudent)
+                            : display.label
+                        : display.label;
+                      const instr =
+                        (studentRow?.instrument as string | undefined) ??
+                        rlForStudent?.instrument ??
+                        null;
+                      const timeRange = `${formatBlockTime(block.start_time)} – ${formatBlockTime(block.end_time)}`;
+                      const showNotes = Boolean(block.notes) && blockHeight >= SLOT_H * 2 - 2;
                       return (
                         <button
                           key={block.id}
@@ -1062,58 +1135,98 @@ export function LocationScheduleGrid({
                             setBookingFirstDay(null);
                             setBookingStudentHasBlocks(null);
                           }}
-                          className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-center transition-all hover:scale-[1.02] hover:z-20 ${
+                          className={`absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border px-1 py-1 text-center transition-all hover:scale-[1.02] hover:z-20 ${
                             isSelected ? "z-30 ring-2 ring-white ring-offset-2 ring-offset-[var(--z-bg)]" : "z-10"
-                          }`}
+                          } ${hasStudent ? "justify-between" : "justify-center"}`}
                           style={{
                             top: `${slotTop + 2}px`,
                             height: `${blockHeight - 4}px`,
                             backgroundColor: display.bg,
                             borderColor: isConflict ? "#ef4444" : display.border,
                             boxShadow: isConflict ? "0 0 0 1px #ef4444, 0 0 8px rgba(239,68,68,0.3)" : undefined,
-                            opacity: block.checked_in ? 0.45 : 1,
+                            opacity: block.checked_in ? 0.78 : 1,
                           }}
+                          title={hasStudent ? fullName || headline : timeRange}
                         >
-                          <div className="flex flex-col items-center gap-0.5">
-                            <span className="w-full truncate text-[15px] font-black leading-tight" style={{ color: display.text }}>
-                              {block.student_id ? (() => {
-                                const s = studentsById.get(block.student_id);
-                                if (s) return studentName(s);
-                                const rl = clientRecurringLessons.find(r => r.student_id === block.student_id);
-                                return rl ? [rl.student_first_name, rl.student_last_name].filter(Boolean).join(" ") : display.label;
-                              })() : display.label}
-                            </span>
-                            
-                            <div className="flex items-center justify-center gap-1.5">
-                              {block.student_id && (() => {
-                                const s = studentsById.get(block.student_id);
-                                const instr = s?.instrument || clientRecurringLessons.find(r => r.student_id === block.student_id)?.instrument;
-                                return instr ? (
+                          {hasStudent ? (
+                            <>
+                              <div
+                                className="shrink-0 truncate text-[13px] font-black leading-tight"
+                                style={{ color: display.text }}
+                              >
+                                {headline}
+                              </div>
+                              <div className="flex min-h-0 shrink-0 items-center justify-center gap-1 overflow-hidden">
+                                {instr ? (
                                   <>
-                                    <span className="text-base">{instrumentEmoji(instr as string)}</span>
-                                    <span className="text-[11px] font-black uppercase tracking-wider opacity-80" style={{ color: display.text }}>{instr as string}</span>
+                                    <span className="shrink-0 text-[15px] leading-none" aria-hidden>
+                                      {instrumentEmoji(instr)}
+                                    </span>
+                                    <span
+                                      className="truncate text-[10px] font-bold uppercase tracking-wide"
+                                      style={{ color: display.text, opacity: 0.92 }}
+                                    >
+                                      {instr}
+                                    </span>
                                   </>
-                                ) : null;
-                              })()}
-                              {block.checked_in && (
-                                <span
-                                  title="Checked In"
-                                  style={{ fontSize: 9, fontWeight: 900, color: "#000", background: "#22c55e", borderRadius: 3, padding: "0 4px", lineHeight: "14px", userSelect: "none" }}
-                                >✓</span>
-                              )}
-                              {isConflict && (
-                                <span
-                                  title="Schedule Conflict"
-                                  style={{ fontSize: 9, fontWeight: 900, color: "#fff", background: "#ef4444", borderRadius: 3, padding: "0 4px", lineHeight: "14px", userSelect: "none" }}
-                                >!</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-1 text-[14px] font-bold opacity-90" style={{ color: display.text }}>
-                            {formatBlockTime(block.start_time)} – {formatBlockTime(block.end_time)}
-                          </div>
-                          {block.notes && (
-                            <div className="mt-1 truncate text-[13px] italic opacity-60" style={{ color: display.text }}>{block.notes}</div>
+                                ) : (
+                                  <span
+                                    className="text-[10px] font-semibold uppercase opacity-55"
+                                    style={{ color: display.text }}
+                                  >
+                                    —
+                                  </span>
+                                )}
+                                {block.checked_in ? (
+                                  <span
+                                    title="Checked In"
+                                    className="shrink-0 rounded px-1 text-[9px] font-black leading-none text-black"
+                                    style={{ background: "#22c55e" }}
+                                  >
+                                    ✓
+                                  </span>
+                                ) : null}
+                                {isConflict ? (
+                                  <span
+                                    title="Schedule conflict"
+                                    className="shrink-0 rounded px-1 text-[9px] font-black leading-none text-white"
+                                    style={{ background: "#ef4444" }}
+                                  >
+                                    !
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div
+                                className="shrink-0 truncate text-[11px] font-bold leading-tight"
+                                style={{ color: display.text, opacity: 0.95 }}
+                              >
+                                {timeRange}
+                              </div>
+                              {showNotes ? (
+                                <div
+                                  className="shrink-0 truncate text-[10px] italic opacity-65"
+                                  style={{ color: display.text }}
+                                  title={block.notes ?? undefined}
+                                >
+                                  {block.notes}
+                                </div>
+                              ) : null}
+                            </>
+                          ) : (
+                            <>
+                              <div
+                                className="truncate text-[12px] font-black uppercase tracking-wide"
+                                style={{ color: display.text }}
+                              >
+                                {display.label}
+                              </div>
+                              <div
+                                className="truncate text-[11px] font-bold leading-tight"
+                                style={{ color: display.text, opacity: 0.92 }}
+                              >
+                                {timeRange}
+                              </div>
+                            </>
                           )}
                         </button>
                       );
@@ -1164,11 +1277,12 @@ export function LocationScheduleGrid({
                       const rlSlotEndMin = rlEnd;
                       const rlStartStr = `${String(Math.floor(rlStart / 60)).padStart(2, "0")}:${String(rlStart % 60).padStart(2, "0")}`;
                       const rlEndStr = `${String(Math.floor(rlSlotEndMin / 60)).padStart(2, "0")}:${String(rlSlotEndMin % 60).padStart(2, "0")}`;
+                      const rlInstr = recurringLesson.instrument;
                       return (
                         <button
                           key={`rl-${recurringLesson.id}`}
                           type="button"
-                          className="absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border p-1.5 text-left hover:scale-[1.02] hover:z-20 transition-all"
+                          className="absolute left-1 right-1 flex flex-col justify-between overflow-hidden rounded-md border px-1 py-1 text-left transition-all hover:scale-[1.02] hover:z-20"
                           style={{
                             top: `${slotTop + 2}px`,
                             height: `${rlHeight - 4}px`,
@@ -1224,12 +1338,18 @@ export function LocationScheduleGrid({
                             }
                           }}
                         >
-                          <div className="truncate text-[14px] font-black leading-tight" style={{ color: "#000" }}>
-                            {recurringLesson.instrument
-                              ? `${instrumentEmoji(recurringLesson.instrument)} ${rlStudentName}`
-                              : `- ${rlStudentName}`}
+                          <div className="shrink-0 truncate text-[13px] font-black leading-tight text-black">
+                            {recurringScheduleLabel(recurringLesson)}
                           </div>
-                          <div className="mt-0.5 text-[13px] font-bold opacity-80" style={{ color: "#000" }}>
+                          <div className="flex min-h-0 shrink-0 items-center gap-1 overflow-hidden">
+                            <span className="shrink-0 text-[15px] leading-none" aria-hidden>
+                              {instrumentEmoji(rlInstr)}
+                            </span>
+                            <span className="truncate text-[10px] font-bold uppercase tracking-wide text-black/85">
+                              {rlInstr ?? "—"}
+                            </span>
+                          </div>
+                          <div className="shrink-0 truncate text-[11px] font-bold leading-tight text-black/90">
                             {formatBlockTime(recurringLesson.start_time)} – {formatBlockTime(recurringLesson.end_time)}
                           </div>
                         </button>
@@ -1391,7 +1511,12 @@ export function LocationScheduleGrid({
                   /* ── UNBOOKED BLOCK: booking flow ── */
                   <div className="space-y-4 rounded-2xl border border-[var(--z-border)] bg-[var(--z-surface-2)] p-4">
                     <div className="text-xs font-black uppercase tracking-widest text-[var(--z-accent)]">Book a Student</div>
-                    
+                    {!canWriteSchedule ? (
+                      <p className="text-sm text-[var(--z-muted)] leading-relaxed">
+                        You can view this schedule. Booking and changes are limited to studio staff.
+                      </p>
+                    ) : null}
+                    {canWriteSchedule ? (<>
                     {/* Student search */}
                     <div className="relative">
                       <input
@@ -1519,6 +1644,7 @@ export function LocationScheduleGrid({
                         {saving ? "Booking…" : bookingRecurring ? `🔄 Book Recurring ${bookingFirstDay ? "First Day" : "Session"}` : `Book ${bookingFirstDay ? "First Day" : "Session"}`}
                       </button>
                     )}
+                    </>) : null}
                   </div>
                 ) : (
                   /* ── BOOKED BLOCK: existing session controls ── */
@@ -1564,6 +1690,8 @@ export function LocationScheduleGrid({
                       </div>
                     )}
 
+                    {canWriteSchedule ? (
+                      <>
                     {/* Session type */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--z-muted)]">
@@ -1645,6 +1773,12 @@ export function LocationScheduleGrid({
                         </button>
                       )}
                     </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-[var(--z-muted)] leading-relaxed pt-1">
+                        Session details are view-only. Staff can check in, edit, or cancel.
+                      </p>
+                    )}
                   </>
                 )}
               </div>
@@ -1655,7 +1789,7 @@ export function LocationScheduleGrid({
       })()}
 
       {/* ── Cancel Session Modal ── */}
-      {cancelTarget && (
+      {cancelTarget && canWriteSchedule && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setCancelTarget(null)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
@@ -1760,7 +1894,7 @@ export function LocationScheduleGrid({
                     <span className="font-semibold text-yellow-400">{conflictTeacher ? teacherName(conflictTeacher) : "This teacher"}</span>
                     {" "}is not scheduled for{" "}
                     <span className="font-semibold text-white capitalize">{selectedDayName}s</span>
-                    {conflictRoom ? <> in <span className="font-semibold text-white">Room {conflictRoom.name}</span></> : ""}.
+                    {conflictRoom ? <> in <span className="font-semibold text-white">{roomDisplayName(conflictRoom.name)}</span></> : ""}.
                   </p>
                 </div>
               </div>

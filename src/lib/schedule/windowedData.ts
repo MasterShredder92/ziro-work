@@ -136,37 +136,6 @@ export async function loadWindowedScheduleData(input: {
     ),
   );
 
-  let teachers: Teacher[] = [];
-  if (teacherIds.length > 0) {
-    const teachersRes = await supabase
-      .from("teachers")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .in("id", teacherIds)
-      .eq("is_active", true)
-      .order("first_name", { ascending: true })
-      .order("last_name", { ascending: true });
-    if (teachersRes.error) {
-      teachers = [];
-    } else {
-      teachers = (teachersRes.data ?? []) as Teacher[];
-    }
-  } else {
-    const teachersRes = await supabase
-      .from("teachers")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true)
-      .order("first_name", { ascending: true })
-      .order("last_name", { ascending: true })
-      .limit(1500);
-    if (teachersRes.error) {
-      teachers = [];
-    } else {
-      teachers = (teachersRes.data ?? []) as Teacher[];
-    }
-  }
-
   let students = studentsError ? [] : ((studentsRes.data ?? []) as Student[]);
   if (includeStudents && students.length === 0) {
     const fallbackStudentsRes = await supabase
@@ -180,25 +149,56 @@ export async function loadWindowedScheduleData(input: {
     students = fallbackStudentsRes.error ? [] : ((fallbackStudentsRes.data ?? []) as Student[]);
   }
 
-  let families: Family[] = [];
-  if (students.length > 0) {
-    const familyIds = Array.from(
-      new Set(
-        students
-          .map((student) => student.family_id)
-          .filter((id): id is string => typeof id === "string" && id.length > 0),
-      ),
-    );
-    if (familyIds.length > 0) {
-      const familiesRes = await supabase
-        .from("families")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .in("id", familyIds)
-        .limit(1500);
-      families = familiesRes.error ? [] : ((familiesRes.data ?? []) as Family[]);
-    }
+  const familyIds =
+    students.length > 0
+      ? Array.from(
+          new Set(
+            students
+              .map((student) => student.family_id)
+              .filter((id): id is string => typeof id === "string" && id.length > 0),
+          ),
+        )
+      : [];
+
+  const teachersPromise =
+    teacherIds.length > 0
+      ? supabase
+          .from("teachers")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .in("id", teacherIds)
+          .eq("is_active", true)
+          .order("first_name", { ascending: true })
+          .order("last_name", { ascending: true })
+      : supabase
+          .from("teachers")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .eq("is_active", true)
+          .order("first_name", { ascending: true })
+          .order("last_name", { ascending: true })
+          .limit(1500);
+
+  const familiesPromise =
+    familyIds.length > 0
+      ? supabase
+          .from("families")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .in("id", familyIds)
+          .limit(1500)
+      : Promise.resolve({ data: [] as unknown[], error: null } as const);
+
+  const [teachersRes, familiesRes] = await Promise.all([teachersPromise, familiesPromise]);
+
+  let teachers: Teacher[] = [];
+  if (teachersRes.error) {
+    teachers = [];
+  } else {
+    teachers = (teachersRes.data ?? []) as Teacher[];
   }
+
+  const families: Family[] = familiesRes.error ? [] : ((familiesRes.data ?? []) as Family[]);
 
   if (teachersLocationError || availabilityError || blocksError) {
     console.warn("[schedule/windowedData] partial fallback", {

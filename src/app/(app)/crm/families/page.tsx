@@ -2,20 +2,45 @@ import { countStudentsByFamilyIds, listFamilies } from "@data/families";
 import { listStudents } from "@data/students";
 import { listTeachers } from "@data/teachers";
 import { listLocations } from "@data/locations";
+import { clientFor } from "@data/_client";
 import type { Family as FamilyRow } from "@/lib/types/entities";
 import { getCRMTenantId } from "../_tenant";
 import { FamiliesMissionControl } from "./families-mission-control-client";
-import { deriveKpi, deriveInsights } from "./_insights";
+import { deriveKpi, deriveInsights, deriveRiskByFamily, deriveBrief } from "./_insights";
 
 export const dynamic = "force-dynamic";
+
+function serverNowMs(): number {
+  return Date.now();
+}
+
+async function fetchLastMessageAtByFamily(tenantId: string): Promise<Record<string, string>> {
+  const supabase = clientFor(tenantId);
+  const { data, error } = await supabase
+    .from("studio_messages")
+    .select("family_id, created_at")
+    .eq("tenant_id", tenantId)
+    .not("family_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(5000);
+  if (error || !data) return {};
+  const out: Record<string, string> = {};
+  for (const row of data as Array<{ family_id: string | null; created_at: string }>) {
+    if (!row.family_id) continue;
+    if (out[row.family_id]) continue;
+    out[row.family_id] = row.created_at;
+  }
+  return out;
+}
 
 export default async function FamiliesIndexPage() {
   const tenantId = await getCRMTenantId();
 
-  const [locations, rows, allTeachers] = await Promise.all([
+  const [locations, rows, allTeachers, lastMessageAtByFamily] = await Promise.all([
     listLocations(tenantId, {}, { limit: 200 }),
     listFamilies(tenantId, {}, { limit: 2000, orderBy: "name", ascending: true }) as Promise<FamilyRow[]>,
     listTeachers(tenantId, {}, { limit: 500 }),
+    fetchLastMessageAtByFamily(tenantId),
   ]);
 
   const locationNameById = Object.fromEntries(
@@ -43,37 +68,73 @@ export default async function FamiliesIndexPage() {
     name: string;
     instrument?: string | null;
     status?: string | null;
+    teacherId?: string | null;
     teacherName?: string | null;
+    locationId?: string | null;
   }[]> = {};
 
   for (const s of allStudents) {
     if (!s.family_id) continue;
     if (!studentsByFamily[s.family_id]) studentsByFamily[s.family_id] = [];
-    const raw = s as { teacher_id?: string | null; instrument?: string | null };
+    const raw = s as {
+      teacher_id?: string | null;
+      instrument?: string | null;
+      location_id?: string | null;
+    };
     const teacherName = raw.teacher_id ? (teacherNameById[raw.teacher_id] ?? null) : null;
     studentsByFamily[s.family_id]!.push({
       id: s.id,
       name: [s.first_name, s.last_name].filter(Boolean).join(" ") || s.id,
       instrument: raw.instrument ?? null,
       status: s.status ?? null,
+      teacherId: raw.teacher_id ?? null,
       teacherName,
+      locationId: raw.location_id ?? null,
     });
   }
 
+  // Per-family aggregates built from the actual student rows (not the cached counts).
   const teacherByFamily: Record<string, string> = {};
+  const activeStudentCountByFamily: Record<string, number> = {};
+  const missingTeacherByFamily: Record<string, number> = {};
+  const splitSiblingsByFamily: Record<string, boolean> = {};
+
   for (const [famId, studs] of Object.entries(studentsByFamily)) {
-    const seen = new Set<string>();
-    for (const s of studs) {
-      if (s.teacherName) seen.add(s.teacherName);
+    const actives = studs.filter((s) => (s.status ?? "").toLowerCase() === "active");
+    activeStudentCountByFamily[famId] = actives.length;
+    const distinctTeacherIds = new Set<string>();
+    const distinctTeacherNames = new Set<string>();
+    let missing = 0;
+    for (const s of actives) {
+      if (s.teacherId) {
+        distinctTeacherIds.add(s.teacherId);
+        if (s.teacherName) distinctTeacherNames.add(s.teacherName);
+      } else {
+        missing += 1;
+      }
     }
-    const unique = Array.from(seen).sort();
-    if (unique.length > 0) teacherByFamily[famId] = unique.join(", ");
+    missingTeacherByFamily[famId] = missing;
+    splitSiblingsByFamily[famId] = actives.length >= 2 && distinctTeacherIds.size >= 2;
+    const orderedNames = Array.from(distinctTeacherNames).sort();
+    if (orderedNames.length > 0) teacherByFamily[famId] = orderedNames.join(", ");
   }
 
-  const insightInput = { rows, counts, locationNameById, studentsByFamily, teacherByFamily };
+  const nowMs = serverNowMs();
+  const insightInput = {
+    rows,
+    counts,
+    locationNameById,
+    studentsByFamily,
+    teacherByFamily,
+    activeStudentCountByFamily,
+    missingTeacherByFamily,
+    lastMessageAtByFamily,
+    nowMs,
+  };
   const kpi = deriveKpi(insightInput);
   const insights = deriveInsights(insightInput);
-  const nowMs = Date.now();
+  const riskByFamily = deriveRiskByFamily(insightInput);
+  const brief = deriveBrief(insightInput, kpi, riskByFamily);
 
   return (
     <div className="flex flex-col h-full">
@@ -84,9 +145,14 @@ export default async function FamiliesIndexPage() {
         locationOptions={locations.map((l) => ({ id: l.id, name: l.name ?? l.id }))}
         studentsByFamily={studentsByFamily}
         teacherByFamily={teacherByFamily}
+        activeStudentCountByFamily={activeStudentCountByFamily}
+        missingTeacherByFamily={missingTeacherByFamily}
+        splitSiblingsByFamily={splitSiblingsByFamily}
         kpi={kpi}
         insights={insights}
         nowMs={nowMs}
+        riskByFamily={riskByFamily}
+        brief={brief}
       />
     </div>
   );

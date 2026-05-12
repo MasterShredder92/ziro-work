@@ -3,20 +3,20 @@
 @import "../styles/vfx-animations.css";
 
 :root {
-  --background: #080808;
+  --background: #030303;
   --foreground: #d4d4d4;
   --accent: var(--z-accent);
   --sidebar-width: 240px;
   --chat-width: 420px;
-  --card-bg: #101012;
+  --card-bg: #080808;
   --card-border: #1c1c1e;
   --card-border-hover: #2a2a2e;
-  --input-bg: #0a0a0c;
+  --input-bg: #0a0a0a;
   --input-border: #232326;
-  --surface-dim: #0c0c0e;
+  --surface-dim: #0a0a0a;
 
   /* Premium design system tokens */
-  --z-bg: #080808;
+  --z-bg: #030303;
   --z-fg: #d4d4d4;
   --z-muted: color-mix(in oklab, var(--z-fg), transparent 35%);
   /* Theme controls (see settings/theme + globals) */
@@ -32,8 +32,8 @@
   --z-purple-dim: #9a28cc;
   --z-purple-glow: color-mix(in oklab, #bf36f8, transparent 55%);
   --z-on-purple: #1a0026;
-  --z-surface: #101012;
-  --z-surface-2: #0b0b0d;
+  --z-surface: #080808;
+  --z-surface-2: #0c0c0c;
   --z-border: #1c1c1e;
   --z-border-2: #2a2a2e;
   --z-danger: #ff3b6b;
@@ -61,12 +61,9 @@
 
   --z-agent-accent: var(--z-accent);
   --z-agent-glow: color-mix(in oklab, var(--z-accent), transparent 60%);
-  /* Gradient utility — green → purple */
-  --z-gradient: linear-gradient(135deg, var(--z-accent), var(--z-purple));
-  --z-gradient-glow: linear-gradient(135deg,
-    color-mix(in oklab, var(--z-accent), transparent 50%),
-    color-mix(in oklab, var(--z-purple), transparent 50%)
-  );
+  /* Subtle neutral sheen (avoid blue / purple wash on page chrome) */
+  --z-gradient: linear-gradient(180deg, #141414 0%, #0a0a0a 100%);
+  --z-gradient-glow: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
 }
 
 @theme inline {
@@ -80,7 +77,7 @@
 }
 
 body {
-  background: var(--z-bg);
+  background-color: var(--z-bg);
   color: var(--z-fg);
   font-family: var(--z-font-sans);
   -webkit-font-smoothing: antialiased;
@@ -88,6 +85,18 @@ body {
   letter-spacing: -0.01em;
   line-height: var(--z-leading-body);
   text-wrap: pretty;
+}
+
+/* Dark default: static faint grid on the canvas (no motion). Light theme overrides below. */
+html:not([data-theme="light"]):not(.light-theme) body {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-attachment: fixed;
+}
+
+[data-theme="light"] body,
+.light-theme body {
+  background-image: none;
 }
 
 h1,

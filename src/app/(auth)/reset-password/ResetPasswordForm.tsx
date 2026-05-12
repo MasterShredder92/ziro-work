@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getBrowserSupabaseClient } from "@/lib/supabase.browser";
@@ -8,7 +8,6 @@ import { getBrowserSupabaseClient } from "@/lib/supabase.browser";
 type Phase = "loading" | "form" | "success" | "error";
 
 export function ResetPasswordForm({ accent }: { accent: string }) {
-  const supabase = useMemo(() => getBrowserSupabaseClient(), []);
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("loading");
@@ -23,6 +22,7 @@ export function ResetPasswordForm({ accent }: { accent: string }) {
   useEffect(() => {
     async function init() {
       try {
+        const supabase = getBrowserSupabaseClient();
         // getSession will pick up the token from the URL hash automatically
         // because detectSessionInUrl: true is set in the browser client.
         const { data, error } = await supabase.auth.getSession();
@@ -54,7 +54,7 @@ export function ResetPasswordForm({ accent }: { accent: string }) {
       }
     }
     void init();
-  }, [supabase]);
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -70,6 +70,7 @@ export function ResetPasswordForm({ accent }: { accent: string }) {
     }
     setBusy(true);
     try {
+      const supabase = getBrowserSupabaseClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
         setFormError(error.message || "Failed to update password.");

@@ -3,6 +3,7 @@ import * as React from "react";
 import { TeacherDetailView } from "./TeacherDetailView";
 import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entities";
 import type { ScheduleRoom } from "@/lib/schedule/types";
+import { roomDisplayShortBadge } from "@/lib/rooms/roomDisplayName";
 import type { LocationHoursMap } from "@/lib/schedule/locationHoursUtils";
 import { getHoursForDate } from "@/lib/schedule/locationHoursUtils";
 import {
@@ -115,12 +116,14 @@ type Props = {
   rooms: ScheduleRoom[];
   locationHours: LocationHoursMap;
   onBlocksChange: (blocks: ScheduleBlock[]) => void;
+  canWriteSchedule?: boolean;
 };
 
 // ─── Action Sheet ─────────────────────────────────────────────────────────────
 function ActionSheet({
   block, student, family, teachers, students,
   onSave, onCheckIn, onCallOut, onCancelSession, onClose, saving, error,
+  canWriteSchedule,
 }: {
   block: ProjectedBlock;
   student: Student | null;
@@ -134,6 +137,7 @@ function ActionSheet({
   onClose: () => void;
   saving: boolean;
   error: string | null;
+  canWriteSchedule: boolean;
 }) {
   const isOpen = block.block_type === "open_time" || !block.student_id;
   const [tab, setTab] = React.useState<"actions" | "edit">("edit");
@@ -200,7 +204,7 @@ function ActionSheet({
       )}
 
       {/* Tabs */}
-      {!isOpen && (
+      {!isOpen && canWriteSchedule && (
         <div className="flex border-b" style={{ borderColor: "var(--z-border)" }}>
           {(["actions", "edit"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -222,6 +226,12 @@ function ActionSheet({
           </div>
         )}
 
+        {!canWriteSchedule ? (
+          <p className="text-center text-sm text-[var(--z-muted)] leading-relaxed py-4">
+            View only. Booking and changes are limited to studio staff.
+          </p>
+        ) : (
+        <>
         {tab === "actions" && (
           <>
             {!isOpen && !block.checked_in && (
@@ -367,6 +377,8 @@ function ActionSheet({
             </div>
           </div>
         )}
+        </>
+        )}
       </div>
     </div>
   );
@@ -384,6 +396,7 @@ export function MobileScheduleView({
   rooms,
   locationHours,
   onBlocksChange,
+  canWriteSchedule = false,
 }: Props) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [detailTeacherId, setDetailTeacherId] = React.useState<string | null>(null);
@@ -439,12 +452,12 @@ export function MobileScheduleView({
       return a.name.localeCompare(b.name);
     });
   }, [rooms]);
-  // Dynamic row height: fill viewport minus header/toolbar (~140px), min 44px, max 80px
+  // Dynamic row height: fill viewport minus header/toolbar (~140px), min 52px so blocks stay readable
   const roomRowH = React.useMemo(() => {
     if (roomsForBoard.length === 0) return ROW_H;
     const available = (typeof window !== "undefined" ? window.innerHeight : 700) - 140 - HEADER_H;
     const h = Math.floor(available / roomsForBoard.length);
-    return Math.max(44, Math.min(80, h));
+    return Math.max(52, Math.min(120, h));
   }, [roomsForBoard.length]);
   // Map: room_id → blocks on this day (by explicit room_id on block)
   const roomBlocksMap = React.useMemo(() => {
@@ -599,6 +612,7 @@ export function MobileScheduleView({
         saving={saving}
         error={error}
         onClearError={() => setError(null)}
+        canWriteSchedule={canWriteSchedule}
       />
     );
   }
@@ -662,7 +676,7 @@ export function MobileScheduleView({
                       boxShadow: "0 0 16px rgba(196,240,54,0.5), inset 0 0 8px rgba(196,240,54,0.2)",
                       textShadow: "0 0 4px rgba(0,0,0,0.9)",
                     }}>
-                    {room.name.replace(/[^0-9]/g, "") || room.name.slice(0, 2).toUpperCase()}
+                    {roomDisplayShortBadge(room.name)}
                   </div>
                   {/* Teacher avatar or empty indicator */}
                   {assignedTeacher ? (
@@ -830,6 +844,7 @@ export function MobileScheduleView({
             onClose={() => { setSelectedBlockId(null); setError(null); }}
             saving={saving}
             error={error}
+            canWriteSchedule={canWriteSchedule}
           />
         </>
       )}

@@ -20,6 +20,7 @@ import {
   readJson,
   serverError,
 } from "@/lib/http";
+import { logStudentScheduleActivity } from "@/lib/schedule/studentActivityLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -220,6 +221,24 @@ export async function POST(req: NextRequest) {
           status: "checked_in",
         }).catch(() => null);
       }
+    }
+
+    if (typeof row.student_id === "string" && row.student_id.length > 0) {
+      await logStudentScheduleActivity({
+        tenantId,
+        studentId: row.student_id,
+        action: "schedule_block_created",
+        locationId: row.location_id ?? null,
+        details: {
+          schedule_block_id: row.id,
+          block_date: row.block_date,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          teacher_id: row.teacher_id,
+          block_type: row.block_type,
+          status: row.status,
+        },
+      });
     }
 
     return created({ data: row });

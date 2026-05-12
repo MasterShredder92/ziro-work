@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { resolveScheduleContext } from "../guard";
 import { listScheduleRooms } from "@data/scheduleRooms";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 import { createRoomAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +100,7 @@ export default async function RoomManagerPage() {
                     <>
                       {rooms.map((r) => (
                         <tr key={r.id} className="border-t border-[var(--z-border)] hover:bg-white/3">
-                          <td className="px-4 py-2 font-semibold text-[var(--z-fg)]">{r.name}</td>
+                          <td className="px-4 py-2 font-semibold text-[var(--z-fg)]">{roomDisplayName(r.name)}</td>
                           <td className="px-4 py-2 text-[var(--z-muted)]">{r.roomType ?? "—"}</td>
                           <td className="px-4 py-2 text-[var(--z-muted)]">{r.capacity}</td>
                           <td className="px-4 py-2 text-[var(--z-muted)] truncate max-w-[220px]">
@@ -159,7 +160,7 @@ export default async function RoomManagerPage() {
               <tbody>
                 {orphanRooms.map((r) => (
                   <tr key={r.id} className="border-t border-[var(--z-border)] hover:bg-white/3">
-                    <td className="px-4 py-2 font-semibold text-[var(--z-fg)]">{r.name}</td>
+                    <td className="px-4 py-2 font-semibold text-[var(--z-fg)]">{roomDisplayName(r.name)}</td>
                     <td className="px-4 py-2 text-[var(--z-muted)]">{r.roomType ?? "—"}</td>
                     <td className="px-4 py-2 text-[var(--z-muted)]">{r.capacity}</td>
                     <td className="px-4 py-2 text-[var(--z-muted)] truncate max-w-[220px]">

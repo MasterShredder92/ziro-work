@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AddFamilyModal } from "./add-family-modal";
-import { SmartBackButton } from "@/components/navigation/SmartBackButton";;
+import { SmartBackButton } from "@/components/navigation/SmartBackButton";
 
 /* ─── Types ──────────────────────────────────────────────── */
 type FamilyRow = {

@@ -2,15 +2,18 @@
 :root,
 [data-theme="dark"],
 .dark-theme {
+  --z-bg: #030303;
+  --background: #030303;
+
   /* Primary Colors */
   --z-accent: #c4f036;
   --z-on-accent: #000000;
   
-  /* Surfaces */
-  --z-surface: #0a0a0c;
-  --z-surface-2: #1a1a1e;
-  --z-surface-3: #2a2a2f;
-  --z-surface-hover: #1a1a1e;
+  /* Surfaces — neutral black / charcoal (no blue cast) */
+  --z-surface: #080808;
+  --z-surface-2: #0c0c0c;
+  --z-surface-3: #121212;
+  --z-surface-hover: #101010;
   
   /* Text */
   --z-fg: #f0f0f0;
@@ -45,8 +48,7 @@
   --z-purple-glow: rgba(191, 54, 248, 0.25);
   --z-purple-bg: rgba(191, 54, 248, 0.10);
   --z-on-purple: #1a0026;
-  /* Gradient — green → purple */
-  --z-gradient: linear-gradient(135deg, #c4f036, #bf36f8);
+  --z-gradient: linear-gradient(180deg, #141414 0%, #0a0a0a 100%);
 }
 
 /* Light Theme */

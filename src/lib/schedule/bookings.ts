@@ -11,6 +11,7 @@ import type {
   ScheduleRoom,
   ScheduleSuggestion,
 } from "./types";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 
 function overlap(aStart: string, aEnd: string, bStart: string, bEnd: string) {
   return aStart < bEnd && bStart < aEnd;
@@ -136,7 +137,7 @@ export async function suggestRoomsForEvent(
       startTime: event.startTime,
       endTime: event.endTime,
       score,
-      rationale: `${room.name} available · capacity ${room.capacity}`,
+      rationale: `${roomDisplayName(room.name)} available · capacity ${room.capacity}`,
     });
   }
 

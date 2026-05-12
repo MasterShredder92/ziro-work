@@ -87,6 +87,7 @@ const BLOCK_TYPES = [
 function DetailActionSheet({
   block, student, family, teachers, students,
   onSave, onCheckIn, onCallOut, onCancelSession, onClose, saving, error,
+  canWriteSchedule,
 }: {
   block: ProjectedBlock;
   student: Student | null;
@@ -100,6 +101,7 @@ function DetailActionSheet({
   onClose: () => void;
   saving: boolean;
   error: string | null;
+  canWriteSchedule: boolean;
 }) {
   const isOpen = block.block_type === "open_time" || !block.student_id;
   const [tab, setTab] = React.useState<"actions" | "edit">("edit");
@@ -138,7 +140,7 @@ function DetailActionSheet({
       </div>
 
       {/* Tabs */}
-      {!isOpen && (
+      {!isOpen && canWriteSchedule && (
         <div className="flex border-b" style={{ borderColor: "var(--z-border)" }}>
           {(["actions", "edit"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -160,6 +162,12 @@ function DetailActionSheet({
           </div>
         )}
 
+        {!canWriteSchedule ? (
+          <p className="text-center text-xs text-[var(--z-muted)] leading-relaxed py-3">
+            View only. Staff can book and edit.
+          </p>
+        ) : (
+        <>
         {tab === "actions" && (
           <>
             {!isOpen && !block.checked_in && (
@@ -305,6 +313,8 @@ function DetailActionSheet({
             </div>
           </div>
         )}
+        </>
+        )}
       </div>
     </div>
   );
@@ -332,6 +342,7 @@ type TeacherDetailViewProps = {
   saving: boolean;
   error: string | null;
   onClearError: () => void;
+  canWriteSchedule?: boolean;
 };
 
 export function TeacherDetailView({
@@ -339,6 +350,7 @@ export function TeacherDetailView({
   isToday, currentMinute, studentsById, familiesById, teachers, students,
   locationConfig, onBack, onPatchBlock, onCheckIn, onCallOut, onCancelSession,
   saving, error, onClearError,
+  canWriteSchedule = false,
 }: TeacherDetailViewProps) {
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
 
@@ -501,6 +513,7 @@ export function TeacherDetailView({
                     onClose={() => { setSelectedBlockId(null); onClearError(); }}
                     saving={saving}
                     error={error}
+                    canWriteSchedule={canWriteSchedule}
                   />
                 </div>
               )}

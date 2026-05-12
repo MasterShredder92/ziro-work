@@ -20,6 +20,7 @@ import {
   readJson,
   serverError,
 } from "@/lib/http";
+import { logStudentScheduleActivity } from "@/lib/schedule/studentActivityLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -264,6 +265,43 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       patchData as unknown as ScheduleBlockUpdate,
     );
 
+    const prevStudent =
+      typeof current.student_id === "string" && current.student_id.length > 0
+        ? current.student_id
+        : null;
+    const nextStudent =
+      typeof row.student_id === "string" && row.student_id.length > 0 ? row.student_id : null;
+    if (prevStudent !== nextStudent) {
+      const loc = row.location_id ?? current.location_id;
+      const meta = {
+        schedule_block_id: row.id,
+        block_date: row.block_date,
+        start_time: row.start_time,
+        end_time: row.end_time,
+        teacher_id: row.teacher_id,
+        previous_student_id: prevStudent,
+        new_student_id: nextStudent,
+      };
+      if (prevStudent) {
+        await logStudentScheduleActivity({
+          tenantId,
+          studentId: prevStudent,
+          action: "schedule_student_unassigned",
+          details: meta,
+          locationId: loc,
+        });
+      }
+      if (nextStudent) {
+        await logStudentScheduleActivity({
+          tenantId,
+          studentId: nextStudent,
+          action: "schedule_student_assigned",
+          details: meta,
+          locationId: loc,
+        });
+      }
+    }
+
     if (row.checked_in && row.student_id && row.teacher_id && row.location_id) {
       const existingLog = await getSessionLogByBlockId(row.id, tenantId).catch(
         () => null,
@@ -280,6 +318,31 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
           status: "checked_in",
         }).catch(() => null);
       }
+    }
+
+    const becameCheckedIn =
+      row.checked_in === true &&
+      current.checked_in !== true &&
+      typeof row.student_id === "string" &&
+      row.student_id.length > 0;
+    const checkedInStudentId =
+      typeof row.student_id === "string" && row.student_id.length > 0 ? row.student_id : null;
+    if (becameCheckedIn && checkedInStudentId) {
+      await logStudentScheduleActivity({
+        tenantId,
+        studentId: checkedInStudentId,
+        action: "schedule_checked_in",
+        locationId: row.location_id ?? current.location_id ?? null,
+        details: {
+          schedule_block_id: row.id,
+          block_date: row.block_date,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          teacher_id: row.teacher_id,
+          teacher_tally: row.teacher_tally ?? null,
+          checked_in_by: row.checked_in_by ?? session.profileId ?? session.userId,
+        },
+      });
     }
 
     return ok({ data: row });
@@ -303,6 +366,22 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
     const allowedLocationId = assertLocationAllowed(access, row.location_id);
     if (!allowedLocationId || allowedLocationId !== row.location_id) {
       return badRequest("Location access denied");
+    }
+    if (typeof row.student_id === "string" && row.student_id.length > 0) {
+      await logStudentScheduleActivity({
+        tenantId,
+        studentId: row.student_id,
+        action: "schedule_block_deleted",
+        locationId: row.location_id ?? null,
+        details: {
+          schedule_block_id: row.id,
+          block_date: row.block_date,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          teacher_id: row.teacher_id,
+          block_type: row.block_type,
+        },
+      });
     }
     await deleteScheduleBlock(id, tenantId);
     return noContent();

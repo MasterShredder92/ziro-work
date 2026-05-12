@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Room } from "@/lib/types/entities";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 import type { RoomScheduleSummary } from "@/lib/locations/types";
 
 interface RoomListProps {
@@ -37,7 +38,7 @@ export function RoomList({ rooms, summaries = [] }: RoomListProps) {
             >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="truncate text-sm font-semibold text-[var(--z-fg)]">
-                  {room.name}
+                  {roomDisplayName(room.name)}
                 </h3>
                 {room.is_active === false ? (
                   <span className="rounded-full border border-[var(--z-border)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--z-muted)]">

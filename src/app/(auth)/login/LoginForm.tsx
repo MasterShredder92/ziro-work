@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getBrowserSupabaseClient } from "@/lib/supabase.browser";
@@ -51,7 +51,6 @@ export function LoginForm({
   nextHref: string;
 }) {
   const router = useRouter();
-  const supabase = useMemo(() => getBrowserSupabaseClient(), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,6 +62,7 @@ export function LoginForm({
     setBusy(true);
     setError(null);
     try {
+      const supabase = getBrowserSupabaseClient();
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,

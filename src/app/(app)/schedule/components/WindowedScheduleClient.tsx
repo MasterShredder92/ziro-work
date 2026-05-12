@@ -8,6 +8,7 @@ import type { Family, ScheduleBlock, Student, Teacher } from "@/lib/types/entiti
 import type { TeacherAvailabilityRow } from "@/lib/schedule/windowedData";
 import { shiftWindowByWeeks, type ScheduleWindow } from "@/lib/schedule/window";
 import type { ScheduleRoom } from "@/lib/schedule/types";
+import { roomDisplayName } from "@/lib/rooms/roomDisplayName";
 import {
   computeOpenSlotsForWindow,
   type ProjectedBlock,
@@ -1018,13 +1019,13 @@ export function WindowedScheduleClient({
                   <option value="">No room</option>
                   {rooms.map((room) => (
                     <option key={room.id} value={room.id}>
-                      {room.name}
+                      {roomDisplayName(room.name)}
                     </option>
                   ))}
                 </select>
                 {roomIdDraft && roomsById.get(roomIdDraft) ? (
                   <span className="mt-1 block text-[10px] text-[var(--z-muted)]">
-                    {roomsById.get(roomIdDraft)?.name}
+                    {roomDisplayName(roomsById.get(roomIdDraft)?.name)}
                   </span>
                 ) : null}
               </label>

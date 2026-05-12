@@ -12,14 +12,15 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
+import { requirePermission } from "@/lib/auth/guards";
 import { formatInTimeZone } from "date-fns-tz";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(_req: NextRequest) {
   try {
-    const tenantId = await getCRMTenantId();
+    const session = await requirePermission("schedule.write")();
+    const tenantId = session.tenantId;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = getServiceClient() as any;
 
@@ -156,6 +157,13 @@ export async function POST(_req: NextRequest) {
     });
   } catch (err) {
     console.error("[auto-checkin]", err);
+    const msg = err instanceof Error ? err.message : "";
+    if (msg === "UNAUTHENTICATED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Auto check-in failed" }, { status: 500 });
   }
 }
