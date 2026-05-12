@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFamilyAccountSummary } from "./_header";
-import { FamilyHubCanvas } from "./_family-hub-canvas";
+import { FamilyDashboardOrbit } from "./_family-dashboard-orbit";
 import { FamilySectionExpandOverlay } from "./_family-section-overlay";
 import { locationBrandColor, parseTabParam, type FamilyWorkspaceTab } from "./_content";
 
@@ -77,40 +76,15 @@ export function FamilyWorkspace() {
     );
   }
 
-  const { displayName, initialsStr, shortId, locC, avatarBg, avatarFg, accent } = derived;
-  const locationShort = locationName ? locationName.replace(" Music Lessons", "") : null;
-  const locChip = locC && locationShort ? { text: locationShort, bg: locC.bg, fg: locC.text } : null;
+  const { displayName } = derived;
 
   return (
-    <div className="relative flex flex-col gap-8 lg:gap-10">
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-[13px] font-medium">
-        <Link
-          href="/crm/families"
-          className="rounded-full border border-[var(--z-border)] bg-[var(--z-surface-2)] px-3 py-1 text-[var(--z-muted)] transition hover:border-[color-mix(in_oklab,var(--z-accent),transparent_55%)] hover:text-[var(--z-fg)]"
-        >
-          ← Families
-        </Link>
-        <span className="text-[var(--z-border)]">/</span>
-        <span className="rounded-full border border-[color-mix(in_oklab,var(--z-accent),transparent_70%)] bg-[color-mix(in_oklab,var(--z-accent),transparent_88%)] px-3 py-1 font-semibold text-[var(--z-fg)]">
-          {family.name}
-        </span>
-      </nav>
-
-      <FamilyHubCanvas
-        displayName={displayName}
-        initialsStr={initialsStr}
-        shortId={shortId}
-        status={family.status}
+    <>
+      <FamilyDashboardOrbit
+        focusLabel={displayName.toUpperCase()}
         balance={family.balance}
-        locationShort={locationShort}
-        isMilitary={!!family.is_military}
-        locChip={locChip}
-        avatarBg={avatarBg}
-        avatarFg={avatarFg}
-        accent={accent}
-        brandColor={brandColor}
         activeTab={hasTabInUrl ? activeTab : null}
-        onSelectTab={handleSelectTab}
+        onOpenTab={handleSelectTab}
       />
 
       {hasTabInUrl && (
@@ -124,6 +98,6 @@ export function FamilyWorkspace() {
           onRequestClose={handleCloseOverlay}
         />
       )}
-    </div>
+    </>
   );
 }
