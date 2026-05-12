@@ -7,6 +7,7 @@ import { CommandPalette } from "@/components/command/CommandPalette";
 import { useTenantUi } from "@/components/tenant/TenantUiContext";
 import { getRouteByHref } from "@/lib/routes";
 import Link from "next/link";
+import { House } from "lucide-react";
 import { ClientPageTitle } from "@/components/navigation/ClientPageTitle";
 import { cn } from "@/components/ui/utils";
 
@@ -41,6 +42,7 @@ export function TopBar({ onMenuToggle, hideMobile }: TopBarProps) {
   const { tenantId } = useTenantUi();
   const [commandOpen, setCommandOpen] = React.useState(false);
   const pageTitle = titleForPath(pathname);
+  const onDashboard = pathname === "/dashboard";
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -80,7 +82,19 @@ export function TopBar({ onMenuToggle, hideMobile }: TopBarProps) {
               <path d="M12.5 12.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
-          <div className="min-w-0 flex-1 flex items-center gap-4">
+          <div className="min-w-0 flex-1 flex items-center gap-3 sm:gap-4">
+            <Link
+              href="/dashboard"
+              title="Dashboard"
+              aria-label="Dashboard"
+              aria-current={onDashboard ? "page" : undefined}
+              className={cn(
+                "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#2b2b2f] bg-[#111113] text-[#909098] transition active:scale-95 hover:border-[var(--z-accent)]/50 hover:text-[var(--z-accent)]",
+                onDashboard && "border-[#b4ff00]/35 text-[#b4ff00]",
+              )}
+            >
+              <House className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            </Link>
             <ClientPageTitle title={pageTitle} />
           </div>
         </div>

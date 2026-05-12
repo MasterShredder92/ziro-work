@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { House } from "lucide-react";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
 import type { ShellLocation } from "@/lib/workspace/getWorkspaceShellData";
+import { cn } from "@/components/ui/utils";
 
 const FONT = "'Inter', system-ui, sans-serif";
 const GREEN = "#b4ff00";
@@ -115,6 +117,7 @@ function LocationOrb({
 
 export function AppLocationRail() {
   const pathname = usePathname() ?? "";
+  const onDashboard = pathname === "/dashboard";
   const { schoolName, locations, selectedLocId, setSelectedLocId } = useZiroWorkspace();
   const allLoc: ShellLocation = {
     id: "all",
@@ -141,9 +144,36 @@ export function AppLocationRail() {
         zIndex: 50,
         position: "relative",
       }}
-      aria-label="Locations"
+      aria-label="Workspace"
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+          <Link
+            href="/dashboard"
+            title="Dashboard"
+            aria-label="Dashboard"
+            aria-current={onDashboard ? "page" : undefined}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/45 transition hover:border-white/20 hover:text-white/80",
+              onDashboard && "border-[#b4ff00]/45 text-[#b4ff00]",
+            )}
+            style={{ textDecoration: "none" }}
+          >
+            <House className="h-[15px] w-[15px]" strokeWidth={2} aria-hidden />
+          </Link>
+          <span
+            style={{
+              fontFamily: FONT,
+              fontSize: 7,
+              fontWeight: 500,
+              color: onDashboard ? "rgba(180,255,0,.55)" : "rgba(255,255,255,.22)",
+              letterSpacing: ".12em",
+              textTransform: "uppercase",
+            }}
+          >
+            Home
+          </span>
+        </div>
         <div
           style={{
             fontFamily: FONT,
