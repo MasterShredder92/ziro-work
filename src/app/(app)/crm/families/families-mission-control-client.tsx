@@ -6,7 +6,7 @@ import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
 import { AddFamilyModal } from "./add-family-modal";
 import { FamiliesListClient } from "./families-list-client";
 import type {
-  Insight, InsightFilter, InsightSeverity, FamiliesKpi,
+  Insight, InsightFilter, FamiliesKpi,
   RiskScore, RiskBand,
 } from "./_insights";
 
@@ -62,6 +62,9 @@ type Props = {
 };
 
 type ViewMode = "families" | "teachers";
+
+/** Right-rail metric pill → detail modal; maps to `Insight.id` where applicable. */
+type MetricModalKey = "overdue" | "no-teacher" | "new" | "trial" | "active";
 
 type TeacherStudentEntry = {
   studentId: string;
@@ -308,6 +311,13 @@ export function FamiliesMissionControl({
   // Location is now the global workspace SSOT — no local rail.
   const activeLocationId = workspace.selectedLocId;
 
+  const [metricModal, setMetricModal] = useState<MetricModalKey | null>(null);
+
+  const trialCount = useMemo(
+    () => rows.filter((r) => (r.status ?? "").toLowerCase() === "trial").length,
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     let list = rows;
 
@@ -457,7 +467,6 @@ export function FamiliesMissionControl({
       <HudStrip
         rowCount={viewMode === "families" ? filtered.length : teachersAggregate.length}
         totalCount={rows.length}
-        kpi={kpi}
         search={search}
         onSearch={setSearch}
         onNewFamily={() => setShowAdd(true)}
@@ -468,9 +477,6 @@ export function FamiliesMissionControl({
 
       {viewMode === "families" && (
         <FiltersBar
-          kpi={kpi}
-          activeChip={activeChip}
-          onChipChange={setActiveChip}
           sortMode={sortMode}
           onSortChange={setSortMode}
           hasActiveFilters={hasActiveFilters}
@@ -481,7 +487,7 @@ export function FamiliesMissionControl({
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 320px",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(176px, 14vw)",
         gap: 0,
         flex: 1,
         minHeight: 0,
@@ -515,8 +521,26 @@ export function FamiliesMissionControl({
           />
         )}
 
-        <IntelPanel insights={insights} onApply={applyInsightFilter} />
+        <MetricsAside
+          kpi={kpi}
+          trialCount={trialCount}
+          activeChip={activeChip}
+          onOpenMetric={(k) => setMetricModal(k)}
+        />
       </div>
+
+      <MetricDetailModal
+        openKey={metricModal}
+        insights={insights}
+        kpi={kpi}
+        trialCount={trialCount}
+        totalFamilies={rows.length}
+        onClose={() => setMetricModal(null)}
+        onApply={(f) => {
+          applyInsightFilter(f);
+          setMetricModal(null);
+        }}
+      />
 
       <AddFamilyModal
         open={showAdd}
@@ -537,7 +561,6 @@ export function FamiliesMissionControl({
 function HudStrip({
   rowCount,
   totalCount,
-  kpi,
   search,
   onSearch,
   onNewFamily,
@@ -547,7 +570,6 @@ function HudStrip({
 }: {
   rowCount: number;
   totalCount: number;
-  kpi: FamiliesKpi;
   search: string;
   onSearch: (v: string) => void;
   onNewFamily: () => void;
@@ -598,12 +620,7 @@ function HudStrip({
         </span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, justifyContent: "center", flexWrap: "wrap" }}>
-        <MiniStat label="Overdue" value={kpi.overdue} tone={kpi.overdue > 0 ? "urgent" : "neutral"} />
-        <MiniStat label="No teacher" value={kpi.noTeacher} tone={kpi.noTeacher > 0 ? "warn" : "neutral"} />
-        <MiniStat label="New / 30d" value={kpi.newLast30} tone="info" />
-        <MiniStat label="Active" value={`${kpi.activePct}%`} tone="accent" />
-      </div>
+      <div style={{ flex: 1 }} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <div style={{ position: "relative" }}>
@@ -719,7 +736,19 @@ function ViewToggle({ viewMode, onChange }: { viewMode: ViewMode; onChange: (m: 
 
 type KpiTone = "neutral" | "urgent" | "warn" | "info" | "accent";
 
-function MiniStat({ label, value, tone }: { label: string; value: number | string; tone: KpiTone }) {
+function MiniStat({
+  label,
+  value,
+  tone,
+  onClick,
+  selected,
+}: {
+  label: string;
+  value: number | string;
+  tone: KpiTone;
+  onClick?: () => void;
+  selected?: boolean;
+}) {
   const tones: Record<KpiTone, { fg: string; border: string; pulse: string }> = {
     neutral: { fg: FG_SECONDARY, border: "rgba(255,255,255,0.06)", pulse: "" },
     urgent:  { fg: URGENT, border: Number(value) > 0 ? `${URGENT}55` : "rgba(255,255,255,0.06)", pulse: "mc-pulse-red" },
@@ -728,15 +757,18 @@ function MiniStat({ label, value, tone }: { label: string; value: number | strin
     accent:  { fg: ACCENT, border: "rgba(255,255,255,0.06)", pulse: "" },
   };
   const t = tones[tone];
-  return (
-    <div className={Number(value) > 0 ? t.pulse : ""} style={{
+  const pulseClass = typeof value === "number" && value > 0 ? t.pulse : "";
+  const inner = (
+    <div className={pulseClass} style={{
       padding: "5px 12px",
       borderRadius: 6,
-      border: `1px solid ${t.border}`,
+      border: `1px solid ${selected ? ACCENT : t.border}`,
+      boxShadow: selected ? `0 0 0 1px ${ACCENT}44` : undefined,
       display: "flex",
       alignItems: "baseline",
       gap: 7,
       whiteSpace: "nowrap",
+      width: "100%",
     }}>
       <span style={{
         ...NUM_STYLE,
@@ -754,23 +786,38 @@ function MiniStat({ label, value, tone }: { label: string; value: number | strin
       }}>{label}</span>
     </div>
   );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        style={{
+          margin: 0,
+          padding: 0,
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          width: "100%",
+          textAlign: "left",
+          borderRadius: 6,
+        }}
+      >
+        {inner}
+      </button>
+    );
+  }
+  return inner;
 }
 
 // ─── Filters toolbar (above table) ────────────────────────────────────────
 
 function FiltersBar({
-  kpi,
-  activeChip,
-  onChipChange,
   sortMode,
   onSortChange,
   hasActiveFilters,
   onClearAll,
   rowCount,
 }: {
-  kpi: FamiliesKpi;
-  activeChip: InsightFilter["status"] | null;
-  onChipChange: (s: InsightFilter["status"] | null) => void;
   sortMode: SortMode;
   onSortChange: (m: SortMode) => void;
   hasActiveFilters: boolean;
@@ -787,46 +834,16 @@ function FiltersBar({
       background: "rgba(8,8,10,0.45)",
       minHeight: 44,
     }}>
-      <FilterChip
-        label="Overdue"
-        count={kpi.overdue}
-        active={activeChip === "overdue"}
-        color={URGENT}
-        onClick={() => onChipChange(activeChip === "overdue" ? null : "overdue")}
-      />
-      <FilterChip
-        label="No teacher"
-        count={kpi.noTeacher}
-        active={activeChip === "no-teacher"}
-        color={OPP}
-        onClick={() => onChipChange(activeChip === "no-teacher" ? null : "no-teacher")}
-      />
-      <FilterChip
-        label="New / 30d"
-        count={kpi.newLast30}
-        active={activeChip === "new"}
-        color={INFO}
-        onClick={() => onChipChange(activeChip === "new" ? null : "new")}
-      />
-      <FilterChip
-        label="Trial"
-        count={null}
-        active={activeChip === "trial"}
-        color={VIOLET}
-        onClick={() => onChipChange(activeChip === "trial" ? null : "trial")}
-      />
-
-      <div style={{ flex: 1 }} />
-
       <span style={{
         ...NUM_STYLE,
         fontSize: 11.5,
         fontWeight: 500,
         color: FG_TERTIARY,
-        marginRight: 6,
       }}>
         {rowCount.toLocaleString()} {rowCount === 1 ? "family" : "families"}
       </span>
+
+      <div style={{ flex: 1 }} />
 
       <SortControl sortMode={sortMode} onChange={onSortChange} />
 
@@ -851,71 +868,6 @@ function FiltersBar({
         </button>
       )}
     </div>
-  );
-}
-
-function FilterChip({
-  label,
-  count,
-  active,
-  color,
-  onClick,
-}: {
-  label: string;
-  count: number | null;
-  active: boolean;
-  color: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontFamily: FONT,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 7,
-        padding: "5px 12px",
-        borderRadius: 7,
-        border: `1px solid ${active ? color : SURFACE_BORDER}`,
-        background: active ? `${color}1c` : "transparent",
-        color: active ? color : FG_SECONDARY,
-        fontSize: 12,
-        fontWeight: active ? 600 : 500,
-        cursor: "pointer",
-        letterSpacing: "-0.005em",
-        transition: "background 0.12s, border-color 0.12s",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-          e.currentTarget.style.color = FG;
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = FG_SECONDARY;
-        }
-      }}
-    >
-      <span style={{
-        width: 5, height: 5, borderRadius: "50%",
-        background: color, flexShrink: 0,
-        boxShadow: active ? `0 0 6px ${color}` : "none",
-      }} />
-      {label}
-      {count != null && count > 0 && (
-        <span style={{
-          ...NUM_STYLE,
-          fontSize: 11,
-          fontWeight: 600,
-          color: active ? color : FG_TERTIARY,
-          letterSpacing: 0,
-        }}>{count}</span>
-      )}
-    </button>
   );
 }
 
@@ -2252,14 +2204,42 @@ function RiskCell({ risk }: { risk: RiskScore | undefined }) {
   );
 }
 
-// ─── Intel panel (right rail) ─────────────────────────────────────────────
+// ─── Metrics rail (narrow right column) ────────────────────────────────────
 
-function IntelPanel({
-  insights,
-  onApply,
+function insightIdForMetric(key: MetricModalKey): string | null {
+  switch (key) {
+    case "overdue": return "overdue";
+    case "no-teacher": return "no-teacher";
+    case "new": return "new-30";
+    case "trial": return "trials";
+    default: return null;
+  }
+}
+
+function findInsightForMetric(insights: Insight[], key: MetricModalKey): Insight | undefined {
+  const id = insightIdForMetric(key);
+  if (!id) return undefined;
+  return insights.find((x) => x.id === id);
+}
+
+function hasApplyableInsightFilter(f: InsightFilter | undefined): boolean {
+  if (!f || typeof f !== "object") return false;
+  if (f.status != null) return true;
+  if (typeof f.search === "string" && f.search.length > 0) return true;
+  if (f.locationId != null && String(f.locationId).length > 0) return true;
+  return false;
+}
+
+function MetricsAside({
+  kpi,
+  trialCount,
+  activeChip,
+  onOpenMetric,
 }: {
-  insights: Insight[];
-  onApply: (f: InsightFilter | undefined) => void;
+  kpi: FamiliesKpi;
+  trialCount: number;
+  activeChip: InsightFilter["status"] | null;
+  onOpenMetric: (k: MetricModalKey) => void;
 }) {
   return (
     <aside className="mc-glass-light" style={{
@@ -2267,125 +2247,192 @@ function IntelPanel({
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
+      minWidth: 0,
     }}>
       <div style={{
-        padding: "14px 18px 12px 18px",
-        display: "flex",
-        alignItems: "baseline",
-        gap: 10,
+        padding: "10px 12px 9px 12px",
         borderBottom: `1px solid ${SURFACE_BORDER}`,
       }}>
         <span style={{
           fontFamily: FONT,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 600,
-          letterSpacing: "-0.015em",
-          color: FG,
-        }}>
-          Insights
-        </span>
-        <span style={{
-          ...NUM_STYLE,
-          fontSize: 11,
-          fontWeight: 500,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
           color: FG_TERTIARY,
-        }}>{insights.length}</span>
+        }}>Metrics</span>
       </div>
-
       <div style={{
         flex: 1,
         overflowY: "auto",
-        padding: "14px 12px",
+        padding: "12px 10px 16px 10px",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: 10,
       }}>
-        {insights.length === 0 ? (
-          <div style={{
-            padding: "30px 12px",
-            textAlign: "center",
-            color: FG_TERTIARY,
-            fontSize: 12,
-            fontFamily: FONT,
-          }}>
-            All steady. Nothing to flag.
-          </div>
-        ) : (
-          insights.map((ins) => (
-            <InsightCard key={ins.id} insight={ins} onApply={() => onApply(ins.filter)} />
-          ))
-        )}
+        <MiniStat
+          label="Overdue"
+          value={kpi.overdue}
+          tone={kpi.overdue > 0 ? "urgent" : "neutral"}
+          onClick={() => onOpenMetric("overdue")}
+          selected={activeChip === "overdue"}
+        />
+        <MiniStat
+          label="No teacher"
+          value={kpi.noTeacher}
+          tone={kpi.noTeacher > 0 ? "warn" : "neutral"}
+          onClick={() => onOpenMetric("no-teacher")}
+          selected={activeChip === "no-teacher"}
+        />
+        <MiniStat
+          label="New / 30d"
+          value={kpi.newLast30}
+          tone="info"
+          onClick={() => onOpenMetric("new")}
+          selected={activeChip === "new"}
+        />
+        <MiniStat
+          label="Trial"
+          value={trialCount}
+          tone={trialCount > 0 ? "warn" : "neutral"}
+          onClick={() => onOpenMetric("trial")}
+          selected={activeChip === "trial"}
+        />
+        <MiniStat
+          label="Active"
+          value={`${kpi.activePct}%`}
+          tone="accent"
+          onClick={() => onOpenMetric("active")}
+        />
       </div>
     </aside>
   );
 }
 
-function InsightCard({ insight, onApply }: { insight: Insight; onApply: () => void }) {
-  const sevColor = sevColorFor(insight.severity);
-  const sevBg = sevBgFor(insight.severity);
+function MetricDetailModal({
+  openKey,
+  insights,
+  kpi,
+  trialCount,
+  totalFamilies,
+  onClose,
+  onApply,
+}: {
+  openKey: MetricModalKey | null;
+  insights: Insight[];
+  kpi: FamiliesKpi;
+  trialCount: number;
+  totalFamilies: number;
+  onClose: () => void;
+  onApply: (f: InsightFilter | undefined) => void;
+}) {
+  if (!openKey) return null;
+
+  const ins = findInsightForMetric(insights, openKey);
+  const approxActiveFamilies =
+    totalFamilies > 0 ? Math.round((kpi.activePct / 100) * totalFamilies) : 0;
+
+  const title =
+    openKey === "active"
+      ? `${kpi.activePct}% active families`
+      : ins?.title ?? "Overview";
+
+  const body =
+    openKey === "active"
+      ? `About ${approxActiveFamilies} of ${totalFamilies} families are marked active in CRM. Other records may be trial, paused, inactive, or archived.`
+      : openKey === "trial" && !ins
+        ? `${trialCount} ${trialCount === 1 ? "family is" : "families are"} on trial. Convert or nurture before the trial window closes.`
+        : ins?.body ?? "No additional details for this metric right now.";
+
+  const canApply = ins != null && hasApplyableInsightFilter(ins.filter);
+
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onApply}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onApply(); }}
+      role="presentation"
       style={{
-        position: "relative",
-        padding: "11px 12px 11px 16px",
-        borderRadius: 7,
-        background: sevBg,
-        border: `1px solid ${sevColor}26`,
-        cursor: "pointer",
-        overflow: "hidden",
-        transition: "border-color 0.14s",
+        position: "fixed",
+        inset: 0,
+        zIndex: 180,
+        background: "rgba(0,0,0,0.52)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${sevColor}77`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${sevColor}26`; }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{
-        position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
-        background: sevColor,
-        boxShadow: `0 0 6px ${sevColor}66`,
-      }} />
-      <div style={{
-        fontFamily: FONT,
-        fontSize: 12.5,
-        fontWeight: 600,
-        color: sevColor,
-        lineHeight: 1.3,
-        marginBottom: 4,
-        letterSpacing: "-0.01em",
-      }}>{insight.title}</div>
-      <div style={{
-        fontFamily: FONT,
-        fontSize: 11.5,
-        color: FG_SECONDARY,
-        lineHeight: 1.45,
-        marginBottom: 6,
-        letterSpacing: "-0.005em",
-      }}>{insight.body}</div>
-      {insight.filter && (
+      <div
+        className="mc-glass"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="metric-modal-title"
+        style={{
+          width: "min(440px, 100%)",
+          maxHeight: "min(80vh, 520px)",
+          overflow: "auto",
+          borderRadius: 10,
+          border: `1px solid ${SURFACE_BORDER}`,
+          padding: "18px 20px 16px 20px",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.65)",
+        }}
+        onMouseDown={(e) => { e.stopPropagation(); }}
+      >
         <div style={{
           fontFamily: FONT,
-          fontSize: 10.5,
+          fontSize: 15,
           fontWeight: 600,
-          color: sevColor,
-          letterSpacing: "0.02em",
-        }}>
-          Apply filter ›
+          color: FG,
+          letterSpacing: "-0.02em",
+          marginBottom: 10,
+          lineHeight: 1.25,
+        }} id="metric-modal-title">{title}</div>
+        <div style={{
+          fontFamily: FONT,
+          fontSize: 13,
+          fontWeight: 400,
+          color: FG_SECONDARY,
+          lineHeight: 1.5,
+          marginBottom: 18,
+        }}>{body}</div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              fontFamily: FONT,
+              padding: "8px 14px",
+              borderRadius: 7,
+              border: `1px solid ${SURFACE_BORDER}`,
+              background: "transparent",
+              color: FG_SECONDARY,
+              fontSize: 12.5,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+          {canApply && (
+            <button
+              type="button"
+              onClick={() => onApply(ins!.filter)}
+              style={{
+                fontFamily: FONT,
+                padding: "8px 16px",
+                borderRadius: 7,
+                border: `1px solid ${ACCENT}66`,
+                background: "rgba(196,240,54,0.12)",
+                color: ACCENT,
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Apply filter
+            </button>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
-}
-
-function sevColorFor(s: InsightSeverity): string {
-  if (s === "urgent") return URGENT;
-  if (s === "opportunity") return OPP;
-  return INFO;
-}
-function sevBgFor(s: InsightSeverity): string {
-  if (s === "urgent") return URGENT_BG;
-  if (s === "opportunity") return OPP_BG;
-  return INFO_BG;
 }
