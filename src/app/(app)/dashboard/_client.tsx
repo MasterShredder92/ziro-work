@@ -45,11 +45,24 @@ interface ScheduleOverview {
   range: { mtdStart: string; mtdEnd: string };
 }
 
+/** Live CRM aggregates for the Families dashboard tile. */
+interface FamiliesOverview {
+  activeFamilies: number;
+  newFamiliesMtd: number;
+  familiesPastDueBalance: number;
+  openLeads: number;
+  leadsNeedingFirstTouch: number;
+  newFamiliesByWeek: number[];
+  weekLabels: string[];
+  range: { mtdStart: string; mtdEnd: string };
+}
+
 interface AllData {
   metrics: DashMetrics;
   teachers: TeacherData[];
   locationRevenue: LocRevenue[];
   schedule: ScheduleOverview | null;
+  families: FamiliesOverview | null;
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -443,19 +456,36 @@ function ScheduleContent({ data, locId }: { data: AllData; locId: string | null 
   );
 }
 
-function FamiliesContent({ data }: { data: AllData }) {
-  const active  = data.metrics.activeFamilies;
-  const pct     = Math.min(97, Math.round((active / Math.max(active + 8, 1)) * 100));
-  const sPerFam = active > 0 ? (data.metrics.activeStudents / active).toFixed(1) : "—";
+function FamiliesContent({ data, locId }: { data: AllData; locId: string | null }) {
+  const fam = data.families;
+  if (!fam) {
+    return (
+      <div style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.28)", padding: "4px 0" }}>
+        Family metrics unavailable. Check network or try again shortly.
+      </div>
+    );
+  }
+  const scope = locId ? "Primary studio on file" : "All locations";
+  const sPerFam =
+    locId || fam.activeFamilies === 0
+      ? "—"
+      : (data.metrics.activeStudents / fam.activeFamilies).toFixed(1);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 6, alignItems: "start" }}>
-      <IC style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 8px" }}>
-        <DonutChart pct={pct} color={GREEN} color2="#22c55e" size={78} gid="fam" />
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <IC>
+        <SL>New families · last 8 weeks</SL>
+        <MiniBar values={fam.newFamiliesByWeek} labels={fam.weekLabels} color={GREEN} color2="#22c55e" gid="famwk" />
+        <div style={{ fontFamily: FONT, fontSize: 6.5, color: "rgba(255,255,255,.22)", marginTop: 4, letterSpacing: ".02em" }}>
+          {scope} · MTD {fam.range.mtdStart} → {fam.range.mtdEnd}
+        </div>
       </IC>
-      <div style={{ display: "grid", gap: 6 }}>
-        <IC><SL>Active Families</SL><SV color={GREEN}>{active}</SV></IC>
-        <IC><SL>Retention Est.</SL><SV color={pct >= 80 ? GREEN : AMBER}>{pct}%</SV></IC>
-        <IC><SL>Students / Family</SL><SV>{sPerFam}</SV></IC>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <IC><SL>Active families</SL><SV color={GREEN}>{fam.activeFamilies}</SV></IC>
+        <IC><SL>New families MTD</SL><SV color={GREEN}>{fam.newFamiliesMtd}</SV></IC>
+        <IC><SL>Open leads</SL><SV color={BLUE}>{fam.openLeads}</SV></IC>
+        <IC><SL>Needs first touch</SL><SV color={fam.leadsNeedingFirstTouch > 0 ? AMBER : "rgba(255,255,255,.35)"}>{fam.leadsNeedingFirstTouch}</SV></IC>
+        <IC><SL>Families past-due</SL><SV color={fam.familiesPastDueBalance > 0 ? AMBER : "rgba(255,255,255,.35)"}>{fam.familiesPastDueBalance}</SV></IC>
+        <IC><SL>Students / family</SL><SV>{sPerFam}</SV></IC>
       </div>
     </div>
   );
@@ -870,7 +900,7 @@ function ModuleBox({ mod, data, locId }: {
     );
     switch (mod.id) {
       case "schedule":  return <ScheduleContent   data={data} locId={locId} />;
-      case "families":  return <FamiliesContent   data={data} />;
+      case "families":  return <FamiliesContent   data={data} locId={locId} />;
       case "invoices":  return <InvoicesContent   data={data} locId={locId} />;
       case "lifecycle": return <LifeCycleContent  data={data} />;
       case "ai-agents": return <AIAgentsContent   data={data} />;
@@ -1042,11 +1072,12 @@ export function DashboardClient() {
   useEffect(() => {
     async function load() {
       const locQs = selectedLocId ? `?locationId=${encodeURIComponent(selectedLocId)}` : "";
-      const [mRes, tRes, lRes, sRes] = await Promise.all([
+      const [mRes, tRes, lRes, sRes, fRes] = await Promise.all([
         fetch("/api/dashboard/metrics").then(r => r.ok ? r.json() : null),
         fetch("/api/dashboard/teacher-utilization").then(r => r.ok ? r.json() : null),
         fetch("/api/dashboard/location-revenue").then(r => r.ok ? r.json() : null),
         fetch(`/api/dashboard/schedule-overview${locQs}`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/dashboard/families-overview${locQs}`).then(r => r.ok ? r.json() : null),
       ]);
       if (mRes && tRes && lRes) {
         setData({
@@ -1054,6 +1085,7 @@ export function DashboardClient() {
           teachers: tRes.teachers ?? [],
           locationRevenue: lRes.locations ?? [],
           schedule: sRes ?? null,
+          families: fRes ?? null,
         });
       }
     }
