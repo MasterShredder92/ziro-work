@@ -50,8 +50,6 @@ interface FamiliesOverview {
   activeFamilies: number;
   newFamiliesMtd: number;
   familiesPastDueBalance: number;
-  openLeads: number;
-  leadsNeedingFirstTouch: number;
   /** Active students with a `family_id` (same scope as location filter on `students.location_id`). */
   activeStudentsLinked: number;
   /** Distinct `family_id` values among those students — denominator for the average. */
@@ -486,8 +484,6 @@ function FamiliesContent({ data, locId }: { data: AllData; locId: string | null 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <IC><SL>Active families</SL><SV color={GREEN}>{fam.activeFamilies}</SV></IC>
         <IC><SL>New families MTD</SL><SV color={GREEN}>{fam.newFamiliesMtd}</SV></IC>
-        <IC><SL>Open leads</SL><SV color={BLUE}>{fam.openLeads}</SV></IC>
-        <IC><SL>Needs first touch</SL><SV color={fam.leadsNeedingFirstTouch > 0 ? AMBER : "rgba(255,255,255,.35)"}>{fam.leadsNeedingFirstTouch}</SV></IC>
         <IC><SL>Families past-due</SL><SV color={fam.familiesPastDueBalance > 0 ? AMBER : "rgba(255,255,255,.35)"}>{fam.familiesPastDueBalance}</SV></IC>
         <IC>
           <SL>Avg students / family</SL>

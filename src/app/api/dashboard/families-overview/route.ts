@@ -29,7 +29,7 @@ function parseYmd(s: string): Date {
  * GET /api/dashboard/families-overview?locationId=optional
  *
  * CRM signals for the Families dashboard tile (location = `families.primary_location_id`
- * and `leads.location_id` when scoped).
+ * and `students.location_id` for student-linked stats when scoped).
  *
  * Students / family = active students with a family_id ÷ distinct family_ids among those rows
  * (optionally filtered by `students.location_id`), not `activeStudents / activeFamilies`.
@@ -89,23 +89,11 @@ export async function GET(req: NextRequest) {
         .eq("status", "active")
         .not("family_id", "is", null);
 
-    const [
-      activeHead,
-      newMtdHead,
-      overdueHead,
-      createdRows,
-      leadsRows,
-      studentRows,
-    ] = await Promise.all([
+    const [activeHead, newMtdHead, overdueHead, createdRows, studentRows] = await Promise.all([
       locationId ? activeQ.eq("primary_location_id", locationId) : activeQ,
       locationId ? newMtdQ.eq("primary_location_id", locationId) : newMtdQ,
       locationId ? overdueQ.eq("primary_location_id", locationId) : overdueQ,
       locationId ? createdQ.eq("primary_location_id", locationId) : createdQ,
-      db
-        .from("leads")
-        .select("id, stage, status, converted_student_id, last_contact_at, location_id")
-        .eq("tenant_id", tenantId)
-        .limit(12000),
       locationId ? studBase().eq("location_id", locationId) : studBase(),
     ]);
 
@@ -113,7 +101,6 @@ export async function GET(req: NextRequest) {
     if (newMtdHead.error) throw newMtdHead.error;
     if (overdueHead.error) throw overdueHead.error;
     if (createdRows.error) throw createdRows.error;
-    if (leadsRows.error) throw leadsRows.error;
     if (studentRows.error) throw studentRows.error;
 
     const newFamiliesByWeek = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -131,20 +118,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    let openLeads = 0;
-    let leadsNeedingFirstTouch = 0;
-    for (const row of leadsRows.data ?? []) {
-      if (locationId && row.location_id && String(row.location_id) !== locationId) continue;
-      if (locationId && !row.location_id) continue;
-
-      const stage = (row.stage ?? "").toLowerCase();
-      if (stage === "lost" || stage === "enrolled") continue;
-      if (row.converted_student_id) continue;
-      openLeads++;
-      const neverContacted = !row.last_contact_at && String(row.status ?? "").toLowerCase() === "new";
-      if (neverContacted) leadsNeedingFirstTouch++;
-    }
-
     const linked = studentRows.data ?? [];
     const activeStudentsLinked = linked.length;
     const familiesWithActiveStudent = new Set(
@@ -155,8 +128,6 @@ export async function GET(req: NextRequest) {
       activeFamilies: activeHead.count ?? 0,
       newFamiliesMtd: newMtdHead.count ?? 0,
       familiesPastDueBalance: overdueHead.count ?? 0,
-      openLeads,
-      leadsNeedingFirstTouch,
       activeStudentsLinked,
       familiesWithActiveStudent,
       newFamiliesByWeek,
