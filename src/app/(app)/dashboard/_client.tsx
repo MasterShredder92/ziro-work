@@ -35,10 +35,21 @@ interface LocRevenue {
   collectionRate: number;
 }
 
+/** Live aggregates from `schedule_blocks` for the Schedule dashboard tile. */
+interface ScheduleOverview {
+  sessionsByDow: number[];
+  mtdBookedSessions: number;
+  mtdOpenSlots: number;
+  fillRatePct: number;
+  teachersTeachingMtd: number;
+  range: { mtdStart: string; mtdEnd: string };
+}
+
 interface AllData {
   metrics: DashMetrics;
   teachers: TeacherData[];
   locationRevenue: LocRevenue[];
+  schedule: ScheduleOverview | null;
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -404,22 +415,30 @@ function SV({ children, color, size }: { children: React.ReactNode; color?: stri
 
 // ── Module content components ─────────────────────────────────────────────────
 
-function ScheduleContent({ data }: { data: AllData; locId: string | null }) {
-  const totSes    = data.teachers.reduce((s, t) => s + t.totalSessions, 0);
-  const bookedSes = data.teachers.reduce((s, t) => s + t.bookedSessions, 0);
-  const fillRate  = totSes > 0 ? Math.round((bookedSes / totSes) * 100) : 0;
-  const base = Math.max(1, Math.floor(totSes / 5));
-  const bars = [0.7, 1.1, 1.0, 1.3, 0.9, 0.5, 0.2].map(f => Math.round(base * f));
+function ScheduleContent({ data, locId }: { data: AllData; locId: string | null }) {
+  const sch = data.schedule;
+  if (!sch) {
+    return (
+      <div style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.28)", padding: "4px 0" }}>
+        Schedule metrics unavailable. Check network or try again shortly.
+      </div>
+    );
+  }
+  const { sessionsByDow, mtdBookedSessions, mtdOpenSlots, fillRatePct, teachersTeachingMtd, range } = sch;
+  const scope = locId ? "This location · MTD" : "All locations · MTD";
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
       <IC style={{ gridColumn: "1 / -1" }}>
-        <SL>Weekly Session Load</SL>
-        <MiniBar values={bars} labels={["M","T","W","T","F","S","S"]} color={BLUE} color2="#0ea5e9" gid="sched" />
+        <SL>Session load by weekday</SL>
+        <MiniBar values={sessionsByDow} labels={["M", "T", "W", "T", "F", "S", "S"]} color={BLUE} color2="#0ea5e9" gid="sched" />
+        <div style={{ fontFamily: FONT, fontSize: 6.5, color: "rgba(255,255,255,.22)", marginTop: 4, letterSpacing: ".02em" }}>
+          {scope} · {range.mtdStart} → {range.mtdEnd}
+        </div>
       </IC>
-      <IC><SL>Sessions MTD</SL><SV color={BLUE}>{totSes}</SV></IC>
-      <IC><SL>Fill Rate</SL><SV color={fillRate >= 70 ? GREEN : AMBER}>{fillRate}%</SV></IC>
-      <IC><SL>Teachers Active</SL><SV>{data.teachers.length}</SV></IC>
-      <IC><SL>Booked</SL><SV color={GREEN}>{bookedSes}</SV></IC>
+      <IC><SL>Booked sessions</SL><SV color={BLUE}>{mtdBookedSessions}</SV></IC>
+      <IC><SL>Capacity fill</SL><SV color={fillRatePct >= 70 ? GREEN : AMBER}>{fillRatePct}%</SV></IC>
+      <IC><SL>Teachers w/ sessions</SL><SV>{teachersTeachingMtd}</SV></IC>
+      <IC><SL>Open slots posted</SL><SV color={mtdOpenSlots > 0 ? TEAL : "rgba(255,255,255,.35)"}>{mtdOpenSlots}</SV></IC>
     </div>
   );
 }
@@ -1022,19 +1041,26 @@ export function DashboardClient() {
 
   useEffect(() => {
     async function load() {
-      const [mRes, tRes, lRes] = await Promise.all([
+      const locQs = selectedLocId ? `?locationId=${encodeURIComponent(selectedLocId)}` : "";
+      const [mRes, tRes, lRes, sRes] = await Promise.all([
         fetch("/api/dashboard/metrics").then(r => r.ok ? r.json() : null),
         fetch("/api/dashboard/teacher-utilization").then(r => r.ok ? r.json() : null),
         fetch("/api/dashboard/location-revenue").then(r => r.ok ? r.json() : null),
+        fetch(`/api/dashboard/schedule-overview${locQs}`).then(r => r.ok ? r.json() : null),
       ]);
       if (mRes && tRes && lRes) {
-        setData({ metrics: mRes, teachers: tRes.teachers ?? [], locationRevenue: lRes.locations ?? [] });
+        setData({
+          metrics: mRes,
+          teachers: tRes.teachers ?? [],
+          locationRevenue: lRes.locations ?? [],
+          schedule: sRes ?? null,
+        });
       }
     }
     load();
     const id = setInterval(load, 60000);
     return () => clearInterval(id);
-  }, []);
+  }, [selectedLocId]);
 
   const handleOrbClick = () => {
     setBrainFlash(true);
