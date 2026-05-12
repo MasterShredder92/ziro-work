@@ -3,12 +3,12 @@
 /**
  * Pixel-identical clone of `src/app/(app)/dashboard/_client.tsx` orbit shell:
  * same rail inset, backdrop, scanlines, CSS keyframes, circuit SVG math,
- * BrainOrb, ModuleBox chrome (width 290, floats, footer), FinancialOverview layout.
+ * BrainOrb rings replaced by `FamilyNameOrb` (family label, larger diameter);
  * Module labels/subs match the family workspace; tile bodies use the same loading
  * skeleton as dashboard `data === null`. Clicks open the family full-page overlay tab.
  */
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { FamilyWorkspaceTab } from "./_content";
 
@@ -190,36 +190,28 @@ function healthStrokeRgb(score: number): { r: number; g: number; b: number } {
   };
 }
 
-function healthStrokeColor(score: number): string {
-  const { r, g, b } = healthStrokeRgb(score);
-  return `rgb(${r},${g},${b})`;
-}
-
 function healthGlowRgba(score: number, a: number): string {
   const { r, g, b } = healthStrokeRgb(score);
   return `rgba(${r},${g},${b},${a})`;
 }
 
-const BRAIN_HEART_D =
-  "M 50 88" +
-  " C 30 80 12 62 12 44" +
-  " C 12 28 26 16 40 22" +
-  " C 46 24 49 30 50 36" +
-  " C 51 30 54 24 60 22" +
-  " C 74 16 88 28 88 44" +
-  " C 88 62 70 80 50 88" +
-  " Z";
+/** Wire endpoint distance from canvas center (px). Match visual orb radius so traces meet the sphere. */
+const FAMILY_ORB_WIRE_ATTACH_R = 90;
+const FAMILY_ORB_OUTER = 280;
+const FAMILY_ORB_INNER = 176;
 
-function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
-  const hRaw = Math.min(100, Math.max(0, healthScore));
-  const h = Math.round(hRaw);
-  const len = 100;
-  const dash = (hRaw / 100) * len;
-  const hx = 50;
-  const hy = 52;
-  const gradId = useId().replace(/:/g, "_");
-  const cLo = healthStrokeColor(Math.max(0, h - 38));
-  const cHi = healthStrokeColor(h);
+function FamilyNameOrb({
+  familyName,
+  healthScore,
+  flash,
+  onClick,
+}: {
+  familyName: string;
+  healthScore: number;
+  flash: boolean;
+  onClick: () => void;
+}) {
+  const h = Math.min(100, Math.max(0, Math.round(healthScore)));
 
   return (
     <button
@@ -236,52 +228,51 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
         zIndex: 35,
         position: "relative",
       }}
-      aria-label="Family command center"
+      aria-label={`Family hub: ${familyName}`}
     >
-      <div style={{ position: "relative", width: 200, height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          position: "relative",
+          width: FAMILY_ORB_OUTER,
+          height: FAMILY_ORB_OUTER,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(153,0,255,.2)", animation: "ringA 22s linear infinite" }} />
-        <div style={{ position: "absolute", inset: 12, borderRadius: "50%", border: "1px solid rgba(255,0,204,.12)", animation: "ringB 16s linear infinite" }} />
-        <div style={{ position: "absolute", inset: 26, borderRadius: "50%", border: "1px solid rgba(180,255,0,.08)", animation: "ringA 34s linear infinite" }} />
+        <div style={{ position: "absolute", inset: 16, borderRadius: "50%", border: "1px solid rgba(255,0,204,.12)", animation: "ringB 16s linear infinite" }} />
+        <div style={{ position: "absolute", inset: 36, borderRadius: "50%", border: "1px solid rgba(180,255,0,.08)", animation: "ringA 34s linear infinite" }} />
         <div
           style={{
             position: "absolute",
-            width: 120,
-            height: 120,
+            width: FAMILY_ORB_INNER,
+            height: FAMILY_ORB_INNER,
             borderRadius: "50%",
             background: `radial-gradient(circle at 34% 28%, rgba(255,255,255,.22) 0%, ${healthGlowRgba(h, 0.22)} 20%, rgba(6,6,10,.96) 58%, rgba(14,10,12,.92) 100%)`,
             boxShadow: `inset 0 -6px 18px rgba(180,255,0,.08), inset 2px 4px 14px rgba(255,255,255,.08), 0 0 36px ${healthGlowRgba(h, 0.35)}`,
             animation: "breathe 4.5s ease-in-out infinite",
           }}
         />
-        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, overflow: "visible" }}>
-          <defs>
-            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={cLo} />
-              <stop offset="100%" stopColor={cHi} />
-            </linearGradient>
-          </defs>
-          <g transform={`rotate(180 ${hx} ${hy})`}>
-            <path d={BRAIN_HEART_D} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth={8} pathLength={len} strokeLinejoin="round" strokeLinecap="round" />
-            <path
-              d={BRAIN_HEART_D}
-              fill="none"
-              stroke={`url(#${gradId})`}
-              strokeWidth={8}
-              pathLength={len}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              strokeDasharray={`${dash} ${len}`}
-              strokeDashoffset={0}
-              style={{ filter: `drop-shadow(0 0 8px ${healthGlowRgba(h, 0.55)})`, transition: "stroke-dasharray 1s ease" }}
-            />
-          </g>
-          <text x={50} y={46} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={17} fontWeight={600} fontFamily={NUMFONT}>
-            {h}%
-          </text>
-          <text x={50} y={58} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,.32)" fontSize={8} fontFamily={FONT}>
-            health
-          </text>
-        </svg>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            maxWidth: FAMILY_ORB_INNER - 24,
+            padding: "0 14px",
+            textAlign: "center",
+            fontFamily: FONT,
+            fontWeight: 800,
+            fontSize: "clamp(15px, 1.85vw, 24px)",
+            lineHeight: 1.12,
+            letterSpacing: "-0.02em",
+            color: "#fff",
+            textWrap: "balance" as const,
+            textShadow: "0 0 28px rgba(180,255,0,0.25), 0 2px 12px rgba(0,0,0,0.85)",
+          }}
+        >
+          {familyName}
+        </div>
         {flash && (
           <div
             style={{
@@ -303,11 +294,13 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
 function StaticCircuitSVG({
   w,
   h,
+  orbAttachRadius,
   getCanvasRect,
   onWireClick,
 }: {
   w: number;
   h: number;
+  orbAttachRadius: number;
   getCanvasRect: () => DOMRect | null;
   onWireClick: (mod: ModDef, approxRect: DOMRect) => void;
 }) {
@@ -315,7 +308,7 @@ function StaticCircuitSVG({
 
   const cx = w * 0.5;
   const cy = h * 0.5;
-  const ORB_R = 62;
+  const ORB_R = orbAttachRadius;
   const BOX_HALF_W = 145;
   const BOX_HALF_H = 120;
 
@@ -710,11 +703,14 @@ function familyHealthFromBalance(balance: number): number {
 
 export function FamilyDashboardOrbit({
   focusLabel,
+  familyOrbName,
   balance,
   activeTab,
   onOpenTab,
 }: {
   focusLabel: string;
+  /** Readable family name inside the center orb (not forced uppercase). */
+  familyOrbName: string;
   balance: number;
   activeTab: FamilyWorkspaceTab | null;
   onOpenTab: (tab: FamilyWorkspaceTab, rect: DOMRect) => void;
@@ -775,12 +771,14 @@ export function FamilyDashboardOrbit({
             <StaticCircuitSVG
               w={canvasSize.w}
               h={canvasSize.h}
+              orbAttachRadius={FAMILY_ORB_WIRE_ATTACH_R}
               getCanvasRect={() => canvasRef.current?.getBoundingClientRect() ?? null}
               onWireClick={(mod, r) => onOpenTab(mod.tab, r)}
             />
 
             <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 35 }}>
-              <BrainOrb
+              <FamilyNameOrb
+                familyName={familyOrbName}
                 flash={brainFlash}
                 healthScore={healthScore}
                 onClick={() => {

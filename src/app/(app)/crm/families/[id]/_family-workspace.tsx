@@ -82,6 +82,7 @@ export function FamilyWorkspace() {
     <>
       <FamilyDashboardOrbit
         focusLabel={displayName.toUpperCase()}
+        familyOrbName={displayName}
         balance={family.balance}
         activeTab={hasTabInUrl ? activeTab : null}
         onOpenTab={handleSelectTab}
