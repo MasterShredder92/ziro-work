@@ -262,10 +262,10 @@ function FamilyNameOrb({
             textAlign: "center",
             fontFamily: FONT,
             fontWeight: 800,
-            fontSize: "clamp(15px, 1.85vw, 24px)",
+            fontSize: "clamp(17px, 2.1vw, 28px)",
             lineHeight: 1.12,
             letterSpacing: "-0.02em",
-            color: "#fff",
+            color: "#ffffff",
             textWrap: "balance" as const,
             textShadow: "0 0 28px rgba(180,255,0,0.25), 0 2px 12px rgba(0,0,0,0.85)",
           }}
@@ -444,7 +444,7 @@ function connectorStyle(dotEdge: ModDef["dotEdge"], color: string): React.CSSPro
 function ModuleSkeletonBody() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {[60, 40, 40].map((hh, i) => (
+      {[68, 48, 48].map((hh, i) => (
         <div key={i} style={{ height: hh, borderRadius: 8, background: "rgba(255,255,255,.04)", animation: "dotBlink 1.8s ease-in-out infinite" }} />
       ))}
     </div>
@@ -538,23 +538,23 @@ function FamilyOrbitDetailDock({
             borderRadius: 8,
             border: "1px solid rgba(255,255,255,.12)",
             background: "rgba(255,255,255,.04)",
-            color: "#e4e4ee",
+            color: "#f6f6fc",
             fontFamily: FONT,
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 600,
-            padding: "6px 12px",
+            padding: "8px 14px",
             cursor: "pointer",
           }}
         >
           Close
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FONT, fontSize: 10, fontWeight: 700, letterSpacing: ".14em", color: "rgba(255,255,255,.35)", textTransform: "uppercase" }}>
+          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", color: "rgba(255,255,255,.62)", textTransform: "uppercase" }}>
             Section
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 15, fontWeight: 700, color: "#f4f4f8", letterSpacing: ".02em" }}>{title}</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 700, color: "#ffffff", letterSpacing: ".02em" }}>{title}</div>
           {sub ? (
-            <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,.38)", marginTop: 2 }}>{sub}</div>
+            <div style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,.78)", marginTop: 3 }}>{sub}</div>
           ) : null}
         </div>
         <div
@@ -574,8 +574,8 @@ function FamilyOrbitDetailDock({
           flex: 1,
           minHeight: 0,
           overflow: "auto",
-          padding: "14px 16px 18px",
-          color: "#e8e8ef",
+          padding: "16px 18px 20px",
+          color: "#f4f4fa",
         }}
       >
         {children}
@@ -600,21 +600,21 @@ function ModuleSummaryBody({
   }
   if (!summary) {
     return (
-      <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,.28)", padding: "4px 0" }}>
+      <div style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,.55)", padding: "4px 0" }}>
         Could not load summary
       </div>
     );
   }
 
-  const muted = "rgba(255,255,255,.38)";
+  const muted = "rgba(255,255,255,.78)";
   const line = (text: string, opts?: { small?: boolean; bold?: boolean }) => (
     <div
       style={{
         fontFamily: FONT,
-        fontSize: opts?.small ? 10 : 11,
-        fontWeight: opts?.bold ? 700 : 500,
-        color: opts?.bold ? "#ececf4" : muted,
-        lineHeight: 1.35,
+        fontSize: opts?.small ? 12 : 13,
+        fontWeight: opts?.bold ? 700 : 600,
+        color: opts?.bold ? "#ffffff" : muted,
+        lineHeight: 1.38,
         wordBreak: "break-word",
       }}
     >
@@ -675,10 +675,10 @@ function ModuleSummaryBody({
         <div
           style={{
             fontFamily: FONT,
-            fontSize: 10,
-            color: muted,
-            lineHeight: 1.45,
-            maxHeight: 72,
+            fontSize: 12,
+            color: "rgba(255,255,255,.82)",
+            lineHeight: 1.5,
+            maxHeight: 88,
             overflow: "hidden",
             whiteSpace: "pre-wrap",
           }}
@@ -726,7 +726,7 @@ function TeachersTileBody({
           <div
             key={i}
             style={{
-              height: 34,
+              height: 38,
               borderRadius: 8,
               background: "rgba(255,255,255,.04)",
               animation: "dotBlink 1.8s ease-in-out infinite",
@@ -738,7 +738,7 @@ function TeachersTileBody({
   }
   if (teachers.length === 0) {
     return (
-      <div style={{ fontFamily: FONT, fontSize: 12, color: "rgba(255,255,255,.35)", padding: "6px 0", lineHeight: 1.4 }}>
+      <div style={{ fontFamily: FONT, fontSize: 14, color: "rgba(255,255,255,.72)", padding: "6px 0", lineHeight: 1.45 }}>
         No teachers assigned yet
       </div>
     );
@@ -766,9 +766,9 @@ function TeachersTileBody({
               <div
                 style={{
                   fontFamily: FONT,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: 700,
-                  color: "#ececf4",
+                  color: "#ffffff",
                   lineHeight: 1.25,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -781,8 +781,8 @@ function TeachersTileBody({
                 <div
                   style={{
                     fontFamily: FONT,
-                    fontSize: 10,
-                    color: "rgba(255,255,255,.38)",
+                    fontSize: 12,
+                    color: "rgba(255,255,255,.82)",
                     marginTop: 3,
                     lineHeight: 1.2,
                     whiteSpace: "nowrap",
@@ -808,9 +808,9 @@ function TeachersTileBody({
               <div
                 style={{
                   fontFamily: FONT,
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 600,
-                  color: "rgba(255,255,255,.82)",
+                  color: "rgba(255,255,255,.92)",
                   lineHeight: 1.25,
                   wordBreak: "break-word",
                 }}
@@ -821,9 +821,9 @@ function TeachersTileBody({
               <div
                 style={{
                   fontFamily: FONT,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "rgba(255,255,255,.52)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "rgba(255,255,255,.85)",
                   lineHeight: 1.25,
                   wordBreak: "break-word",
                 }}
@@ -836,7 +836,7 @@ function TeachersTileBody({
         );
       })}
       {teachers.length > 4 ? (
-        <div style={{ fontFamily: FONT, fontSize: 10, color: "rgba(255,255,255,.28)", letterSpacing: ".04em" }}>+{teachers.length - 4} more</div>
+        <div style={{ fontFamily: FONT, fontSize: 12, color: "rgba(255,255,255,.7)", letterSpacing: ".04em" }}>+{teachers.length - 4} more</div>
       ) : null}
     </div>
   );
@@ -907,7 +907,7 @@ function ModuleBox({
           <span
             style={{
               fontFamily: NUMFONT,
-              fontSize: 17,
+              fontSize: 20,
               fontWeight: 600,
               color: mod.color,
               lineHeight: 1,
@@ -920,10 +920,10 @@ function ModuleBox({
             {mod.num}
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#eeeef8", letterSpacing: ".06em", textTransform: "uppercase", lineHeight: 1.1 }}>
+            <div style={{ fontFamily: FONT, fontSize: 15, fontWeight: 700, color: "#fafafa", letterSpacing: ".06em", textTransform: "uppercase", lineHeight: 1.12 }}>
               {mod.label}
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 7.5, color: "rgba(255,255,255,.3)", letterSpacing: ".03em", marginTop: 3 }}>{mod.sub}</div>
+            <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,.68)", letterSpacing: ".03em", marginTop: 4 }}>{mod.sub}</div>
           </div>
           <div
             style={{
@@ -941,14 +941,14 @@ function ModuleBox({
 
         <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${mod.color}18, transparent)` }} />
 
-        <div style={{ padding: "8px 10px" }}>
+        <div style={{ padding: "9px 11px 10px" }}>
           <ModuleSummaryBody mod={mod} summary={summary} summaryLoading={summaryLoading} accent={mod.color} />
         </div>
 
-        <div style={{ padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,.04)", display: "flex", alignItems: "center" }}>
+        <div style={{ padding: "6px 11px", borderTop: "1px solid rgba(255,255,255,.04)", display: "flex", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 6 }}>
             {["◆", "▲", "◉"].map((ic) => (
-              <span key={ic} style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.12)" }}>
+              <span key={ic} style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.22)" }}>
                 {ic}
               </span>
             ))}
@@ -956,7 +956,7 @@ function ModuleBox({
           <div style={{ flex: 1 }} />
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN, boxShadow: `0 0 5px ${GREEN}`, animation: "dotBlink 3s ease-in-out infinite" }} />
-            <span style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.18)", letterSpacing: ".1em" }}>System Active</span>
+            <span style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.62)", letterSpacing: ".1em" }}>System Active</span>
           </div>
         </div>
       </div>
@@ -993,7 +993,7 @@ function FamilyFinancialOverviewPanel() {
         <div style={{ height: 2, margin: "-24px -24px 0", background: `linear-gradient(90deg, transparent, ${GREEN}50, ${BLUE}30, transparent)` }} />
 
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontFamily: FONT, fontSize: "0.75rem", fontWeight: 700, letterSpacing: "1px", color: "#a0aab5", textTransform: "uppercase", lineHeight: 1.3 }}>
+          <div style={{ fontFamily: FONT, fontSize: "0.82rem", fontWeight: 700, letterSpacing: "1px", color: "#d2dae4", textTransform: "uppercase", lineHeight: 1.3 }}>
             Financial
             <br />
             Overview
@@ -1003,11 +1003,11 @@ function FamilyFinancialOverviewPanel() {
 
         {stats.map((stat) => (
           <div key={stat.label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{ fontFamily: FONT, fontSize: "0.6rem", fontWeight: 600, letterSpacing: "1px", color: "#a0aab5", textTransform: "uppercase" }}>{stat.label}</div>
+            <div style={{ fontFamily: FONT, fontSize: "0.68rem", fontWeight: 600, letterSpacing: "1px", color: "#c4ced8", textTransform: "uppercase" }}>{stat.label}</div>
             <div
               style={{
                 fontFamily: NUMFONT,
-                fontSize: "1.15rem",
+                fontSize: "1.28rem",
                 fontWeight: 600,
                 color: stat.color,
                 lineHeight: 1,
@@ -1019,7 +1019,7 @@ function FamilyFinancialOverviewPanel() {
             >
               {stat.value}
             </div>
-            {stat.sub && <div style={{ fontFamily: FONT, fontSize: "0.58rem", color: "rgba(255,255,255,.2)", letterSpacing: ".04em" }}>{stat.sub}</div>}
+            {stat.sub && <div style={{ fontFamily: FONT, fontSize: "0.66rem", color: "rgba(255,255,255,.52)", letterSpacing: ".04em" }}>{stat.sub}</div>}
           </div>
         ))}
 
@@ -1033,7 +1033,7 @@ function FamilyFinancialOverviewPanel() {
           ).map(([l, c]) => (
             <div key={l} style={{ display: "flex", alignItems: "center", gap: 7 }}>
               <div style={{ width: 4, height: 4, borderRadius: "50%", background: c, boxShadow: `0 0 6px ${c}`, animation: "dotBlink 2.4s ease-in-out infinite", flexShrink: 0 }} />
-              <span style={{ fontFamily: FONT, fontSize: "0.58rem", color: c + "80", letterSpacing: ".1em", textTransform: "uppercase" }}>{l} Online</span>
+              <span style={{ fontFamily: FONT, fontSize: "0.66rem", color: c + "a8", letterSpacing: ".1em", textTransform: "uppercase" }}>{l} Online</span>
             </div>
           ))}
         </div>
@@ -1056,11 +1056,11 @@ function FamilyTopBar({ focusLabel }: { focusLabel: string }) {
         position: "relative",
       }}
     >
-      <span style={{ fontFamily: FONT, fontSize: 12, color: `${GREEN}99`, letterSpacing: ".05em", opacity: 0.6 }}>
+      <span style={{ fontFamily: FONT, fontSize: 13, color: `${GREEN}cc`, letterSpacing: ".05em", opacity: 0.88 }}>
         System Scope: Family account
       </span>
       <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", pointerEvents: "none" }}>
-        <span style={{ fontFamily: NUMFONT, fontSize: 19, fontWeight: 700, color: "#fff", letterSpacing: ".06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+        <span style={{ fontFamily: NUMFONT, fontSize: 22, fontWeight: 700, color: "#ffffff", letterSpacing: ".06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
           {focusLabel}
         </span>
       </div>
@@ -1077,8 +1077,8 @@ function FamilyTopBar({ focusLabel }: { focusLabel: string }) {
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          color: "rgba(255,255,255,.3)",
-          fontSize: 13,
+          color: "rgba(255,255,255,.72)",
+          fontSize: 15,
         }}
         title="Settings"
       >
