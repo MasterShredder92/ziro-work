@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFamilyAccountSummary } from "./_header";
 import { FamilyHubCanvas } from "./_family-hub-canvas";
-import { FamilySectionPanel, locationBrandColor, parseTabParam, type FamilyWorkspaceTab } from "./_content";
+import { FamilySectionExpandOverlay } from "./_family-section-overlay";
+import { locationBrandColor, parseTabParam, type FamilyWorkspaceTab } from "./_content";
 
 function WorkspaceSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
       <div className="h-4 w-48 rounded-full bg-[var(--z-border)]" />
       <div className="mx-auto h-[min(400px,55vh)] max-w-[920px] rounded-3xl bg-[var(--z-surface-2)]" />
-      <div className="h-64 rounded-2xl bg-[var(--z-surface-2)]" />
     </div>
   );
 }
@@ -24,15 +24,16 @@ export function FamilyWorkspace() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [originRect, setOriginRect] = useState<DOMRect | null>(null);
+
   const { loading, error, family, locationName, derived } = useFamilyAccountSummary(familyId);
 
+  const hasTabInUrl = useMemo(() => searchParams.has("tab"), [searchParams]);
   const activeTab = useMemo(() => parseTabParam(searchParams.get("tab")), [searchParams]);
 
-  const setTab = (t: FamilyWorkspaceTab) => {
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("tab", t);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  };
+  useEffect(() => {
+    if (!hasTabInUrl) setOriginRect(null);
+  }, [hasTabInUrl]);
 
   useEffect(() => {
     if (searchParams.get("addStudent") !== "1") return;
@@ -43,6 +44,21 @@ export function FamilyWorkspace() {
   }, [searchParams, pathname, router]);
 
   const brandColor = locationBrandColor(locationName);
+
+  const handleSelectTab = (t: FamilyWorkspaceTab, rect: DOMRect) => {
+    setOriginRect(rect);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("tab", t);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
+
+  const handleCloseOverlay = () => {
+    setOriginRect(null);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("tab");
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  };
 
   if (loading) return <WorkspaceSkeleton />;
 
@@ -93,19 +109,20 @@ export function FamilyWorkspace() {
         avatarFg={avatarFg}
         accent={accent}
         brandColor={brandColor}
-        activeTab={activeTab}
-        onSelectTab={setTab}
+        activeTab={hasTabInUrl ? activeTab : null}
+        onSelectTab={handleSelectTab}
       />
 
-      <section
-        aria-labelledby="family-section-heading"
-        className="rounded-[1.35rem] border border-white/[0.06] bg-black/[0.12] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.25)] backdrop-blur-md light-theme:border-[var(--z-border)] light-theme:bg-[color-mix(in_oklab,var(--z-surface),transparent_8%)] light-theme:shadow-md sm:p-6"
-      >
-        <h2 id="family-section-heading" className="sr-only">
-          {activeTab} workspace panel
-        </h2>
-        <FamilySectionPanel tab={activeTab} familyId={familyId} brandColor={brandColor} />
-      </section>
+      {hasTabInUrl && (
+        <FamilySectionExpandOverlay
+          open
+          tab={activeTab}
+          originRect={originRect}
+          familyId={familyId}
+          brandColor={brandColor}
+          onRequestClose={handleCloseOverlay}
+        />
+      )}
     </div>
   );
 }

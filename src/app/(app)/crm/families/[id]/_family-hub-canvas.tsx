@@ -31,7 +31,7 @@ const HUB_CSS = `
   @keyframes famFloat5 { 0%,100%{transform:translate(-50%,-50%) translateY(-3px)} 50%{transform:translate(-50%,-50%) translateY(6px)} }
 `;
 
-const MODULES: {
+export const FAMILY_HUB_MODULES: {
   id: FamilyWorkspaceTab;
   label: string;
   sub: string;
@@ -51,7 +51,7 @@ const MODULES: {
   { id: "notes",     label: "Notes",     sub: "Internal log",           num: "06", color: "#ff00cc", color2: "#9900ff", leftPct: 18, topPct: 30, dotEdge: "right",  float: "famFloat5" },
 ];
 
-function connectorStyle(dotEdge: (typeof MODULES)[number]["dotEdge"], color: string): CSSProperties {
+function connectorStyle(dotEdge: (typeof FAMILY_HUB_MODULES)[number]["dotEdge"], color: string): CSSProperties {
   const base: CSSProperties = {
     position: "absolute",
     width: 7,
@@ -80,16 +80,16 @@ function FamilyModuleCard({
   brandColor,
   onSelect,
 }: {
-  mod: (typeof MODULES)[number];
+  mod: (typeof FAMILY_HUB_MODULES)[number];
   active: boolean;
   brandColor: string;
-  onSelect: () => void;
+  onSelect: (originRect: DOMRect) => void;
 }) {
-  const idx = MODULES.indexOf(mod);
+  const idx = FAMILY_HUB_MODULES.indexOf(mod);
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={(e) => onSelect(e.currentTarget.getBoundingClientRect())}
       aria-current={active ? "true" : undefined}
       className="light-theme:shadow-[0_8px_28px_rgba(0,0,0,0.08)]"
       style={{
@@ -236,8 +236,8 @@ export function FamilyHubCanvas({
   avatarFg: string;
   accent: string;
   brandColor: string;
-  activeTab: FamilyWorkspaceTab;
-  onSelectTab: (t: FamilyWorkspaceTab) => void;
+  activeTab: FamilyWorkspaceTab | null;
+  onSelectTab: (t: FamilyWorkspaceTab, originRect: DOMRect) => void;
 }) {
   const balLabel = balance > 0 ? "Due" : balance < 0 ? "Credit" : "Balance";
 
@@ -256,7 +256,7 @@ export function FamilyHubCanvas({
           preserveAspectRatio="none"
           aria-hidden
         >
-          {MODULES.map((m) => (
+          {FAMILY_HUB_MODULES.map((m) => (
             <line
               key={m.id}
               x1={50}
@@ -316,13 +316,13 @@ export function FamilyHubCanvas({
         </div>
 
         <nav aria-label="Family workspace modules" className="absolute inset-0">
-          {MODULES.map((mod) => (
+          {FAMILY_HUB_MODULES.map((mod) => (
             <FamilyModuleCard
               key={mod.id}
               mod={mod}
               active={activeTab === mod.id}
               brandColor={brandColor}
-              onSelect={() => onSelectTab(mod.id)}
+              onSelect={(r) => onSelectTab(mod.id, r)}
             />
           ))}
         </nav>
@@ -378,13 +378,13 @@ export function FamilyHubCanvas({
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {MODULES.map((mod) => {
+          {FAMILY_HUB_MODULES.map((mod) => {
             const active = activeTab === mod.id;
             return (
               <button
                 key={mod.id}
                 type="button"
-                onClick={() => onSelectTab(mod.id)}
+                onClick={(e) => onSelectTab(mod.id, e.currentTarget.getBoundingClientRect())}
                 aria-current={active ? "true" : undefined}
                 className="rounded-xl border px-3 py-3 text-left transition hover:opacity-95"
                 style={{
