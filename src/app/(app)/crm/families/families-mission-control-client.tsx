@@ -152,6 +152,12 @@ function initials(name: string | null | undefined): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
+function studentFirstName(full: string): string {
+  const t = full.trim();
+  if (!t) return "";
+  return t.split(/\s+/)[0] ?? t;
+}
+
 function relTime(iso: string | null | undefined, nowMs: number): { label: string; days: number | null } {
   if (!iso) return { label: "—", days: null };
   const t = Date.parse(iso);
@@ -485,7 +491,6 @@ export function FamiliesMissionControl({
         {viewMode === "families" ? (
           <FamilyTable
             rows={filtered}
-            counts={counts}
             locationNameById={locationNameById}
             studentsByFamily={studentsByFamily}
             teacherByFamily={teacherByFamily}
@@ -1192,11 +1197,10 @@ function FamilyTableTeacherCell({
 
 // ─── Table ────────────────────────────────────────────────────────────────
 
-const TABLE_GRID = "20px 44px minmax(0, 1.6fr) 80px minmax(0, 1.5fr) 100px 96px 88px 100px";
+const TABLE_GRID = "20px 44px minmax(0, 1.35fr) minmax(200px, 1.2fr) minmax(0, 1.2fr) minmax(72px, 0.5fr) minmax(112px, 0.95fr) 82px";
 
 function FamilyTable({
   rows,
-  counts,
   locationNameById,
   studentsByFamily,
   teacherByFamily,
@@ -1212,7 +1216,6 @@ function FamilyTable({
   riskByFamily,
 }: {
   rows: FamilyRow[];
-  counts: Record<string, number>;
   locationNameById: Record<string, string>;
   studentsByFamily: Record<string, StudentEntry[]>;
   teacherByFamily: Record<string, string>;
@@ -1247,7 +1250,7 @@ function FamilyTable({
         alignItems: "center",
       }}>
         <span />
-        {["Risk", "Family", "Students", "Teacher", "Location", "Balance", "Joined", "Status"].map((h) => (
+        {["Risk", "Family", "Students", "Teacher", "Location", "Balance · status", "Joined"].map((h) => (
           <span key={h} style={{
             fontFamily: FONT,
             fontSize: 10.5,
@@ -1267,7 +1270,6 @@ function FamilyTable({
             <TableRow
               key={row.id}
               row={row}
-              studentCount={counts[row.id] ?? 0}
               students={studentsByFamily[row.id] ?? []}
               teacher={teacherByFamily[row.id] ?? ""}
               teacherChips={inlineTeachersByFamily[row.id] ?? []}
@@ -1335,7 +1337,6 @@ function EmptyState({ hasActiveFilters, onClearAll }: { hasActiveFilters: boolea
 
 function TableRow({
   row,
-  studentCount,
   students,
   teacher,
   teacherChips,
@@ -1350,7 +1351,6 @@ function TableRow({
   fadeIndex,
 }: {
   row: FamilyRow;
-  studentCount: number;
   students: StudentEntry[];
   teacher: string;
   teacherChips: FamilyTeacherChip[];
@@ -1364,6 +1364,18 @@ function TableRow({
   risk: RiskScore | undefined;
   fadeIndex: number;
 }) {
+  const { studentFirstNames, studentListTitle } = useMemo(() => {
+    const sorted = [...students].sort((a, b) => {
+      const aActive = (a.status ?? "").toLowerCase() === "active";
+      const bActive = (b.status ?? "").toLowerCase() === "active";
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    return {
+      studentFirstNames: sorted.map((s) => studentFirstName(s.name)).filter(Boolean),
+      studentListTitle: sorted.map((s) => s.name.trim()).filter(Boolean).join(", "),
+    };
+  }, [students]);
   const overdue = isRowOverdue(row);
   const isMil = row.is_military === true;
   const isNew = isRowNewLast30(row, nowMs);
@@ -1381,12 +1393,6 @@ function TableRow({
       ? { label: fmtNumber(row.balance), color: FG, bold: false }
       : { label: "$0", color: FG_TERTIARY, bold: false };
 
-  const instrumentSet = new Set<string>();
-  for (const s of students) {
-    if (s.instrument) instrumentSet.add(s.instrument.toLowerCase());
-  }
-  const instruments = Array.from(instrumentSet).slice(0, 4);
-
   const dotColor = row.primary_location_id ? locDotColor(row.primary_location_id) : FG_QUIET;
 
   let statusPill: { label: string; color: string } | null = null;
@@ -1402,23 +1408,7 @@ function TableRow({
 
   return (
     <>
-      <div
-        className="mc-row"
-        onClick={onOpen}
-        style={{
-          position: "relative",
-          display: "grid",
-          gridTemplateColumns: TABLE_GRID,
-          gap: 14,
-          padding: "12px 24px",
-          alignItems: "center",
-          cursor: "pointer",
-          borderBottom: isExpanded ? "none" : `1px solid ${SURFACE_BORDER}`,
-          background: isExpanded ? "rgba(255,255,255,0.018)" : "transparent",
-          transition: "background 0.12s",
-          animationDelay: `${fadeDelay}s`,
-        }}
-      >
+      <div style={{ position: "relative" }}>
         <div
           style={{
             position: "absolute",
@@ -1427,9 +1417,27 @@ function TableRow({
             background: `linear-gradient(to bottom, ${riskColor}, ${riskColor}66, ${riskColor}22)`,
             opacity: riskBand === "fine" ? 0.35 : 1,
             boxShadow: riskBand === "critical" ? `0 0 10px ${riskColor}` : riskBand === "risk" ? `0 0 6px ${riskColor}88` : "none",
+            pointerEvents: "none",
+            zIndex: 1,
           }}
         />
-
+        <div
+          className="mc-row"
+          onClick={onOpen}
+          style={{
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: TABLE_GRID,
+            gap: 14,
+            padding: "12px 24px",
+            alignItems: "center",
+            cursor: "pointer",
+            borderBottom: isExpanded ? "none" : `1px solid ${SURFACE_BORDER}`,
+            background: isExpanded ? "rgba(255,255,255,0.018)" : "transparent",
+            transition: "background 0.12s",
+            animationDelay: `${fadeDelay}s`,
+          }}
+        >
         <button
           type="button"
           aria-label={isExpanded ? "Collapse" : "Expand"}
@@ -1510,18 +1518,32 @@ function TableRow({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{
-            ...NUM_STYLE,
-            fontSize: 14, fontWeight: 600,
-            color: studentCount > 0 ? FG : FG_TERTIARY,
-            minWidth: 18,
-          }}>{studentCount}</span>
-          <div style={{ display: "flex", gap: 0, fontSize: 13, opacity: 0.9 }}>
-            {instruments.map((i, idx) => (
-              <span key={idx} style={{ marginLeft: -2 }}>{instrEmoji(i)}</span>
-            ))}
-          </div>
+        <div
+          style={{ minWidth: 0, overflow: "hidden", alignSelf: "center" }}
+          title={studentListTitle || undefined}
+        >
+          {studentFirstNames.length > 0 ? (
+            <span style={{
+              fontFamily: FONT,
+              fontSize: 12.5,
+              fontWeight: 500,
+              color: FG_SECONDARY,
+              letterSpacing: "-0.005em",
+              lineHeight: 1.35,
+              display: "block",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>{studentFirstNames.join(", ")}</span>
+          ) : (
+            <span style={{
+              fontFamily: FONT,
+              fontSize: 12.5,
+              color: FG_QUIET,
+              fontStyle: "italic",
+              letterSpacing: "-0.005em",
+            }}>—</span>
+          )}
         </div>
 
         <FamilyTableTeacherCell
@@ -1547,14 +1569,39 @@ function TableRow({
         </div>
 
         <div style={{
-          ...NUM_STYLE,
-          fontSize: 13,
-          fontWeight: balanceDisplay.bold ? 700 : 500,
-          color: balanceDisplay.color,
-          letterSpacing: "-0.01em",
-          textShadow: balanceDisplay.bold ? `0 0 8px ${URGENT}55` : "none",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 5,
+          minWidth: 0,
+          justifyContent: "center",
         }}>
-          {balanceDisplay.label}
+          <div style={{
+            ...NUM_STYLE,
+            fontSize: 13,
+            fontWeight: balanceDisplay.bold ? 700 : 500,
+            color: balanceDisplay.color,
+            letterSpacing: "-0.01em",
+            textShadow: balanceDisplay.bold ? `0 0 8px ${URGENT}55` : "none",
+            whiteSpace: "nowrap",
+          }}>
+            {balanceDisplay.label}
+          </div>
+          {statusPill && (
+            <span style={{
+              fontFamily: FONT,
+              display: "inline-block",
+              padding: "2px 8px",
+              borderRadius: 4,
+              border: `1px solid ${statusPill.color}55`,
+              color: statusPill.color,
+              background: `${statusPill.color}14`,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.01em",
+              boxShadow: statusPill.label === "Overdue" ? `0 0 8px ${statusPill.color}33` : "none",
+            }}>{statusPill.label}</span>
+          )}
         </div>
 
         <div style={{
@@ -1565,23 +1612,6 @@ function TableRow({
         }}>
           {rt.label}
         </div>
-
-        <div>
-          {statusPill && (
-            <span style={{
-              fontFamily: FONT,
-              display: "inline-block",
-              padding: "3px 10px",
-              borderRadius: 4,
-              border: `1px solid ${statusPill.color}55`,
-              color: statusPill.color,
-              background: `${statusPill.color}14`,
-              fontSize: 10.5,
-              fontWeight: 600,
-              letterSpacing: "0.01em",
-              boxShadow: statusPill.label === "Overdue" ? `0 0 8px ${statusPill.color}33` : "none",
-            }}>{statusPill.label}</span>
-          )}
         </div>
       </div>
 
