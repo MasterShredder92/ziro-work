@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
@@ -656,6 +656,41 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
   const heartColor = healthStrokeColor(h);
   const heartGlow = healthGlowRgba(h, 0.5);
   const heartFill = healthGlowRgba(h, 0.07);
+
+  const heartMeasureRef = useRef<SVGPathElement | null>(null);
+  /** strokeDashoffset (same units as pathLength=100) so fill begins at ~12 o’clock and runs clockwise. */
+  const [heartDashOffset, setHeartDashOffset] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = heartMeasureRef.current;
+    if (!el || typeof el.getTotalLength !== "function") return;
+    const len = el.getTotalLength();
+    if (!(len > 1e-6)) return;
+
+    const notchX = 50;
+    const notchY = 22;
+    const steps = 480;
+    let bestS = 0;
+    let bestD = Infinity;
+    for (let i = 0; i <= steps; i++) {
+      const s = (i / steps) * len;
+      const p = el.getPointAtLength(s);
+      const d = (p.x - notchX) ** 2 + (p.y - notchY) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        bestS = s;
+      }
+    }
+
+    const eps = Math.max(0.12, len * 0.006);
+    const p0 = el.getPointAtLength(bestS);
+    const p1 = el.getPointAtLength((bestS + eps) % len);
+    // From the crown, clockwise outline should move toward the right lobe first (x increases).
+    const forwardIsCw = p1.x > p0.x + 0.04;
+    const off = forwardIsCw ? -bestS : bestS - len;
+    setHeartDashOffset(off);
+  }, []);
+
   return (
     <button
       onClick={onClick}
@@ -672,10 +707,11 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
           boxShadow: `inset 0 -6px 18px rgba(180,255,0,.08), inset 2px 4px 14px rgba(255,255,255,.08), 0 0 36px ${healthGlowRgba(h, 0.35)}`,
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
-        {/* Heart-shaped progress: path starts at the tip; no mirror — vertical flip was only for dash alignment and inverted the art. */}
+        {/* Heart-shaped progress: dash origin from path geometry (no flip) — clockwise from crown. */}
         <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${heartGlow})` }}>
           <path d={BRAIN_HEART_D} fill={heartFill} stroke="none" />
           <path
+            ref={heartMeasureRef}
             d={BRAIN_HEART_D}
             fill="none"
             stroke="rgba(255,255,255,0.1)"
@@ -693,7 +729,8 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
             strokeLinejoin="round"
             strokeLinecap="round"
             strokeDasharray={`${h} ${100 - h}`}
-            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
+            strokeDashoffset={heartDashOffset}
+            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease, stroke-dashoffset 0.3s ease" }}
           />
         </svg>
         {/* Health score */}
