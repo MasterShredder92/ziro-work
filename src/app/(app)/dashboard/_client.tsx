@@ -59,12 +59,23 @@ interface FamiliesOverview {
   range: { mtdStart: string; mtdEnd: string };
 }
 
+/** Staffing + compliance for the Teachers dashboard tile. */
+interface TeachersOverview {
+  activeStudents: number;
+  teachersNeeded: number;
+  activeRooms: number;
+  teachersWithComplianceGaps: number;
+  missingW9Teachers: number;
+  missingContractTeachers: number;
+}
+
 interface AllData {
   metrics: DashMetrics;
   teachers: TeacherData[];
   locationRevenue: LocRevenue[];
   schedule: ScheduleOverview | null;
   families: FamiliesOverview | null;
+  teachersOverview: TeachersOverview | null;
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -153,7 +164,7 @@ const MODULE_DEFS: ModDef[] = [
   { id: "ai-agents", label: "AI Agents",  num: "05", sub: "Autonomous Operations",    color: RED,    color2: PINK,      float: "float4", leftPct: 50, topPct: 84, pathStyle: "S", dotEdge: "top"    },
   { id: "finance",   label: "Financials", num: "06", sub: "Revenue & Projections",    color: GREEN,  color2: "#22c55e", float: "float5", leftPct: 16, topPct: 82, pathStyle: "H", dotEdge: "right"  },
   { id: "payroll",   label: "Payroll",    num: "07", sub: "Teacher Compensation",     color: PINK,   color2: PURPLE,    float: "float6", leftPct: 15, topPct: 50, pathStyle: "S", dotEdge: "right"  },
-  { id: "teachers",  label: "Teachers",   num: "08", sub: "Instructor Overview",      color: TEAL,   color2: BLUE,      float: "float7", leftPct: 16, topPct: 18, pathStyle: "H", dotEdge: "right"  },
+  { id: "teachers",  label: "Teachers",   num: "08", sub: "Staffing & compliance",      color: TEAL,   color2: BLUE,      float: "float7", leftPct: 16, topPct: 18, pathStyle: "H", dotEdge: "right"  },
 ];
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
@@ -640,35 +651,43 @@ function AIAgentsContent({ data }: { data: AllData }) {
 }
 
 function TeachersContent({ data, locId }: { data: AllData; locId: string | null }) {
-  const COLORS = [TEAL, GREEN, BLUE, PINK, AMBER];
-  const teachers = locId
-    ? data.teachers.filter(t => t.byLocation.some(l => l.locationId === locId))
-    : data.teachers;
+  const ov = data.teachersOverview;
+  if (!ov) {
+    return (
+      <div style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.28)", padding: "4px 0" }}>
+        Teacher metrics unavailable. Check network or try again shortly.
+      </div>
+    );
+  }
+  const scope = locId ? "This location" : "All locations";
+  const gaps = ov.teachersWithComplianceGaps;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {teachers.length === 0 && (
-        <IC><div style={{ fontFamily: FONT, fontSize: 10, color: "rgba(255,255,255,.3)", textAlign: "center" }}>No teachers found</div></IC>
-      )}
-      {teachers.slice(0, 4).map((t, i) => {
-        const c = COLORS[i % COLORS.length];
-        const initials = t.teacherName.split(" ").map((w: string) => w[0]).join("").slice(0, 2);
-        return (
-          <IC key={t.teacherId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 11px" }}>
-            <div style={{
-              width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
-              background: `linear-gradient(135deg, ${c}28, rgba(0,0,0,.4))`,
-              border: `1px solid ${c}40`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: NUMFONT, fontSize: 9, fontWeight: 700, color: c,
-            }}>{initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT, fontSize: 10, fontWeight: 600, color: "#d8d8e8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.teacherName}</div>
-              <div style={{ fontFamily: FONT, fontSize: 7.5, color: "rgba(255,255,255,.26)" }}>{t.totalSessions} sessions · {t.bookedSessions} booked</div>
-            </div>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: TEAL, boxShadow: `0 0 6px ${TEAL}`, animation: "dotBlink 2.5s ease-in-out infinite", flexShrink: 0 }} />
-          </IC>
-        );
-      })}
+      <IC>
+        <SL>Active students</SL>
+        <SV color={TEAL} size={22}>{ov.activeStudents}</SV>
+        <div style={{ fontFamily: FONT, fontSize: 6.5, color: "rgba(255,255,255,.22)", marginTop: 4 }}>{scope} · status = active</div>
+      </IC>
+      <IC>
+        <SL>Teachers needed</SL>
+        <SV color={ov.teachersNeeded > 0 ? AMBER : GREEN} size={22}>{ov.teachersNeeded}</SV>
+        <div style={{ fontFamily: FONT, fontSize: 6.5, color: "rgba(255,255,255,.22)", marginTop: 4, lineHeight: 1.35 }}>
+          Active rooms with no teacher in room assignments ({ov.activeRooms} room{ov.activeRooms === 1 ? "" : "s"})
+        </div>
+      </IC>
+      <IC>
+        <SL>Compliance gaps</SL>
+        <SV color={gaps > 0 ? RED : GREEN} size={22}>{gaps}</SV>
+        <div style={{ fontFamily: FONT, fontSize: 6.5, color: "rgba(255,255,255,.22)", marginTop: 4, lineHeight: 1.35 }}>
+          Active teachers missing W9 (when 1099) or signed contract
+          {gaps > 0 && (
+            <span style={{ display: "block", marginTop: 3, color: "rgba(255,255,255,.28)" }}>
+              W9: {ov.missingW9Teachers} · Contract: {ov.missingContractTeachers}
+              <span style={{ opacity: 0.7 }}> (counts can overlap)</span>
+            </span>
+          )}
+        </div>
+      </IC>
     </div>
   );
 }
@@ -1078,12 +1097,13 @@ export function DashboardClient() {
   useEffect(() => {
     async function load() {
       const locQs = selectedLocId ? `?locationId=${encodeURIComponent(selectedLocId)}` : "";
-      const [mRes, tRes, lRes, sRes, fRes] = await Promise.all([
+      const [mRes, tRes, lRes, sRes, fRes, tvRes] = await Promise.all([
         fetch("/api/dashboard/metrics").then(r => r.ok ? r.json() : null),
         fetch("/api/dashboard/teacher-utilization").then(r => r.ok ? r.json() : null),
         fetch("/api/dashboard/location-revenue").then(r => r.ok ? r.json() : null),
         fetch(`/api/dashboard/schedule-overview${locQs}`).then(r => r.ok ? r.json() : null),
         fetch(`/api/dashboard/families-overview${locQs}`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/dashboard/teachers-overview${locQs}`).then(r => r.ok ? r.json() : null),
       ]);
       if (mRes && tRes && lRes) {
         setData({
@@ -1092,6 +1112,7 @@ export function DashboardClient() {
           locationRevenue: lRes.locations ?? [],
           schedule: sRes ?? null,
           families: fRes ?? null,
+          teachersOverview: tvRes ?? null,
         });
       }
     }
