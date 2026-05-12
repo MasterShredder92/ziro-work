@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
@@ -641,16 +641,97 @@ function TopBar({ focusLabel, scopeLabel }: { focusLabel: string; scopeLabel: st
   );
 }
 
+/** BrainOrb health ring outline — viewBox 0 0 100 100 */
+const BRAIN_HEART_D =
+  "M 50 88" +
+  " C 30 80 12 62 12 44" +
+  " C 12 28 26 16 40 22" +
+  " C 46 24 49 30 50 36" +
+  " C 51 30 54 24 60 22" +
+  " C 74 16 88 28 88 44" +
+  " C 88 62 70 80 50 88" +
+  " Z";
+
 function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
   const hRaw = Math.min(100, Math.max(0, healthScore));
   const h = Math.round(hRaw);
   const ringColor = healthStrokeColor(h);
   const ringGlow = healthGlowRgba(h, 0.5);
-  const cx = 50;
-  const cy = 50;
-  const r = 38;
-  const circ = 2 * Math.PI * r;
-  const dash = (hRaw / 100) * circ;
+  /** Interior reads as health tint (not a flat grey). */
+  const heartFillOpacity = 0.1 + (hRaw / 100) * 0.22;
+  /** Same dash math as the circle ring: dash = (h/100)*perimeter, gap = full perimeter (pathLength=100). */
+  const len = 100;
+  const dash = (hRaw / 100) * len;
+
+  const heartMeasureRef = useRef<SVGPathElement | null>(null);
+  /** Align dash pattern so progress starts at the heart crown and runs clockwise (same role as rotate(-90) on the circle). */
+  const [heartDashOffset, setHeartDashOffset] = useState(0);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = heartMeasureRef.current;
+      if (!el || typeof el.getTotalLength !== "function") return;
+      /** Geometric length (getTotalLength ignores `pathLength` in browsers). */
+      const rawLen = el.getTotalLength();
+      if (!(rawLen > 1e-6)) return;
+      /** Dash math uses normalized perimeter `len` via pathLength — map crown to same units. */
+      const scale = len / rawLen;
+
+      const steps = 720;
+      const cx = 50;
+      const cy = 54;
+
+      let crownS = 0;
+      let crownY = -1e9;
+      let foundCrown = false;
+      for (let i = 0; i <= steps; i++) {
+        const s = (i / steps) * rawLen;
+        const p = el.getPointAtLength(s);
+        if (Math.abs(p.x - cx) > 14) continue;
+        if (p.y < 10 || p.y > 44) continue;
+        if (p.y > crownY) {
+          crownY = p.y;
+          crownS = s;
+          foundCrown = true;
+        }
+      }
+      if (!foundCrown) {
+        let bestD = Infinity;
+        for (let i = 0; i <= steps; i++) {
+          const s = (i / steps) * rawLen;
+          const p = el.getPointAtLength(s);
+          const d = (p.x - cx) ** 2 + (p.y - 28) ** 2;
+          if (d < bestD) {
+            bestD = d;
+            crownS = s;
+          }
+        }
+      }
+
+      const eps = Math.max(0.18, rawLen * 0.008);
+      const p0 = el.getPointAtLength(crownS);
+      const p1 = el.getPointAtLength((crownS + eps) % rawLen);
+      const radx = p0.x - cx;
+      const rady = p0.y - cy;
+      const tx = p1.x - p0.x;
+      const ty = p1.y - p0.y;
+      const cross = radx * ty - rady * tx;
+      const forwardIsCw = cross > 0;
+      const crownN = crownS * scale;
+      const off = forwardIsCw ? -crownN : crownN - len;
+      setHeartDashOffset(off);
+    };
+
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(measure);
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [len]);
 
   return (
     <button
@@ -669,27 +750,28 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
         <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${ringGlow})` }}>
-          <circle
-            cx={cx}
-            cy={cy}
-            r={r}
+          <path d={BRAIN_HEART_D} fill={ringColor} fillOpacity={heartFillOpacity} stroke="none" style={{ transition: "fill-opacity 0.7s ease" }} />
+          <path
+            ref={heartMeasureRef}
+            d={BRAIN_HEART_D}
             fill="none"
-            stroke="rgba(255,255,255,0.1)"
+            stroke="rgba(255,255,255,0.06)"
             strokeWidth={6}
-            transform={`rotate(-90 ${cx} ${cy})`}
+            pathLength={len}
+            strokeLinejoin="round"
+            strokeLinecap="round"
           />
-          <circle
-            cx={cx}
-            cy={cy}
-            r={r}
+          <path
+            d={BRAIN_HEART_D}
             fill="none"
             stroke={ringColor}
-            strokeWidth={4.5}
+            strokeWidth={6}
+            pathLength={len}
+            strokeLinejoin="round"
             strokeLinecap="round"
-            strokeDasharray={`${dash} ${circ}`}
-            strokeDashoffset={0}
-            transform={`rotate(-90 ${cx} ${cy})`}
-            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
+            strokeDasharray={`${dash} ${len}`}
+            strokeDashoffset={heartDashOffset}
+            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease, stroke-dashoffset 0.35s ease" }}
           />
         </svg>
         {/* Health score */}
