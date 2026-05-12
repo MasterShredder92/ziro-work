@@ -53,6 +53,35 @@ const TEAL    = "#00e5cc";
 const FONT    = "'Inter', system-ui, sans-serif";
 const NUMFONT = "'Plus Jakarta Sans', system-ui, sans-serif";
 
+/** Heart progress ring: red (low) → yellow (mid) → green (high). */
+function healthStrokeRgb(score: number): { r: number; g: number; b: number } {
+  const s = Math.max(0, Math.min(100, score)) / 100;
+  if (s <= 0.5) {
+    const t = s * 2;
+    return {
+      r: Math.round(239 + (234 - 239) * t),
+      g: Math.round(68 + (179 - 68) * t),
+      b: Math.round(68 + (8 - 68) * t),
+    };
+  }
+  const t = (s - 0.5) * 2;
+  return {
+    r: Math.round(234 + (34 - 234) * t),
+    g: Math.round(179 + (197 - 179) * t),
+    b: Math.round(8 + (94 - 8) * t),
+  };
+}
+
+function healthStrokeColor(score: number): string {
+  const { r, g, b } = healthStrokeRgb(score);
+  return `rgb(${r},${g},${b})`;
+}
+
+function healthGlowRgba(score: number, a: number): string {
+  const { r, g, b } = healthStrokeRgb(score);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 /** Matches `AppLocationRail` aside width so fixed dashboard layers leave the rail visible. */
 const WORKSPACE_LOCATION_RAIL_PX = 88;
 
@@ -622,7 +651,10 @@ const BRAIN_HEART_D =
   " Z";
 
 function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
-  const heartColor = healthScore > 90 ? "#00FFFF" : healthScore >= 70 ? "#10B981" : "#F59E0B";
+  const h = Math.max(0, Math.min(100, Math.round(healthScore)));
+  const heartColor = healthStrokeColor(h);
+  const heartGlow = healthGlowRgba(h, 0.5);
+  const heartFill = healthGlowRgba(h, 0.07);
   return (
     <button
       onClick={onClick}
@@ -635,25 +667,37 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
         <div style={{ position: "absolute", inset: 26, borderRadius: "50%", border: "1px solid rgba(180,255,0,.08)", animation: "ringA 34s linear infinite" }} />
         <div style={{
           position: "absolute", width: 120, height: 120, borderRadius: "50%",
-          background: "radial-gradient(circle at 34% 28%, rgba(255,255,255,.28) 0%, rgba(153,0,255,.5) 22%, rgba(4,0,14,.94) 58%, rgba(153,0,255,.14) 100%)",
-          boxShadow: `inset 0 -6px 18px rgba(180,255,0,.12), inset 2px 4px 14px rgba(255,255,255,.12), 0 0 36px ${heartColor}44`,
+          background: `radial-gradient(circle at 34% 28%, rgba(255,255,255,.22) 0%, ${healthGlowRgba(h, 0.22)} 20%, rgba(6,6,10,.96) 58%, rgba(14,10,12,.92) 100%)`,
+          boxShadow: `inset 0 -6px 18px rgba(180,255,0,.08), inset 2px 4px 14px rgba(255,255,255,.08), 0 0 36px ${healthGlowRgba(h, 0.35)}`,
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
-        {/* Geometric heart SVG */}
-        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${heartColor}88)` }}>
-          {/* Progress ring */}
-          <path d={BRAIN_HEART_D} fill="none" stroke={`${heartColor}22`} strokeWidth={3} pathLength={100} />
-          <path d={BRAIN_HEART_D} fill="none" stroke={heartColor} strokeWidth={3} pathLength={100}
-            strokeDasharray={`${healthScore} ${100 - healthScore}`} strokeLinecap="round"
-            style={{ transition: "stroke-dasharray 1.2s ease, stroke 0.8s ease" }} />
-          {/* Angular blade: left wing */}
-          <path d="M 50 55 L 26 30 L 40 38 Z" fill={heartColor} opacity={0.85} />
-          {/* Angular blade: right wing */}
-          <path d="M 50 55 L 74 30 L 60 38 Z" fill={heartColor} opacity={0.85} />
+        {/* Heart-shaped progress: track + dash along path (pathLength-normalized). */}
+        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${heartGlow})` }}>
+          <path d={BRAIN_HEART_D} fill={heartFill} stroke="none" />
+          <path
+            d={BRAIN_HEART_D}
+            fill="none"
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth={6}
+            pathLength={100}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <path
+            d={BRAIN_HEART_D}
+            fill="none"
+            stroke={heartColor}
+            strokeWidth={4.5}
+            pathLength={100}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            strokeDasharray={`${h} ${100 - h}`}
+            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
+          />
         </svg>
         {/* Health score */}
         <div style={{ position: "absolute", top: "59%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2, pointerEvents: "none" }}>
-          <span style={{ fontFamily: NUMFONT, fontSize: 18, fontWeight: 700, color: heartColor, letterSpacing: "-.01em", textShadow: `0 0 12px ${heartColor}` }}>{healthScore}</span>
+          <span style={{ fontFamily: NUMFONT, fontSize: 18, fontWeight: 700, color: heartColor, letterSpacing: "-.01em", textShadow: `0 0 12px ${heartGlow}` }}>{h}</span>
         </div>
         {flash && (
           <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 3, background: "radial-gradient(circle, rgba(255,255,255,.5) 0%, rgba(180,255,0,.18) 50%, transparent 70%)", animation: "flashIn .35s ease-out forwards", pointerEvents: "none" }} />
