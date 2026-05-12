@@ -295,9 +295,10 @@ function DonutChart({ pct, color, color2, size = 88, gid }: {
           <stop offset="100%" stopColor={color2 ?? color} />
         </linearGradient>
       </defs>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth={9} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth={9} transform={`rotate(-90 ${cx} ${cy})`} />
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={`url(#${gId})`} strokeWidth={9}
-        strokeDasharray={`${dash} ${circ}`} strokeDashoffset={circ * 0.25} strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ}`} strokeDashoffset={0} strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
         style={{ filter: `drop-shadow(0 0 8px ${color}99)`, transition: "stroke-dasharray 1s ease" }} />
       <text x={cx} y={cy - 2} textAnchor="middle" dominantBaseline="middle"
         fill="#fff" fontSize={size * 0.19} fontWeight="600" fontFamily={NUMFONT}>{pct}%</text>
@@ -650,6 +651,9 @@ const BRAIN_HEART_D =
   " C 88 62 70 80 50 88" +
   " Z";
 
+/** ~vertical centroid of `BRAIN_HEART_D` — flip so stroke dash origin sits near the crown (12 o’clock). */
+const HEART_PROGRESS_FLIP_Y = 58;
+
 function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
   const h = Math.max(0, Math.min(100, Math.round(healthScore)));
   const heartColor = healthStrokeColor(h);
@@ -671,29 +675,32 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
           boxShadow: `inset 0 -6px 18px rgba(180,255,0,.08), inset 2px 4px 14px rgba(255,255,255,.08), 0 0 36px ${healthGlowRgba(h, 0.35)}`,
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
-        {/* Heart-shaped progress: track + dash along path (pathLength-normalized). */}
+        {/* Heart-shaped progress: flip so dash origin is near crown; fill grows clockwise from 12 o’clock. */}
         <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${heartGlow})` }}>
-          <path d={BRAIN_HEART_D} fill={heartFill} stroke="none" />
-          <path
-            d={BRAIN_HEART_D}
-            fill="none"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth={6}
-            pathLength={100}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <path
-            d={BRAIN_HEART_D}
-            fill="none"
-            stroke={heartColor}
-            strokeWidth={4.5}
-            pathLength={100}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            strokeDasharray={`${h} ${100 - h}`}
-            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
-          />
+          <g transform={`translate(50 ${HEART_PROGRESS_FLIP_Y}) scale(1,-1) translate(-50 ${-HEART_PROGRESS_FLIP_Y})`}>
+            <path d={BRAIN_HEART_D} fill={heartFill} stroke="none" />
+            <path
+              d={BRAIN_HEART_D}
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth={6}
+              pathLength={100}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <path
+              d={BRAIN_HEART_D}
+              fill="none"
+              stroke={heartColor}
+              strokeWidth={4.5}
+              pathLength={100}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              strokeDasharray={`${h} ${100 - h}`}
+              strokeDashoffset={0}
+              style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
+            />
+          </g>
         </svg>
         {/* Health score */}
         <div style={{ position: "absolute", top: "59%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2, pointerEvents: "none" }}>

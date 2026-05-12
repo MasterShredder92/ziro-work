@@ -77,7 +77,7 @@ function FillRing({ pct, color, glow, size = 76, animated }: { pct: number; colo
     <svg width={size} height={size} className="shrink-0">
       <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={glow} strokeWidth="1" opacity="0.5" />
       {/* Track — uses CSS var so it adapts to light/dark */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--z-border)" strokeWidth={7} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--z-border)" strokeWidth={7} transform={`rotate(-90 ${cx} ${cy})`} />
       <circle
         cx={cx}
         cy={cy}
@@ -86,8 +86,9 @@ function FillRing({ pct, color, glow, size = 76, animated }: { pct: number; colo
         stroke={ringColor}
         strokeWidth={7}
         strokeDasharray={`${filled} ${circ - filled}`}
-        strokeDashoffset={circ * 0.25}
+        strokeDashoffset={0}
         strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
         style={{
           filter: `drop-shadow(0 0 8px ${ringColor}aa)`,
           transition: "stroke-dasharray 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
