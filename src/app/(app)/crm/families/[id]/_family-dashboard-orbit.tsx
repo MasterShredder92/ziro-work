@@ -463,7 +463,7 @@ type FamilyTeacherRow = {
 
 function formatInstrumentLine(t: FamilyTeacherRow): string {
   const raw = t.instruments?.filter((s): s is string => typeof s === "string" && s.trim().length > 0) ?? [];
-  return raw.map((s) => s.trim()).join(", ");
+  return raw.map((s) => s.trim().toUpperCase()).join(", ");
 }
 
 function formatStudentLine(t: FamilyTeacherRow): string {
