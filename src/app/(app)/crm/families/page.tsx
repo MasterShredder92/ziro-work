@@ -1,6 +1,6 @@
 import { countStudentsByFamilyIds, listFamilies } from "@data/families";
 import { listStudents } from "@data/students";
-import { listTeachers } from "@data/teachers";
+import { getTeachersByIds, type Teacher } from "@data/teachers";
 import { listLocations } from "@data/locations";
 import { clientFor } from "@data/_client";
 import type { Family as FamilyRow } from "@/lib/types/entities";
@@ -36,10 +36,9 @@ async function fetchLastMessageAtByFamily(tenantId: string): Promise<Record<stri
 export default async function FamiliesIndexPage() {
   const tenantId = await getCRMTenantId();
 
-  const [locations, rows, allTeachers, lastMessageAtByFamily] = await Promise.all([
+  const [locations, rows, lastMessageAtByFamily] = await Promise.all([
     listLocations(tenantId, {}, { limit: 200 }),
     listFamilies(tenantId, {}, { limit: 2000, orderBy: "name", ascending: true }) as Promise<FamilyRow[]>,
-    listTeachers(tenantId, {}, { limit: 500 }),
     fetchLastMessageAtByFamily(tenantId),
   ]);
 
@@ -47,30 +46,45 @@ export default async function FamiliesIndexPage() {
     locations.map((l) => [l.id, l.name ?? l.id]),
   );
 
-  const teacherNameById: Record<string, string> = {};
-  const teacherPhotoById: Record<string, string | null> = {};
-  for (const t of allTeachers) {
-    const raw = t as {
-      id: string;
-      display_name?: string | null;
-      first_name?: string | null;
-      last_name?: string | null;
-      photo_url?: string | null;
-    };
-    const name =
-      raw.display_name?.trim() ||
-      [raw.first_name, raw.last_name].filter(Boolean).join(" ").trim();
-    if (name) teacherNameById[raw.id] = name;
-    const photo = raw.photo_url?.trim();
-    teacherPhotoById[raw.id] = photo && photo.length > 0 ? photo : null;
-  }
-
   const counts = await countStudentsByFamilyIds(
     tenantId,
     rows.map((r) => r.id),
   );
 
   const allStudents = await listStudents(tenantId, {}, { limit: 2000, orderBy: "created_at", ascending: false });
+
+  const teacherIdSet = new Set<string>();
+  for (const s of allStudents) {
+    const tid = (s as { teacher_id?: string | null }).teacher_id;
+    if (tid) teacherIdSet.add(tid);
+  }
+  const teacherIds = [...teacherIdSet];
+  const teachersForRoster: Teacher[] = [];
+  const BATCH = 200;
+  for (let i = 0; i < teacherIds.length; i += BATCH) {
+    const chunk = teacherIds.slice(i, i + BATCH);
+    teachersForRoster.push(...(await getTeachersByIds(tenantId, chunk)));
+  }
+
+  const teacherNameById: Record<string, string> = {};
+  const teacherPhotoById: Record<string, string | null> = {};
+  for (const t of teachersForRoster) {
+    const raw = t as {
+      id: string;
+      display_name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      email?: string | null;
+      photo_url?: string | null;
+    };
+    const name =
+      raw.display_name?.trim() ||
+      [raw.first_name, raw.last_name].filter(Boolean).join(" ").trim();
+    const email = raw.email?.trim();
+    teacherNameById[raw.id] = name || email || "Teacher";
+    const photo = raw.photo_url?.trim();
+    teacherPhotoById[raw.id] = photo && photo.length > 0 ? photo : null;
+  }
 
   const studentsByFamily: Record<string, {
     id: string;
