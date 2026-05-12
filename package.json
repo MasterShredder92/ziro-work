@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 9999",
+    "verify": "npm run lint && npx tsc --noEmit && npm run build",
     "test": "vitest run",
     "test:smoke": "vitest run tests/smoke",
     "test:watch": "vitest",

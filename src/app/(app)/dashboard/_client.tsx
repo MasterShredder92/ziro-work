@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { PageShell } from "@/components/layouts/PageShell";
-import { PageTransition } from "@/components/system/PageTransition";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
 
-type DashboardMetrics = {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+
+interface DashMetrics {
   activeStudents: number;
   activeFamilies: number;
   collectedCents: number;
@@ -15,617 +16,894 @@ type DashboardMetrics = {
   overdueCount: number;
   scheduledCents: number;
   projectedMonthlyCents: number;
-  schoolName?: string;
-  mtd?: { start: string; end: string; today: string };
+}
+
+interface TeacherData {
+  teacherId: string;
+  teacherName: string;
+  totalSessions: number;
+  bookedSessions: number;
+  byLocation: { locationId: string; locationName: string; sessions: number }[];
+}
+
+interface LocRevenue {
+  locationId: string;
+  collectedCents: number;
+  invoicedCents: number;
+  outstandingCents: number;
+  collectionRate: number;
+}
+
+interface AllData {
+  metrics: DashMetrics;
+  teachers: TeacherData[];
+  locationRevenue: LocRevenue[];
+}
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+
+const GREEN   = "#b4ff00";
+const PURPLE  = "#9900ff";
+const PINK    = "#ff00cc";
+const BLUE    = "#22d3ee";
+const AMBER   = "#f59e0b";
+const RED     = "#ef4444";
+const TEAL    = "#00e5cc";
+const FONT    = "'Inter', system-ui, sans-serif";
+const NUMFONT = "'Plus Jakarta Sans', system-ui, sans-serif";
+
+// ── Module definitions — center-anchored percentage coordinates ───────────────
+//
+// left/top are the CENTER of each box (translate(-50%,-50%) anchors to center).
+// pathStyle: "H" = horizontal-first L-bend, "V" = vertical-first, "S" = straight.
+// dotEdge: which face of the box holds the HTML connector dot (facing the orb).
+
+interface ModDef {
+  id: string; label: string; num: string; sub: string;
+  color: string; color2?: string; float: string;
+  leftPct: number;
+  topPct:  number;
+  pathStyle: "H" | "V" | "S";
+  dotEdge: "top" | "bottom" | "left" | "right";
+}
+
+const MODULE_DEFS: ModDef[] = [
+  { id: "schedule",  label: "Schedule",   num: "01", sub: "Sessions & Availability",  color: BLUE,   color2: "#0ea5e9", float: "float0", leftPct: 50, topPct: 19, pathStyle: "S", dotEdge: "bottom" },
+  { id: "families",  label: "Families",   num: "02", sub: "Household Management",     color: GREEN,  color2: "#22c55e", float: "float1", leftPct: 84, topPct: 18, pathStyle: "H", dotEdge: "left"   },
+  { id: "invoices",  label: "Invoices",   num: "03", sub: "Billing & Collections",    color: AMBER,  color2: "#ef4444", float: "float2", leftPct: 85, topPct: 50, pathStyle: "S", dotEdge: "left"   },
+  { id: "lifecycle", label: "Life Cycle", num: "04", sub: "Student Journey Tracking", color: PURPLE, color2: PINK,      float: "float3", leftPct: 84, topPct: 82, pathStyle: "H", dotEdge: "left"   },
+  { id: "ai-agents", label: "AI Agents",  num: "05", sub: "Autonomous Operations",    color: RED,    color2: PINK,      float: "float4", leftPct: 50, topPct: 84, pathStyle: "S", dotEdge: "top"    },
+  { id: "finance",   label: "Financials", num: "06", sub: "Revenue & Projections",    color: GREEN,  color2: "#22c55e", float: "float5", leftPct: 16, topPct: 82, pathStyle: "H", dotEdge: "right"  },
+  { id: "payroll",   label: "Payroll",    num: "07", sub: "Teacher Compensation",     color: PINK,   color2: PURPLE,    float: "float6", leftPct: 15, topPct: 50, pathStyle: "S", dotEdge: "right"  },
+  { id: "teachers",  label: "Teachers",   num: "08", sub: "Instructor Overview",      color: TEAL,   color2: BLUE,      float: "float7", leftPct: 16, topPct: 18, pathStyle: "H", dotEdge: "right"  },
+];
+
+// ── CSS ───────────────────────────────────────────────────────────────────────
+// IMPORTANT: float keyframes MUST include translate(-50%,-50%) in every frame
+// because animation overrides the inline transform style entirely.
+
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  @keyframes ringA  { to { transform: rotate(360deg); } }
+  @keyframes ringB  { to { transform: rotate(-360deg); } }
+  @keyframes breathe {
+    0%,100% { transform:scale(1);    box-shadow:0 0 32px rgba(153,0,255,.28),0 0 64px rgba(180,255,0,.08),inset 0 0 24px rgba(153,0,255,.14); }
+    50%     { transform:scale(1.05); box-shadow:0 0 52px rgba(153,0,255,.44),0 0 96px rgba(180,255,0,.12),inset 0 0 36px rgba(153,0,255,.22); }
+  }
+  @keyframes locPulse { 0%{transform:scale(1);opacity:1;} 40%,100%{transform:scale(1.7);opacity:0;} }
+  @keyframes dotBlink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+  @keyframes flashIn  { from{opacity:0;transform:scale(.96);} to{opacity:1;transform:scale(1);} }
+  @keyframes ticker   { from{transform:translateX(0);} to{transform:translateX(-50%);} }
+  @keyframes glitch {
+    0%,91%,100%{transform:translate(0) skewX(0);opacity:1;}
+    92%{transform:translate(-3px,0) skewX(-5deg);opacity:.85;}
+    93%{transform:translate(3px,0) skewX(3deg);opacity:.9;}
+    94%{transform:translate(0) skewX(0);opacity:1;}
+  }
+  @keyframes float0 { 0%,100%{transform:translate(-50%,-50%) translateY(0px)}   50%{transform:translate(-50%,-50%) translateY(-9px)} }
+  @keyframes float1 { 0%,100%{transform:translate(-50%,-50%) translateY(-5px)}  50%{transform:translate(-50%,-50%) translateY(5px)}  }
+  @keyframes float2 { 0%,100%{transform:translate(-50%,-50%) translateY(-3px)}  50%{transform:translate(-50%,-50%) translateY(8px)}  }
+  @keyframes float3 { 0%,100%{transform:translate(-50%,-50%) translateY(4px)}   50%{transform:translate(-50%,-50%) translateY(-7px)} }
+  @keyframes float4 { 0%,100%{transform:translate(-50%,-50%) translateY(-7px)}  50%{transform:translate(-50%,-50%) translateY(4px)}  }
+  @keyframes float5 { 0%,100%{transform:translate(-50%,-50%) translateY(2px)}   50%{transform:translate(-50%,-50%) translateY(-8px)} }
+  @keyframes float6 { 0%,100%{transform:translate(-50%,-50%) translateY(-4px)}  50%{transform:translate(-50%,-50%) translateY(6px)}  }
+  @keyframes float7 { 0%,100%{transform:translate(-50%,-50%) translateY(3px)}   50%{transform:translate(-50%,-50%) translateY(-9px)} }
+`;
+
+// ── Routing ───────────────────────────────────────────────────────────────────
+
+const MODULE_WIRE_HREFS: Record<string, string> = {
+  schedule:  "/schedule",
+  families:  "/crm",
+  invoices:  "/invoices",
+  lifecycle: "/lifecycle",
+  finance:   "/financials",
+  payroll:   "/payroll",
+  teachers:  "/teachers",
 };
 
-type SystemNode = {
-  id: string;
-  eyebrow: string;
-  title: string;
-  value: string;
-  label: string;
-  pulse: "green" | "purple" | "blue" | "red" | "amber";
-  x: number;
-  y: number;
-  href?: string;
-  children?: ReactNode;
-};
+// ── Health score ──────────────────────────────────────────────────────────────
 
-function usd(cents = 0) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+function computeHealthScore(d: AllData): number {
+  const inv = d.metrics.totalInvoicedCents;
+  const collRate = inv > 0 ? (d.metrics.collectedCents / inv) * 100 : 0;
+  const tot = d.teachers.reduce((s, t) => s + t.totalSessions, 0);
+  const bkd = d.teachers.reduce((s, t) => s + t.bookedSessions, 0);
+  const fillRate = tot > 0 ? (bkd / tot) * 100 : 0;
+  return Math.min(99, Math.max(0, Math.round(collRate * 0.6 + fillRate * 0.4)));
 }
 
-function ShimmerBlock({ h = "h-[6.5rem]" }: { h?: string }) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmt$(cents: number) { return `$${Math.round(cents / 100).toLocaleString()}`; }
+function px(n: number) { return Math.round(n * 10) / 10; }
+
+// ── Chart primitives ─────────────────────────────────────────────────────────
+
+function DonutChart({ pct, color, color2, size = 88, gid }: {
+  pct: number; color: string; color2?: string; size?: number; gid: string;
+}) {
+  const r = (size - 18) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = Math.min(Math.max(pct, 0), 100) / 100 * circ;
+  const cx = size / 2, cy = size / 2;
+  const gId = `dg-${gid}`;
   return (
-    <div
-      className={`${h} rounded-2xl`}
-      style={{
-        background: "rgba(10,10,12,0.72)",
-        backgroundImage:
-          "linear-gradient(90deg, rgba(12,12,16,0.72) 25%, rgba(0,255,136,0.08) 50%, rgba(12,12,16,0.72) 75%)",
-        backgroundSize: "200% 100%",
-        animation: "shimmer 1.6s infinite",
-        border: "1px solid rgba(0,255,136,0.16)",
-      }}
-    />
+    <svg width={size} height={size} style={{ overflow: "visible" }}>
+      <defs>
+        <linearGradient id={gId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} />
+          <stop offset="100%" stopColor={color2 ?? color} />
+        </linearGradient>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth={9} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={`url(#${gId})`} strokeWidth={9}
+        strokeDasharray={`${dash} ${circ}`} strokeDashoffset={circ * 0.25} strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 8px ${color}99)`, transition: "stroke-dasharray 1s ease" }} />
+      <text x={cx} y={cy - 2} textAnchor="middle" dominantBaseline="middle"
+        fill="#fff" fontSize={size * 0.19} fontWeight="600" fontFamily={NUMFONT}>{pct}%</text>
+      <text x={cx} y={cy + size * 0.16} textAnchor="middle" dominantBaseline="middle"
+        fill="rgba(255,255,255,.3)" fontSize={size * 0.1} fontFamily={FONT}>rate</text>
+    </svg>
   );
 }
 
-function StripSkeleton() {
+function Sparkline({ values, color, w = 300, h = 54, gid }: {
+  values: number[]; color: string; w?: number; h?: number; gid: string;
+}) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values), max = Math.max(...values), rng = max - min || 1;
+  const pts = values.map((v, i) => ({
+    x: (i / (values.length - 1)) * w,
+    y: h - 6 - ((v - min) / rng) * (h - 14),
+  }));
+  let path = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const cp = (pts[i - 1].x + pts[i].x) / 2;
+    path += ` C ${cp} ${pts[i - 1].y} ${cp} ${pts[i].y} ${pts[i].x} ${pts[i].y}`;
+  }
+  const area = `${path} L ${pts[pts.length - 1].x} ${h} L 0 ${h} Z`;
+  const last = pts[pts.length - 1];
+  const aId = `sl-${gid}`;
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_2fr_1fr_1fr]">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <ShimmerBlock key={i} h="h-[140px]" />
-      ))}
+    <svg width={w} height={h} style={{ overflow: "visible" }}>
+      <defs>
+        <linearGradient id={aId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.32} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${aId})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
+      <circle cx={last.x} cy={last.y} r={3.5} fill={color}
+        style={{ filter: `drop-shadow(0 0 8px ${color})`, animation: "dotBlink 2s ease-in-out infinite" }} />
+    </svg>
+  );
+}
+
+function MiniBar({ values, labels, color, color2, w = 300, h = 60, gid }: {
+  values: number[]; labels?: string[]; color: string; color2?: string; w?: number; h?: number; gid: string;
+}) {
+  const max = Math.max(...values) || 1;
+  const n = values.length;
+  const bw = (w / n) * 0.55;
+  const step = w / n;
+  const bId = `mb-${gid}`;
+  return (
+    <svg width={w} height={h} style={{ overflow: "visible" }}>
+      <defs>
+        <linearGradient id={bId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} />
+          <stop offset="100%" stopColor={color2 ?? color} stopOpacity={0.55} />
+        </linearGradient>
+      </defs>
+      {values.map((v, i) => {
+        const bh = Math.max(2, (v / max) * (h - 14));
+        const x = i * step + (step - bw) / 2;
+        const y = h - 12 - bh;
+        return (
+          <g key={i}>
+            <rect x={x} y={0} width={bw} height={h - 12} rx={2} fill="rgba(255,255,255,.03)" />
+            <rect x={x} y={y} width={bw} height={bh} rx={2} fill={`url(#${bId})`}
+              style={{ filter: `drop-shadow(0 0 5px ${color}70)` }} />
+            {labels && <text x={x + bw / 2} y={h - 1} textAnchor="middle"
+              fill="rgba(255,255,255,.25)" fontSize={7} fontFamily={FONT}>{labels[i]}</text>}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Inner card primitives ─────────────────────────────────────────────────────
+
+function IC({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{
+      background: "rgba(0,0,0,.44)", border: "1px solid rgba(255,255,255,.05)",
+      borderRadius: 7, padding: "7px 10px", boxShadow: "inset 0 2px 8px rgba(0,0,0,.45)",
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+function SL({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontFamily: FONT, fontSize: 8, fontWeight: 500, color: "rgba(255,255,255,.28)", letterSpacing: ".05em", marginBottom: 4 }}>{children}</div>;
+}
+
+function SV({ children, color, size }: { children: React.ReactNode; color?: string; size?: number }) {
+  return (
+    <div style={{
+      fontFamily: NUMFONT, fontSize: size ?? 20, fontWeight: 600,
+      color: color ?? "#e8e8f4", lineHeight: 1,
+      letterSpacing: "-.01em", fontVariantNumeric: "tabular-nums",
+    }}>{children}</div>
+  );
+}
+
+// ── Module content components ─────────────────────────────────────────────────
+
+function ScheduleContent({ data }: { data: AllData; locId: string | null }) {
+  const totSes    = data.teachers.reduce((s, t) => s + t.totalSessions, 0);
+  const bookedSes = data.teachers.reduce((s, t) => s + t.bookedSessions, 0);
+  const fillRate  = totSes > 0 ? Math.round((bookedSes / totSes) * 100) : 0;
+  const base = Math.max(1, Math.floor(totSes / 5));
+  const bars = [0.7, 1.1, 1.0, 1.3, 0.9, 0.5, 0.2].map(f => Math.round(base * f));
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      <IC style={{ gridColumn: "1 / -1" }}>
+        <SL>Weekly Session Load</SL>
+        <MiniBar values={bars} labels={["M","T","W","T","F","S","S"]} color={BLUE} color2="#0ea5e9" gid="sched" />
+      </IC>
+      <IC><SL>Sessions MTD</SL><SV color={BLUE}>{totSes}</SV></IC>
+      <IC><SL>Fill Rate</SL><SV color={fillRate >= 70 ? GREEN : AMBER}>{fillRate}%</SV></IC>
+      <IC><SL>Teachers Active</SL><SV>{data.teachers.length}</SV></IC>
+      <IC><SL>Booked</SL><SV color={GREEN}>{bookedSes}</SV></IC>
     </div>
   );
 }
-function CapacitySkeleton() {
+
+function FamiliesContent({ data }: { data: AllData }) {
+  const active  = data.metrics.activeFamilies;
+  const pct     = Math.min(97, Math.round((active / Math.max(active + 8, 1)) * 100));
+  const sPerFam = active > 0 ? (data.metrics.activeStudents / active).toFixed(1) : "—";
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {[1, 2, 3, 4].map((i) => (
-        <ShimmerBlock key={i} h="h-[220px]" />
-      ))}
-    </div>
-  );
-}
-function PlatformSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      {[1, 2, 3].map((i) => (
-        <ShimmerBlock key={i} h="h-[260px]" />
-      ))}
-    </div>
-  );
-}
-function PanelSkeleton({ rows = 4 }: { rows?: number }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: rows }).map((_, i) => (
-        <ShimmerBlock key={i} h="h-14" />
-      ))}
-    </div>
-  );
-}
-
-const CommandStrip = dynamic(
-  () => import("./_CommandStrip").then((m) => ({ default: m.CommandStrip })),
-  { loading: () => <StripSkeleton /> },
-);
-const StudioCapacity = dynamic(
-  () => import("./_StudioCapacity").then((m) => ({ default: m.StudioCapacity })),
-  { loading: () => <CapacitySkeleton /> },
-);
-const PlatformCards = dynamic(
-  () => import("./_PlatformCards").then((m) => ({ default: m.PlatformCards })),
-  { loading: () => <PlatformSkeleton /> },
-);
-const InstrumentChart = dynamic(
-  () => import("./_InstrumentChart").then((m) => ({ default: m.InstrumentChart })),
-  { loading: () => <PanelSkeleton rows={6} /> },
-);
-const LeadsBox = dynamic(
-  () => import("./_LeadsBox").then((m) => ({ default: m.LeadsBox })),
-  { loading: () => <ShimmerBlock h="h-[120px]" /> },
-);
-
-function useDashboardMetrics() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    fetch("/api/dashboard/metrics", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (mounted) setMetrics(json as DashboardMetrics);
-      })
-      .catch(() => {
-        if (mounted) setMetrics(null);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return metrics;
-}
-
-function PulseLine({ from, to, delay = 0 }: { from: { x: number; y: number }; to: { x: number; y: number }; delay?: number }) {
-  const x1 = from.x;
-  const y1 = from.y;
-  const x2 = to.x;
-  const y2 = to.y;
-  return (
-    <line
-      x1={`${x1}%`}
-      y1={`${y1}%`}
-      x2={`${x2}%`}
-      y2={`${y2}%`}
-      className="zw-neural-line"
-      style={{ animationDelay: `${delay}s` }}
-    />
-  );
-}
-
-function BrainCore({ metrics }: { metrics: DashboardMetrics | null }) {
-  const schoolName = metrics?.schoolName?.trim() || "Adkins Music Lessons";
-  const collected = usd(metrics?.collectedCents ?? 0);
-  const projected = usd(metrics?.projectedMonthlyCents ?? 0);
-
-  return (
-    <div className="zw-brain-core" aria-label={`${schoolName} ZiroWork command brain`}>
-      <div className="zw-orbit zw-orbit-one" />
-      <div className="zw-orbit zw-orbit-two" />
-      <div className="zw-orbit zw-orbit-three" />
-      <div className="zw-brain-inner">
-        <div className="zw-fire-z" aria-hidden="true">
-          Z
-        </div>
-        <div className="zw-brain-name">{schoolName}</div>
-        <div className="zw-brain-title">ZIROWORK BRAIN</div>
-        <div className="zw-brain-income">{collected}</div>
-        <div className="zw-brain-caption">income collected this month</div>
-        <div className="zw-brain-footer">
-          <span>Projected {projected}</span>
-          <span>{metrics?.activeStudents ?? "—"} active students</span>
-        </div>
+    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 6, alignItems: "start" }}>
+      <IC style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 8px" }}>
+        <DonutChart pct={pct} color={GREEN} color2="#22c55e" size={78} gid="fam" />
+      </IC>
+      <div style={{ display: "grid", gap: 6 }}>
+        <IC><SL>Active Families</SL><SV color={GREEN}>{active}</SV></IC>
+        <IC><SL>Retention Est.</SL><SV color={pct >= 80 ? GREEN : AMBER}>{pct}%</SV></IC>
+        <IC><SL>Students / Family</SL><SV>{sPerFam}</SV></IC>
       </div>
     </div>
   );
 }
 
-function NeuralNodeContent({ node }: { node: SystemNode }) {
+function LifeCycleContent({ data }: { data: AllData }) {
+  const active   = data.metrics.activeStudents;
+  const atRisk   = data.metrics.overdueCount;
+  const enrolled = active + atRisk;
+  const churned  = Math.max(1, Math.round(enrolled * 0.07));
+  const tiers = [
+    { label: "Enrolled", count: enrolled, color: GREEN, pct: 100 },
+    { label: "Active",   count: active,   color: BLUE,  pct: enrolled > 0 ? Math.round((active / enrolled) * 100) : 0 },
+    { label: "At-Risk",  count: atRisk,   color: AMBER, pct: enrolled > 0 ? Math.round((atRisk / enrolled) * 100) : 0 },
+    { label: "Churned",  count: churned,  color: RED,   pct: enrolled > 0 ? Math.round((churned / enrolled) * 100) : 0 },
+  ];
   return (
-    <>
-      <div className="zw-node-header">
-        <span>{node.eyebrow}</span>
-        <i />
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <IC>
+        <SL>Student Funnel</SL>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+          {tiers.map(t => (
+            <div key={t.label}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                <span style={{ fontFamily: FONT, fontSize: 8.5, color: "rgba(255,255,255,.38)" }}>{t.label}</span>
+                <span style={{ fontFamily: NUMFONT, fontSize: 8.5, fontWeight: 600, color: t.color, fontVariantNumeric: "tabular-nums" }}>{t.count}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,.06)" }}>
+                <div style={{ width: `${t.pct}%`, height: "100%", borderRadius: 3, background: t.color, transition: "width .8s ease" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </IC>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <IC><SL>Active Students</SL><SV color={GREEN}>{active}</SV></IC>
+        <IC><SL>At-Risk</SL><SV color={AMBER}>{atRisk}</SV></IC>
       </div>
-      <div className="zw-node-title">{node.title}</div>
-      <div className="zw-node-metric">{node.value}</div>
-      <div className="zw-node-label">{node.label}</div>
-      {node.children ? <div className="zw-node-body">{node.children}</div> : null}
-    </>
+    </div>
   );
 }
 
-function NeuralNode({ node }: { node: SystemNode }) {
-  const className = `zw-system-node zw-node-${node.pulse}`;
-  const style = { left: `${node.x}%`, top: `${node.y}%` };
+function InvoicesContent({ data, locId }: { data: AllData; locId: string | null }) {
+  const loc  = locId ? data.locationRevenue.find(l => l.locationId === locId) : null;
+  const col  = loc?.collectedCents   ?? data.metrics.collectedCents;
+  const inv  = loc?.invoicedCents    ?? data.metrics.totalInvoicedCents;
+  const out  = loc?.outstandingCents ?? data.metrics.outstandingCents;
+  const rate = loc?.collectionRate   ?? (inv > 0 ? Math.round((col / inv) * 100) : 0);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 6 }}>
+      <IC style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 8px" }}>
+        <DonutChart pct={rate} color={AMBER} color2="#ef4444" size={78} gid="inv" />
+      </IC>
+      <div style={{ display: "grid", gap: 8 }}>
+        <IC><SL>Outstanding</SL><SV color={AMBER} size={15}>{fmt$(out)}</SV></IC>
+        <IC><SL>Invoiced MTD</SL><SV size={15}>{fmt$(inv)}</SV></IC>
+        <IC><SL>Overdue Count</SL><SV color={data.metrics.overdueCount > 5 ? RED : AMBER}>{data.metrics.overdueCount}</SV></IC>
+      </div>
+    </div>
+  );
+}
 
-  if (node.href) {
-    return (
-      <Link href={node.href} className={className} style={style}>
-        <NeuralNodeContent node={node} />
-      </Link>
+function FinancialsContent({ data, locId }: { data: AllData; locId: string | null }) {
+  const loc  = locId ? data.locationRevenue.find(l => l.locationId === locId) : null;
+  const col  = loc?.collectedCents ?? data.metrics.collectedCents;
+  const inv  = loc?.invoicedCents  ?? data.metrics.totalInvoicedCents;
+  const proj = data.metrics.projectedMonthlyCents;
+  const trend = [0.72, 0.78, 0.85, 0.91, 0.96, 1.0].map(f => Math.round(col * f));
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <IC>
+        <SL>Revenue Trend — 6 months</SL>
+        <div style={{ marginTop: 6 }}><Sparkline values={trend} color={GREEN} gid="fin" /></div>
+      </IC>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <IC><SL>Collected</SL><SV color={GREEN} size={13}>{fmt$(col)}</SV></IC>
+        <IC><SL>Invoiced</SL><SV size={13}>{fmt$(inv)}</SV></IC>
+        <IC><SL>Projected</SL><SV color={BLUE} size={13}>{fmt$(proj)}</SV></IC>
+      </div>
+    </div>
+  );
+}
+
+function PayrollContent({ data, locId }: { data: AllData; locId: string | null }) {
+  const teachers = locId
+    ? data.teachers.filter(t => t.byLocation.some(l => l.locationId === locId))
+    : data.teachers;
+  const vals  = teachers.slice(0, 6).map(t => t.totalSessions);
+  const lbls  = teachers.slice(0, 6).map(t => t.teacherName.split(" ")[0].slice(0, 4));
+  const total = teachers.reduce((s, t) => s + t.totalSessions, 0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <IC>
+        <SL>Sessions by Teacher</SL>
+        <div style={{ marginTop: 6 }}>
+          <MiniBar values={vals.length ? vals : [1]} labels={lbls} color={PINK} color2={PURPLE} gid="pay" />
+        </div>
+      </IC>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <IC><SL>Active Teachers</SL><SV color={PINK}>{teachers.length}</SV></IC>
+        <IC><SL>Total Sessions</SL><SV>{total}</SV></IC>
+      </div>
+    </div>
+  );
+}
+
+function AIAgentsContent({ data }: { data: AllData }) {
+  const activeAgents = 3;
+  const tasksToday   = 47;
+  const successRate  = 94;
+  const agents: { name: string; task: string; status: "active" | "idle" | "processing" }[] = [
+    { name: "Billing Bot",  task: "Overdue notices sent",     status: "active" },
+    { name: "Enroll Scout", task: "Monitoring re-engagement", status: "processing" },
+    { name: "Schedule AI",  task: "Gap-fill recommendations", status: "active" },
+  ];
+  const statusColor = (s: "active" | "idle" | "processing") =>
+    s === "active" ? GREEN : s === "processing" ? AMBER : "rgba(255,255,255,.25)";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <IC><SL>Active</SL><SV color={RED}>{activeAgents}</SV></IC>
+        <IC><SL>Tasks Today</SL><SV color={AMBER}>{tasksToday}</SV></IC>
+        <IC><SL>Success</SL><SV color={successRate >= 90 ? GREEN : AMBER}>{successRate}%</SV></IC>
+      </div>
+      <IC>
+        <SL>Agent Status</SL>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+          {agents.map(ag => (
+            <div key={ag.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 5, height: 5, borderRadius: "50%", background: statusColor(ag.status), boxShadow: `0 0 6px ${statusColor(ag.status)}`, flexShrink: 0, animation: ag.status !== "idle" ? "dotBlink 2s ease-in-out infinite" : "none" }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: FONT, fontSize: 9, fontWeight: 700, color: "#d8d8e8" }}>{ag.name}</div>
+                <div style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.28)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ag.task}</div>
+              </div>
+              <span style={{ fontFamily: FONT, fontSize: 6.5, letterSpacing: ".1em", color: statusColor(ag.status), textTransform: "uppercase", flexShrink: 0 }}>{ag.status}</span>
+            </div>
+          ))}
+        </div>
+      </IC>
+      <IC>
+        <SL>Actions MTD</SL>
+        <MiniBar values={[12, 18, 22, 15, 29, 34, 40].map(v => Math.round(v * (tasksToday / 40)))} labels={["M","T","W","T","F","S","S"]} color={RED} color2={PINK} gid="ai" />
+      </IC>
+    </div>
+  );
+}
+
+function TeachersContent({ data, locId }: { data: AllData; locId: string | null }) {
+  const COLORS = [TEAL, GREEN, BLUE, PINK, AMBER];
+  const teachers = locId
+    ? data.teachers.filter(t => t.byLocation.some(l => l.locationId === locId))
+    : data.teachers;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {teachers.length === 0 && (
+        <IC><div style={{ fontFamily: FONT, fontSize: 10, color: "rgba(255,255,255,.3)", textAlign: "center" }}>No teachers found</div></IC>
+      )}
+      {teachers.slice(0, 4).map((t, i) => {
+        const c = COLORS[i % COLORS.length];
+        const initials = t.teacherName.split(" ").map((w: string) => w[0]).join("").slice(0, 2);
+        return (
+          <IC key={t.teacherId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 11px" }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+              background: `linear-gradient(135deg, ${c}28, rgba(0,0,0,.4))`,
+              border: `1px solid ${c}40`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: NUMFONT, fontSize: 9, fontWeight: 700, color: c,
+            }}>{initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: FONT, fontSize: 10, fontWeight: 600, color: "#d8d8e8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.teacherName}</div>
+              <div style={{ fontFamily: FONT, fontSize: 7.5, color: "rgba(255,255,255,.26)" }}>{t.totalSessions} sessions · {t.bookedSessions} booked</div>
+            </div>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: TEAL, boxShadow: `0 0 6px ${TEAL}`, animation: "dotBlink 2.5s ease-in-out infinite", flexShrink: 0 }} />
+          </IC>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── TopBar ────────────────────────────────────────────────────────────────────
+
+function TopBar({ focusLabel, scopeLabel }: { focusLabel: string; scopeLabel: string }) {
+  return (
+    <div style={{ height: 38, flexShrink: 0, background: "#020203", borderBottom: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", padding: "0 14px 0 10px", position: "relative" }}>
+      {/* Scope label — top-left */}
+      <span style={{ fontFamily: FONT, fontSize: 12, color: `${GREEN}99`, letterSpacing: ".05em", opacity: 0.6 }}>
+        System Scope: {scopeLabel}
+      </span>
+      {/* School / location name — absolute center */}
+      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", pointerEvents: "none" }}>
+        <span style={{ fontFamily: NUMFONT, fontSize: 19, fontWeight: 700, color: "#fff", letterSpacing: ".06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+          {focusLabel}
+        </span>
+      </div>
+      <div style={{ flex: 1 }} />
+      {/* Settings button */}
+      <button style={{ background: "none", border: "1px solid rgba(255,255,255,.08)", borderRadius: 6, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,.3)", fontSize: 13 }}
+        title="Settings">⚙</button>
+    </div>
+  );
+}
+
+const BRAIN_HEART_D =
+  "M 50 88" +
+  " C 30 80 12 62 12 44" +
+  " C 12 28 26 16 40 22" +
+  " C 46 24 49 30 50 36" +
+  " C 51 30 54 24 60 22" +
+  " C 74 16 88 28 88 44" +
+  " C 88 62 70 80 50 88" +
+  " Z";
+
+function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
+  const heartColor = healthScore > 90 ? "#00FFFF" : healthScore >= 70 ? "#10B981" : "#F59E0B";
+  return (
+    <button
+      onClick={onClick}
+      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", userSelect: "none", zIndex: 35, position: "relative" }}
+      aria-label="Z-IQ Command Center"
+    >
+      <div style={{ position: "relative", width: 200, height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "absolute", inset: 0,  borderRadius: "50%", border: "1.5px solid rgba(153,0,255,.2)", animation: "ringA 22s linear infinite" }} />
+        <div style={{ position: "absolute", inset: 12, borderRadius: "50%", border: "1px solid rgba(255,0,204,.12)",  animation: "ringB 16s linear infinite" }} />
+        <div style={{ position: "absolute", inset: 26, borderRadius: "50%", border: "1px solid rgba(180,255,0,.08)", animation: "ringA 34s linear infinite" }} />
+        <div style={{
+          position: "absolute", width: 120, height: 120, borderRadius: "50%",
+          background: "radial-gradient(circle at 34% 28%, rgba(255,255,255,.28) 0%, rgba(153,0,255,.5) 22%, rgba(4,0,14,.94) 58%, rgba(153,0,255,.14) 100%)",
+          boxShadow: `inset 0 -6px 18px rgba(180,255,0,.12), inset 2px 4px 14px rgba(255,255,255,.12), 0 0 36px ${heartColor}44`,
+          animation: "breathe 4.5s ease-in-out infinite",
+        }} />
+        {/* Geometric heart SVG */}
+        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${heartColor}88)` }}>
+          {/* Progress ring */}
+          <path d={BRAIN_HEART_D} fill="none" stroke={`${heartColor}22`} strokeWidth={3} pathLength={100} />
+          <path d={BRAIN_HEART_D} fill="none" stroke={heartColor} strokeWidth={3} pathLength={100}
+            strokeDasharray={`${healthScore} ${100 - healthScore}`} strokeLinecap="round"
+            style={{ transition: "stroke-dasharray 1.2s ease, stroke 0.8s ease" }} />
+          {/* Angular blade: left wing */}
+          <path d="M 50 55 L 26 30 L 40 38 Z" fill={heartColor} opacity={0.85} />
+          {/* Angular blade: right wing */}
+          <path d="M 50 55 L 74 30 L 60 38 Z" fill={heartColor} opacity={0.85} />
+        </svg>
+        {/* Health score */}
+        <div style={{ position: "absolute", top: "59%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2, pointerEvents: "none" }}>
+          <span style={{ fontFamily: NUMFONT, fontSize: 18, fontWeight: 700, color: heartColor, letterSpacing: "-.01em", textShadow: `0 0 12px ${heartColor}` }}>{healthScore}</span>
+        </div>
+        {flash && (
+          <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 3, background: "radial-gradient(circle, rgba(255,255,255,.5) 0%, rgba(180,255,0,.18) 50%, transparent 70%)", animation: "flashIn .35s ease-out forwards", pointerEvents: "none" }} />
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ── SVG circuit traces — 90° L-bends, percentage coordinates ─────────────────
+// Lines run from the orb surface to the connector dot on each box edge.
+
+function StaticCircuitSVG({ w, h, onNavigate }: { w: number; h: number; onNavigate: (href: string) => void }) {
+  if (!w || !h) return null;
+
+  const cx = w * 0.5;
+  const cy = h * 0.5;
+  const ORB_R      = 62;
+  const BOX_HALF_W = 145;
+  const BOX_HALF_H = 120;
+
+  return (
+    <svg
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}
+      width={w} height={h}
+    >
+      {MODULE_DEFS.map(mod => {
+        const tx = w * (mod.leftPct / 100);
+        const ty = h * (mod.topPct  / 100);
+
+        const dx = tx - cx, dy = ty - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const ex = cx + (dx / dist) * ORB_R;
+        const ey = cy + (dy / dist) * ORB_R;
+
+        let ftx = tx, fty = ty;
+        switch (mod.dotEdge) {
+          case "bottom": fty = ty + BOX_HALF_H; break;
+          case "top":    fty = ty - BOX_HALF_H; break;
+          case "left":   ftx = tx - BOX_HALF_W; break;
+          case "right":  ftx = tx + BOX_HALF_W; break;
+        }
+
+        let d: string;
+        let bendX = 0, bendY = 0, hasBend = true;
+
+        if (mod.pathStyle === "S") {
+          d = `M ${px(ex)} ${px(ey)} L ${px(ftx)} ${px(fty)}`;
+          hasBend = false;
+        } else if (mod.pathStyle === "H") {
+          bendX = ftx; bendY = ey;
+          d = `M ${px(ex)} ${px(ey)} L ${px(ftx)} ${px(ey)} L ${px(ftx)} ${px(fty)}`;
+        } else {
+          bendX = ex; bendY = fty;
+          d = `M ${px(ex)} ${px(ey)} L ${px(ex)} ${px(fty)} L ${px(ftx)} ${px(fty)}`;
+        }
+
+        const href = MODULE_WIRE_HREFS[mod.id];
+
+        return (
+          <g key={mod.id}>
+            <path d={d} fill="none" stroke={mod.color} strokeWidth={3} strokeOpacity={0.06} />
+            <path d={d} fill="none" stroke={mod.color} strokeWidth={1} strokeOpacity={0.4}
+              style={{ filter: `drop-shadow(0 0 3px ${mod.color}60)` }} />
+            <circle cx={px(ex)} cy={px(ey)} r={2.5} fill={mod.color} fillOpacity={0.7} />
+            {hasBend && <rect x={px(bendX - 2)} y={px(bendY - 2)} width={4} height={4} fill={mod.color} fillOpacity={0.5} />}
+            <circle cx={px(ftx)} cy={px(fty)} r={3} fill={mod.color} fillOpacity={0.6}
+              style={{ filter: `drop-shadow(0 0 4px ${mod.color})` }} />
+            {/* Invisible wide hit path for click */}
+            {href && (
+              <path d={d} fill="none" stroke="transparent" strokeWidth={22}
+                pointerEvents="stroke" style={{ cursor: "pointer" }}
+                onClick={() => onNavigate(href)} />
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Connector dot — sits on box edge facing the orb ───────────────────────────
+
+function connectorStyle(dotEdge: ModDef["dotEdge"], color: string): React.CSSProperties {
+  const base: React.CSSProperties = {
+    position: "absolute", width: 8, height: 8, borderRadius: "50%", zIndex: 10,
+    background: color,
+    boxShadow: `0 0 10px ${color}, 0 0 20px ${color}60`,
+    border: "1.5px solid rgba(255,255,255,0.3)",
+  };
+  switch (dotEdge) {
+    case "bottom": return { ...base, bottom: -4, left: "50%",  transform: "translateX(-50%)" };
+    case "top":    return { ...base, top:    -4, left: "50%",  transform: "translateX(-50%)" };
+    case "left":   return { ...base, left:   -4, top:  "50%",  transform: "translateY(-50%)" };
+    case "right":  return { ...base, right:  -4, top:  "50%",  transform: "translateY(-50%)" };
+  }
+}
+
+// ── ModuleBox — center-anchored percentage positioning ────────────────────────
+// Float keyframes bake in translate(-50%,-50%) — do NOT remove from keyframes.
+
+function ModuleBox({ mod, data, locId }: {
+  mod: ModDef;
+  data: AllData | null;
+  locId: string | null;
+}) {
+  const router = useRouter();
+  const [hovered, setHovered] = useState(false);
+  const idx = MODULE_DEFS.indexOf(mod);
+  const href = MODULE_WIRE_HREFS[mod.id];
+
+  function renderContent() {
+    if (!data) return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {[60, 40, 40].map((hh, i) => (
+          <div key={i} style={{ height: hh, borderRadius: 8, background: "rgba(255,255,255,.04)", animation: "dotBlink 1.8s ease-in-out infinite" }} />
+        ))}
+      </div>
     );
+    switch (mod.id) {
+      case "schedule":  return <ScheduleContent   data={data} locId={locId} />;
+      case "families":  return <FamiliesContent   data={data} />;
+      case "invoices":  return <InvoicesContent   data={data} locId={locId} />;
+      case "lifecycle": return <LifeCycleContent  data={data} />;
+      case "ai-agents": return <AIAgentsContent   data={data} />;
+      case "finance":   return <FinancialsContent data={data} locId={locId} />;
+      case "payroll":   return <PayrollContent    data={data} locId={locId} />;
+      case "teachers":  return <TeachersContent   data={data} locId={locId} />;
+      default: return null;
+    }
   }
 
   return (
-    <div className={className} style={style}>
-      <NeuralNodeContent node={node} />
-    </div>
-  );
-}
+    <div
+      role={href ? "button" : undefined}
+      tabIndex={href ? 0 : undefined}
+      aria-label={href ? `Open ${mod.label}` : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => href && router.push(href)}
+      onKeyDown={(e) => { if (href && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); router.push(href); } }}
+      style={{
+        position: "absolute",
+        left: `${mod.leftPct}%`,
+        top:  `${mod.topPct}%`,
+        transform: "translate(-50%, -50%)",
+        width: 290,
+        animation: `${mod.float} ${3.5 + idx * 0.28}s ease-in-out infinite`,
+        zIndex: 30,
+        cursor: href ? "pointer" : "default",
+      }}
+    >
+      {/* Edge connector dot */}
+      <div style={connectorStyle(mod.dotEdge, mod.color)} />
 
-function OutcomeRail({ metrics }: { metrics: DashboardMetrics | null }) {
-  const signals = [
-    {
-      label: "Revenue captured",
-      value: usd(metrics?.collectedCents ?? 0),
-      trend: "+ MTD",
-      tone: "green",
-    },
-    {
-      label: "Recovery target",
-      value: usd(metrics?.outstandingCents ?? 0),
-      trend: `${metrics?.overdueCount ?? 0} overdue`,
-      tone: metrics?.overdueCount ? "red" : "green",
-    },
-    {
-      label: "Active families",
-      value: String(metrics?.activeFamilies ?? "—"),
-      trend: "live roster",
-      tone: "purple",
-    },
-    {
-      label: "Next month",
-      value: usd(metrics?.projectedMonthlyCents ?? 0),
-      trend: "projected",
-      tone: "blue",
-    },
-  ];
+      <div style={{
+        background: "linear-gradient(135deg, rgba(20,25,35,.95) 0%, rgba(8,8,14,.99) 100%)",
+        backdropFilter: "blur(14px)",
+        border: `1px solid ${hovered ? mod.color + "30" : "rgba(255,255,255,.07)"}`,
+        borderRadius: 12,
+        boxShadow: hovered
+          ? `0 0 50px ${mod.color}22, 0 20px 56px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.07)`
+          : `0 0 28px ${mod.color}10, 0 12px 36px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.04)`,
+        transition: "all 240ms ease",
+        overflow: "hidden",
+      }}>
+        {/* Accent bar */}
+        <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${mod.color}70, ${mod.color2 ?? mod.color}45, transparent)` }} />
 
-  return (
-    <aside className="zw-outcome-rail" aria-label="Command outcomes">
-      <div className="zw-rail-title">OUTCOME SIGNALS</div>
-      {signals.map((signal) => (
-        <div className={`zw-signal zw-signal-${signal.tone}`} key={signal.label}>
-          <div>
-            <span>{signal.label}</span>
-            <strong>{signal.value}</strong>
+        {/* Header */}
+        <div style={{ padding: "8px 12px 7px", display: "flex", alignItems: "flex-start", gap: 9 }}>
+          <span style={{ fontFamily: NUMFONT, fontSize: 17, fontWeight: 600, color: mod.color, lineHeight: 1, flexShrink: 0, textShadow: `0 0 12px ${mod.color}88`, letterSpacing: "-.01em", fontVariantNumeric: "tabular-nums" }}>{mod.num}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#eeeef8", letterSpacing: ".06em", textTransform: "uppercase", lineHeight: 1.1 }}>{mod.label}</div>
+            <div style={{ fontFamily: FONT, fontSize: 7.5, color: "rgba(255,255,255,.3)", letterSpacing: ".03em", marginTop: 3 }}>{mod.sub}</div>
           </div>
-          <em>{signal.trend}</em>
+          <div style={{ width: 5, height: 5, borderRadius: "50%", background: mod.color, boxShadow: `0 0 7px ${mod.color}`, animation: "dotBlink 2.4s ease-in-out infinite", flexShrink: 0, marginTop: 2 }} />
         </div>
-      ))}
-      <div className="zw-rail-footer">ONE SCHOOL. ONE BRAIN. LIVE COMMAND.</div>
-    </aside>
-  );
-}
 
-function CommandFeed({ metrics }: { metrics: DashboardMetrics | null }) {
-  const items = [
-    {
-      title: "Collect the money already earned",
-      body: `${usd(metrics?.outstandingCents ?? 0)} sits in revenue recovery. Attack overdue invoices first.`,
-      href: "/billing/invoices",
-      tone: "red",
-    },
-    {
-      title: "Fill open weekly lesson capacity",
-      body: "Studio capacity is the growth map. Open blocks are the fastest path to revenue.",
-      href: "/schedule",
-      tone: "green",
-    },
-    {
-      title: "Convert uncontacted leads",
-      body: "Enrollment speed wins. Work the lead queue before the 48-hour decay window.",
-      href: "/crm/leads",
-      tone: "purple",
-    },
-  ];
+        {/* Rule */}
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${mod.color}18, transparent)` }} />
 
-  return (
-    <div className="zw-command-feed">
-      {items.map((item, idx) => (
-        <Link className={`zw-feed-item zw-feed-${item.tone}`} href={item.href} key={item.title}>
-          <span>0{idx + 1}</span>
-          <div>
-            <strong>{item.title}</strong>
-            <p>{item.body}</p>
+        {/* Body */}
+        <div style={{ padding: "8px 10px" }}>{renderContent()}</div>
+
+        {/* Footer */}
+        <div style={{ padding: "5px 10px", borderTop: "1px solid rgba(255,255,255,.04)", display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            {["◆", "▲", "◉"].map(ic => <span key={ic} style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.12)" }}>{ic}</span>)}
           </div>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-function AgentOrbitMobile() {
-  const agents = [
-    ["Raven", "Retention scanner", "Active"],
-    ["Revenue", "Invoice recovery", "Live"],
-    ["Enroll", "Lead converter", "Watching"],
-    ["Schedule", "Capacity mapper", "Active"],
-    ["Reviews", "Growth engine", "Ready"],
-  ];
-
-  return (
-    <div className="zw-agent-scroll" aria-label="Agent orbit">
-      {agents.map(([name, role, status]) => (
-        <div className="zw-agent-pill" key={name}>
-          <span>{name}</span>
-          <strong>{role}</strong>
-          <em>{status}</em>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN, boxShadow: `0 0 5px ${GREEN}`, animation: "dotBlink 3s ease-in-out infinite" }} />
+            <span style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.18)", letterSpacing: ".1em" }}>System Active</span>
+          </div>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function NeuralDesktop({ metrics }: { metrics: DashboardMetrics | null }) {
-  const nodes = useMemo<SystemNode[]>(
-    () => [
-      {
-        id: "enrollment",
-        eyebrow: "01 ENROLLMENT ENGINE",
-        title: "Lead-to-student converter",
-        value: usd(metrics?.scheduledCents ?? 0),
-        label: "scheduled invoice pressure",
-        pulse: "green",
-        x: 7,
-        y: 8,
-        href: "/crm/leads",
-      },
-      {
-        id: "lifecycle",
-        eyebrow: "02 STUDENT LIFECYCLE",
-        title: "Student health monitor",
-        value: String(metrics?.activeStudents ?? "—"),
-        label: "active students in motion",
-        pulse: "purple",
-        x: 66,
-        y: 10,
-        href: "/students",
-      },
-      {
-        id: "lessons",
-        eyebrow: "03 LESSON OPERATIONS",
-        title: "Schedule command",
-        value: "Live",
-        label: "rooms, teachers, students",
-        pulse: "blue",
-        x: 72,
-        y: 42,
-        href: "/schedule",
-      },
-      {
-        id: "revenue",
-        eyebrow: "04 REVENUE RECOVERY",
-        title: "Money waiting",
-        value: usd(metrics?.outstandingCents ?? 0),
-        label: `${metrics?.overdueCount ?? 0} overdue invoices`,
-        pulse: metrics?.overdueCount ? "red" : "green",
-        x: 63,
-        y: 70,
-        href: "/billing/invoices",
-      },
-      {
-        id: "retention",
-        eyebrow: "05 RETENTION INTELLIGENCE",
-        title: "Risk scanner",
-        value: "Raven",
-        label: "student threats + save plays",
-        pulse: "amber",
-        x: 36,
-        y: 78,
-        href: "/crm/families",
-      },
-      {
-        id: "capacity",
-        eyebrow: "06 TEACHER CAPACITY",
-        title: "Open slots become cash",
-        value: usd(metrics?.projectedMonthlyCents ?? 0),
-        label: "next month projected",
-        pulse: "green",
-        x: 14,
-        y: 67,
-        href: "/teachers",
-      },
-      {
-        id: "agents",
-        eyebrow: "07 AI AGENTS",
-        title: "Robot operator layer",
-        value: "5",
-        label: "agents feeding the brain",
-        pulse: "purple",
-        x: 8,
-        y: 39,
-        href: "/marketing-insights",
-      },
-      {
-        id: "command",
-        eyebrow: "08 COMMAND CENTER",
-        title: "Owner decision layer",
-        value: "Now",
-        label: "what to attack next",
-        pulse: "green",
-        x: 35,
-        y: 9,
-      },
-    ],
-    [metrics],
-  );
-
-  return (
-    <section className="zw-neural-desktop" aria-label="ZiroWork neural command center">
-      <svg className="zw-neural-map" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        {nodes.map((node, idx) => (
-          <PulseLine key={node.id} from={{ x: 50, y: 50 }} to={{ x: node.x + 10, y: node.y + 7 }} delay={idx * 0.22} />
-        ))}
-      </svg>
-      <div className="zw-starfield" />
-      <BrainCore metrics={metrics} />
-      {nodes.map((node) => (
-        <NeuralNode key={node.id} node={node} />
-      ))}
-      <OutcomeRail metrics={metrics} />
-    </section>
-  );
-}
-
-function IntelligenceModule({ title, eyebrow, children, accent = "green" }: { title: string; eyebrow: string; children: ReactNode; accent?: "green" | "purple" | "blue" }) {
-  return (
-    <section className={`zw-intel-module zw-intel-${accent}`}>
-      <div className="zw-module-head">
-        <span>{eyebrow}</span>
-        <h2>{title}</h2>
       </div>
-      {children}
-    </section>
+    </div>
   );
 }
+
+// ── FinancialOverview panel ───────────────────────────────────────────────────
+
+function FinancialOverview({ data }: { data: AllData | null }) {
+  const m = data?.metrics;
+
+  const stats: { label: string; value: string; color: string; sub?: string }[] = [
+    { label: "Revenue MTD",  value: m ? fmt$(m.collectedCents)       : "—", color: GREEN, sub: "collected this month" },
+    { label: "Outstanding",  value: m ? fmt$(m.outstandingCents)      : "—", color: AMBER, sub: "awaiting payment" },
+    { label: "Overdue",      value: m ? String(m.overdueCount)        : "—", color: RED,   sub: "past due accounts" },
+    { label: "Projected",    value: m ? fmt$(m.projectedMonthlyCents) : "—", color: BLUE,  sub: "end-of-month forecast" },
+    { label: "Teacher Comp", value: data ? `${data.teachers.length} staff` : "—", color: TEAL, sub: "active instructors" },
+  ];
+
+  return (
+    <div style={{
+      width: 160, flexShrink: 0,
+      display: "flex", flexDirection: "column",
+      alignItems: "stretch", justifyContent: "center",
+      padding: "16px 10px",
+      position: "relative", zIndex: 10,
+      background: "transparent",
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, rgba(20,25,35,.92) 0%, rgba(10,10,15,.98) 100%)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(255,255,255,.05)",
+        borderRadius: 16,
+        boxShadow: "0 10px 30px rgba(0,255,150,.05), inset 0 1px 0 rgba(255,255,255,.05)",
+        padding: 24,
+        display: "flex", flexDirection: "column", gap: 16,
+        overflow: "hidden",
+      }}>
+        {/* Accent bar */}
+        <div style={{ height: 2, margin: "-24px -24px 0", background: `linear-gradient(90deg, transparent, ${GREEN}50, ${BLUE}30, transparent)` }} />
+
+        {/* Title */}
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontFamily: FONT, fontSize: "0.75rem", fontWeight: 700, letterSpacing: "1px", color: "#a0aab5", textTransform: "uppercase", lineHeight: 1.3 }}>
+            Financial<br />Overview
+          </div>
+          <div style={{ width: 24, height: 1, background: `${GREEN}40`, marginTop: 6 }} />
+        </div>
+
+        {/* Stats */}
+        {stats.map(stat => (
+          <div key={stat.label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ fontFamily: FONT, fontSize: "0.6rem", fontWeight: 600, letterSpacing: "1px", color: "#a0aab5", textTransform: "uppercase" }}>{stat.label}</div>
+            <div style={{ fontFamily: NUMFONT, fontSize: "1.15rem", fontWeight: 600, color: stat.color, lineHeight: 1, letterSpacing: "-0.01em", fontVariantNumeric: "tabular-nums", textShadow: `0 0 18px ${stat.color}60` }}>{stat.value}</div>
+            {stat.sub && <div style={{ fontFamily: FONT, fontSize: "0.58rem", color: "rgba(255,255,255,.2)", letterSpacing: ".04em" }}>{stat.sub}</div>}
+          </div>
+        ))}
+
+        {/* Status footer */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
+          {([["SYNC", GREEN], ["AI OPS", PURPLE], ["API", BLUE]] as [string, string][]).map(([l, c]) => (
+            <div key={l} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div style={{ width: 4, height: 4, borderRadius: "50%", background: c, boxShadow: `0 0 6px ${c}`, animation: "dotBlink 2.4s ease-in-out infinite", flexShrink: 0 }} />
+              <span style={{ fontFamily: FONT, fontSize: "0.58rem", color: c + "80", letterSpacing: ".1em", textTransform: "uppercase" }}>{l} Online</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export function DashboardClient() {
-  const metrics = useDashboardMetrics();
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const router = useRouter();
+  const { selectedLocId, headerFocusLabel } = useZiroWorkspace();
+
+  const [brainFlash, setBrainFlash] = useState(false);
+  const [data, setData]             = useState<AllData | null>(null);
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setCanvasSize({ w: width, h: height });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    async function load() {
+      const [mRes, tRes, lRes] = await Promise.all([
+        fetch("/api/dashboard/metrics").then(r => r.ok ? r.json() : null),
+        fetch("/api/dashboard/teacher-utilization").then(r => r.ok ? r.json() : null),
+        fetch("/api/dashboard/location-revenue").then(r => r.ok ? r.json() : null),
+      ]);
+      if (mRes && tRes && lRes) {
+        setData({ metrics: mRes, teachers: tRes.teachers ?? [], locationRevenue: lRes.locations ?? [] });
+      }
+    }
+    load();
+    const id = setInterval(load, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  const handleOrbClick = () => {
+    setBrainFlash(true);
+    setTimeout(() => setBrainFlash(false), 480);
+  };
+
+  const healthScore = data ? computeHealthScore(data) : 72;
 
   return (
-    <PageShell
-      showBreadcrumb={false}
-      shellClassName="min-h-full overflow-hidden bg-[#050506] p-2 pt-2 sm:p-5 sm:pt-4"
-      mainClassName="mt-0"
-    >
-      <style>{`
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes brainPulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 0 34px rgba(0,255,136,0.3)); } 50% { transform: translate(-50%, -50%) scale(1.025); filter: drop-shadow(0 0 58px rgba(191,54,248,0.42)); } }
-        @keyframes orbitSpin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-        @keyframes lineFlow { 0% { stroke-dashoffset: 120; opacity: .08; } 45% { opacity: .9; } 100% { stroke-dashoffset: 0; opacity: .22; } }
-        @keyframes floatNode { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-        @keyframes scanDrift { from { background-position: 0 0, 0 0; } to { background-position: 0 80px, 80px 0; } }
-        @keyframes sparkBlink { 0%, 100% { opacity: .34; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.25); } }
-        @keyframes flameShift { 0%,100% { text-shadow: 0 0 14px #00ff88, 0 0 36px rgba(0,255,136,.5), 0 -8px 30px rgba(191,54,248,.35); } 50% { text-shadow: 0 0 18px #bf36f8, 0 0 48px rgba(191,54,248,.65), 0 -10px 34px rgba(0,255,136,.42); } }
+    <>
+      <style>{CSS}</style>
 
-        .zw-dashboard-shell { position: relative; isolation: isolate; --z-surface:rgba(255,255,255,.045); --z-surface-hover:rgba(0,255,136,.08); --z-border:rgba(0,255,136,.18); --z-fg:#ffffff; --z-muted:rgba(255,255,255,.56); }
-        .zw-dashboard-shell::before { content: ""; position: fixed; inset: 65px 0 0 64px; pointer-events: none; z-index: -1; background:
-          radial-gradient(circle at 48% 42%, rgba(0,255,136,.18), transparent 18%),
-          radial-gradient(circle at 62% 36%, rgba(191,54,248,.16), transparent 24%),
-          radial-gradient(circle at 30% 74%, rgba(0,255,136,.08), transparent 26%),
-          linear-gradient(180deg, #050506 0%, #09090c 48%, #030304 100%);
-        }
-        .zw-dashboard-header { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:14px; }
-        .zw-dashboard-kicker { display:flex; align-items:center; gap:8px; color:#00ff88; font:800 10px/1 Space Grotesk, sans-serif; letter-spacing:.22em; text-transform:uppercase; }
-        .zw-dashboard-kicker i { width:7px; height:7px; border-radius:999px; background:#00ff88; box-shadow:0 0 14px rgba(0,255,136,.9); animation:sparkBlink 1.8s ease-in-out infinite; }
-        .zw-dashboard-title { margin-top:6px; font:950 clamp(28px,4vw,54px)/.9 Space Grotesk, sans-serif; letter-spacing:-.07em; background:linear-gradient(120deg,#f8fff0 0%,#00ff88 35%,#bf36f8 82%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; filter:drop-shadow(0 0 24px rgba(0,255,136,.22)); }
-        .zw-dashboard-date { color:var(--z-muted); font:700 11px/1.4 Space Grotesk, sans-serif; margin-top:8px; }
-        .zw-live-badge { display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:999px; background:rgba(0,255,136,.08); border:1px solid rgba(0,255,136,.28); color:#00ff88; font:900 11px/1 Space Grotesk, sans-serif; box-shadow:0 0 28px rgba(0,255,136,.12); }
-        .zw-live-badge i { width:8px; height:8px; border-radius:999px; background:#00ff88; box-shadow:0 0 12px rgba(0,255,136,.95); animation:sparkBlink 1.4s ease-in-out infinite; }
+      {/* Scanlines */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.08) 3px, rgba(0,0,0,.08) 4px)" }} />
 
-        .zw-neural-desktop { position:relative; min-height:830px; border-radius:42px; overflow:hidden; border:1px solid rgba(0,255,136,.17); background:
-          radial-gradient(circle at 50% 50%, rgba(0,255,136,.10), transparent 15%),
-          radial-gradient(circle at 50% 50%, rgba(191,54,248,.16), transparent 25%),
-          linear-gradient(135deg, rgba(5,5,6,.94), rgba(9,11,14,.96) 48%, rgba(5,4,8,.98));
-          box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), inset 0 0 80px rgba(0,255,136,.05), 0 30px 120px rgba(0,0,0,.48);
-        }
-        .zw-neural-desktop::before { content:""; position:absolute; inset:0; background-image: linear-gradient(rgba(0,255,136,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(191,54,248,.045) 1px, transparent 1px); background-size:40px 40px; mask-image:radial-gradient(circle at center, black 0%, transparent 74%); animation:scanDrift 18s linear infinite; }
-        .zw-starfield { position:absolute; inset:0; background-image: radial-gradient(circle, rgba(0,255,136,.72) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(191,54,248,.7) 0 1px, transparent 1.5px); background-size: 90px 90px, 130px 130px; background-position: 20px 30px, 70px 10px; opacity:.22; }
-        .zw-neural-map { position:absolute; inset:0; width:100%; height:100%; z-index:1; }
-        .zw-neural-line { stroke:url(#zwLineGradient); stroke-width:.18; stroke-dasharray: 5 8; stroke-linecap:round; animation:lineFlow 3.2s linear infinite; filter:drop-shadow(0 0 4px rgba(0,255,136,.5)); }
-        .zw-neural-map line:nth-child(odd) { stroke:#00ff88; }
-        .zw-neural-map line:nth-child(even) { stroke:#bf36f8; }
+      {/* Full-screen canvas */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        backgroundColor: "#0a0c10",
+        backgroundImage: "radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden", fontFamily: FONT,
+      }}>
+        <TopBar focusLabel={headerFocusLabel} scopeLabel={selectedLocId ? headerFocusLabel : "All Locations"} />
 
-        .zw-brain-core { position:absolute; left:50%; top:50%; width:250px; height:250px; transform:translate(-50%,-50%); z-index:4; animation:brainPulse 5s ease-in-out infinite; }
-        .zw-orbit { position:absolute; left:50%; top:50%; border-radius:999px; transform:translate(-50%,-50%); pointer-events:none; }
-        .zw-orbit-one { width:100%; height:100%; border:1px solid rgba(0,255,136,.45); box-shadow:0 0 34px rgba(0,255,136,.28), inset 0 0 28px rgba(0,255,136,.12); }
-        .zw-orbit-two { width:116%; height:116%; border:1px dashed rgba(191,54,248,.45); animation:orbitSpin 22s linear infinite; }
-        .zw-orbit-three { width:137%; height:137%; border:1px solid rgba(255,255,255,.08); animation:orbitSpin 34s linear reverse infinite; }
-        .zw-brain-inner { position:absolute; inset:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; border-radius:999px; background:radial-gradient(circle at 50% 34%, rgba(255,255,255,.12), transparent 14%), radial-gradient(circle at 50% 58%, rgba(0,255,136,.16), rgba(191,54,248,.13) 36%, rgba(4,5,7,.97) 68%); border:1px solid rgba(0,255,136,.34); box-shadow:inset 0 0 45px rgba(0,0,0,.75), 0 0 80px rgba(191,54,248,.24); }
-        .zw-fire-z { font:1000 54px/.8 Space Grotesk, sans-serif; letter-spacing:-.14em; padding-right:8px; color:#f8fff0; animation:flameShift 2.8s ease-in-out infinite; }
-        .zw-brain-name { max-width:170px; margin-top:8px; color:#fff; font:900 15px/1.05 Space Grotesk, sans-serif; letter-spacing:-.04em; }
-        .zw-brain-title { margin-top:6px; color:#00ff88; font:900 9px/1 Space Grotesk, sans-serif; letter-spacing:.22em; }
-        .zw-brain-income { margin-top:12px; color:#fff; font:1000 30px/.9 Space Grotesk, sans-serif; letter-spacing:-.08em; text-shadow:0 0 26px rgba(0,255,136,.38); }
-        .zw-brain-caption { margin-top:5px; color:rgba(255,255,255,.54); font:800 9px/1 Space Grotesk, sans-serif; text-transform:uppercase; letter-spacing:.12em; }
-        .zw-brain-footer { position:absolute; left:26px; right:26px; bottom:24px; display:flex; justify-content:space-between; gap:8px; color:rgba(255,255,255,.58); font:800 8px/1.1 Space Grotesk, sans-serif; }
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
-        .zw-system-node { position:absolute; z-index:3; width:245px; min-height:132px; padding:14px; border-radius:18px; text-decoration:none; background:linear-gradient(145deg, rgba(13,17,20,.86), rgba(7,8,11,.94)); border:1px solid rgba(0,255,136,.16); box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 18px 54px rgba(0,0,0,.34); backdrop-filter:blur(16px); animation:floatNode 6s ease-in-out infinite; overflow:hidden; }
-        .zw-system-node::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 0 0, var(--node-glow), transparent 58%); opacity:.8; pointer-events:none; }
-        .zw-system-node::after { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--node-color); box-shadow:0 0 18px var(--node-color); }
-        .zw-system-node:hover { transform:translateY(-5px) scale(1.015); border-color:var(--node-color); box-shadow:0 24px 70px rgba(0,0,0,.45), 0 0 34px var(--node-glow); }
-        .zw-node-green { --node-color:#00ff88; --node-glow:rgba(0,255,136,.18); }
-        .zw-node-purple { --node-color:#bf36f8; --node-glow:rgba(191,54,248,.19); }
-        .zw-node-blue { --node-color:#38bdf8; --node-glow:rgba(56,189,248,.16); }
-        .zw-node-red { --node-color:#ff3b6b; --node-glow:rgba(255,59,107,.18); }
-        .zw-node-amber { --node-color:#f59e0b; --node-glow:rgba(245,158,11,.15); }
-        .zw-node-header { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; color:var(--node-color); font:900 10px/1 Space Grotesk, sans-serif; letter-spacing:.1em; }
-        .zw-node-header i { width:7px; height:7px; border-radius:999px; background:var(--node-color); box-shadow:0 0 12px var(--node-color); animation:sparkBlink 2s ease-in-out infinite; }
-        .zw-node-title { position:relative; z-index:1; margin-top:11px; color:#fff; font:900 15px/1.05 Space Grotesk, sans-serif; letter-spacing:-.04em; }
-        .zw-node-metric { position:relative; z-index:1; margin-top:11px; color:var(--node-color); font:1000 28px/.9 Space Grotesk, sans-serif; letter-spacing:-.07em; }
-        .zw-node-label { position:relative; z-index:1; margin-top:6px; color:rgba(255,255,255,.52); font:750 10px/1.2 Space Grotesk, sans-serif; }
+          {/* Canvas */}
+          <div ref={canvasRef} style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0, isolation: "isolate" }}>
 
-        .zw-dashboard-shell .zw-outcome-rail { position:absolute; right:18px; top:18px; bottom:18px; width:190px; z-index:4; display:flex; flex-direction:column; gap:12px; padding:14px; border-radius:26px; background:linear-gradient(180deg, rgba(5,5,7,.92), rgba(9,5,14,.88)) !important; border:1px solid rgba(0,255,136,.26) !important; color:#fff !important; box-shadow:inset 0 0 40px rgba(0,255,136,.055), 0 0 42px rgba(191,54,248,.14); backdrop-filter:blur(18px); }
-        .zw-rail-title { color:#00ff88; font:1000 10px/1.2 Space Grotesk, sans-serif; letter-spacing:.2em; }
-        .zw-dashboard-shell .zw-signal { padding:12px; border-radius:15px; background:rgba(255,255,255,.045) !important; border:1px solid rgba(255,255,255,.09) !important; color:#fff !important; }
-        .zw-signal span { display:block; color:rgba(255,255,255,.48); font:800 9px/1 Space Grotesk, sans-serif; text-transform:uppercase; letter-spacing:.1em; }
-        .zw-signal strong { display:block; margin-top:7px; color:#fff; font:1000 20px/.9 Space Grotesk, sans-serif; letter-spacing:-.06em; }
-        .zw-signal em { display:block; margin-top:7px; font:800 10px/1 Space Grotesk, sans-serif; font-style:normal; }
-        .zw-signal-green em { color:#00ff88; } .zw-signal-purple em { color:#bf36f8; } .zw-signal-blue em { color:#38bdf8; } .zw-signal-red em { color:#ff3b6b; }
-        .zw-dashboard-shell .zw-rail-footer { margin-top:auto; padding:12px; border-radius:16px; color:#00ff88 !important; font:900 9px/1.35 Space Grotesk, sans-serif; letter-spacing:.13em; border:1px solid rgba(0,255,136,.22) !important; background:rgba(0,255,136,.075) !important; }
+            {/* Circuit SVG — z-index 1, pointer-events:none on root */}
+            <StaticCircuitSVG w={canvasSize.w} h={canvasSize.h} onNavigate={(href) => router.push(href)} />
 
-        .zw-intel-grid { display:grid; grid-template-columns:1fr; gap:18px; margin-top:18px; }
-        .zw-intel-module { position:relative; overflow:hidden; border-radius:24px; padding:18px; background:linear-gradient(145deg, rgba(10,10,12,.86), rgba(5,5,6,.96)); border:1px solid rgba(0,255,136,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 24px 80px rgba(0,0,0,.28); }
-        .zw-intel-module::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 12% 0, var(--module-glow), transparent 32%); pointer-events:none; }
-        .zw-intel-green { --module-color:#00ff88; --module-glow:rgba(0,255,136,.13); } .zw-intel-purple { --module-color:#bf36f8; --module-glow:rgba(191,54,248,.14); } .zw-intel-blue { --module-color:#38bdf8; --module-glow:rgba(56,189,248,.12); }
-        .zw-module-head { position:relative; z-index:1; display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:14px; }
-        .zw-module-head span { color:var(--module-color); font:1000 10px/1 Space Grotesk, sans-serif; letter-spacing:.2em; }
-        .zw-module-head h2 { color:#fff; font:1000 18px/.95 Space Grotesk, sans-serif; letter-spacing:-.05em; margin:0; }
-
-        .zw-mobile-command { display:none; }
-        .zw-agent-scroll { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 10px; scroll-snap-type:x mandatory; }
-        .zw-agent-pill { min-width:156px; scroll-snap-align:start; padding:12px; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(0,255,136,.16); box-shadow:inset 0 0 24px rgba(0,255,136,.035); }
-        .zw-agent-pill span { color:#00ff88; font:1000 13px/1 Space Grotesk, sans-serif; }
-        .zw-agent-pill strong { display:block; margin-top:7px; color:#fff; font:850 11px/1.2 Space Grotesk, sans-serif; }
-        .zw-agent-pill em { display:block; margin-top:8px; color:#bf36f8; font:900 9px/1 Space Grotesk, sans-serif; font-style:normal; text-transform:uppercase; letter-spacing:.12em; }
-        .zw-command-feed { display:grid; gap:10px; }
-        .zw-feed-item { display:flex; gap:12px; padding:13px; border-radius:18px; text-decoration:none; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
-        .zw-feed-item span { display:grid; place-items:center; width:32px; height:32px; flex:0 0 auto; border-radius:999px; color:#030304; background:var(--feed-color); font:1000 12px/1 Space Grotesk, sans-serif; box-shadow:0 0 18px var(--feed-glow); }
-        .zw-feed-item strong { color:#fff; font:950 13px/1.05 Space Grotesk, sans-serif; }
-        .zw-feed-item p { margin:5px 0 0; color:rgba(255,255,255,.54); font:700 11px/1.35 Space Grotesk, sans-serif; }
-        .zw-feed-green { --feed-color:#00ff88; --feed-glow:rgba(0,255,136,.35); } .zw-feed-purple { --feed-color:#bf36f8; --feed-glow:rgba(191,54,248,.35); } .zw-feed-red { --feed-color:#ff3b6b; --feed-glow:rgba(255,59,107,.35); }
-        .zw-mobile-dock { position:sticky; bottom:10px; z-index:30; display:none; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:14px; padding:8px; border-radius:22px; background:rgba(5,5,7,.86); border:1px solid rgba(0,255,136,.18); backdrop-filter:blur(18px); box-shadow:0 18px 70px rgba(0,0,0,.55); }
-        .zw-mobile-dock a { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:48px; border-radius:16px; color:rgba(255,255,255,.64); text-decoration:none; font:900 9px/1.1 Space Grotesk, sans-serif; text-transform:uppercase; letter-spacing:.08em; background:rgba(255,255,255,.03); }
-        .zw-mobile-dock a:first-child { color:#030304; background:#00ff88; box-shadow:0 0 18px rgba(0,255,136,.28); }
-
-@media (max-width: 1380px) {
-	          .zw-neural-desktop { min-height:760px; }
-	          .zw-system-node { width:220px; }
-	          .zw-dashboard-shell .zw-outcome-rail { display:none; }
-	        }
-        @media (max-width: 1023px) {
-          .zw-neural-desktop { display:none; }
-          .zw-mobile-command { display:flex; flex-direction:column; gap:14px; }
-          .zw-mobile-brain-wrap { position:relative; min-height:340px; border-radius:34px; overflow:hidden; border:1px solid rgba(0,255,136,.17); background:radial-gradient(circle at 50% 45%, rgba(0,255,136,.16), transparent 30%), radial-gradient(circle at 64% 34%, rgba(191,54,248,.18), transparent 34%), #050506; }
-          .zw-mobile-brain-wrap .zw-brain-core { width:240px; height:240px; }
-          .zw-mobile-dock { display:grid; }
-          .zw-dashboard-shell::before { inset:65px 0 0 0; }
-          .zw-dashboard-header { align-items:flex-start; }
-          .zw-live-badge { display:none; }
-        }
-        @media (min-width: 1024px) {
-          .zw-intel-grid { grid-template-columns:1fr 1fr; }
-          .zw-intel-module:first-child, .zw-intel-module:nth-child(2) { grid-column:1 / -1; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; }
-        }
-      `}</style>
-      <PageTransition>
-        <div className="zw-dashboard-shell mx-auto flex w-full flex-col gap-4" data-dashboard-rev="12" data-app="ziro-work">
-          <header className="zw-dashboard-header">
-            <div>
-              <div className="zw-dashboard-kicker"><i /> LIVE SCHOOL OPERATING SYSTEM</div>
-              <h1 className="zw-dashboard-title">COMMAND CENTER</h1>
-              <p className="zw-dashboard-date">{today}</p>
+            {/* Central orb — z-index 35 */}
+            <div style={{
+              position: "absolute",
+              left: "50%", top: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 35,
+            }}>
+              <BrainOrb flash={brainFlash} healthScore={healthScore} onClick={handleOrbClick} />
             </div>
-            <div className="zw-live-badge"><i /> BRAIN ONLINE</div>
-          </header>
 
-          <NeuralDesktop metrics={metrics} />
-
-          <section className="zw-mobile-command" aria-label="Mobile ZiroWork command center">
-            <div className="zw-mobile-brain-wrap">
-              <div className="zw-starfield" />
-              <BrainCore metrics={metrics} />
-            </div>
-            <AgentOrbitMobile />
-            <CommandFeed metrics={metrics} />
-          </section>
-
-          <div className="zw-intel-grid">
-            <IntelligenceModule eyebrow="LIVE OWNER VITALS" title="Command Strip" accent="green">
-              <CommandStrip />
-            </IntelligenceModule>
-            <IntelligenceModule eyebrow="CAPACITY MAP" title="Studio Capacity" accent="purple">
-              <StudioCapacity />
-            </IntelligenceModule>
-            <IntelligenceModule eyebrow="AGENT NETWORK" title="Platform Intelligence" accent="blue">
-              <PlatformCards />
-            </IntelligenceModule>
-            <IntelligenceModule eyebrow="DEMAND SIGNAL" title="Instrument Demand" accent="purple">
-              <InstrumentChart />
-            </IntelligenceModule>
-            <IntelligenceModule eyebrow="ENROLLMENT ENGINE" title="Lead Pipeline" accent="green">
-              <LeadsBox />
-            </IntelligenceModule>
+            {/* 8 orbiting boxes — z-index 30 */}
+            {MODULE_DEFS.map(mod => (
+              <ModuleBox key={mod.id} mod={mod} data={data} locId={selectedLocId} />
+            ))}
           </div>
 
-          <nav className="zw-mobile-dock" aria-label="Mobile command dock">
-            <Link href="/crm/leads">Leads</Link>
-            <Link href="/schedule">Schedule</Link>
-            <Link href="/students">Students</Link>
-            <Link href="/billing/invoices">Money</Link>
-            <Link href="/crm/search">Search</Link>
-          </nav>
+          {/* Financial Overview panel */}
+          <FinancialOverview data={data} />
         </div>
-      </PageTransition>
-    </PageShell>
+      </div>
+    </>
   );
 }

@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Root-level exports (e.g. chat transcripts) can contain DOM paths that look like Tailwind
+   arbitrary classes but with typos — scanning them breaks the PostCSS build. */
+@source not "../../cursor-conversation-export.md";
 @import "../styles/animations.css";
 @import "../styles/vfx-animations.css";
 

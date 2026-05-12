@@ -47,4 +47,6 @@ supabase/.temp/
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# Local Cursor / chat exports at repo root — Tailwind scans non-ignored files; typos in
+# pasted class names can break `next build`. Keep exports out of git or under .cursor/.
+/cursor-conversation-export.md

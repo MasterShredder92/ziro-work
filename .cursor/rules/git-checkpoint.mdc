@@ -1,0 +1,16 @@
+---
+description: Save work to git after batches of edits so nothing silently reverts
+alwaysApply: true
+---
+
+# Git checkpoints (simple)
+
+When you finish a **batch** of edits the user asked for (not after every tiny tweak):
+
+1. Run `git status`. If there is nothing to save, stop.
+2. If there are real changes, **`git add -A`** then **`git commit`** with a **short plain-English** message (what changed, not jargon).
+3. Tell the user in one sentence: **saved** — what you committed (no lecture).
+
+**Skip committing** if the user said not to, or if the only changes are things they are clearly still experimenting with and said "don't save yet."
+
+Do **not** push to GitHub unless they ask you to push.
