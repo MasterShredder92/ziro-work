@@ -107,6 +107,7 @@ export default async function FamiliesIndexPage() {
 
   // Per-family aggregates built from the actual student rows (not the cached counts).
   const teacherByFamily: Record<string, string> = {};
+  const inlineTeachersByFamily: Record<string, Array<{ id: string; name: string; photoUrl: string | null }>> = {};
   const activeStudentCountByFamily: Record<string, number> = {};
   const missingTeacherByFamily: Record<string, number> = {};
   const splitSiblingsByFamily: Record<string, boolean> = {};
@@ -115,20 +116,35 @@ export default async function FamiliesIndexPage() {
     const actives = studs.filter((s) => (s.status ?? "").toLowerCase() === "active");
     activeStudentCountByFamily[famId] = actives.length;
     const distinctTeacherIds = new Set<string>();
-    const distinctTeacherNames = new Set<string>();
+    const byTeacherId = new Map<string, { name: string; photoUrl: string | null }>();
     let missing = 0;
     for (const s of actives) {
       if (s.teacherId) {
         distinctTeacherIds.add(s.teacherId);
-        if (s.teacherName) distinctTeacherNames.add(s.teacherName);
+        if (!byTeacherId.has(s.teacherId)) {
+          const name =
+            (s.teacherName?.trim()) ||
+            teacherNameById[s.teacherId] ||
+            s.teacherId;
+          const photoUrl =
+            (s.teacherPhotoUrl && s.teacherPhotoUrl.length > 0 ? s.teacherPhotoUrl : null) ??
+            teacherPhotoById[s.teacherId] ??
+            null;
+          byTeacherId.set(s.teacherId, { name, photoUrl });
+        }
       } else {
         missing += 1;
       }
     }
     missingTeacherByFamily[famId] = missing;
     splitSiblingsByFamily[famId] = actives.length >= 2 && distinctTeacherIds.size >= 2;
-    const orderedNames = Array.from(distinctTeacherNames).sort();
-    if (orderedNames.length > 0) teacherByFamily[famId] = orderedNames.join(", ");
+    const chips = Array.from(byTeacherId.entries())
+      .map(([id, v]) => ({ id, name: v.name, photoUrl: v.photoUrl }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (chips.length > 0) {
+      inlineTeachersByFamily[famId] = chips;
+      teacherByFamily[famId] = chips.map((c) => c.name).join(", ");
+    }
   }
 
   const nowMs = serverNowMs();
@@ -157,6 +173,7 @@ export default async function FamiliesIndexPage() {
         locationOptions={locations.map((l) => ({ id: l.id, name: l.name ?? l.id }))}
         studentsByFamily={studentsByFamily}
         teacherByFamily={teacherByFamily}
+        inlineTeachersByFamily={inlineTeachersByFamily}
         activeStudentCountByFamily={activeStudentCountByFamily}
         missingTeacherByFamily={missingTeacherByFamily}
         splitSiblingsByFamily={splitSiblingsByFamily}

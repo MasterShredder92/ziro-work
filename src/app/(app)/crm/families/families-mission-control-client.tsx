@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
 import { AddFamilyModal } from "./add-family-modal";
@@ -40,6 +40,8 @@ type StudentEntry = {
 
 type LocationOpt = { id: string; name: string };
 
+type FamilyTeacherChip = { id: string; name: string; photoUrl: string | null };
+
 type Props = {
   rows: FamilyRow[];
   counts: Record<string, number>;
@@ -47,6 +49,7 @@ type Props = {
   locationOptions?: LocationOpt[];
   studentsByFamily?: Record<string, StudentEntry[]>;
   teacherByFamily?: Record<string, string>;
+  inlineTeachersByFamily?: Record<string, FamilyTeacherChip[]>;
   activeStudentCountByFamily?: Record<string, number>;
   missingTeacherByFamily?: Record<string, number>;
   splitSiblingsByFamily?: Record<string, boolean>;
@@ -247,6 +250,7 @@ export function FamiliesMissionControl({
   locationOptions = [],
   studentsByFamily = {},
   teacherByFamily = {},
+  inlineTeachersByFamily = {},
   missingTeacherByFamily = {},
   splitSiblingsByFamily = {},
   kpi,
@@ -485,6 +489,7 @@ export function FamiliesMissionControl({
             locationNameById={locationNameById}
             studentsByFamily={studentsByFamily}
             teacherByFamily={teacherByFamily}
+            inlineTeachersByFamily={inlineTeachersByFamily}
             missingTeacherByFamily={missingTeacherByFamily}
             splitSiblingsByFamily={splitSiblingsByFamily}
             expandedIds={expandedFamilyIds}
@@ -983,6 +988,208 @@ function SortControl({ sortMode, onChange }: { sortMode: SortMode; onChange: (m:
   );
 }
 
+// ─── Table (shared row avatar for student roster + main Teacher column) ──
+
+function InlineStudentTeacherAvatar({
+  photoUrl,
+  teacherName,
+  needsAssignment,
+  hasTeacher,
+  size = 22,
+}: {
+  photoUrl?: string | null;
+  teacherName: string | null;
+  needsAssignment: boolean;
+  hasTeacher: boolean;
+  size?: number;
+}) {
+  const border = `1px solid ${SURFACE_BORDER}`;
+  if (needsAssignment) {
+    return (
+      <div
+        title="Needs teacher"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "rgba(245,158,11,0.12)",
+          border: `1px dashed ${OPP}66`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: FONT,
+          fontSize: Math.round(size * 0.45),
+          fontWeight: 700,
+          color: OPP,
+        }}
+      >
+        ?
+      </div>
+    );
+  }
+  if (hasTeacher && photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={teacherName ? `Teacher: ${teacherName}` : "Teacher"}
+        width={size}
+        height={size}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          flexShrink: 0,
+          border,
+        }}
+      />
+    );
+  }
+  if (hasTeacher) {
+    const ini = initials(teacherName);
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.06)",
+          border,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: FONT,
+          fontSize: Math.round(size * 0.38),
+          fontWeight: 700,
+          color: FG_SECONDARY,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {ini}
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        flexShrink: 0,
+        background: "rgba(255,255,255,0.04)",
+        border: `1px dashed ${FG_QUIET}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: FONT,
+        fontSize: Math.round(size * 0.32),
+        fontWeight: 600,
+        color: FG_QUIET,
+      }}
+    >
+      —
+    </div>
+  );
+}
+
+function FamilyTableTeacherCell({
+  chips,
+  fallbackLabel,
+  missingTeachers,
+}: {
+  chips: FamilyTeacherChip[];
+  fallbackLabel: string;
+  missingTeachers: number;
+}) {
+  const hasAssigned = chips.length > 0;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+      {hasAssigned ? (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          minWidth: 0,
+          flex: 1,
+          overflow: "hidden",
+        }}>
+          {chips.map((t, i) => (
+            <Fragment key={t.id}>
+              {i > 0 ? (
+                <span style={{
+                  fontFamily: FONT,
+                  fontSize: 12.5,
+                  color: FG_TERTIARY,
+                  flexShrink: 0,
+                  letterSpacing: "-0.005em",
+                }}>, </span>
+              ) : null}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                minWidth: 0,
+                overflow: "hidden",
+                flex: chips.length > 1 ? "1 1 0" : "1 1 auto",
+              }}>
+                <InlineStudentTeacherAvatar
+                  photoUrl={t.photoUrl}
+                  teacherName={t.name}
+                  needsAssignment={false}
+                  hasTeacher
+                  size={20}
+                />
+                <span style={{
+                  fontFamily: FONT,
+                  fontSize: 12.5,
+                  color: FG_SECONDARY,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  letterSpacing: "-0.005em",
+                  minWidth: 0,
+                }}>{t.name}</span>
+              </div>
+            </Fragment>
+          ))}
+        </div>
+      ) : (
+        <span style={{
+          fontFamily: FONT,
+          fontSize: 12.5,
+          color: FG_QUIET,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          fontStyle: "italic",
+          letterSpacing: "-0.005em",
+          flex: 1,
+          minWidth: 0,
+        }}>{fallbackLabel}</span>
+      )}
+      {missingTeachers > 0 && hasAssigned && (
+        <span
+          title={`${missingTeachers} student${missingTeachers === 1 ? "" : "s"} without a teacher`}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9.5,
+            fontWeight: 700,
+            padding: "1px 6px",
+            borderRadius: 3,
+            background: `${OPP}1f`,
+            color: OPP,
+            letterSpacing: "0.02em",
+            flexShrink: 0,
+          }}
+        >+{missingTeachers}</span>
+      )}
+    </div>
+  );
+}
+
 // ─── Table ────────────────────────────────────────────────────────────────
 
 const TABLE_GRID = "20px 44px minmax(0, 1.6fr) 80px minmax(0, 1.5fr) 100px 96px 88px 100px";
@@ -993,6 +1200,7 @@ function FamilyTable({
   locationNameById,
   studentsByFamily,
   teacherByFamily,
+  inlineTeachersByFamily,
   missingTeacherByFamily,
   splitSiblingsByFamily,
   expandedIds,
@@ -1008,6 +1216,7 @@ function FamilyTable({
   locationNameById: Record<string, string>;
   studentsByFamily: Record<string, StudentEntry[]>;
   teacherByFamily: Record<string, string>;
+  inlineTeachersByFamily: Record<string, FamilyTeacherChip[]>;
   missingTeacherByFamily: Record<string, number>;
   splitSiblingsByFamily: Record<string, boolean>;
   expandedIds: Set<string>;
@@ -1061,6 +1270,7 @@ function FamilyTable({
               studentCount={counts[row.id] ?? 0}
               students={studentsByFamily[row.id] ?? []}
               teacher={teacherByFamily[row.id] ?? ""}
+              teacherChips={inlineTeachersByFamily[row.id] ?? []}
               missingTeachers={missingTeacherByFamily[row.id] ?? 0}
               splitSiblings={splitSiblingsByFamily[row.id] ?? false}
               isExpanded={expandedIds.has(row.id)}
@@ -1128,6 +1338,7 @@ function TableRow({
   studentCount,
   students,
   teacher,
+  teacherChips,
   missingTeachers,
   splitSiblings,
   isExpanded,
@@ -1142,6 +1353,7 @@ function TableRow({
   studentCount: number;
   students: StudentEntry[];
   teacher: string;
+  teacherChips: FamilyTeacherChip[];
   missingTeachers: number;
   splitSiblings: boolean;
   isExpanded: boolean;
@@ -1312,30 +1524,11 @@ function TableRow({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-          <span style={{
-            fontFamily: FONT,
-            fontSize: 12.5,
-            color: teacher ? FG_SECONDARY : FG_QUIET,
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            fontStyle: teacher ? "normal" : "italic",
-            letterSpacing: "-0.005em",
-            flex: 1,
-            minWidth: 0,
-          }}>{teacherDisplay}</span>
-          {missingTeachers > 0 && teacher && (
-            <span
-              title={`${missingTeachers} student${missingTeachers === 1 ? "" : "s"} without a teacher`}
-              style={{
-                fontFamily: FONT,
-                fontSize: 9.5, fontWeight: 700,
-                padding: "1px 6px", borderRadius: 3,
-                background: `${OPP}1f`, color: OPP,
-                letterSpacing: "0.02em",
-                flexShrink: 0,
-              }}>+{missingTeachers}</span>
-          )}
-        </div>
+        <FamilyTableTeacherCell
+          chips={teacherChips}
+          fallbackLabel={teacherDisplay}
+          missingTeachers={missingTeachers}
+        />
 
         <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
           <span style={{
@@ -1399,111 +1592,6 @@ function TableRow({
         />
       )}
     </>
-  );
-}
-
-function InlineStudentTeacherAvatar({
-  photoUrl,
-  teacherName,
-  needsAssignment,
-  hasTeacher,
-  size = 22,
-}: {
-  photoUrl?: string | null;
-  teacherName: string | null;
-  needsAssignment: boolean;
-  hasTeacher: boolean;
-  size?: number;
-}) {
-  const border = `1px solid ${SURFACE_BORDER}`;
-  if (needsAssignment) {
-    return (
-      <div
-        title="Needs teacher"
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          flexShrink: 0,
-          background: "rgba(245,158,11,0.12)",
-          border: `1px dashed ${OPP}66`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: FONT,
-          fontSize: Math.round(size * 0.45),
-          fontWeight: 700,
-          color: OPP,
-        }}
-      >
-        ?
-      </div>
-    );
-  }
-  if (hasTeacher && photoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={teacherName ? `Teacher: ${teacherName}` : "Teacher"}
-        width={size}
-        height={size}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          objectFit: "cover",
-          flexShrink: 0,
-          border,
-        }}
-      />
-    );
-  }
-  if (hasTeacher) {
-    const ini = initials(teacherName);
-    return (
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          flexShrink: 0,
-          background: "rgba(255,255,255,0.06)",
-          border,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: FONT,
-          fontSize: Math.round(size * 0.38),
-          fontWeight: 700,
-          color: FG_SECONDARY,
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {ini}
-      </div>
-    );
-  }
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        flexShrink: 0,
-        background: "rgba(255,255,255,0.04)",
-        border: `1px dashed ${FG_QUIET}`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: FONT,
-        fontSize: Math.round(size * 0.32),
-        fontWeight: 600,
-        color: FG_QUIET,
-      }}
-    >
-      —
-    </div>
   );
 }
 
