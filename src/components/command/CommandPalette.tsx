@@ -1,83 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { List, type ListItem } from "@/components/ui/List";
 import { OmniSearch } from "@/components/search/OmniSearch";
 import { fuzzyScore } from "@/lib/search/fuzzy";
 import { cn, focusRingClassName } from "@/components/ui/utils";
-
-type CommandNav = {
-  id: string;
-  label: string;
-  kind: "nav";
-  href: string;
-  haystack: string;
-};
-
-type CommandAction = {
-  id: string;
-  label: string;
-  kind: "action";
-  actionId: "newFamily" | "newStudent" | "newInvoice";
-  haystack: string;
-};
-
-type CommandDef = CommandNav | CommandAction;
-
-const COMMANDS: CommandDef[] = [
-  {
-    id: "nav-dashboard",
-    label: "Go to Dashboard",
-    kind: "nav",
-    href: "/dashboard",
-    haystack: "dashboard home overview",
-  },
-  {
-    id: "nav-studio-map",
-    label: "Go to Studio Map",
-    kind: "nav",
-    href: "/studio-map",
-    haystack: "studio map locations rooms",
-  },
-  {
-    id: "act-family",
-    label: "New Family",
-    kind: "action",
-    actionId: "newFamily",
-    haystack: "new family account household",
-  },
-  {
-    id: "act-student",
-    label: "New Student",
-    kind: "action",
-    actionId: "newStudent",
-    haystack: "new student learner enroll",
-  },
-  {
-    id: "act-invoice",
-    label: "New Invoice",
-    kind: "action",
-    actionId: "newInvoice",
-    haystack: "new invoice billing charge",
-  },
-  {
-    id: "nav-leads",
-    label: "Review Leads",
-    kind: "nav",
-    href: "/lifecycle/lead-work",
-    haystack: "leads pipeline intake prospects",
-  },
-  {
-    id: "nav-at-risk",
-    label: "See At-Risk Students",
-    kind: "nav",
-    href: "/lifecycle/retention",
-    haystack: "at risk retention churn students",
-  },
-];
+import type { CommandDef } from "@/components/command/commandPaletteTypes";
+import { BASE_COMMANDS } from "@/components/command/commandPaletteConstants";
+import {
+  buildFamilyWorkspaceCommands,
+  parseFamilyIdFromPath,
+} from "@/lib/crm/familyWorkspaceCommands";
 
 export type CommandPaletteProps = {
   open: boolean;
@@ -91,14 +27,22 @@ export type CommandPaletteProps = {
 export function CommandPalette({
   open,
   onClose,
-  tenantId,
+  tenantId: _tenantId,
   onNewFamily,
   onNewStudent,
   onNewInvoice,
 }: CommandPaletteProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [tab, setTab] = React.useState("search");
   const [commandQuery, setCommandQuery] = React.useState("");
+
+  const familyIdOnPage = React.useMemo(() => parseFamilyIdFromPath(pathname), [pathname]);
+
+  const commandCatalog = React.useMemo(() => {
+    if (!familyIdOnPage) return BASE_COMMANDS;
+    return [...buildFamilyWorkspaceCommands(familyIdOnPage), ...BASE_COMMANDS];
+  }, [familyIdOnPage]);
 
   React.useEffect(() => {
     if (!open) {
@@ -109,14 +53,23 @@ export function CommandPalette({
 
   const filteredCommands = React.useMemo(() => {
     const q = commandQuery.trim();
-    if (!q.length) return COMMANDS;
-    return COMMANDS.filter((c) => Math.max(fuzzyScore(q, c.label), fuzzyScore(q, c.haystack)) > 0.25);
-  }, [commandQuery]);
+    if (!q.length) return commandCatalog;
+    return commandCatalog.filter(
+      (c) => Math.max(fuzzyScore(q, c.label), fuzzyScore(q, c.haystack)) > 0.25
+    );
+  }, [commandCatalog, commandQuery]);
 
   const runCommand = React.useCallback(
     (c: CommandDef) => {
       if (c.kind === "nav") {
         router.push(c.href);
+        onClose();
+        return;
+      }
+      if (c.actionId === "familyAddStudent") {
+        if (familyIdOnPage) {
+          router.push(`/crm/families/${familyIdOnPage}?tab=overview&addStudent=1`);
+        }
         onClose();
         return;
       }
@@ -128,7 +81,7 @@ export function CommandPalette({
       map[c.actionId]?.();
       onClose();
     },
-    [onClose, onNewFamily, onNewInvoice, onNewStudent, router]
+    [onClose, onNewFamily, onNewInvoice, onNewStudent, router, familyIdOnPage]
   );
 
   const commandItems: ListItem[] = React.useMemo(
@@ -136,7 +89,12 @@ export function CommandPalette({
       filteredCommands.map((c) => ({
         id: c.id,
         title: c.label,
-        description: c.kind === "nav" ? c.href : "Workspace action",
+        description:
+          c.kind === "nav"
+            ? c.href
+            : c.actionId === "familyAddStudent"
+              ? "Opens Overview and add-student flow"
+              : "Workspace action",
         onPress: () => runCommand(c),
       })),
     [filteredCommands, runCommand]
@@ -176,6 +134,11 @@ export function CommandPalette({
                 focusRingClassName()
               )}
             />
+            {familyIdOnPage && !commandQuery.trim() && (
+              <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--z-muted)]">
+                This family — quick jumps and add student appear first
+              </p>
+            )}
             {commandItems.length === 0 ? (
               <p className="mt-[var(--z-space-4)] text-xs text-[var(--z-muted)]">No commands match.</p>
             ) : (

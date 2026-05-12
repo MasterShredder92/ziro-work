@@ -250,6 +250,27 @@ export function FamilyAccountHeader() {
           </div>
         </div>
       </div>
+
+      <p className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--z-muted)]">
+        <span className="text-[var(--z-fg-secondary)]">Workspace</span>
+        <span aria-hidden className="text-[var(--z-border)]">
+          ·
+        </span>
+        <span>
+          <kbd className="rounded border border-[var(--z-border)] bg-[var(--z-surface-2)] px-1.5 py-0.5 font-mono text-[10px] normal-case tracking-normal text-[var(--z-fg)]">
+            Ctrl
+          </kbd>
+          <span className="mx-0.5 font-mono text-[10px] normal-case text-[var(--z-muted)]">/</span>
+          <kbd className="rounded border border-[var(--z-border)] bg-[var(--z-surface-2)] px-1.5 py-0.5 font-mono text-[10px] normal-case tracking-normal text-[var(--z-fg)]">
+            ⌘K
+          </kbd>{" "}
+          command center
+        </span>
+        <span aria-hidden className="text-[var(--z-border)]">
+          ·
+        </span>
+        <span>Tab dock sticks on scroll</span>
+      </p>
     </div>
   );
 }

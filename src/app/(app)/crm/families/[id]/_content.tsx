@@ -156,7 +156,9 @@ const TABS: { id: Tab; label: string }[] = [
 
 function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: Tab) => void; brandColor: string }) {
   return (
-    <div className="min-w-0" style={{ borderBottom: `1px solid ${T.border}` }}>
+    <div
+      className="min-w-0 rounded-xl border border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface),transparent_8%)] px-1 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:bg-[color-mix(in_oklab,var(--z-surface),transparent_22%)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
+    >
       <nav
         className="-mb-px flex gap-0 overflow-x-auto overflow-y-hidden"
         aria-label="Family tabs"
@@ -167,13 +169,15 @@ function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: T
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => onChange(tab.id)}
-              className="shrink-0 px-4 py-3 text-sm whitespace-nowrap transition-colors"
+              className="shrink-0 px-4 py-3 text-sm whitespace-nowrap transition-all duration-150"
               style={{
                 borderBottom: isActive ? `2px solid ${brandColor}` : "2px solid transparent",
-                color: isActive ? T.fg : T.muted,
+                color: isActive ? "var(--z-fg)" : "var(--z-fg-secondary, var(--z-muted))",
                 fontWeight: isActive ? 700 : 500,
-                background: "transparent",
+                background: isActive ? "color-mix(in oklab, var(--z-accent), transparent 92%)" : "transparent",
+                borderRadius: isActive ? "10px 10px 0 0" : undefined,
               }}
               aria-selected={isActive}
               role="tab"
@@ -1102,12 +1106,24 @@ function StudentsTab({
   brandColor: string;
   familyName?: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [students, setStudents] = useState<(FamilyStudent & { teacherName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [familyLocationId, setFamilyLocationId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (searchParams.get("addStudent") !== "1") return;
+    setShowAdd(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("addStudent");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, pathname, router]);
 
   // Lookup family's primary_location_id once so we can default the new student to it
   useEffect(() => {
@@ -2118,8 +2134,10 @@ export function FamilyAccountContent() {
 
   return (
     <div className="flex flex-col gap-0">
-      <TabNav active={activeTab} onChange={setTab} brandColor={brandColor} />
-      <div className="pt-5">
+      <div className="sticky top-0 z-30 -mx-1 mb-1 bg-[color-mix(in_oklab,var(--z-bg),transparent_12%)] px-1 pb-1 pt-0.5 backdrop-blur-md">
+        <TabNav active={activeTab} onChange={setTab} brandColor={brandColor} />
+      </div>
+      <div className="pt-4">
         {activeTab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
         {activeTab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
         {activeTab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
