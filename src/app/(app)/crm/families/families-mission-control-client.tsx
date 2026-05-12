@@ -995,7 +995,7 @@ function InlineStudentTeacherAvatar({
   teacherName,
   needsAssignment,
   hasTeacher,
-  size = 24,
+  size = 32,
 }: {
   photoUrl?: string | null;
   teacherName: string | null;
@@ -1111,7 +1111,7 @@ function FamilyTableTeacherCell({
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          gap: 10,
           minWidth: 0,
           flex: 1,
           overflow: "hidden",
@@ -1130,7 +1130,7 @@ function FamilyTableTeacherCell({
               <div style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 8,
                 minWidth: 0,
                 overflow: "hidden",
                 flex: chips.length > 1 ? "1 1 0" : "1 1 auto",
@@ -1140,7 +1140,7 @@ function FamilyTableTeacherCell({
                   teacherName={t.name}
                   needsAssignment={false}
                   hasTeacher
-                  size={22}
+                  size={30}
                 />
                 <span style={{
                   fontFamily: FONT,
@@ -1651,7 +1651,7 @@ function ExpandedFamilyRow({
               opacity: isActive ? 1 : 0.55,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
               <InlineStudentTeacherAvatar
                 photoUrl={s.teacherPhotoUrl}
                 teacherName={s.teacherName ?? null}

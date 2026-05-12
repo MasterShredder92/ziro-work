@@ -131,7 +131,7 @@ function MiniTeacherLineAvatar({
   teacherName,
   needsAssignment,
   hasTeacher,
-  size = 20,
+  size = 28,
 }: {
   photoUrl?: string | null;
   teacherName: string | null;
@@ -569,7 +569,7 @@ export function FamiliesListClient({
                         const hasTeacher = !!(sl.teacherId || sl.teacher);
                         const needsAssign = isActive && !sl.teacherId && !sl.teacher;
                         return (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <MiniTeacherLineAvatar
                             photoUrl={sl.teacherPhotoUrl}
                             teacherName={sl.teacher}
@@ -737,13 +737,13 @@ export function FamiliesListClient({
                           const hasTeacher = !!(sl.teacherId || sl.teacher);
                           const needsAssign = isActive && !sl.teacherId && !sl.teacher;
                           return (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden", whiteSpace: "nowrap" }}>
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", whiteSpace: "nowrap" }}>
                             <MiniTeacherLineAvatar
                               photoUrl={sl.teacherPhotoUrl}
                               teacherName={sl.teacher}
                               needsAssignment={needsAssign}
                               hasTeacher={hasTeacher}
-                              size={18}
+                              size={24}
                             />
                             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--z-fg)", flexShrink: 0 }}>{sl.name}</span>
                             {sl.instrument && (
