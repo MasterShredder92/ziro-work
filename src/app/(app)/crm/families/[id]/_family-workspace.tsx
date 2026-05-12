@@ -119,6 +119,7 @@ export function FamilyWorkspace() {
           tab={activeTab}
           originRect={originRect}
           familyId={familyId}
+          familyName={family.name}
           brandColor={brandColor}
           onRequestClose={handleCloseOverlay}
         />
