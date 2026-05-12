@@ -453,7 +453,23 @@ function ModuleSkeletonBody() {
   );
 }
 
-type FamilyTeacherRow = { id: string; full_name: string; teacher_role?: string };
+type FamilyTeacherRow = {
+  id: string;
+  full_name: string;
+  teacher_role?: string;
+  instruments?: string[] | null;
+  teaches_students?: string[];
+};
+
+function formatInstrumentLine(t: FamilyTeacherRow): string {
+  const raw = t.instruments?.filter((s): s is string => typeof s === "string" && s.trim().length > 0) ?? [];
+  return raw.map((s) => s.trim()).join(", ");
+}
+
+function formatStudentLine(t: FamilyTeacherRow): string {
+  const raw = t.teaches_students?.filter((s) => s.trim().length > 0) ?? [];
+  return raw.join(", ");
+}
 
 function TeachersTileBody({
   loading,
@@ -466,13 +482,13 @@ function TeachersTileBody({
 }) {
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {[0, 1, 2].map((i) => (
           <div
             key={i}
             style={{
-              height: 22,
-              borderRadius: 6,
+              height: 34,
+              borderRadius: 8,
               background: "rgba(255,255,255,.04)",
               animation: "dotBlink 1.8s ease-in-out infinite",
             }}
@@ -483,62 +499,105 @@ function TeachersTileBody({
   }
   if (teachers.length === 0) {
     return (
-      <div style={{ fontFamily: FONT, fontSize: 9, color: "rgba(255,255,255,.28)", padding: "4px 0", lineHeight: 1.35 }}>
+      <div style={{ fontFamily: FONT, fontSize: 12, color: "rgba(255,255,255,.35)", padding: "6px 0", lineHeight: 1.4 }}>
         No teachers assigned yet
       </div>
     );
   }
   const show = teachers.slice(0, 4);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      {show.map((t) => (
-        <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0 }}>
-          <div
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: "50%",
-              background: accent,
-              boxShadow: `0 0 6px ${accent}`,
-              flexShrink: 0,
-              marginTop: 3,
-            }}
-          />
-          <div style={{ minWidth: 0, flex: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {show.map((t) => {
+        const inst = formatInstrumentLine(t);
+        const studs = formatStudentLine(t);
+        return (
+          <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0 }}>
             <div
               style={{
-                fontFamily: FONT,
-                fontSize: 9,
-                fontWeight: 700,
-                color: "#d8d8e8",
-                lineHeight: 1.2,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: accent,
+                boxShadow: `0 0 8px ${accent}`,
+                flexShrink: 0,
+                marginTop: 5,
               }}
-            >
-              {t.full_name}
-            </div>
-            {t.teacher_role ? (
+            />
+            <div style={{ minWidth: 0, flex: 1, paddingRight: 4 }}>
               <div
                 style={{
                   fontFamily: FONT,
-                  fontSize: 7,
-                  color: "rgba(255,255,255,.28)",
-                  marginTop: 2,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#ececf4",
+                  lineHeight: 1.25,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
               >
-                {t.teacher_role}
+                {t.full_name}
               </div>
-            ) : null}
+              {t.teacher_role ? (
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: 10,
+                    color: "rgba(255,255,255,.38)",
+                    marginTop: 3,
+                    lineHeight: 1.2,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {t.teacher_role}
+                </div>
+              ) : null}
+            </div>
+            <div
+              style={{
+                flexShrink: 0,
+                maxWidth: "46%",
+                textAlign: "right",
+                display: "flex",
+                flexDirection: "column",
+                gap: 3,
+                alignItems: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "rgba(255,255,255,.82)",
+                  lineHeight: 1.25,
+                  wordBreak: "break-word",
+                }}
+                title={inst || undefined}
+              >
+                {inst || "—"}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "rgba(255,255,255,.52)",
+                  lineHeight: 1.25,
+                  wordBreak: "break-word",
+                }}
+                title={studs || undefined}
+              >
+                {studs || "—"}
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {teachers.length > 4 ? (
-        <div style={{ fontFamily: FONT, fontSize: 7, color: "rgba(255,255,255,.22)", letterSpacing: ".04em" }}>+{teachers.length - 4} more</div>
+        <div style={{ fontFamily: FONT, fontSize: 10, color: "rgba(255,255,255,.28)", letterSpacing: ".04em" }}>+{teachers.length - 4} more</div>
       ) : null}
     </div>
   );
