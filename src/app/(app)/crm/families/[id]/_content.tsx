@@ -37,8 +37,8 @@ const T = {
   fg:        "var(--z-fg)",
   muted:     "var(--z-muted)",
   label:     "var(--z-muted)",
-  shadow:    "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
-  shadowHover: "0 4px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08)",
+  shadow:    "0 4px 24px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06)",
+  shadowHover: "0 12px 40px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.08)",
 };
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -117,10 +117,10 @@ function BrandCard({
       style={{
         position: "relative",
         background: T.surface,
-        borderRadius: 12,
+        borderRadius: 18,
         border: `1px solid ${T.border}`,
         borderLeft: "none",
-        boxShadow: T.shadow,
+        boxShadow: `${T.shadow}, inset 0 1px 0 rgba(255,255,255,0.05)`,
         overflow: "hidden",
         ...style,
       }}
@@ -133,9 +133,9 @@ function BrandCard({
           left: 0,
           top: 0,
           bottom: 0,
-          width: 3,
-          background: `linear-gradient(to bottom, ${brandColor} 0%, ${brandColor}00 50%)`,
-          borderRadius: "12px 0 0 12px",
+          width: 4,
+          background: `linear-gradient(to bottom, ${brandColor} 0%, ${brandColor}00 55%)`,
+          borderRadius: "18px 0 0 18px",
           pointerEvents: "none",
         }}
       />
@@ -156,11 +156,9 @@ const TABS: { id: Tab; label: string }[] = [
 
 function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: Tab) => void; brandColor: string }) {
   return (
-    <div
-      className="min-w-0 rounded-xl border border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface),transparent_8%)] px-1 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:bg-[color-mix(in_oklab,var(--z-surface),transparent_22%)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
-    >
+    <div className="min-w-0 p-1.5">
       <nav
-        className="-mb-px flex gap-0 overflow-x-auto overflow-y-hidden"
+        className="flex gap-1 overflow-x-auto overflow-y-hidden rounded-2xl border border-[var(--z-border)] bg-[color-mix(in_oklab,var(--z-surface-2),transparent_6%)] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl dark:bg-[color-mix(in_oklab,var(--z-surface-2),transparent_20%)]"
         aria-label="Family tabs"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
@@ -171,14 +169,22 @@ function TabNav({ active, onChange, brandColor }: { active: Tab; onChange: (t: T
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
-              className="shrink-0 px-4 py-3 text-sm whitespace-nowrap transition-all duration-150"
-              style={{
-                borderBottom: isActive ? `2px solid ${brandColor}` : "2px solid transparent",
-                color: isActive ? "var(--z-fg)" : "var(--z-fg-secondary, var(--z-muted))",
-                fontWeight: isActive ? 700 : 500,
-                background: isActive ? "color-mix(in oklab, var(--z-accent), transparent 92%)" : "transparent",
-                borderRadius: isActive ? "10px 10px 0 0" : undefined,
-              }}
+              className={`shrink-0 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all duration-200 sm:px-4 sm:py-3 ${
+                isActive ? "" : "hover:bg-[color-mix(in_oklab,var(--z-fg),transparent_94%)] dark:hover:bg-white/[0.04]"
+              }`}
+              style={
+                isActive
+                  ? {
+                      color: "var(--z-fg)",
+                      background: "color-mix(in oklab, var(--z-surface), transparent 2%)",
+                      boxShadow: `0 0 0 1px ${brandColor}55, 0 8px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)`,
+                    }
+                  : {
+                      color: "var(--z-fg-secondary, var(--z-muted))",
+                      background: "transparent",
+                      boxShadow: "none",
+                    }
+              }
               aria-selected={isActive}
               role="tab"
             >
@@ -1074,12 +1080,11 @@ function FamilyStudentsAccountBanner({
 }) {
   return (
     <BrandCard brandColor={brandColor}>
-      <div className="px-5 py-3.5">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.muted }}>
-          Family account
-        </p>
-        <p className="mt-1 text-lg font-semibold leading-snug" style={{ color: T.fg }}>
-          {familyName}
+      <div className="px-6 py-5 sm:px-7 sm:py-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[var(--z-muted)]">Roster anchor</p>
+        <p className="mt-2 text-2xl font-black tracking-tight text-[var(--z-fg)] sm:text-3xl">{familyName}</p>
+        <p className="mt-2 max-w-prose text-sm italic leading-relaxed text-[var(--z-fg-secondary)]">
+          Students on this account share billing and location defaults.
         </p>
       </div>
     </BrandCard>
@@ -2134,10 +2139,10 @@ export function FamilyAccountContent() {
 
   return (
     <div className="flex flex-col gap-0">
-      <div className="sticky top-0 z-30 -mx-1 mb-1 bg-[color-mix(in_oklab,var(--z-bg),transparent_12%)] px-1 pb-1 pt-0.5 backdrop-blur-md">
+      <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-[1.35rem] border border-[var(--z-border)]/80 bg-[color-mix(in_oklab,var(--z-bg),transparent_18%)] p-1 shadow-[0_20px_50px_rgba(0,0,0,0.12)] backdrop-blur-xl dark:border-white/5 dark:bg-[color-mix(in_oklab,var(--z-bg),transparent_35%)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
         <TabNav active={activeTab} onChange={setTab} brandColor={brandColor} />
       </div>
-      <div className="pt-4">
+      <div className="pt-1">
         {activeTab === "overview"   && <OverviewTab   familyId={familyId} brandColor={brandColor} />}
         {activeTab === "teachers"   && <MeetTeachersCard familyId={familyId} brandColor={brandColor} />}
         {activeTab === "billing"    && <BillingTab    familyId={familyId} brandColor={brandColor} />}
