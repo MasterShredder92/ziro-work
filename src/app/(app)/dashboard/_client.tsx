@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect, useId } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useZiroWorkspace } from "@/components/workspace/ZiroWorkspaceContext";
@@ -655,86 +655,15 @@ const BRAIN_HEART_D =
 function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore: number; onClick: () => void }) {
   const hRaw = Math.min(100, Math.max(0, healthScore));
   const h = Math.round(hRaw);
-  const ringColor = healthStrokeColor(h);
-  const ringGlow = healthGlowRgba(h, 0.5);
-  /** Normalized path length for stroke math (matches `pathLength` on paths). */
+  /** Same stroke-dash math as `DonutChart` circles: dash = (pct/100)*perimeter, gap = full perimeter. */
   const len = 100;
-  /** Solid fill uses a bottom-up clip so % filled matches the center number. */
-  const fillClipId = useId().replace(/:/g, "_");
-  const fillY = len * (1 - hRaw / 100);
-  const fillH = len * (hRaw / 100);
-
-  const heartMeasureRef = useRef<SVGPathElement | null>(null);
-  /** Align stroke dash so the meter starts at the heart crown and runs clockwise. */
-  const [heartDashOffset, setHeartDashOffset] = useState(0);
-  /** One full-length dash + offset reveals `hRaw%` of the outline (same trick as circular meters). */
-  const progressRingOffset = heartDashOffset + len * (1 - hRaw / 100);
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = heartMeasureRef.current;
-      if (!el || typeof el.getTotalLength !== "function") return;
-      /** Geometric length (getTotalLength ignores `pathLength` in browsers). */
-      const rawLen = el.getTotalLength();
-      if (!(rawLen > 1e-6)) return;
-      /** Dash math uses normalized perimeter `len` via pathLength — map crown to same units. */
-      const scale = len / rawLen;
-
-      const steps = 720;
-      const cx = 50;
-      const cy = 54;
-
-      let crownS = 0;
-      let crownY = -1e9;
-      let foundCrown = false;
-      for (let i = 0; i <= steps; i++) {
-        const s = (i / steps) * rawLen;
-        const p = el.getPointAtLength(s);
-        if (Math.abs(p.x - cx) > 14) continue;
-        if (p.y < 10 || p.y > 44) continue;
-        if (p.y > crownY) {
-          crownY = p.y;
-          crownS = s;
-          foundCrown = true;
-        }
-      }
-      if (!foundCrown) {
-        let bestD = Infinity;
-        for (let i = 0; i <= steps; i++) {
-          const s = (i / steps) * rawLen;
-          const p = el.getPointAtLength(s);
-          const d = (p.x - cx) ** 2 + (p.y - 28) ** 2;
-          if (d < bestD) {
-            bestD = d;
-            crownS = s;
-          }
-        }
-      }
-
-      const eps = Math.max(0.18, rawLen * 0.008);
-      const p0 = el.getPointAtLength(crownS);
-      const p1 = el.getPointAtLength((crownS + eps) % rawLen);
-      const radx = p0.x - cx;
-      const rady = p0.y - cy;
-      const tx = p1.x - p0.x;
-      const ty = p1.y - p0.y;
-      const cross = radx * ty - rady * tx;
-      const forwardIsCw = cross > 0;
-      const crownN = crownS * scale;
-      const off = forwardIsCw ? -crownN : crownN - len;
-      setHeartDashOffset(off);
-    };
-
-    let raf1 = 0;
-    let raf2 = 0;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(measure);
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, [len]);
+  const dash = (hRaw / 100) * len;
+  /** Heart path starts at the tip; rotate 180° so the stroke origin reads like 12 o’clock (same idea as `rotate(-90)` on circles). */
+  const hx = 50;
+  const hy = 52;
+  const gradId = useId().replace(/:/g, "_");
+  const cLo = healthStrokeColor(Math.max(0, h - 38));
+  const cHi = healthStrokeColor(h);
 
   return (
     <button
@@ -752,41 +681,39 @@ function BrainOrb({ flash, healthScore, onClick }: { flash: boolean; healthScore
           boxShadow: `inset 0 -6px 18px rgba(180,255,0,.08), inset 2px 4px 14px rgba(255,255,255,.08), 0 0 36px ${healthGlowRgba(h, 0.35)}`,
           animation: "breathe 4.5s ease-in-out infinite",
         }} />
-        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, filter: `drop-shadow(0 0 8px ${ringGlow})` }}>
+        <svg width={100} height={100} viewBox="0 0 100 100" style={{ position: "absolute", zIndex: 1, overflow: "visible" }}>
           <defs>
-            <clipPath id={fillClipId}>
-              <rect x={0} y={fillY} width={len} height={Math.max(0, fillH)} />
-            </clipPath>
+            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={cLo} />
+              <stop offset="100%" stopColor={cHi} />
+            </linearGradient>
           </defs>
-          <path d={BRAIN_HEART_D} fill="rgba(255,255,255,0.07)" stroke="none" />
-          <path d={BRAIN_HEART_D} fill={ringColor} clipPath={`url(#${fillClipId})`} stroke="none" style={{ transition: "fill 0.7s ease" }} />
-          <path
-            ref={heartMeasureRef}
-            d={BRAIN_HEART_D}
-            fill="none"
-            stroke="rgba(255,255,255,0.06)"
-            strokeWidth={6}
-            pathLength={len}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <path
-            d={BRAIN_HEART_D}
-            fill="none"
-            stroke={ringColor}
-            strokeWidth={6}
-            pathLength={len}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            strokeDasharray={`${len} ${len}`}
-            strokeDashoffset={progressRingOffset}
-            style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.7s ease" }}
-          />
+          <g transform={`rotate(180 ${hx} ${hy})`}>
+            <path
+              d={BRAIN_HEART_D}
+              fill="none"
+              stroke="rgba(255,255,255,.08)"
+              strokeWidth={8}
+              pathLength={len}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <path
+              d={BRAIN_HEART_D}
+              fill="none"
+              stroke={`url(#${gradId})`}
+              strokeWidth={8}
+              pathLength={len}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              strokeDasharray={`${dash} ${len}`}
+              strokeDashoffset={0}
+              style={{ filter: `drop-shadow(0 0 8px ${healthGlowRgba(h, 0.55)})`, transition: "stroke-dasharray 1s ease" }}
+            />
+          </g>
+          <text x={50} y={46} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={17} fontWeight={600} fontFamily={NUMFONT}>{h}%</text>
+          <text x={50} y={58} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,.32)" fontSize={8} fontFamily={FONT}>health</text>
         </svg>
-        {/* Health score */}
-        <div style={{ position: "absolute", top: "59%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2, pointerEvents: "none" }}>
-          <span style={{ fontFamily: NUMFONT, fontSize: 18, fontWeight: 700, color: ringColor, letterSpacing: "-.01em", textShadow: `0 0 12px ${ringGlow}` }}>{h}</span>
-        </div>
         {flash && (
           <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 3, background: "radial-gradient(circle, rgba(255,255,255,.5) 0%, rgba(180,255,0,.18) 50%, transparent 70%)", animation: "flashIn .35s ease-out forwards", pointerEvents: "none" }} />
         )}
