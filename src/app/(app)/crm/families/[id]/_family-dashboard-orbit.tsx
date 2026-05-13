@@ -8,7 +8,7 @@
  * and open the section in the in-grid detail dock (not full-screen).
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CSSProperties } from "react";
 import type { FamilyWorkspaceTab } from "./_content";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
@@ -81,6 +81,7 @@ const CSS = `
   @keyframes locPulse { 0%{transform:scale(1);opacity:1;} 40%,100%{transform:scale(1.7);opacity:0;} }
   @keyframes dotBlink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
   @keyframes flashIn  { from{opacity:0;transform:scale(.96);} to{opacity:1;transform:scale(1);} }
+  @keyframes orbitBackdropIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes ticker   { from{transform:translateX(0);} to{transform:translateX(-50%);} }
   @keyframes glitch {
     0%,91%,100%{transform:translate(0) skewX(0);opacity:1;}
@@ -487,19 +488,59 @@ function cityStateLine(h: FamilyWorkspaceSummaryData["household"]): string | nul
   return cs.length > 0 ? cs : null;
 }
 
-function FamilyOrbitExpandedModule({
+type SurfaceOriginPx = { x: number; y: number; w: number; h: number };
+
+function computeExpandedTargetRect(canvasW: number, canvasH: number) {
+  const cw = Math.max(320, canvasW);
+  const ch = Math.max(240, canvasH);
+  const tw = Math.max(280, Math.min(920, cw - 36));
+  const vh = typeof window !== "undefined" ? window.innerHeight * 0.72 : 560;
+  const th = Math.max(220, Math.min(700, vh, ch - 40));
+  const tx = (cw - tw) / 2;
+  const ty = (ch - th) / 2;
+  return { tw, th, tx, ty };
+}
+
+function FamilyOrbitExpandedSurface({
+  surfaceOrigin,
+  canvasW,
+  canvasH,
   title,
   sub,
   accentColor,
   onClose,
   children,
 }: {
+  surfaceOrigin: SurfaceOriginPx | null;
+  canvasW: number;
+  canvasH: number;
   title: string;
   sub?: string;
   accentColor: string;
   onClose: () => void;
   children: ReactNode;
 }) {
+  /** 0 = paint source rect (no transition); 1 = animate to target */
+  const [phase, setPhase] = useState<0 | 1>(() => (surfaceOrigin ? 0 : 1));
+
+  const target = useMemo(() => computeExpandedTargetRect(canvasW, canvasH), [canvasW, canvasH]);
+
+  useLayoutEffect(() => {
+    if (!surfaceOrigin) {
+      setPhase(1);
+      return;
+    }
+    setPhase(0);
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setPhase(1));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [surfaceOrigin, canvasW, canvasH]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -507,6 +548,16 @@ function FamilyOrbitExpandedModule({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  const g =
+    surfaceOrigin && phase === 0
+      ? { x: surfaceOrigin.x, y: surfaceOrigin.y, w: surfaceOrigin.w, h: surfaceOrigin.h, br: 12 }
+      : { x: target.tx, y: target.ty, w: target.tw, h: target.th, br: 16 };
+
+  const morphTransition =
+    surfaceOrigin && phase === 1
+      ? "left 0.44s cubic-bezier(0.22, 1, 0.36, 1), top 0.44s cubic-bezier(0.22, 1, 0.36, 1), width 0.44s cubic-bezier(0.22, 1, 0.36, 1), height 0.44s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.34s ease"
+      : "none";
 
   return (
     <>
@@ -523,6 +574,8 @@ function FamilyOrbitExpandedModule({
           margin: 0,
           cursor: "pointer",
           background: "rgba(0,0,0,.58)",
+          opacity: 0,
+          animation: "orbitBackdropIn 0.32s ease forwards",
         }}
       />
       <div
@@ -532,23 +585,22 @@ function FamilyOrbitExpandedModule({
         className="family-orbit-expanded-card"
         style={{
           position: "absolute",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
+          left: g.x,
+          top: g.y,
+          width: g.w,
+          height: g.h,
           zIndex: 50,
-          width: "min(920px, calc(100% - 36px))",
-          height: "min(72vh, 700px)",
-          maxHeight: "calc(100% - 40px)",
           display: "flex",
           flexDirection: "column",
           minHeight: 0,
-          borderRadius: 16,
+          borderRadius: g.br,
           border: `1px solid ${accentColor}44`,
           background: "linear-gradient(155deg, rgba(22,22,24,.98) 0%, rgba(6,6,8,.99) 100%)",
           boxShadow: `0 0 0 1px rgba(0,0,0,.5), 0 24px 80px rgba(0,0,0,.65), 0 0 60px ${accentColor}18`,
           backdropFilter: "blur(16px)",
           overflow: "hidden",
-          animation: "flashIn 0.28s ease-out",
+          transition: morphTransition,
+          willChange: surfaceOrigin && phase === 1 ? "left, top, width, height" : undefined,
         }}
       >
         <div
@@ -560,6 +612,8 @@ function FamilyOrbitExpandedModule({
             padding: "12px 16px",
             borderBottom: `1px solid ${accentColor}28`,
             background: `linear-gradient(90deg, ${accentColor}12, transparent 55%)`,
+            opacity: phase === 1 ? 1 : 0.88,
+            transition: "opacity 0.22s ease 0.06s",
           }}
         >
           <button
@@ -618,6 +672,8 @@ function FamilyOrbitExpandedModule({
             overflow: "auto",
             padding: "16px 18px 22px",
             color: "#f4f4fa",
+            opacity: phase === 1 ? 1 : 0.75,
+            transition: "opacity 0.26s ease 0.1s",
           }}
         >
           {children}
@@ -926,6 +982,7 @@ function ModuleBox({
         transform: "translate(-50%, -50%)",
         width: 290,
         animation: `${mod.float} ${3.5 + idx * 0.28}s ease-in-out infinite`,
+        animationPlayState: dimmed ? "paused" : "running",
         zIndex: 30,
         cursor: "pointer",
         opacity: dimmed ? 0.22 : 1,
@@ -1174,6 +1231,41 @@ export function FamilyDashboardOrbit({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [summary, setSummary] = useState<FamilyWorkspaceSummaryData | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [expandSnapshot, setExpandSnapshot] = useState<{
+    cw: number;
+    ch: number;
+    origin: SurfaceOriginPx;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activeTab) setExpandSnapshot(null);
+  }, [activeTab]);
+
+  const openFromHub = useCallback(
+    (tab: FamilyWorkspaceTab, rect: DOMRect) => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const r = canvas.getBoundingClientRect();
+        setExpandSnapshot({
+          cw: r.width,
+          ch: r.height,
+          origin: {
+            x: rect.left - r.left,
+            y: rect.top - r.top,
+            w: rect.width,
+            h: rect.height,
+          },
+        });
+      } else setExpandSnapshot(null);
+      onOpenTab(tab, rect);
+    },
+    [onOpenTab],
+  );
+
+  const closeFromHub = useCallback(() => {
+    setExpandSnapshot(null);
+    onCloseDetail();
+  }, [onCloseDetail]);
 
   useEffect(() => {
     if (!familyId) return;
@@ -1215,6 +1307,9 @@ export function FamilyDashboardOrbit({
   const orbitHasExpanded = Boolean(detailPanel && activeTab);
   const expandedAccent =
     activeTab && detailPanel ? (FAMILY_MODULE_DEFS.find((m) => m.tab === activeTab)?.color ?? brandColor) : brandColor;
+  const layoutW = Math.max(1, expandSnapshot?.cw ?? canvasSize.w);
+  const layoutH = Math.max(1, expandSnapshot?.ch ?? canvasSize.h);
+  const expandOrigin = expandSnapshot?.origin ?? null;
 
   return (
     <>
@@ -1257,7 +1352,7 @@ export function FamilyDashboardOrbit({
               h={canvasSize.h}
               orbAttachRadius={FAMILY_ORB_WIRE_ATTACH_R}
               getCanvasRect={() => canvasRef.current?.getBoundingClientRect() ?? null}
-              onWireClick={(mod, r) => onOpenTab(mod.tab, r)}
+              onWireClick={(mod, r) => openFromHub(mod.tab, r)}
             />
 
             <div
@@ -1288,7 +1383,7 @@ export function FamilyDashboardOrbit({
                 key={mod.id}
                 mod={mod}
                 activeTab={activeTab}
-                onActivate={onOpenTab}
+                onActivate={openFromHub}
                 summary={summary}
                 summaryLoading={summaryLoading}
                 dimmed={orbitHasExpanded}
@@ -1296,14 +1391,17 @@ export function FamilyDashboardOrbit({
             ))}
 
             {detailPanel && activeTab ? (
-              <FamilyOrbitExpandedModule
+              <FamilyOrbitExpandedSurface
+                surfaceOrigin={expandOrigin}
+                canvasW={layoutW}
+                canvasH={layoutH}
                 title={detailTitle ?? activeTab}
                 sub={detailSub ?? undefined}
                 accentColor={expandedAccent}
-                onClose={onCloseDetail}
+                onClose={closeFromHub}
               >
                 {detailPanel}
-              </FamilyOrbitExpandedModule>
+              </FamilyOrbitExpandedSurface>
             ) : null}
           </div>
 
