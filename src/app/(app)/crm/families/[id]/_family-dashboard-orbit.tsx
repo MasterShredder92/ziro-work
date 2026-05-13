@@ -487,16 +487,16 @@ function cityStateLine(h: FamilyWorkspaceSummaryData["household"]): string | nul
   return cs.length > 0 ? cs : null;
 }
 
-function FamilyOrbitDetailDock({
+function FamilyOrbitExpandedModule({
   title,
   sub,
-  brandColor,
+  accentColor,
   onClose,
   children,
 }: {
   title: string;
   sub?: string;
-  brandColor: string;
+  accentColor: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -509,78 +509,121 @@ function FamilyOrbitDetailDock({
   }, [onClose]);
 
   return (
-    <div
-      style={{
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: 0,
-        maxHeight: "min(42vh, 460px)",
-        borderTop: "1px solid rgba(180,255,0,.14)",
-        background: "linear-gradient(180deg, rgba(10,10,12,.97) 0%, rgba(4,4,6,.99) 100%)",
-        boxShadow: "0 -12px 40px rgba(0,0,0,.45)",
-      }}
-    >
-      <div
+    <>
+      <button
+        type="button"
+        aria-label="Dismiss expanded section"
+        onClick={onClose}
         style={{
-          flexShrink: 0,
+          position: "absolute",
+          inset: 0,
+          zIndex: 40,
+          border: "none",
+          padding: 0,
+          margin: 0,
+          cursor: "pointer",
+          background: "rgba(0,0,0,.58)",
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="family-orbit-expanded-title"
+        className="family-orbit-expanded-card"
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 50,
+          width: "min(920px, calc(100% - 36px))",
+          height: "min(72vh, 700px)",
+          maxHeight: "calc(100% - 40px)",
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 14px",
-          borderBottom: "1px solid rgba(255,255,255,.06)",
+          flexDirection: "column",
+          minHeight: 0,
+          borderRadius: 16,
+          border: `1px solid ${accentColor}44`,
+          background: "linear-gradient(155deg, rgba(22,22,24,.98) 0%, rgba(6,6,8,.99) 100%)",
+          boxShadow: `0 0 0 1px rgba(0,0,0,.5), 0 24px 80px rgba(0,0,0,.65), 0 0 60px ${accentColor}18`,
+          backdropFilter: "blur(16px)",
+          overflow: "hidden",
+          animation: "flashIn 0.28s ease-out",
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.12)",
-            background: "rgba(255,255,255,.04)",
-            color: "#f6f6fc",
-            fontFamily: FONT,
-            fontSize: 14,
-            fontWeight: 600,
-            padding: "8px 14px",
-            cursor: "pointer",
-          }}
-        >
-          Close
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, letterSpacing: ".14em", color: "rgba(255,255,255,.62)", textTransform: "uppercase" }}>
-            Section
-          </div>
-          <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 700, color: "#ffffff", letterSpacing: ".02em" }}>{title}</div>
-          {sub ? (
-            <div style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,.78)", marginTop: 3 }}>{sub}</div>
-          ) : null}
-        </div>
         <div
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: brandColor,
-            boxShadow: `0 0 12px ${brandColor}`,
             flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "12px 16px",
+            borderBottom: `1px solid ${accentColor}28`,
+            background: `linear-gradient(90deg, ${accentColor}12, transparent 55%)`,
           }}
-        />
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,.14)",
+              background: "rgba(255,255,255,.06)",
+              color: "#f6f6fc",
+              fontFamily: FONT,
+              fontSize: 14,
+              fontWeight: 600,
+              padding: "8px 14px",
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: FONT,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: ".14em",
+                color: "rgba(255,255,255,.62)",
+                textTransform: "uppercase",
+              }}
+            >
+              Section
+            </div>
+            <div id="family-orbit-expanded-title" style={{ fontFamily: FONT, fontSize: 18, fontWeight: 700, color: "#ffffff", letterSpacing: ".02em" }}>
+              {title}
+            </div>
+            {sub ? (
+              <div style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,.78)", marginTop: 3 }}>{sub}</div>
+            ) : null}
+          </div>
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: accentColor,
+              boxShadow: `0 0 14px ${accentColor}`,
+              flexShrink: 0,
+            }}
+          />
+        </div>
+        <div
+          className="family-orbit-detail-scroll"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+            padding: "16px 18px 22px",
+            color: "#f4f4fa",
+          }}
+        >
+          {children}
+        </div>
       </div>
-      <div
-        className="family-orbit-detail-scroll"
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
-          padding: "16px 18px 20px",
-          color: "#f4f4fa",
-        }}
-      >
-        {children}
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -848,12 +891,14 @@ function ModuleBox({
   onActivate,
   summary,
   summaryLoading,
+  dimmed,
 }: {
   mod: ModDef;
   activeTab: FamilyWorkspaceTab | null;
   onActivate: (tab: FamilyWorkspaceTab, rect: DOMRect) => void;
   summary: FamilyWorkspaceSummaryData | null;
   summaryLoading: boolean;
+  dimmed: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const idx = FAMILY_MODULE_DEFS.indexOf(mod);
@@ -883,6 +928,9 @@ function ModuleBox({
         animation: `${mod.float} ${3.5 + idx * 0.28}s ease-in-out infinite`,
         zIndex: 30,
         cursor: "pointer",
+        opacity: dimmed ? 0.22 : 1,
+        transition: "opacity 220ms ease",
+        pointerEvents: dimmed ? "none" : "auto",
       }}
     >
       <div style={connectorStyle(mod.dotEdge, mod.color)} />
@@ -1164,6 +1212,9 @@ export function FamilyDashboardOrbit({
   }, []);
 
   const healthScore = familyHealthFromBalance(balance);
+  const orbitHasExpanded = Boolean(detailPanel && activeTab);
+  const expandedAccent =
+    activeTab && detailPanel ? (FAMILY_MODULE_DEFS.find((m) => m.tab === activeTab)?.color ?? brandColor) : brandColor;
 
   return (
     <>
@@ -1200,44 +1251,59 @@ export function FamilyDashboardOrbit({
         <FamilyTopBar focusLabel={focusLabel} />
 
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-            <div ref={canvasRef} style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0, isolation: "isolate" }}>
-              <StaticCircuitSVG
-                w={canvasSize.w}
-                h={canvasSize.h}
-                orbAttachRadius={FAMILY_ORB_WIRE_ATTACH_R}
-                getCanvasRect={() => canvasRef.current?.getBoundingClientRect() ?? null}
-                onWireClick={(mod, r) => onOpenTab(mod.tab, r)}
+          <div ref={canvasRef} style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0, minHeight: 0, isolation: "isolate" }}>
+            <StaticCircuitSVG
+              w={canvasSize.w}
+              h={canvasSize.h}
+              orbAttachRadius={FAMILY_ORB_WIRE_ATTACH_R}
+              getCanvasRect={() => canvasRef.current?.getBoundingClientRect() ?? null}
+              onWireClick={(mod, r) => onOpenTab(mod.tab, r)}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                zIndex: 35,
+                opacity: orbitHasExpanded ? 0.2 : 1,
+                transition: "opacity 220ms ease",
+                pointerEvents: orbitHasExpanded ? "none" : "auto",
+              }}
+            >
+              <FamilyNameOrb
+                familyName={familyOrbName}
+                flash={brainFlash}
+                healthScore={healthScore}
+                onClick={() => {
+                  setBrainFlash(true);
+                  setTimeout(() => setBrainFlash(false), 480);
+                }}
               />
-
-              <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 35 }}>
-                <FamilyNameOrb
-                  familyName={familyOrbName}
-                  flash={brainFlash}
-                  healthScore={healthScore}
-                  onClick={() => {
-                    setBrainFlash(true);
-                    setTimeout(() => setBrainFlash(false), 480);
-                  }}
-                />
-              </div>
-
-              {FAMILY_MODULE_DEFS.map((mod) => (
-                <ModuleBox
-                  key={mod.id}
-                  mod={mod}
-                  activeTab={activeTab}
-                  onActivate={onOpenTab}
-                  summary={summary}
-                  summaryLoading={summaryLoading}
-                />
-              ))}
             </div>
 
-            {detailPanel && detailTitle ? (
-              <FamilyOrbitDetailDock title={detailTitle} sub={detailSub ?? undefined} brandColor={brandColor} onClose={onCloseDetail}>
+            {FAMILY_MODULE_DEFS.map((mod) => (
+              <ModuleBox
+                key={mod.id}
+                mod={mod}
+                activeTab={activeTab}
+                onActivate={onOpenTab}
+                summary={summary}
+                summaryLoading={summaryLoading}
+                dimmed={orbitHasExpanded}
+              />
+            ))}
+
+            {detailPanel && activeTab ? (
+              <FamilyOrbitExpandedModule
+                title={detailTitle ?? activeTab}
+                sub={detailSub ?? undefined}
+                accentColor={expandedAccent}
+                onClose={onCloseDetail}
+              >
                 {detailPanel}
-              </FamilyOrbitDetailDock>
+              </FamilyOrbitExpandedModule>
             ) : null}
           </div>
 
