@@ -265,7 +265,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           /* Collapsed: logo icon only */
           <div className="flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/zirowork-logo-square-bolt-text.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
+            <img src="/brand/zirowork-bolt-icon.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
           </div>
         )}
       </div>
