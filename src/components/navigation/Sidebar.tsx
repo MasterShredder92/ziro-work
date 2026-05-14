@@ -250,11 +250,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           <>
             <div className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/zw-logo.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
-              <div className="text-2xl tracking-tighter whitespace-nowrap select-none">
-                <span className="text-[#c4f036] font-extrabold">ZIRO</span>
-                <span className="text-white ml-1 font-light">WORK</span>
-              </div>
+              <img src="/brand/zirowork-logo-horizontal-bolt.png" alt="ZiroWork" className="h-8 w-auto object-contain" />
             </div>
             {/* Mobile close button */}
             <button
@@ -269,7 +265,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           /* Collapsed: logo icon only */
           <div className="flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/zw-logo.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
+            <img src="/brand/zirowork-logo-square-bolt-text.png" alt="ZW" className="h-8 w-8 rounded-full object-cover" />
           </div>
         )}
       </div>

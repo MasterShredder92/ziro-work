@@ -123,7 +123,7 @@ export function AppLocationRail() {
     id: "all",
     name: schoolName,
     shortName: "All",
-    logoUrl: "/ziro-logo.png",
+    logoUrl: "/brand/zirowork-logo-square-bolt-text.png",
   };
   /** Schedule is per-location only (four separate studio calendars). */
   const scheduleMode = pathname.startsWith("/schedule");
