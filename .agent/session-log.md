@@ -27,3 +27,21 @@
 - All tenant tables have `rowsecurity = true`
 - 14 tables have at least 1 policy; ~90+ have 0 policies (enabled but no pass-through)
 - Service role bypasses RLS; isolation is app-layer only until Phase 4 applies
+
+## 2026-05-19 — Phase 4 Wave 1: Financial Tier RLS Hardening (APPLIED TO LIVE)
+
+**Commit:** 49b3e78
+
+**Pre-flight audit findings:**
+1. `tenant_id` column type is MIXED across financial tables — 15 tables use `text`, 7 use `uuid`
+2. Existing `tenant_isolation` policies use `current_setting('app.tenant_id'::text, true)` — session variable, NOT JWT claims
+3. JWT claims approach (Zach's guardrail) would have failed: `tenant_id` is in `app_metadata` not top-level, AND text/uuid mismatch would block all rows
+4. One pre-existing policy on `invoice_items` (`service_role_all_invoice_items`, scoped to `{service_role}`) — dropped as dead weight
+5. `get_my_tenant_id()` function approach abandoned in favor of inline session variable (matches codebase standard)
+
+**Applied to live DB (gngbyydqjouxkoprzzil):**
+- 15 text tables: `payments`, `invoices`, `invoice_line_items`, `billing_cycles`, `billing_plans`, `billing_settings`, `credits`, `discounts`, `subscriptions`, `subscription_items`, `usage_records`, `square_invoices`, `square_invoices_fact`, `square_payments_fact`, `stripe_customers` — `USING (tenant_id = current_setting('app.tenant_id'::text, true))` ✓
+- 7 uuid tables: `billing_adjustments`, `billing_events`, `billing_periods`, `invoice_flags`, `invoice_items`, `invoice_tokens`, `square_refunds_fact` — `USING (tenant_id = current_setting('app.tenant_id'::text, true)::uuid)` ✓
+- All 22 confirmed via `pg_policies` post-apply
+
+**Architecture note:** All server-side billing access uses `getServiceClient()` (service_role, RLS bypass). Phase 4 policies protect future authenticated-client or direct PostgREST access paths.
