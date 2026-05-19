@@ -81,8 +81,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const signature = req.headers.get("x-square-hmacsha256-signature");
   const signingKey = process.env.SQUARE_BOOKINGS_WEBHOOK_SIGNATURE_KEY ?? "";
 
-  // Verify signature — skip in dev if key not set
-  if (signingKey) {
+  if (!signingKey) {
+    // Fail closed in production — missing key means webhook is not safe to process
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "WEBHOOK_NOT_CONFIGURED" }, { status: 503 });
+    }
+    // In dev/test, allow processing without a key
+  } else {
     const valid = verifySquareSignature(
       rawBody,
       signature,
