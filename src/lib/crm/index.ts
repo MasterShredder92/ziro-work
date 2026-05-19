@@ -27,7 +27,6 @@ export {
   setStudentStage,
   createProspect,
   enrollStudentAsActive,
-  canTransition as canStudentTransition,
 } from "./studentLifecycle";
 
 export {

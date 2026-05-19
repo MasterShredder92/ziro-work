@@ -2,14 +2,11 @@
  * Enrollment engine — orchestrates enrolling a student with a teacher,
  * updating their schedule linkage, and propagating status changes.
  *
- * Integrates with:
- *  - Scheduling OS (teacher assignment on `students.teacher_id`)
- *  - Billing OS (via `families` on the student's family_id; we do not
- *    mutate billing rows directly from here)
- *  - CRM student lifecycle (promotes to "enrolled")
+ * enrollStudent delegates to the enroll_student Postgres RPC (Phase 3)
+ * for atomic, single-transaction execution. All other functions remain
+ * as thin data-layer wrappers.
  */
 import {
-  createEnrollment,
   endEnrollment as endEnrollmentRow,
   getEnrollmentById,
   listEnrollments,
@@ -17,6 +14,7 @@ import {
   type EnrollmentFilter,
 } from "@data/enrollments";
 import { getStudentById, updateStudent } from "@data/students";
+import { getServiceClient } from "@/lib/supabase";
 import type { Enrollment, EnrollmentUpdate } from "@/lib/types/crm";
 
 export type EnrollInput = {
@@ -30,24 +28,16 @@ export async function enrollStudent(
   tenantId: string,
   input: EnrollInput,
 ): Promise<Enrollment> {
-  const student = await getStudentById(input.studentId, tenantId);
-  if (!student) throw new Error(`Student ${input.studentId} not found`);
-
-  const enrollment = await createEnrollment(tenantId, {
-    student_id: input.studentId,
-    teacher_id: input.teacherId,
-    start_date: input.startDate ?? new Date().toISOString().slice(0, 10),
-    status: input.status ?? "active",
+  const supabase = getServiceClient();
+  const { data, error } = await supabase.rpc("enroll_student", {
+    p_tenant_id:         tenantId,
+    p_student_id:        input.studentId,
+    p_teacher_id:        input.teacherId,
+    p_start_date:        input.startDate ?? null,
+    p_enrollment_status: input.status ?? "active",
   });
-
-  await updateStudent(input.studentId, tenantId, {
-    teacher_id: input.teacherId,
-    status: "active",
-    start_date: input.startDate ?? null,
-    first_lesson_date: student.first_lesson_date ?? input.startDate ?? null,
-  });
-
-  return enrollment;
+  if (error) throw new Error(error.message);
+  return (data as { enrollment: Enrollment }).enrollment;
 }
 
 export async function updateEnrollment(

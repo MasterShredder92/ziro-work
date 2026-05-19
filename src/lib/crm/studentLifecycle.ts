@@ -10,24 +10,11 @@ import type {
   StudentLifecycleStage,
 } from "@/lib/types/crm";
 
-/**
- * Advance a student through the CRM lifecycle.
- * Legal transitions: lead → prospect → enrolled → inactive.
- * "inactive" can also be re-opened to any earlier stage.
- */
-const LEGAL_NEXT: Record<StudentLifecycleStage, StudentLifecycleStage[]> = {
-  lead: ["prospect", "enrolled", "inactive"],
-  prospect: ["enrolled", "inactive", "lead"],
-  enrolled: ["inactive", "prospect"],
-  inactive: ["lead", "prospect", "enrolled"],
-};
-
-export function canTransition(
-  from: StudentLifecycleStage,
-  to: StudentLifecycleStage,
-): boolean {
-  return LEGAL_NEXT[from]?.includes(to) ?? false;
-}
+// Transition enforcement lives in the DB trigger
+// enforce_student_stage_transitions (Phase 3 migration).
+// Invalid transitions surface as Postgres check_violation errors
+// with SQLSTATE 23514 and a human-readable message prefixed
+// "student_stage_invalid:".
 
 export async function setStudentStage(
   tenantId: string,
@@ -37,14 +24,7 @@ export async function setStudentStage(
 ): Promise<Student> {
   const current = await getStudentById(studentId, tenantId);
   if (!current) throw new Error(`Student ${studentId} not found`);
-  const currentStage = ((current.status as StudentLifecycleStage | null) ??
-    "lead") as StudentLifecycleStage;
-  if (currentStage === nextStage) return current;
-  if (!canTransition(currentStage, nextStage)) {
-    throw new Error(
-      `Illegal student transition ${currentStage} → ${nextStage}`,
-    );
-  }
+  if ((current.status as string) === nextStage) return current;
   if (nextStage === "inactive") {
     return deactivateStudent(
       studentId,
