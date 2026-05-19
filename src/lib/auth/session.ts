@@ -276,8 +276,7 @@ async function buildServerClient() {
 }
 
 async function resolveDevelopmentFallbackSession(): Promise<Session | null> {
-  // Allow fallback in all environments — when no Supabase auth cookie is present
-  // (e.g. custom login flow), fall back to the first admin profile via service client.
+  if (process.env.NODE_ENV === "production") return null;
   if (process.env.ZIRO_SESSION_FALLBACK === "0") return null;
   try {
     const service = getServiceClient();
