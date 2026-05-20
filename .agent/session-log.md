@@ -75,7 +75,7 @@
 
 ## 2026-05-19 — Phase 4 Wave 3: Final Sweep RLS Hardening (APPLIED TO LIVE)
 
-**Commit:** TBD (pending)
+**Commit:** 3eb8bd7
 
 **Pre-flight audit findings:**
 1. 72 entries in information_schema had tenant_id and zero policies — 7 confirmed views (RLS not applicable), 65 net base tables confirmed via information_schema.tables
