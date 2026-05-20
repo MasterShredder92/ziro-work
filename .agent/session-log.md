@@ -72,3 +72,49 @@
 - `schedule_blocks` — existing `tenant_access` (uuid, current_tenant_id())
 
 **schema.sql note:** Contains only CREATE TABLE definitions; RLS policies are not tracked there. Wave 2 added no table structure changes — schema.sql remains accurate. Migration file is the source of truth for policy changes.
+
+## 2026-05-19 — Phase 4 Wave 3: Final Sweep RLS Hardening (APPLIED TO LIVE)
+
+**Commit:** TBD (pending)
+
+**Pre-flight audit findings:**
+1. 72 entries in information_schema had tenant_id and zero policies — 7 confirmed views (RLS not applicable), 65 net base tables confirmed via information_schema.tables
+2. Final count after type classification: 23 TEXT tenant_id + 45 UUID tenant_id = 68 base tables
+3. All 68 targets had zero existing policies — no conflicting permissive policy to drop
+4. views_skipped: v_family_billing, view_family_account_summary, view_schedule_blocks_extended, view_student_lifecycle_context, view_student_profiles, view_tenant_billing_aging, vw_student_family_search
+
+**Applied to live DB (gngbyydqjouxkoprzzil) — 68 tables:**
+
+TEXT tenant_id (23):
+addresses, api_tokens, attendance, brand_settings, enrollments, error_resolution_logs,
+expenses, finance_accounts, finance_locations, integration_configs, leads, lesson_plans,
+lifecycle, performance_alerts, pricing_tiers, raven_escalations, raven_message_log,
+schedules, student_followups, teacher_w9, tenant_settings, trials, ziro_events
+
+UUID tenant_id (45):
+agent_tenants, appointment_notifications, audit_log, events, family_files, files,
+finance_balance_snapshots, finance_categories, finance_category_groups, finance_category_rules,
+finance_exports, finance_plaid_items, finance_recurring_rules, finance_sync_runs,
+finance_transaction_category_assignments, finance_transactions, google_oauth_tokens,
+intake_submissions, integration_events, issues, notifications, onboarding_sequences,
+performance_metrics, permission_definitions, privacy_violation_log, rate_limit_hits,
+recruitment_prospects, reviews, room_inventory, rooms, schedule_series, security_events,
+sid_context_cache, stewie_risk_log, student_duplicate_reviews, student_events, student_files,
+student_instruments, student_notes, studio_closures, studio_messages, teacher_availability,
+teacher_room_assignments, tenant_agent_config, value_cards
+
+**Explicitly skipped (global/system — no tenant_id):**
+anchor_job_locks, bank_accounts, bank_statements, bank_transactions, billing_line_items,
+contacts (platform lead table), customers, lesson_notes, location_hours, metric_snapshots,
+pending_reminders, portal_activity, profile_locations, raven_knowledge_base, settings,
+star_reviews, system_health, teacher_locations, touches, vault_delivery_attempts,
+vault_fulfillment_events, vault_product_square_map, verticals
+
+**Explicitly skipped (vault — user_id isolation, not tenant):**
+vault_users, vault_products, vault_product_modules, vault_user_products, vault_user_module_progress
+
+**Post-apply verification:**
+- pg_policies count for Wave 3 tables: 68 ✓
+- Zero remaining unhardened base tables with tenant_id: confirmed ✓
+
+**Phase 4 RLS COMPLETE — all tenant data tables hardened across all waves.**
