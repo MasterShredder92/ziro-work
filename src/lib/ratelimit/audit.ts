@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { logger } from "@/lib/observability/logger";
 import { incrementCounter } from "@/lib/observability/metrics";
 
@@ -47,6 +48,7 @@ export async function recordRateLimitHit(hit: RateLimitHitRecord): Promise<void>
   if (g.__ziro_rate_limit_table_missing) return;
 
   try {
+    assertServiceRoleAllowed("src/lib/ratelimit/audit.ts — service-role module; internal/background operations only");
     const supabase = getServiceClient();
     const { error } = await supabase.from("rate_limit_hits").insert({
       policy_id: hit.policyId,

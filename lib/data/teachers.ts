@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { clientFor } from "./_client";
 import type {
   TeacherInsert,
@@ -34,6 +35,7 @@ async function safeQuery<T>(
 
 export async function getTeachersForTenant(tenantId: string): DataResult<Teacher[]> {
   return safeQuery(async () => {
+    assertServiceRoleAllowed("lib/data/teachers.ts — service-role module; internal/background operations only");
     const supabase = getServiceClient();
     const { data, error } = await supabase
       .from("teachers")

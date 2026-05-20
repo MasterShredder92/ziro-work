@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type {
   Appointment,
   AppointmentConflict,
@@ -223,6 +224,7 @@ async function assertScheduleBelongsToTenant(
   tenantId: string,
   scheduleId: string,
 ): Promise<ScheduleRow> {
+  assertServiceRoleAllowed("src/lib/scheduling/schedulingOps.ts — service-role module; internal/background operations only");
   const db = getServiceClient().schema("scheduling");
   const { data, error } = await db
     .from("schedules")

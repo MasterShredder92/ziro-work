@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { getSession } from "@/lib/auth/session";
 
 export type AuditPayload = Record<string, unknown> | null | undefined;
@@ -68,6 +69,7 @@ export async function logAudit(
     session = null;
   }
 
+  assertServiceRoleAllowed("src/lib/audit/log.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const row: Record<string, unknown> = {
     action: event,

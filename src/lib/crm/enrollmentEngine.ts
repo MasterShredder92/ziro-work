@@ -15,6 +15,7 @@ import {
 } from "@data/enrollments";
 import { getStudentById, updateStudent } from "@data/students";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { Enrollment, EnrollmentUpdate } from "@/lib/types/crm";
 
 export type EnrollInput = {
@@ -28,6 +29,7 @@ export async function enrollStudent(
   tenantId: string,
   input: EnrollInput,
 ): Promise<Enrollment> {
+  assertServiceRoleAllowed("src/lib/crm/enrollmentEngine.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const { data, error } = await supabase.rpc("enroll_student", {
     p_tenant_id:         tenantId,

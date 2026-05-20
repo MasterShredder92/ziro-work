@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { Session } from "@/lib/auth/session";
 import { bestFuzzyScore } from "./fuzzy";
 
@@ -199,6 +200,7 @@ interface SearchTableArgs {
 }
 
 async function searchTable(args: SearchTableArgs): Promise<SearchResult[]> {
+  assertServiceRoleAllowed("src/lib/search/service.ts — service-role module; internal/background operations only");
   const sb = getServiceClient();
   const pattern = `%${args.query.replace(/[%_]/g, "\\$&")}%`;
   const orFilter = args.textColumns.map((col) => `${col}.ilike.${pattern}`).join(",");

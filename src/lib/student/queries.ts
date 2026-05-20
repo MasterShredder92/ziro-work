@@ -8,6 +8,7 @@ import {
   listSquarePayments,
 } from "@data/squareInvoices";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import type {
   AIConversation,
@@ -40,6 +41,7 @@ async function resolveTenantForStudent(
   tenantId?: string,
 ): Promise<string> {
   if (tenantId && tenantId.trim().length > 0) return tenantId.trim();
+  assertServiceRoleAllowed("src/lib/student/queries.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const { data, error } = await supabase
     .from("students")

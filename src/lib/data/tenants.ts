@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export interface TenantRow {
   id: string;
@@ -68,6 +69,7 @@ function stripUnknownColumns(input: UpsertTenantInput): Partial<UpsertTenantInpu
  * Fetch a single tenant by ID.
  */
 export async function getTenant(tenantId: string): Promise<TenantRow | null> {
+  assertServiceRoleAllowed("src/lib/data/tenants.ts — service-role module; internal/background operations only");
   const db = getServiceClient();
   const { data, error } = await (db as any)
     .from("tenants")

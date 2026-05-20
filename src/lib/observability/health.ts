@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export type HealthStatus = "ok" | "degraded" | "down";
 
@@ -89,6 +90,7 @@ function registerDefaults(registry: Map<string, HealthCheck>): void {
   registry.set("database", async () => {
     const started = Date.now();
     try {
+      assertServiceRoleAllowed("src/lib/observability/health.ts — service-role module; internal/background operations only");
       const sb = getServiceClient();
       const { error } = await sb.from("tenants").select("id", { head: true, count: "exact" }).limit(1);
       if (error && !/relation .*tenants.* does not exist/i.test(error.message)) {

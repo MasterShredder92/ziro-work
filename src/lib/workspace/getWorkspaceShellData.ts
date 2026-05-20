@@ -1,6 +1,7 @@
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { getSession } from "@/lib/auth/session";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export type ShellLocation = {
   id: string;
@@ -18,6 +19,7 @@ export type WorkspaceShellData = {
 export async function getWorkspaceShellData(): Promise<WorkspaceShellData> {
   const session = await getSession().catch(() => null);
   const tenantId = session?.tenantId ?? DEFAULT_TENANT_ID;
+  assertServiceRoleAllowed("src/lib/workspace/getWorkspaceShellData.ts — service-role module; internal/background operations only");
   const db = getServiceClient();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 

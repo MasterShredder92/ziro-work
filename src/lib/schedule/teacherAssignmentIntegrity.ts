@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 type TeacherAssignmentInput = {
   teacherId: string;
@@ -14,6 +15,7 @@ type TeacherAssignmentValidation =
 export async function validateTeacherLocationAssignment(
   input: TeacherAssignmentInput,
 ): Promise<TeacherAssignmentValidation> {
+  assertServiceRoleAllowed("src/lib/schedule/teacherAssignmentIntegrity.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
 
   const { data: anyAssignments, error: anyAssignmentsError } = await supabase

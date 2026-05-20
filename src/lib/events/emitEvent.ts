@@ -3,6 +3,7 @@
  * All API routes should call this after state-changing operations.
  */
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export interface EventPayload {
   tenantId: string;
@@ -15,6 +16,7 @@ export interface EventPayload {
 
 export async function emitEvent(event: EventPayload): Promise<void> {
   try {
+    assertServiceRoleAllowed("src/lib/events/emitEvent.ts — service-role module; internal/background operations only");
     const supabase = getServiceClient();
     const { error } = await supabase.from("events").insert({
       tenant_id: event.tenantId,

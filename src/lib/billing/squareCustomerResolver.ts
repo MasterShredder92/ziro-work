@@ -12,6 +12,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 const SQUARE_API = "https://connect.squareup.com";
 const SQUARE_VERSION = "2024-01-17";
@@ -95,6 +96,7 @@ export async function resolveSquareCustomer(
   }
 
   const dryRun = !!options?.dryRun;
+  assertServiceRoleAllowed("src/lib/billing/squareCustomerResolver.ts — service-role module; internal/background operations only");
   const db = getServiceClient();
 
   // ── 1. Search by email ──

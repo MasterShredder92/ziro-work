@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { LifecycleContext } from "./types";
 
 function daysBetween(a: Date, b: Date) {
@@ -27,6 +28,7 @@ function computeRiskScore(signals: {
 }
 
 export async function buildLifecycleContext(studentId: string): Promise<LifecycleContext> {
+  assertServiceRoleAllowed("src/lib/lifecycle/buildContext.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const now = new Date();
 

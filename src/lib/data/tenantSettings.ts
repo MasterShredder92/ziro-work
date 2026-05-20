@@ -1,6 +1,7 @@
 import type { DbClient, FacadeResult } from "./core";
 import { toErrorInfo } from "./core";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 /** Row shape for `tenant_settings` (read-only UI consumption). */
 export type TenantSettingsRow = {
@@ -39,6 +40,7 @@ export async function getTenantSettingsByTenantId(
  * Used by the admin settings layer (no DbClient injection needed).
  */
 export async function getTenantSettings(tenantId: string): Promise<TenantSettingsRow> {
+  assertServiceRoleAllowed("src/lib/data/tenantSettings.ts — service-role module; internal/background operations only");
   const db = getServiceClient();
   const { data, error } = await db
     .from("tenant_settings")

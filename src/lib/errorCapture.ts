@@ -8,6 +8,7 @@
  *   captureError(err, { route: "/api/invoices/create", tenantId, inputPayload: body })
  */
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export interface ErrorCaptureContext {
   route?: string;
@@ -59,6 +60,7 @@ export function captureError(err: unknown, ctx: ErrorCaptureContext = {}): void 
   void (async () => {
     try {
       const { error_code, message, stack_trace } = extractErrorFields(err);
+      assertServiceRoleAllowed("src/lib/errorCapture.ts — service-role module; internal/background operations only");
       const supabase = getServiceClient();
       await supabase.from("error_resolution_logs").insert({
         tenant_id: ctx.tenantId ?? null,

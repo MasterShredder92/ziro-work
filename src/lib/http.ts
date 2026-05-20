@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export type ApiError = {
   error: string;
@@ -27,6 +28,7 @@ export async function resolveTenantIdBySlugOrId(
   if (!value) return null;
   if (UUID_LIKE.test(value)) return value;
 
+  assertServiceRoleAllowed("src/lib/http.ts — service-role module; internal/background operations only");
   const service = getServiceClient();
   const { data, error } = await service
     .from("tenants")

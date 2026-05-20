@@ -1,6 +1,7 @@
 import "server-only";
 import type { Session } from "@/lib/auth/session";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export type AccessibleLocation = {
@@ -92,6 +93,7 @@ function buildAccess(input: {
 
 async function listActiveTenantLocations(tenantId: string): Promise<AccessibleLocation[]> {
   try {
+    assertServiceRoleAllowed("src/lib/auth/locationAccess.ts — service-role module; internal/background operations only");
     const supabase = getServiceClient();
     const { data: byIsActive } = await supabase
       .from("locations")

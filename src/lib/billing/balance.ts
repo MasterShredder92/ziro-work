@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { BillingAgingBucket, BillingAgingBucketId } from "./types";
 import type { FamilyBalance } from "./models";
 
@@ -18,6 +19,7 @@ export async function computeFamilyBalance(
   tenantId: string,
   familyId: string,
 ): Promise<FamilyBalance> {
+  assertServiceRoleAllowed("src/lib/billing/balance.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const { data: row, error } = await supabase
     .from("view_family_account_summary")

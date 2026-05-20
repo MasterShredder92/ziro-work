@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export type FacadeResult<T> =
   | { data: T; error: null }
@@ -57,6 +58,7 @@ export async function getAgentById(
   agentId: string
 ): Promise<FacadeResult<AgentRecord | null>> {
   try {
+    assertServiceRoleAllowed("src/lib/data/agents.ts — service-role module; internal/background operations only");
     const supabase = getServiceClient();
     const { data, error } = await supabase
       .from("agents")

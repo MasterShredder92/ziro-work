@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { LocationHoursMap } from "./locationHoursUtils";
 
 export type { LocationHoursMap } from "./locationHoursUtils";
@@ -17,6 +18,7 @@ function toMinute(value: string): number {
 }
 
 export async function fetchLocationHours(locationId: string): Promise<LocationHoursMap> {
+  assertServiceRoleAllowed("src/lib/schedule/locationHours.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const { data, error } = await supabase
     .from("location_hours")

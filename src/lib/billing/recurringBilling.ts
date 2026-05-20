@@ -9,6 +9,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,7 @@ export async function generateMonthlyInvoices(
   const hasFifthWeek = monthHasFifthWeek(year, month);
   const fifthDays = fifthWeekDays(year, month);
 
+  assertServiceRoleAllowed("src/lib/billing/recurringBilling.ts — service-role module; internal/background operations only");
   const db = getServiceClient();
   const errors: string[] = [];
   const previews: GeneratedInvoicePreview[] = [];

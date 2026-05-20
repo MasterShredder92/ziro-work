@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { LifecycleStageId } from "./types";
 
 export type TimelineItem = {
@@ -26,6 +27,7 @@ function isStageId(x: unknown): x is LifecycleStageId {
 }
 
 export async function buildTimeline(studentId: string): Promise<TimelineItem[]> {
+  assertServiceRoleAllowed("src/lib/lifecycle/buildTimeline.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
 
   const { data: student, error: studentErr } = await supabase

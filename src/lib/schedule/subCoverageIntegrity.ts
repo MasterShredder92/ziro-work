@@ -2,6 +2,7 @@ import "server-only";
 
 import { findConflictingBlocks, listScheduleBlocks } from "@data/scheduleBlocks";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { ScheduleBlock } from "@/lib/types/entities";
 
 type SubCoverageInput = {
@@ -128,6 +129,7 @@ export async function validateSubCoverage(
     };
   }
 
+  assertServiceRoleAllowed("src/lib/schedule/subCoverageIntegrity.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const dayOfWeek = isoDateToDayOfWeek(input.blockDate);
   const { data: availabilityRows, error: availabilityError } = await supabase

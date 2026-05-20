@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 /**
  * Best-effort student timeline entry for schedule mutations.
@@ -14,6 +15,7 @@ export async function logStudentScheduleActivity(opts: {
   locationId?: string | null;
 }): Promise<void> {
   try {
+    assertServiceRoleAllowed("src/lib/schedule/studentActivityLog.ts — service-role module; internal/background operations only");
     const supabase = getServiceClient();
     const { error } = await supabase.from("activity_log").insert({
       tenant_id: opts.tenantId,

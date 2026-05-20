@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { listScheduleRooms } from "@data/scheduleRooms";
 import { fetchLocationHours, type LocationHoursMap } from "@/lib/schedule/locationHours";
 import type {
@@ -39,6 +40,7 @@ export async function loadWindowedScheduleData(input: {
     includeRooms = false,
     includeStudents = true,
   } = input;
+  assertServiceRoleAllowed("src/lib/schedule/windowedData.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
 
   let locationRow: { id: string } | null = null;

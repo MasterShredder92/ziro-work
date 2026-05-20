@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type { ComputedLifecycle } from "./types";
 
 export type StageTransitionResult =
@@ -36,6 +37,7 @@ export async function emitStageTransition(input: {
     return { changed: false, from: prev, to: next };
   }
 
+  assertServiceRoleAllowed("src/lib/lifecycle/emitStageTransition.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const now = new Date().toISOString();
 

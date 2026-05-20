@@ -5,6 +5,7 @@ import { listAIConversations } from "@data/aiConversations";
 import { getTeacherById, type Teacher } from "@data/teachers";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type {
   Student,
   ScheduleBlock,
@@ -43,6 +44,7 @@ export async function getTeacherProfile(
 export async function getTeacherByProfileId(
   profileId: string,
 ): Promise<Teacher | null> {
+  assertServiceRoleAllowed("src/lib/teacher/queries.ts — service-role module; internal/background operations only");
   const supabase = getServiceClient();
   const { data, error } = await supabase
     .from("teachers")

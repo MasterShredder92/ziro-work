@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { isRole, normalizeDbRole, roleAtLeast, type Role } from "./roles";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export const IMPERSONATE_COOKIE = "ziro_impersonate";
 
@@ -279,6 +280,7 @@ async function resolveDevelopmentFallbackSession(): Promise<Session | null> {
   if (process.env.NODE_ENV === "production") return null;
   if (process.env.ZIRO_SESSION_FALLBACK === "0") return null;
   try {
+    assertServiceRoleAllowed("src/lib/auth/session.ts — service-role module; internal/background operations only");
     const service = getServiceClient();
     const { data: profile } = await service
       .from("profiles")

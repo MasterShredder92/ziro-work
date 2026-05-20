@@ -1,5 +1,6 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import type {
   DeadLetterJobRecord,
   EnqueueArgs,
@@ -81,6 +82,7 @@ function rowToRun(row: Record<string, unknown>): JobRunRecord {
 // ---------------------------------------------------------------------------
 export async function enqueueJob(args: EnqueueArgs): Promise<JobRecord | null> {
   if (missing()) return null;
+  assertServiceRoleAllowed("src/lib/queue/queries.ts — service-role module; internal/background operations only");
   const sb = getServiceClient();
   const payload = {
     tenant_id: args.tenantId ?? null,
