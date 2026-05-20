@@ -170,3 +170,24 @@ vault_users, vault_products, vault_product_modules, vault_user_products, vault_u
 **Token cost:** Low
 **Failure index match consulted:** No
 **Self-score (1-5):** 4 — digest is current and accurate; Python shell gap noted for future sessions
+
+## 2026-05-20 — Phase D: clientFor() Async Conversion (COMPLETE)
+
+**Commit:** 9cae504
+
+**Changes:**
+- `lib/data/_client.ts` — `clientFor()` converted from synchronous service-role fallback to async `createTenantBoundSupabaseClient({ tenantId })` on server path; browser path unchanged; Phase D comment removed
+- `src/lib/billing/stripe.ts` — changed from `clientFor()` to `serviceClient()` throughout; webhook handlers have no user session so `createTenantBoundSupabaseClient()` would return an unauthenticated client that RLS blocks silently
+- 109 caller files across `lib/data/*.ts`, `src/lib/crm/*.ts`, `src/lib/director/`, `src/lib/files/`, `src/app/api/` routes, and `src/app/(app)/crm/families/page.tsx` — all `clientFor(` calls prefixed with `await`
+- TSC = 0 errors confirmed pre-commit
+
+**Key architectural decision:**
+`set_app_tenant_context()` pre-request hook returns early when `auth.uid()` is null (webhook/unauthenticated context), leaving `app.tenant_id` unset. RLS policies then evaluate to `tenant_id = NULL = FALSE`, silently returning 0 rows. Any server-side code called from webhook routes MUST use `serviceClient()`, not `clientFor()`.
+
+**Tenant isolation status:** Complete. No user-facing API path can now reach `getServiceClient()` without an `assertServiceRoleAllowed()` gate.
+
+**Changed:** 111 files (1 core client, 1 webhook exception, 109 callers)
+**Verified:** TSC = 0 errors
+**Blocked on:** Nothing
+**Next move:** Phase D is complete. Remaining debt: `src/lib/data/supabaseTenant.ts` still uses service-role on server path (same pattern as old `_client.ts`) — candidate for a follow-up pass.
+**Token cost:** Medium
