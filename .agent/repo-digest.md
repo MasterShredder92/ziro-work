@@ -8,9 +8,9 @@
 |---|---|
 | Repo | `ziro-work` |
 | Project Type | Next.js / TypeScript web app |
-| Generated | 2026-05-19 — manual regeneration (Python unavailable in shell) |
+| Generated | 2026-05-20 — manual regeneration (Python unavailable in shell) |
 | Git Branch | `main` |
-| Git Commit | `83eec1a` |
+| Git Commit | `a2d0a5a` |
 | Supabase Project | `gngbyydqjouxkoprzzil` |
 
 ## Staleness Check
@@ -39,7 +39,8 @@ Read this digest before opening source files. Use it to choose exact paths for t
 **Key client files:**
 - `src/lib/supabaseAuthenticated.ts` — correct client for all new user-facing server routes
 - `src/lib/supabase.ts` — service-role client; exceptions only
-- `lib/data/_client.ts` — data layer client; `clientFor()` server fallback still uses service-role (known debt, Phase B)
+- `lib/data/_client.ts` — data layer client; `clientFor()` is async and tenant-bound (Phase D complete)
+- `src/lib/data/supabaseTenant.ts` — tenant-scoped client; server path uses `createTenantBoundSupabaseClient` (Phase E complete)
 
 ## Commands
 
@@ -74,7 +75,8 @@ Read this digest before opening source files. Use it to choose exact paths for t
 |---|---|
 | `src/lib/supabaseAuthenticated.ts` | **PRIMARY server client** — authenticated RLS-bound Supabase client for user-facing API routes. Use `createTenantBoundSupabaseClient()`. |
 | `src/lib/supabase.ts` | Service-role Supabase client — exceptions only (webhooks, jobs, migrations). |
-| `lib/data/_client.ts` | Data layer client. `clientFor()` server-side fallback still uses service-role — known Phase B debt. |
+| `lib/data/_client.ts` | Data layer client. `clientFor()` is async; server path uses `createTenantBoundSupabaseClient({ tenantId })` (Phase D complete). |
+| `src/lib/data/supabaseTenant.ts` | Tenant-scoped client factory. Server path uses `createTenantBoundSupabaseClient({ tenantId })`; browser path returns cached anon client (Phase E complete). |
 | `supabase/migrations/20260520020432_tenant_context_pre_request.sql` | **CRITICAL** — tenant context bridge. Installs `set_app_tenant_context()` pre-request hook and `current_tenant_id()`. |
 | `supabase/migrations/20260520014704_tenant_context_pre_request.sql` | No-op alignment marker for live migration ledger consistency. |
 | `supabase/migrations/20260519170000_phase4_wave3_final_sweep_rls.sql` | Phase 4 Wave 3 — 68 tables hardened. |
@@ -392,16 +394,17 @@ Any change touching these areas should be treated as higher risk and should not 
 - `src/app/api/integrations/square/sync/route.ts`
 - `supabase/migrations/` — all files (T5 surface — any live migration requires `GO T5 [migration name]`)
 
-## Service-Role Status (Phase B — In Progress)
+## Service-Role Status (Phase D + E — Complete)
 
-38 routes still use service-role as of commit `83eec1a`. Classification and conversion is Phase B work.
+All user-facing routes and data-layer clients are tenant-bound as of commit `a2d0a5a`.
 
 | Status | Count | Notes |
 |---|---|---|
-| Converted to authenticated client | ~29 | CRM, dashboard, expenses (Manus Phase 5) |
-| Still using service-role | ~38 | Needs classification pass (Phase B) |
-| Legitimate exceptions (estimate) | ~10 | Square webhooks, internal tools, debug, intake |
-| Should be converted (estimate) | ~28 | Schedule, families, invoices, locations, payroll, recruitment, leads |
+| Converted to `createTenantBoundSupabaseClient` | 21 | All user-facing `src/app/api/` routes (Phase B+C, commit 9ec963d) |
+| Legitimate service-role exceptions | 15 | Webhooks, internal tools, debug, intake — each calls `assertServiceRoleAllowed(reason)` |
+| `clientFor()` in `lib/data/_client.ts` | ✓ | Now async + tenant-bound (Phase D, commit 9cae504) |
+| `getSupabaseTenant()` in `src/lib/data/supabaseTenant.ts` | ✓ | Server path now uses `createTenantBoundSupabaseClient` (Phase E, commit bb15658) |
+| CI guardrail coverage | `src/app/api/`, `lib/data/`, `src/lib/` | Fails on bare `getServiceClient()` without `assertServiceRoleAllowed()` (commit a2d0a5a) |
 
 ## Ignored Zones
 
