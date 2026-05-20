@@ -11,7 +11,7 @@
  * Returns { updated: number, blocks: [{id, student_id, teacher_tally}] }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { requirePermission } from "@/lib/auth/guards";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -22,7 +22,7 @@ export async function POST(_req: NextRequest) {
     const session = await requirePermission("schedule.write")();
     const tenantId = session.tenantId;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = getServiceClient() as any;
+    const db = await createTenantBoundSupabaseClient({ tenantId }) as any;
 
     // Fetch tenant timezone setting
     const { data: tenant } = await db

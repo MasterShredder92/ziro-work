@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { fetchLocationHours } from '@/lib/schedule/locationHours';
 import { getHoursForDate } from '@/lib/schedule/locationHoursUtils';
 
@@ -8,6 +9,7 @@ const BELLEVUE_ID = 'f7b52dd5-12ee-437f-9c60-f8adf454ac31';
 const SUNDAY = '2026-04-26';
 
 export async function GET() {
+  assertServiceRoleAllowed("Internal debug endpoint — no user session, diagnostic-only");
   const supabase = getServiceClient();
 
   // 1. Fetch location_hours

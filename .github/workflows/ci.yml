@@ -21,6 +21,18 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Service-role guard
+        run: |
+          violations=$(grep -rl "getServiceClient" src/app/api/ | while read -r f; do
+            grep -q "assertServiceRoleAllowed" "$f" || echo "$f"
+          done)
+          if [ -n "$violations" ]; then
+            echo "ERROR: These files use getServiceClient() without assertServiceRoleAllowed():"
+            echo "$violations"
+            exit 1
+          fi
+          echo "Service-role guard check passed."
+
       - name: Lint
         run: npm run lint
 

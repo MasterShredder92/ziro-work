@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, serverError, badRequest } from "@/lib/http";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
 
   if (!locationId) return badRequest("location_id required");
 
-  const supabase = getServiceClient();
   const tenantId = DEFAULT_TENANT_ID;
+  const supabase = await createTenantBoundSupabaseClient({ tenantId });
 
   let query = supabase
     .from("teacher_availability")

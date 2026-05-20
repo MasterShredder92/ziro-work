@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { renderInvoicePdf, type InvoicePdfInput } from "@/lib/invoice/pdf";
 
 export const runtime = "nodejs";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 const BUCKET = "invoice-pdfs";
 
 async function generateAndUpload(invoiceId: string): Promise<string> {
+  assertServiceRoleAllowed("PDF generation + storage upload — service-role required for storage admin operations");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = getServiceClient() as any;
 

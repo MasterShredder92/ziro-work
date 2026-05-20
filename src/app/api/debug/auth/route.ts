@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,6 +66,7 @@ function pickNameParts(user: { email?: string | null; user_metadata?: JsonRecord
 }
 
 export async function GET() {
+  assertServiceRoleAllowed("Auth debug endpoint — diagnostic only, no session required");
   const payload: {
     ok: boolean;
     authenticated: boolean;

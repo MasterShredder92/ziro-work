@@ -9,7 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       new URL(req.url).searchParams.get("tenantId") ||
       DEFAULT_TENANT_ID;
 
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
 
     // ── Compute invoice_month and next_invoice_date ────────────
     const dueDateObj = new Date(due_date);

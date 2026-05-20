@@ -5,7 +5,7 @@ import { assertLocationAllowed } from "@/lib/auth/locationAccess";
 import { clampWindowLength } from "@/lib/schedule/window";
 import { loadWindowedScheduleData } from "@/lib/schedule/windowedData";
 import { projectBlocksForWindow } from "@/lib/schedule/windowedClient";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import type { StudentStatus } from "@/lib/data/models/students";
 
 function validIsoDate(value: string | null): value is string {
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
       return ok({ students: [] as StudioMapRosterStudent[] });
     }
 
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId });
     const { data: rows, error } = await supabase
       .from("students")
       .select("id, first_name, last_name, status")

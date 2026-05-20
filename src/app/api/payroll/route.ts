@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   const startDate = url.searchParams.get("start") || defaultStart;
   const endDate = url.searchParams.get("end") || defaultEnd;
 
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId });
 
   // 1. Get all active teachers (including square_team_member_id for cross-reference)
   const { data: teachers, error: teachersError } = await supabase

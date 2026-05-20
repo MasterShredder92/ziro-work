@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 type IntakePayload = {
   name?: unknown;
@@ -312,6 +313,7 @@ async function insertLegacyLead(args: {
 }
 
 export async function POST(req: NextRequest) {
+  assertServiceRoleAllowed("Public intake form — anonymous lead capture, no auth");
   const rawPayload = await readJson(req);
   const meta = pickRequestMeta(req);
 

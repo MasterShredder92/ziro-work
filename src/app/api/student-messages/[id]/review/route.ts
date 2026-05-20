@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export async function PATCH(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  assertServiceRoleAllowed("Admin review marker — no session guard; service-role used as interim");
   const { id } = await params;
   const db = getServiceClient();
 

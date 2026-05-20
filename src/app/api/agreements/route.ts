@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { badRequest, created, ok, readJson, resolveTenantId, serverError } from "@/lib/http";
 import { emitEvent } from "@/lib/events/emitEvent";
 
@@ -16,7 +16,7 @@ const AgreementCreateSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const tenantId = resolveTenantId(req);
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId });
     const url = new URL(req.url);
     const studentId = url.searchParams.get("studentId");
     let query = supabase.from("agreements").select("*").eq("tenantid", tenantId);
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return badRequest("Invalid agreement payload", parsed.error.flatten());
     }
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId });
     const { data: row, error } = await supabase
       .from("agreements")
       .insert({
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
     const body = await readJson(req);
     const parsed = AgreementPatchSchema.safeParse(body);
     if (!parsed.success) return badRequest("Invalid patch payload", parsed.error.flatten());
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId });
     const patch: Record<string, unknown> = { signed: parsed.data.signed };
     if (parsed.data.url) patch.url = parsed.data.url;
     if (parsed.data.signed) patch.signed_at = new Date().toISOString();

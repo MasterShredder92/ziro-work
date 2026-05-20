@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { getSession } from "@/lib/auth/session";
 import { roleAtLeast } from "@/lib/auth/roles";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
@@ -77,7 +77,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const { new_teacher_id, reason, effective_date } = parsed.data;
     const effective = effective_date || new Date().toISOString().slice(0, 10);
 
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId });
 
     // 1. Load current student (must exist and belong to tenant)
     const { data: student, error: sErr } = await supabase

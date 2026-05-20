@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID ?? "00000000-0000-0000-0000-000000000001";
 // Average revenue per student per month (from pricing_tiers avg = $176)
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export async function GET() {
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient();
 
   // 1. Get all active locations with hours
   const { data: locations } = await supabase

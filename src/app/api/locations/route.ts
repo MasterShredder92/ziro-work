@@ -4,7 +4,7 @@
  * Used by teacher profile page and other places that need the full location list.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       url.searchParams.get("tenantId") ||
       DEFAULT_TENANT_ID;
 
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const { data, error } = await db
       .from("locations")
       .select("id, name, address, city, state, zip, phone, email, is_active, color")

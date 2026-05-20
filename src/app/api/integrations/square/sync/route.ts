@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 /**
@@ -69,6 +70,7 @@ async function squareFetch(path: string, accessToken: string): Promise<{ ok: boo
 }
 
 export async function POST(req: NextRequest) {
+  assertServiceRoleAllowed("Square sync job — no user session, admin-triggered bulk upsert");
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
   if (!accessToken) {
     return NextResponse.json(

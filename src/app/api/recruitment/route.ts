@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const tenantId = url.searchParams.get("tenantId") || DEFAULT_TENANT_ID;
   const status = url.searchParams.get("status") || null;
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId });
   let query = supabase
     .from("recruitment_prospects")
     .select("*")
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const tenantId = DEFAULT_TENANT_ID;
   const body = await req.json();
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId });
   const { data, error } = await supabase
     .from("recruitment_prospects")
     .insert({ ...body, tenant_id: tenantId })
@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const { id, ...updates } = body;
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient();
   const { data, error } = await supabase
     .from("recruitment_prospects")
     .update(updates)
@@ -53,7 +53,7 @@ export async function DELETE(req: NextRequest) {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient();
   const { error } = await supabase.from("recruitment_prospects").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

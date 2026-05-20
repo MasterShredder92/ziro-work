@@ -10,6 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 const SQUARE_API_BASE = "https://connect.squareup.com/v2";
 
@@ -68,6 +69,7 @@ async function fetchAllSquareTeamMembers(token: string): Promise<SquareTeamMembe
 }
 
 export async function POST(req: NextRequest) {
+  assertServiceRoleAllowed("Square team sync — no user session, admin-triggered repair operation");
   const token = process.env.SQUARE_ACCESS_TOKEN;
   if (!token) {
     return NextResponse.json({ error: "SQUARE_ACCESS_TOKEN not configured" }, { status: 500 });

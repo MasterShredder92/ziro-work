@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -23,6 +24,7 @@ const Schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    assertServiceRoleAllowed("Anonymous feedback submissions — no caller session, public endpoint");
     const body = await req.json();
     const parsed = Schema.safeParse(body);
     if (!parsed.success) {

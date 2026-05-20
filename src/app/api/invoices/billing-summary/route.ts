@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 export const dynamic = "force-dynamic";
 
@@ -100,7 +100,7 @@ export async function GET(_req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = getServiceClient() as any;
+    const db = await createTenantBoundSupabaseClient({ tenantId }) as any;
     const now = new Date();
     const today = toDateStr(now);
 

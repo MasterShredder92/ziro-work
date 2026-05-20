@@ -3,7 +3,7 @@
 // Does NOT enroll — status = trial. Director converts to active when they sign up.
 
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, badRequest, serverError, notFound } from "@/lib/http";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { captureError } from "@/lib/errorCapture";
@@ -16,8 +16,8 @@ export async function POST(
   const { id: leadId } = await params;
   if (!leadId) return badRequest("Missing lead id");
 
-  const supabase = getServiceClient();
   const tenantId = DEFAULT_TENANT_ID;
+  const supabase = await createTenantBoundSupabaseClient({ tenantId });
 
   // 1. Load the lead
   const { data: lead, error: leadErr } = await supabase

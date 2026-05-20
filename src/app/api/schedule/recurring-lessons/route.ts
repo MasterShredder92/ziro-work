@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient();
 
   const { data, error } = await supabase
     .from("recurring_lessons")

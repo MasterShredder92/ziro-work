@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 const SQUARE_API_BASE = "https://connect.squareup.com/v2";
 
@@ -61,6 +62,7 @@ async function fetchTeamMember(token: string, memberId: string) {
 }
 
 export async function POST(req: NextRequest) {
+  assertServiceRoleAllowed("Square webhook — no caller session, Square-Signature-based auth");
   const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 

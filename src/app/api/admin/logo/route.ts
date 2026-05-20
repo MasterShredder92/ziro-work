@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { resolveContext, requireRole } from "../_context";
 import { handleError } from "../_handle";
 
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   try {
+    assertServiceRoleAllowed("Storage upload for tenant assets — service-role required for storage admin bypass");
     const { session, tenantId } = await resolveContext(req);
     requireRole(session, "director");
 

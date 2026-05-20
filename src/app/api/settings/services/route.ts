@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -18,8 +18,8 @@ function tenantId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const db = getServiceClient();
   const tid = tenantId(req);
+  const db = await createTenantBoundSupabaseClient({ tenantId: tid });
 
   const { data, error } = await db
     .from("services_catalog")
@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const db = getServiceClient();
   const tid = tenantId(req);
+  const db = await createTenantBoundSupabaseClient({ tenantId: tid });
 
   const { data, error } = await db
     .from("services_catalog")

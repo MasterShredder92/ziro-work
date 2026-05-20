@@ -11,6 +11,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +49,7 @@ async function squarePost(path: string, token: string, payload: unknown): Promis
 }
 
 export async function GET(req: NextRequest) {
+  assertServiceRoleAllowed("Internal Square audit — read-only diagnostic, no user session");
   // Simple internal auth check — require a secret header
   const internalKey = req.headers.get("x-internal-key");
   if (internalKey !== process.env.INTERNAL_AUDIT_KEY && internalKey !== "ziro-audit-2026") {

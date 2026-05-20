@@ -1,6 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { type SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 type GlobalWithCache = typeof globalThis & {
   __ziro_data_tenant_clients?: Map<string, SupabaseClient>;
@@ -44,12 +45,17 @@ export function tenantClient(tenantId: string): SupabaseClient {
 }
 
 export function clientFor(tenantId: string | null | undefined): SupabaseClient {
-  if (typeof window === "undefined") return getServiceClient();
+  if (typeof window === "undefined") {
+    // Phase D: convert to async createTenantBoundSupabaseClient when data-layer callers are refactored
+    assertServiceRoleAllowed("lib/data clientFor() server path — sync data layer; Phase D async refactor pending");
+    return getServiceClient();
+  }
   if (tenantId && tenantId.trim().length > 0) return tenantClient(tenantId);
   return getServiceClient();
 }
 
 export function serviceClient(): SupabaseClient {
+  assertServiceRoleAllowed("lib/data serviceClient() — explicit service-role call in data layer");
   return getServiceClient();
 }
 

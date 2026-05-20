@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { requirePermission } from "@/lib/auth/guards";
 import { assertLocationAllowed, resolveUserLocationAccess } from "@/lib/auth/locationAccess";
 import { logStudentScheduleActivity } from "@/lib/schedule/studentActivityLog";
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requirePermission("schedule.write")();
     const tenantId = session.tenantId;
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const body = await req.json();
 
     const { block_id, block_date, student_id, reason, scope } = body as {

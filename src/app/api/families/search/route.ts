@@ -5,7 +5,7 @@
  * primary_location_id and rate_tier so the modal can auto-fill location + price.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = getServiceClient() as any;
+    const db = await createTenantBoundSupabaseClient({ tenantId }) as any;
     const safe = q.replace(/[%,]/g, " ");
     const pattern = `%${safe}%`;
 

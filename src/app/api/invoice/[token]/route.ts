@@ -6,6 +6,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  assertServiceRoleAllowed("Public invoice view — no auth, token-gated read-only endpoint");
   const { token } = await params;
   if (!token) return NextResponse.json({ error: "Token required" }, { status: 400 });
 

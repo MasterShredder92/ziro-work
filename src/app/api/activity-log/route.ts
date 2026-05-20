@@ -3,7 +3,7 @@
  * GET ?familyId= — CRM family timeline: family + linked students' activity (crm.read).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 import { resolveCRMContext } from "@/app/api/crm/_context";
 
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   try {
     const { tenantId } = resolved.context;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = getServiceClient() as any;
+    const db = await createTenantBoundSupabaseClient({ tenantId }) as any;
 
     const { data: students, error: stErr } = await db
       .from("students")
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = getServiceClient() as any;
+    const db = await createTenantBoundSupabaseClient({ tenantId }) as any;
 
     const body = await req.json() as {
       entity_type: string;

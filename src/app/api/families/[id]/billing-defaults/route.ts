@@ -12,7 +12,7 @@
  *   - If rate_tier is missing, unit_price = 0 and `rate_missing: true`.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function GET(
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = getServiceClient() as any;
+    const db = await createTenantBoundSupabaseClient({ tenantId }) as any;
 
     // ── Family ──
     const { data: fam, error: famErr } = await db

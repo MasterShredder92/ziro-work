@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 export const runtime = "nodejs";
@@ -33,8 +33,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const db = getServiceClient();
   const tid = tenantId(req);
+  const db = await createTenantBoundSupabaseClient({ tenantId: tid });
 
   const { data, error } = await db
     .from("services_catalog")
@@ -53,8 +53,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const db = getServiceClient();
   const tid = tenantId(req);
+  const db = await createTenantBoundSupabaseClient({ tenantId: tid });
 
   // Soft delete — set active = false
   const { error } = await db

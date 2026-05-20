@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 
 /**
@@ -245,6 +246,7 @@ async function handleCustomerEvent(db: any, tenantId: string, eventType: string,
 }
 
 export async function POST(req: NextRequest) {
+  assertServiceRoleAllowed("Square webhook — no caller session, HMAC signature-based auth");
   const rawBody = await req.text();
   const signature = req.headers.get("x-square-hmacsha256-signature");
   const signingKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";

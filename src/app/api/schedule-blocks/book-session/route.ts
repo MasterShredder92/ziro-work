@@ -18,7 +18,7 @@
  *   is_first_lesson — boolean
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { requirePermission } from "@/lib/auth/guards";
 
 export const runtime = "nodejs";
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   const session = await requirePermission("schedule.write")();
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId: session.tenantId });
 
   const { data, error } = await supabase.rpc("book_session", {
     p_tenant_id:       session.tenantId,

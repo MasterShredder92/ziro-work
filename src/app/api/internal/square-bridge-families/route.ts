@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated";
 import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 import { resolveSquareCustomer } from "@/lib/billing/squareCustomerResolver";
 
@@ -22,6 +23,7 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  assertServiceRoleAllowed("Internal Square repair tool — no user session, admin-only bulk repair");
   // Auth: require x-internal-key header matching INTERNAL_API_KEY env var.
   // If env var is unset, refuse the call entirely (fail-closed).
   const expectedKey = process.env.INTERNAL_API_KEY;
