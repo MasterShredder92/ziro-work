@@ -21,7 +21,7 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Service-role guard
+      - name: Service-role guard (src/app/api/)
         run: |
           violations=$(grep -rl "getServiceClient" src/app/api/ | while read -r f; do
             grep -q "assertServiceRoleAllowed" "$f" || echo "$f"
@@ -31,7 +31,31 @@ jobs:
             echo "$violations"
             exit 1
           fi
-          echo "Service-role guard check passed."
+          echo "Service-role guard (src/app/api/) passed."
+
+      - name: Service-role guard (lib/data/)
+        run: |
+          violations=$(grep -rl "getServiceClient" lib/data/ 2>/dev/null | while read -r f; do
+            grep -q "assertServiceRoleAllowed" "$f" || echo "$f"
+          done)
+          if [ -n "$violations" ]; then
+            echo "ERROR: These files use getServiceClient() without assertServiceRoleAllowed():"
+            echo "$violations"
+            exit 1
+          fi
+          echo "Service-role guard (lib/data/) passed."
+
+      - name: Service-role guard (src/lib/)
+        run: |
+          violations=$(grep -rl "getServiceClient" src/lib/ | grep -v "src/lib/supabase.ts" | while read -r f; do
+            grep -q "assertServiceRoleAllowed" "$f" || echo "$f"
+          done)
+          if [ -n "$violations" ]; then
+            echo "ERROR: These files use getServiceClient() without assertServiceRoleAllowed():"
+            echo "$violations"
+            exit 1
+          fi
+          echo "Service-role guard (src/lib/) passed."
 
       - name: Lint
         run: npm run lint
