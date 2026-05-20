@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 
@@ -37,7 +37,7 @@ function parseYmd(s: string): Date {
 export async function GET(req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const url = new URL(req.url);
     const locationId = url.searchParams.get("locationId")?.trim() || null;
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export async function DELETE(
 ) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const { id } = await params;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,7 +34,7 @@ export async function PATCH(
 ) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const { id } = await params;
     const body = await req.json();
 

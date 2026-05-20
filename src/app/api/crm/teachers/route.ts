@@ -7,6 +7,7 @@ import {
 } from "@data/teachers";
 import { badRequest, created, ok, readJson, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../_context";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,8 +32,7 @@ export async function GET(req: NextRequest) {
     // Optionally enrich each teacher with their teacher_locations rows so the UI
     // can filter dropdowns by location without an N+1 fetch.
     if (url.searchParams.get("include_locations") === "true" && data.length > 0) {
-      const { getServiceClient } = await import("@/lib/supabase");
-      const db = getServiceClient();
+      const db = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
       const ids = data.map((t: { id: string }) => t.id);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: tlRows } = await (db as any)
@@ -84,12 +84,14 @@ export async function POST(req: NextRequest) {
 
     const { first_name, last_name, ...rest } = parsed.data;
 
-    const row = await createTeacher(resolved.context.tenantId, {
+    const payload: Parameters<typeof createTeacher>[1] = {
       first_name,
       last_name,
       instruments: rest.instruments ?? [],
       ...rest,
-    } as any);
+    };
+
+    const row = await createTeacher(resolved.context.tenantId, payload);
     
     return created({ data: row });
   } catch (err) {

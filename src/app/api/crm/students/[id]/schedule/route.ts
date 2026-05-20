@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, notFound, serverError, badRequest } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: studentId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     // Validate student exists and belongs to this tenant
     const { data: student, error: studentError } = await supabase
@@ -120,7 +120,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       new Set((blocks ?? []).map((b) => b.teacher_id).filter(Boolean))
     ) as string[];
 
-    let teacherMap: Record<string, { display_name: string | null; first_name: string | null; last_name: string | null }> = {};
+    const teacherMap: Record<string, { display_name: string | null; first_name: string | null; last_name: string | null }> = {};
     if (teacherIds.length > 0) {
       const { data: teachers } = await supabase
         .from("teachers")
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       new Set((blocks ?? []).map((b) => b.location_id).filter(Boolean))
     ) as string[];
 
-    let locationMap: Record<string, { name: string; color: string | null }> = {};
+    const locationMap: Record<string, { name: string; color: string | null }> = {};
     if (locationIds.length > 0) {
       const { data: locations } = await supabase
         .from("locations")

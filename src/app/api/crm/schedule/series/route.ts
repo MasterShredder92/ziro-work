@@ -23,7 +23,7 @@
 import { NextRequest } from "next/server";
 import { ok, badRequest, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../_context";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { tenantId } = resolved.context;
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
   // Compute day_of_week from start_date
   const startD = new Date((start_date as string) + "T00:00:00");

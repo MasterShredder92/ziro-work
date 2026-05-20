@@ -1,5 +1,4 @@
-import { type NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 
@@ -19,10 +18,10 @@ export type LocationRevenue = {
   collectionRate: number; // 0–100
 };
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
 
     const now = new Date();
     const mtdStart = new Date(now.getFullYear(), now.getMonth(), 1)

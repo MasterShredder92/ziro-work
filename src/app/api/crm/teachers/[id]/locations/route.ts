@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { badRequest, ok, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 export const runtime = "nodejs";
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   if ("response" in resolved) return resolved.response;
   try {
     const { id: teacherId } = await ctx.params;
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
     const { data: tlRows, error: tlError } = await db
       .from("teacher_locations")
       .select("id, location_id, is_regular, can_sub, created_at")
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
       return badRequest("INVALID_BODY");
     }
     if (!body?.location_id) return badRequest("MISSING_LOCATION_ID");
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
     const { data: existing } = await db
       .from("teacher_locations")
       .select("id")
@@ -121,7 +121,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       return badRequest("INVALID_BODY");
     }
     if (!body?.location_id) return badRequest("MISSING_LOCATION_ID");
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
     const patch: Record<string, unknown> = {};
     if (body.is_regular !== undefined) patch.is_regular = body.is_regular;
     if (body.can_sub !== undefined) patch.can_sub = body.can_sub;

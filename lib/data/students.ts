@@ -112,12 +112,12 @@ export async function getStudentById(
 
 export async function createStudent(
   tenantId: string,
-  input: Omit<StudentInsert, "tenant_id">,
+  input: Record<string, unknown> | Omit<StudentInsert, "tenant_id">,
 ): Promise<Student> {
   const supabase = clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
-    .insert({ ...input, tenant_id: tenantId })
+    .insert({ ...input, tenant_id: tenantId } as never)
     .select("*")
     .single();
   if (error) throw error;
@@ -127,13 +127,13 @@ export async function createStudent(
 export async function updateStudent(
   id: string,
   tenantId: string,
-  input: StudentUpdate,
+  input: Record<string, unknown> | StudentUpdate,
 ): Promise<Student> {
   const supabase = clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
-    .update(patch)
+    .update(patch as never)
     .eq("tenant_id", tenantId)
     .eq("id", id)
     .select("*")

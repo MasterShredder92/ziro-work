@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const url = new URL(req.url);
     const month = url.searchParams.get("month"); // YYYY-MM
 
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const body = await req.json();
 
     const row = {

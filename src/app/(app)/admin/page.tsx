@@ -347,7 +347,7 @@ export default async function AdminDashboardPage({
           {
             id: "room",
             header: "Room",
-            accessor: (b) => asString(b.room ?? b.room_id),
+            accessor: (b) => asString(b.room_id),
           },
         ]}
         rows={upcomingBlocks(schedule)}

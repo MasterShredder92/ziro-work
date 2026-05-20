@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 
@@ -45,7 +45,7 @@ function contractComplete(row: {
 export async function GET(req: NextRequest) {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
     const url = new URL(req.url);
     const locationId = url.searchParams.get("locationId")?.trim() || null;
 
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
     const roomRows = roomsRes.data ?? [];
     const roomIds = roomRows.map((r) => String(r.id)).filter(Boolean);
 
-    let staffedRoomIds = new Set<string>();
+    const staffedRoomIds = new Set<string>();
     if (roomIds.length > 0) {
       const { data: assignRows, error: arErr } = await db
         .from("teacher_room_assignments")

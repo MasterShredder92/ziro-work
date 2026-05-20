@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, notFound, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: studentId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     const url = new URL(req.url);
     const filterType = url.searchParams.get("event_type") as EventType | null;
@@ -77,6 +77,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     const events: TimelineEvent[] = [];
 
     // ── 1. Attendance (session_log) ──────────────────────────────
+    assertNoBillingQuery("session_log");
     if (!filterType || filterType === "attendance") {
       const { data: sessions, error: sessErr } = await supabase
         .from("session_log")
@@ -109,6 +110,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     }
 
     // ── 2. Notes (student_notes) ────────────────────────────────
+    assertNoBillingQuery("student_notes");
     if (!filterType || filterType === "note") {
       const { data: notes, error: notesErr } = await supabase
         .from("student_notes")
@@ -135,6 +137,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     }
 
     // ── 3. Uploads (student_files) ─────────────────────────────
+    assertNoBillingQuery("student_files");
     if (!filterType || filterType === "upload") {
       const { data: files, error: filesErr } = await supabase
         .from("student_files")
@@ -159,6 +162,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     }
 
     // ── 4. System updates (student_events) ──────────────────────
+    assertNoBillingQuery("student_events");
     if (!filterType || filterType === "system_update") {
       const { data: sysEvents, error: sysErr } = await supabase
         .from("student_events")

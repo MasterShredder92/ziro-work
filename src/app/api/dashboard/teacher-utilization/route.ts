@@ -1,5 +1,5 @@
-import { getServiceClient } from "@/lib/supabase";
-import { ok, serverError } from "@/lib/http";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
+import { serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 import { NextResponse } from "next/server";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)

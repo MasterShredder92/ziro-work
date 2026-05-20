@@ -167,7 +167,7 @@ export async function promoteLeadToStudent(
     return { leadId: lead.id, studentId: lead.converted_student_id };
   }
 
-  const studentInput: Omit<StudentInsert, "tenant_id"> = {
+  const studentInput: Record<string, unknown> = {
     first_name: lead.first_name || "Unknown",
     last_name: lead.last_name ?? "",
     email: lead.email ?? null,

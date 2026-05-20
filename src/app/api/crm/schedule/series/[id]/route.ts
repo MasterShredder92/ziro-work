@@ -28,7 +28,7 @@
 import { NextRequest } from "next/server";
 import { ok, badRequest, notFound, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { logAudit } from "@/lib/audit/log";
 
 export const runtime = "nodejs";
@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
 
   const { tenantId } = resolved.context;
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
   // Verify series exists and belongs to this tenant
   const { data: series, error: seriesErr } = await supabase
@@ -217,7 +217,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   const { id: seriesId } = await ctx.params;
   const { tenantId } = resolved.context;
-  const supabase = getServiceClient();
+  const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
   const { data: series, error } = await supabase
     .from("schedule_series")

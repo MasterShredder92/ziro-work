@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { ok, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     const startDate = url.searchParams.get("start") ?? defaultStart;
     const endDate = url.searchParams.get("end") ?? defaultEnd;
 
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     // Tally by location — only checked-in blocks with teacher_tally = true
     const { data: rows, error } = await supabase

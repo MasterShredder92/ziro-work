@@ -1,5 +1,4 @@
-import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 import { getBrandingProfile } from "@/lib/branding";
@@ -29,10 +28,10 @@ function toDateStr(d: Date): string {
  * - projectedMonthlyCents: from v_family_billing (pricing_tiers SSOT)
  * - totalInvoicedCents: sum of requested_amount for MTD rows
  */
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
 
     const now = new Date();
     const today = toDateStr(now);

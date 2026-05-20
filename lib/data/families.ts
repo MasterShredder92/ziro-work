@@ -118,12 +118,12 @@ export async function listFamilies(
 
 export async function createFamily(
   tenantId: string,
-  input: Omit<FamilyInsert, "tenant_id">,
+  input: Record<string, unknown> | Omit<FamilyInsert, "tenant_id">,
 ): Promise<FamilyRow> {
   const supabase = clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
-    .insert({ ...input, tenant_id: tenantId })
+    .insert({ ...input, tenant_id: tenantId } as never)
     .select("*")
     .single();
   if (error) throw error;
@@ -146,13 +146,13 @@ export async function deleteFamily(
 export async function updateFamily(
   id: string,
   tenantId: string,
-  input: FamilyUpdate,
+  input: Record<string, unknown> | FamilyUpdate,
 ): Promise<FamilyRow> {
   const supabase = clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
-    .update(patch)
+    .update(patch as never)
     .eq("tenant_id", tenantId)
     .eq("id", id)
     .select("*")

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
-import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
+import { resolveCRMContext } from "../../../_context";
 
 /**
  * GET  /api/crm/teachers/[id]/w9  — fetch latest W9 for teacher
@@ -11,12 +11,18 @@ import { DEFAULT_TENANT_ID } from "@/lib/defaultTenantId";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: RouteContext
 ) {
+  const resolved = await resolveCRMContext(req, {
+    permissions: ["crm.read"],
+    minRole: "director",
+  });
+  if ("response" in resolved) return resolved.response;
+
   const { id } = await ctx.params;
-  const db = getServiceClient();
-  const tenantId = DEFAULT_TENANT_ID;
+  const tenantId = resolved.context.tenantId;
+  const db = await createTenantBoundSupabaseClient({ tenantId });
 
   const { data, error } = await (db as any)
     .from("teacher_w9")
@@ -41,9 +47,15 @@ export async function POST(
   req: NextRequest,
   ctx: RouteContext
 ) {
+  const resolved = await resolveCRMContext(req, {
+    permissions: ["crm.write"],
+    minRole: "director",
+  });
+  if ("response" in resolved) return resolved.response;
+
   const { id } = await ctx.params;
-  const db = getServiceClient();
-  const tenantId = DEFAULT_TENANT_ID;
+  const tenantId = resolved.context.tenantId;
+  const db = await createTenantBoundSupabaseClient({ tenantId });
 
   let body: Record<string, any>;
   try {

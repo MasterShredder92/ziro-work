@@ -9,7 +9,8 @@
  * Both shapes are normalized to the SquareInvoiceRow contract the UI expects.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { resolveCRMContext } from "../../../_context";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolved = await resolveCRMContext(req, {
+    permissions: ["crm.read"],
+    minRole: "teacher",
+  });
+  if ("response" in resolved) return resolved.response;
+
   try {
     const { id: familyId } = await params;
     if (!familyId) {
@@ -44,7 +51,7 @@ export async function GET(
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = getServiceClient() as any;
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId }) as any;
 
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);

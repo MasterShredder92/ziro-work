@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, notFound, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: familyId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     const { data: famData, error: famErr } = await supabase
       .from("families")

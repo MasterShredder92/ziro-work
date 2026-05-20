@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, created, notFound, serverError, badRequest } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: studentId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     // Verify student belongs to this tenant
     const { data: student, error: studentError } = await supabase
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: studentId } = await ctx.params;
     const { tenantId, session } = resolved.context;
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     // Verify student belongs to this tenant
     const { data: student, error: studentError } = await supabase
@@ -150,7 +150,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: studentId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
     const { searchParams } = new URL(req.url);
     const fileId = searchParams.get("fileId");
     if (!fileId) return badRequest("fileId is required");

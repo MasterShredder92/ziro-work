@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { noContent, notFound, serverError } from "@/lib/http";
 import { resolveCRMContext } from "../../../../_context";
 
@@ -20,7 +20,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   if ("response" in resolved) return resolved.response;
   try {
     const { id: teacherId, locationId } = await ctx.params;
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
     const { data, error } = await db
       .from("teacher_locations")
       .delete()

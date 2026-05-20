@@ -3,75 +3,87 @@ import type { Database, Json } from "./supabase";
 export type { Database, Json };
 
 type T = Database["public"]["Tables"];
+type Table<Name extends string> = Name extends keyof T
+  ? T[Name]
+  :     {
+      // Some legacy Ziro/AI tables are no longer present in the generated Lean DB type contract.
+      // Keep aliases compile-safe without weakening real generated table typings.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Row: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Insert: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Update: any;
+    };
 
-export type Lead = T["leads"]["Row"];
-export type LeadInsert = T["leads"]["Insert"];
-export type LeadUpdate = T["leads"]["Update"];
+export type Lead = Table<"leads">["Row"];
+export type LeadInsert = Table<"leads">["Insert"];
+export type LeadUpdate = Table<"leads">["Update"];
 
-export type IntakeSubmission = T["intake_submissions"]["Row"];
-export type IntakeSubmissionInsert = T["intake_submissions"]["Insert"];
-export type IntakeSubmissionUpdate = T["intake_submissions"]["Update"];
+export type IntakeSubmission = Table<"intake_submissions">["Row"];
+export type IntakeSubmissionInsert = Table<"intake_submissions">["Insert"];
+export type IntakeSubmissionUpdate = Table<"intake_submissions">["Update"];
 
-export type StudentFollowup = T["student_followups"]["Row"];
-export type StudentFollowupInsert = T["student_followups"]["Insert"];
-export type StudentFollowupUpdate = T["student_followups"]["Update"];
+export type StudentFollowup = Table<"student_followups">["Row"];
+export type StudentFollowupInsert = Table<"student_followups">["Insert"];
+export type StudentFollowupUpdate = Table<"student_followups">["Update"];
 
-export type ScheduleBlock = T["schedule_blocks"]["Row"];
-export type ScheduleBlockInsert = T["schedule_blocks"]["Insert"];
-export type ScheduleBlockUpdate = T["schedule_blocks"]["Update"];
+export type ScheduleBlock = Table<"schedule_blocks">["Row"];
+export type ScheduleBlockInsert = Table<"schedule_blocks">["Insert"];
+export type ScheduleBlockUpdate = Table<"schedule_blocks">["Update"];
 
-export type SessionLog = T["session_log"]["Row"];
-export type SessionLogInsert = T["session_log"]["Insert"];
-export type SessionLogUpdate = T["session_log"]["Update"];
+export type SessionLog = Table<"session_log">["Row"];
+export type SessionLogInsert = Table<"session_log">["Insert"];
+export type SessionLogUpdate = Table<"session_log">["Update"];
 
-export type Family = T["families"]["Row"];
-export type FamilyInsert = T["families"]["Insert"];
-export type FamilyUpdate = T["families"]["Update"];
+export type Family = Table<"families">["Row"];
+export type FamilyInsert = Table<"families">["Insert"];
+export type FamilyUpdate = Table<"families">["Update"];
 
-export type Student = T["students"]["Row"];
-export type StudentInsert = T["students"]["Insert"];
-export type StudentUpdate = T["students"]["Update"];
+export type Student = Table<"students">["Row"];
+export type StudentInsert = Table<"students">["Insert"];
+export type StudentUpdate = Table<"students">["Update"];
 
-export type Task = T["tasks"]["Row"];
-export type TaskInsert = T["tasks"]["Insert"];
-export type TaskUpdate = T["tasks"]["Update"];
+export type Task = Table<"tasks">["Row"];
+export type TaskInsert = Table<"tasks">["Insert"];
+export type TaskUpdate = Table<"tasks">["Update"];
 
-export type AIConversation = T["ai_conversations"]["Row"];
-export type AIConversationInsert = T["ai_conversations"]["Insert"];
-export type AIConversationUpdate = T["ai_conversations"]["Update"];
+export type AIConversation = Table<"ai_conversations">["Row"];
+export type AIConversationInsert = Table<"ai_conversations">["Insert"];
+export type AIConversationUpdate = Table<"ai_conversations">["Update"];
 
-export type AIMessage = T["ai_messages"]["Row"];
-export type AIMessageInsert = T["ai_messages"]["Insert"];
-export type AIMessageUpdate = T["ai_messages"]["Update"];
+export type AIMessage = Table<"ai_messages">["Row"];
+export type AIMessageInsert = Table<"ai_messages">["Insert"];
+export type AIMessageUpdate = Table<"ai_messages">["Update"];
 
-export type AIActionLog = T["ai_action_logs"]["Row"];
-export type AIActionLogInsert = T["ai_action_logs"]["Insert"];
+export type AIActionLog = Table<"ai_action_logs">["Row"];
+export type AIActionLogInsert = Table<"ai_action_logs">["Insert"];
 
-export type Teacher = T["teachers"]["Row"];
-export type TeacherInsert = T["teachers"]["Insert"];
-export type TeacherUpdate = T["teachers"]["Update"];
+export type Teacher = Table<"teachers">["Row"];
+export type TeacherInsert = Table<"teachers">["Insert"];
+export type TeacherUpdate = Table<"teachers">["Update"];
 
-export type Room = T["rooms"]["Row"];
-export type RoomInsert = T["rooms"]["Insert"];
-export type RoomUpdate = T["rooms"]["Update"];
+export type Room = Table<"rooms">["Row"];
+export type RoomInsert = Table<"rooms">["Insert"];
+export type RoomUpdate = Table<"rooms">["Update"];
 
-export type Location = T["locations"]["Row"];
-export type LocationInsert = T["locations"]["Insert"];
-export type LocationUpdate = T["locations"]["Update"];
+export type Location = Table<"locations">["Row"];
+export type LocationInsert = Table<"locations">["Insert"];
+export type LocationUpdate = Table<"locations">["Update"];
 
-export type Tenant = T["tenants"]["Row"];
+export type Tenant = Table<"tenants">["Row"];
 
-export type ZiroAgent = T["ziro_agents"]["Row"];
-export type ZiroAgentInsert = T["ziro_agents"]["Insert"];
-export type ZiroSkill = T["ziro_skills"]["Row"];
-export type ZiroAgentSkill = T["ziro_agent_skills"]["Row"];
-export type ZiroConfig = T["ziro_config"]["Row"];
-export type ZiroPageIntelligenceBinding = T["ziro_page_intelligence_bindings"]["Row"];
-export type ZiroPageIntelligenceBindingInsert = T["ziro_page_intelligence_bindings"]["Insert"];
+export type ZiroAgent = Table<"ziro_agents">["Row"];
+export type ZiroAgentInsert = Table<"ziro_agents">["Insert"];
+export type ZiroSkill = Table<"ziro_skills">["Row"];
+export type ZiroAgentSkill = Table<"ziro_agent_skills">["Row"];
+export type ZiroConfig = Table<"ziro_config">["Row"];
+export type ZiroPageIntelligenceBinding = Table<"ziro_page_intelligence_bindings">["Row"];
+export type ZiroPageIntelligenceBindingInsert = Table<"ziro_page_intelligence_bindings">["Insert"];
 
-export type SquareInvoice = T["square_invoices"]["Row"];
-export type SquarePayment = T["square_payments_fact"]["Row"];
-export type SquareRefund = T["square_refunds_fact"]["Row"];
+export type SquareInvoice = Table<"square_invoices">["Row"];
+export type SquarePayment = Table<"square_payments_fact">["Row"];
+export type SquareRefund = Table<"square_refunds_fact">["Row"];
 
 export type LeadStage = Database["public"]["Enums"]["lead_stage"];
 export type BlockType = Database["public"]["Enums"]["block_type"];

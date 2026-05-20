@@ -1,5 +1,5 @@
-import { getServiceClient } from "@/lib/supabase";
-import { ok, serverError } from "@/lib/http";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
+import { serverError } from "@/lib/http";
 import { getCRMTenantId } from "@/app/(app)/crm/_tenant";
 import { NextResponse } from "next/server";
 
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const tenantId = await getCRMTenantId();
-    const db = getServiceClient();
+    const db = await createTenantBoundSupabaseClient({ tenantId });
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -105,7 +105,7 @@ export async function GET() {
     // ── Family names for overdue invoices ─────────────────────────────
     const overdueInvoices = invoicesResult.data ?? [];
     const familyIds = [...new Set(overdueInvoices.map((i) => i.family_id).filter(Boolean))];
-    let familyNames = new Map<string, string>();
+    const familyNames = new Map<string, string>();
     if (familyIds.length > 0) {
       const { data: families } = await db
         .from("families")

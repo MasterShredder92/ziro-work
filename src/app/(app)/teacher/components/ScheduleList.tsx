@@ -26,7 +26,7 @@ export function ScheduleList({
         startTime: b.start_time,
         endTime: b.end_time,
         status: b.status,
-        room: b.room,
+        room: b.room_id,
         isVirtual: b.is_virtual,
         blockType: b.checked_in ? `${b.block_type ?? "lesson"} · checked in` : b.block_type ?? "lesson",
       }))}

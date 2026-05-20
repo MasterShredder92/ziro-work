@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 import { ok, serverError, badRequest } from "@/lib/http";
 import { resolveCRMContext } from "../../../_context";
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const supabase = getServiceClient();
+    const supabase = await createTenantBoundSupabaseClient({ tenantId: resolved.context.tenantId });
 
     // Upload to storage (upsert = replace existing)
     const { error: uploadError } = await supabase.storage
