@@ -48,7 +48,7 @@
 
 ## 2026-05-19 — Phase 4 Wave 2: CRM & Operational Tier RLS Hardening (APPLIED TO LIVE)
 
-**Commit:** pending
+**Commit:** 707bb5d
 
 **Pre-flight audit findings:**
 1. 5 tables had RLS enabled but zero policies — needed new `tenant_isolation` policies
