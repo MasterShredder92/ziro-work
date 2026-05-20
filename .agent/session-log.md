@@ -45,3 +45,30 @@
 - All 22 confirmed via `pg_policies` post-apply
 
 **Architecture note:** All server-side billing access uses `getServiceClient()` (service_role, RLS bypass). Phase 4 policies protect future authenticated-client or direct PostgREST access paths.
+
+## 2026-05-19 — Phase 4 Wave 2: CRM & Operational Tier RLS Hardening (APPLIED TO LIVE)
+
+**Commit:** pending
+
+**Pre-flight audit findings:**
+1. 5 tables had RLS enabled but zero policies — needed new `tenant_isolation` policies
+2. 5 tables had existing `tenant_access` policies (families, students, teachers, locations, schedule_blocks) using `current_tenant_id()` function (profiles-based lookup via auth.uid()) — preserved as-is per guardrail
+3. `current_tenant_id()` function body: `SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1` — valid isolation pattern, different from session-variable but not contradictory
+4. `contacts` table has no `tenant_id` column — platform-level lead table; skipped
+5. `family_members`, `lesson_rates`, `studios` tables do not exist in public schema — skipped
+6. `tenants` table uses `id` (text) not `tenant_id` as the isolation key — special-cased with `USING (id = current_setting('app.tenant_id'::text, true))`
+
+**Applied to live DB (gngbyydqjouxkoprzzil):**
+- `notes` (text tenant_id): `USING (tenant_id = current_setting('app.tenant_id'::text, true))` ✓
+- `activity_log` (uuid tenant_id): `USING (tenant_id = current_setting('app.tenant_id'::text, true)::uuid)` ✓
+- `recurring_lessons` (uuid tenant_id): `USING (tenant_id = current_setting('app.tenant_id'::text, true)::uuid)` ✓
+- `session_log` (uuid tenant_id): `USING (tenant_id = current_setting('app.tenant_id'::text, true)::uuid)` ✓
+- `tenants` (id :: text): `USING (id = current_setting('app.tenant_id'::text, true))` ✓
+- All 5 confirmed via `pg_policies` post-apply
+
+**Preserved (no touch):**
+- `families`, `students`, `teachers` — existing `tenant_access` (text, current_tenant_id()::text)
+- `locations` — existing `tenant_access` (uuid, current_tenant_id()) + public SELECT read
+- `schedule_blocks` — existing `tenant_access` (uuid, current_tenant_id())
+
+**schema.sql note:** Contains only CREATE TABLE definitions; RLS policies are not tracked there. Wave 2 added no table structure changes — schema.sql remains accurate. Migration file is the source of truth for policy changes.
