@@ -11,7 +11,7 @@ import { useFacadeQuery } from "./useFacadeQuery";
 export function useStudentLifecycle(params: ListStudentLifecycleParams) {
   const query = useCallback(
     async (): Promise<FacadeResult<ListResult<StudentLifecycleEntry>>> => {
-      const client = getSupabaseTenant(params.tenantId);
+      const client = await getSupabaseTenant(params.tenantId);
       return listStudentLifecycle(client, params);
     },
     [params]

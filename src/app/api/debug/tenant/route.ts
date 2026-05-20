@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 async function countFor(
-  supabase: ReturnType<typeof getSupabaseTenant>,
+  supabase: Awaited<ReturnType<typeof getSupabaseTenant>>,
   table: string,
   tenantId: string,
 ): Promise<{ count: number | null; error: string | null }> {
@@ -22,7 +22,7 @@ async function countFor(
 
 export async function GET() {
   const tenantId = DEFAULT_TENANT_ID;
-  const supabase = getSupabaseTenant(tenantId);
+  const supabase = await getSupabaseTenant(tenantId);
 
   const [students, teachers, families, enrollments, schedules] = await Promise.all([
     countFor(supabase, "students", tenantId),

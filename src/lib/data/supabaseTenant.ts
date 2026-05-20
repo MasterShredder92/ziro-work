@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { type SupabaseClient } from "@supabase/supabase-js";
-import { getServiceClient } from "@/lib/supabase";
+import { createTenantBoundSupabaseClient } from "@/lib/supabaseAuthenticated";
 
 type GlobalWithCache = typeof globalThis & {
   __ziro_tenant_clients?: Map<string, SupabaseClient>;
@@ -10,9 +10,9 @@ const g = globalThis as GlobalWithCache;
 const tenantClients: Map<string, SupabaseClient> =
   g.__ziro_tenant_clients ?? (g.__ziro_tenant_clients = new Map());
 
-export function getSupabaseTenant(tenantId: string): SupabaseClient {
+export async function getSupabaseTenant(tenantId: string): Promise<SupabaseClient> {
   if (typeof window === "undefined") {
-    return getServiceClient();
+    return createTenantBoundSupabaseClient({ tenantId });
   }
   const cached = tenantClients.get(tenantId);
   if (cached) return cached;

@@ -12,7 +12,7 @@ import { getSupabaseTenant } from "@/lib/data/supabaseTenant";
  */
 export async function isTenantOnboarded(tenantId: string): Promise<boolean> {
   try {
-    const supabase = getSupabaseTenant(tenantId);
+    const supabase = await getSupabaseTenant(tenantId);
 
     const studentCount = await supabase
       .from("students")

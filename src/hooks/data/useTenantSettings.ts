@@ -6,7 +6,7 @@ import { useFacadeQuery } from "./useFacadeQuery";
 
 export function useTenantSettings(tenantId: string) {
   const query = useCallback(async (): Promise<FacadeResult<TenantSettingsRow | null>> => {
-    const client = getSupabaseTenant(tenantId);
+    const client = await getSupabaseTenant(tenantId);
     return getTenantSettingsByTenantId(client, tenantId);
   }, [tenantId]);
 

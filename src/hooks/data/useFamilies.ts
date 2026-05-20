@@ -11,7 +11,7 @@ export function useFamilies(
   options?: { enabled?: boolean },
 ) {
   const query = useCallback(async (): Promise<FacadeResult<ListResult<Family>>> => {
-    const client = getSupabaseTenant(params.tenantId);
+    const client = await getSupabaseTenant(params.tenantId);
     return listFamilies(client, params);
   }, [params]);
 

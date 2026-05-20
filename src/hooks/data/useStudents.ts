@@ -10,7 +10,7 @@ export function useStudents(
   options?: { enabled?: boolean },
 ) {
   const query = useCallback(async (): Promise<FacadeResult<ListResult<Student>>> => {
-    const client = getSupabaseTenant(params.tenantId);
+    const client = await getSupabaseTenant(params.tenantId);
     return listStudents(client, params);
   }, [params]);
 

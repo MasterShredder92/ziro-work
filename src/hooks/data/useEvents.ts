@@ -10,7 +10,7 @@ export function useEvents(
   options?: { enabled?: boolean },
 ) {
   const query = useCallback(async (): Promise<FacadeResult<ListResult<EventLog>>> => {
-    const client = getSupabaseTenant(params.tenantId);
+    const client = await getSupabaseTenant(params.tenantId);
     return listEvents(client, params);
   }, [params]);
 

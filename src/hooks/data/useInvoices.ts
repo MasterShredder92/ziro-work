@@ -10,7 +10,7 @@ export function useInvoices(
   options?: { enabled?: boolean }
 ) {
   const query = useCallback(async (): Promise<FacadeResult<ListResult<Invoice>>> => {
-    const client = getSupabaseTenant(params.tenantId);
+    const client = await getSupabaseTenant(params.tenantId);
     return listInvoices(client, params);
   }, [params]);
 
