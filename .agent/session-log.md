@@ -191,3 +191,22 @@ vault_users, vault_products, vault_product_modules, vault_user_products, vault_u
 **Blocked on:** Nothing
 **Next move:** Phase D is complete. Remaining debt: `src/lib/data/supabaseTenant.ts` still uses service-role on server path (same pattern as old `_client.ts`) — candidate for a follow-up pass.
 **Token cost:** Medium
+
+## 2026-05-20 — Phase E: supabaseTenant.ts + CI Guardrail Extension + Digest Refresh (COMPLETE)
+
+**Commits:** bb15658 (supabaseTenant fix), a2d0a5a (CI extension), 0a408f3 (digest)
+
+**Changes:**
+- `src/lib/data/supabaseTenant.ts` — server path changed from `getServiceClient()` to `createTenantBoundSupabaseClient({ tenantId })`; function made async; return type updated to `Promise<SupabaseClient>`; import swapped from `getServiceClient` to `createTenantBoundSupabaseClient`
+- 9 callers updated to `await getSupabaseTenant(...)`: `src/app/api/debug/tenant/route.ts`, `src/lib/onboarding/gate.ts`, and 7 hooks in `src/hooks/data/`
+- `src/app/api/debug/tenant/route.ts:9` — `ReturnType<typeof getSupabaseTenant>` updated to `Awaited<ReturnType<typeof getSupabaseTenant>>`
+- `.github/workflows/ci.yml` — original "Service-role guard" step renamed to cover `src/app/api/`; two new parallel steps added for `lib/data/` and `src/lib/` (excluding `src/lib/supabase.ts` definition file)
+- `.agent/repo-digest.md` — metadata commit updated, Architecture Context and Critical Files updated, Service-Role Status table rewritten to reflect Phase D+E completion
+
+**Tenant isolation status:** Complete. No user-facing server path can reach `getServiceClient()` without `assertServiceRoleAllowed()`. CI guardrail now covers all three key directories.
+
+**Changed:** 12 files
+**Verified:** TSC = 0 errors
+**Blocked on:** Nothing
+**Next move:** Tenant isolation hardening is complete across all phases (4 Waves + B+C + D + E). All user-facing data paths are RLS-bound.
+**Token cost:** Low
