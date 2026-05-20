@@ -119,6 +119,40 @@ vault_users, vault_products, vault_product_modules, vault_user_products, vault_u
 
 **Phase 4 RLS COMPLETE — all tenant data tables hardened across all waves.**
 
+## 2026-05-19 — Phase B+C: Service-Role Eradication + CI Guardrail
+
+**Revenue link:** ZiroWork MRR — tenant isolation hardened end-to-end; service-role bypass eliminated from all user-facing routes.
+
+**Commits:** `9ec963d`
+
+**What was done:**
+- Classified all 38 service-role API routes: 21 CONVERT, 15 LEGITIMATE (2 fewer than estimated)
+- Converted all 21 user-facing routes from `getServiceClient()` to `createTenantBoundSupabaseClient()`:
+  - activity-log, agreements, billing-summary, book-session, cancel-session, auto-checkin
+  - billing-defaults, dashboard/revenue-gaps, families/search, invoices/create
+  - leads/[id]/promote, locations, payroll, recruitment, schedule/availability
+  - schedule/recurring-lessons, settings/services, settings/services/[id]
+  - students/[id]/reports, students/[id]/teacher, studio-map/roster
+- Added `assertServiceRoleAllowed(reason)` to all 15 LEGITIMATE routes (webhooks, public endpoints, internal tools, PDF generation) and to `lib/data/_client.ts` server-side fallback
+- Added CI guardrail step to `.github/workflows/ci.yml`: fails if any `src/app/api/` file uses `getServiceClient()` without `assertServiceRoleAllowed()` in the same file
+- Fixed TSC error: `schedule/availability` had `tenantId` declaration after first use — swapped order
+
+**Verification:**
+- TSC=0 confirmed
+- CI guardrail dry-run passed locally
+- `lib/data/_client.ts` `clientFor()` server-side path documented with Phase D note; async refactor deferred
+
+**Deferred to Phase D (needs Zach approval):**
+- `lib/data/_client.ts` async refactor (80+ data layer callers need updating)
+- Billing/family aggregation → Supabase views/RPCs
+- Supabase types regeneration from live schema
+
+**Failure index match consulted:** No
+**Token cost:** High (large surface area, 38 route conversions)
+**Self-score (1-5):** 5 — all 21 CONVERT done, all 15 LEGITIMATE documented, CI guardrail active, TSC=0
+
+---
+
 ## 2026-05-19 — Phase A: Repo Digest Regeneration + Pre-flight Verification
 
 **Revenue link:** Operational leverage — stale digest was costing orientation tokens on every session.
