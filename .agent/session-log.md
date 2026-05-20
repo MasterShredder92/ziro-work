@@ -118,3 +118,21 @@ vault_users, vault_products, vault_product_modules, vault_user_products, vault_u
 - Zero remaining unhardened base tables with tenant_id: confirmed ✓
 
 **Phase 4 RLS COMPLETE — all tenant data tables hardened across all waves.**
+
+## 2026-05-19 — Phase A: Repo Digest Regeneration + Pre-flight Verification
+
+**Revenue link:** Operational leverage — stale digest was costing orientation tokens on every session.
+
+**Verified (read-only):**
+- `profiles.is_platform_admin` confirmed exists as `boolean` in live DB (`gngbyydqjouxkoprzzil`) ✓
+- Pre-request hook in `20260520020432_tenant_context_pre_request.sql` is safe — `COALESCE(p.is_platform_admin, false)` handles missing/null gracefully ✓
+- Repo digest was stale at commit `d9fc85f` (May 15); regenerated to `83eec1a` (May 20) ✓
+
+**Changed:**
+- `.agent/repo-digest.md` — regenerated manually (Python unavailable in shell); now reflects commit `83eec1a`, includes `supabaseAuthenticated.ts`, all Phase 4 migration files, Architecture Context section, and Service-Role Status table
+
+**Next move:** Phase B — classify 38 remaining service-role API routes and convert ~28 to `createTenantBoundSupabaseClient()`
+
+**Token cost:** Low
+**Failure index match consulted:** No
+**Self-score (1-5):** 4 — digest is current and accurate; Python shell gap noted for future sessions

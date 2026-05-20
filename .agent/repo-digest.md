@@ -8,13 +8,38 @@
 |---|---|
 | Repo | `ziro-work` |
 | Project Type | Next.js / TypeScript web app |
-| Generated | 2026-05-15 20:01:45 UTC |
+| Generated | 2026-05-19 — manual regeneration (Python unavailable in shell) |
 | Git Branch | `main` |
-| Git Commit | `d9fc85f` |
+| Git Commit | `83eec1a` |
+| Supabase Project | `gngbyydqjouxkoprzzil` |
+
+## Staleness Check
+
+Regenerate this digest if:
+- The last 5 commits touched files not listed in Critical Files, or
+- Routes, schema, payment logic, or deployment configuration changed since generation.
 
 ## Startup Rule
 
 Read this digest before opening source files. Use it to choose exact paths for targeted reads. Do not broad-scan the repo unless this digest is missing, stale, or insufficient.
+
+## Architecture Context
+
+**This is a Lean Repo / Smart DB multi-tenant SaaS app.**
+
+| Layer | Canonical Pattern |
+|---|---|
+| Tenant isolation | PostgREST pre-request hook (`public.set_app_tenant_context`) sets `app.tenant_id` on every authenticated request. RLS policies read `current_setting('app.tenant_id', true)`. |
+| User-facing API routes | Use `createTenantBoundSupabaseClient()` from `src/lib/supabaseAuthenticated.ts`. Never `getServiceClient()`. |
+| Service-role exceptions | Webhooks, internal jobs, migrations, repair scripts only. Must call `assertServiceRoleAllowed(reason)` explicitly. |
+| DB read models | Supabase views (`view_family_account_summary`, `view_schedule_blocks_extended`, etc.) — prefer over multi-query app-side aggregation. |
+| DB write models | Supabase RPCs (`book_session`, `enroll_student`) and triggers — prefer over app-side write logic. |
+| RLS status | 95 tables hardened (Phases 4 Waves 1–3). All tenant tables have isolation policies. |
+
+**Key client files:**
+- `src/lib/supabaseAuthenticated.ts` — correct client for all new user-facing server routes
+- `src/lib/supabase.ts` — service-role client; exceptions only
+- `lib/data/_client.ts` — data layer client; `clientFor()` server fallback still uses service-role (known debt, Phase B)
 
 ## Commands
 
@@ -47,106 +72,61 @@ Read this digest before opening source files. Use it to choose exact paths for t
 
 | Path | Purpose |
 |---|---|
-| `.env.example` | Relevant project file. |
-| `CLAUDE.md` | Relevant project file. |
+| `src/lib/supabaseAuthenticated.ts` | **PRIMARY server client** — authenticated RLS-bound Supabase client for user-facing API routes. Use `createTenantBoundSupabaseClient()`. |
+| `src/lib/supabase.ts` | Service-role Supabase client — exceptions only (webhooks, jobs, migrations). |
+| `lib/data/_client.ts` | Data layer client. `clientFor()` server-side fallback still uses service-role — known Phase B debt. |
+| `supabase/migrations/20260520020432_tenant_context_pre_request.sql` | **CRITICAL** — tenant context bridge. Installs `set_app_tenant_context()` pre-request hook and `current_tenant_id()`. |
+| `supabase/migrations/20260520014704_tenant_context_pre_request.sql` | No-op alignment marker for live migration ledger consistency. |
+| `supabase/migrations/20260519170000_phase4_wave3_final_sweep_rls.sql` | Phase 4 Wave 3 — 68 tables hardened. |
+| `supabase/migrations/20260519160000_phase4_wave2_rls_crm_operational_tier.sql` | Phase 4 Wave 2 — 5 CRM tables hardened. |
+| `supabase/migrations/20260519140000_phase4_wave1_rls_financial_tier.sql` | Phase 4 Wave 1 — 22 financial tables hardened. |
+| `supabase/migrations/20260519130000_write_optimization_triggers_rpcs.sql` | Phase 3 — write triggers and RPCs (`book_session`, `enroll_student`). |
+| `supabase/migrations/20260519120000_read_optimization_views.sql` | Phase 2 — read views replacing multi-query aggregation. |
+| `src/lib/types/supabase.ts` | Generated Supabase TypeScript types. Normalized 2026-05-20; not yet regenerated from live schema. |
+| `src/lib/types/entities.ts` | Entity type aliases. Patched at Phase 5 for strict generated types. |
+| `src/lib/security/tenantIsolation.ts` | Tenant isolation helpers. |
+| `src/lib/auth/session.ts` | Auth session helpers. |
+| `src/lib/auth/guards.ts` | Route auth guard logic. |
+| `.env.example` | Env var documentation. |
+| `CLAUDE.md` | Agent startup contract — read `.agent/repo-digest.md` first. |
 | `README.md` | Human-facing project overview. |
-| `next.config.ts` | Application source/config file. |
-| `package-lock.json` | Relevant project file. |
+| `next.config.ts` | Next.js configuration. |
 | `package.json` | Node project metadata, dependencies, and scripts. |
-| `pnpm-lock.yaml` | Relevant project file. |
-| `tsconfig.json` | Relevant project file. |
+| `pnpm-lock.yaml` | Lockfile. |
+| `tsconfig.json` | TypeScript configuration. |
 | `vercel.json` | Deployment/platform configuration. |
-| `scripts/README.md` | Human-facing project overview. |
-| `scripts/apply-crm-normalization.ts` | Application source/config file. |
-| `scripts/apply-gngbyy-cleanup.ts` | Application source/config file. |
-| `scripts/apply-missing-schema.ts` | Database schema, migration, or ORM configuration. |
-| `scripts/apply-schema.ts` | Database schema, migration, or ORM configuration. |
-| `scripts/apply_report_schema.ts` | Database schema, migration, or ORM configuration. |
-| `scripts/auditCrossProject.ts` | Application source/config file. |
-| `scripts/check_all_schedule.ts` | Application source/config file. |
-| `scripts/check_models.py` | Python source file. |
-| `scripts/create_test_student.js` | Application source/config file. |
-| `scripts/debug_schedule_data.ts` | Application source/config file. |
-| `scripts/diag-families.ts` | Application source/config file. |
-| `scripts/find_any_nathan_student.ts` | Application source/config file. |
-| `scripts/fix-tenant-id.ts` | Application source/config file. |
-| `scripts/generate_report_pdf.py` | Python source file. |
-| `scripts/get_nathan_schedule.ts` | Application source/config file. |
-| `scripts/get_nathan_schedule_2027.ts` | Application source/config file. |
-| `scripts/get_nathan_today_final.ts` | Application source/config file. |
-| `scripts/get_nathan_weekly.ts` | Application source/config file. |
-| `scripts/lessonpreneur-worker.js` | Application source/config file. |
-| `scripts/link_nina_report.ts` | Application source/config file. |
-| `scripts/list_all_teachers.ts` | Application source/config file. |
-| `scripts/manual_report_nina.ts` | Application source/config file. |
-| `scripts/manual_report_nina_v2.ts` | Application source/config file. |
-| `scripts/migrateLocationsToStudios.ts` | Application source/config file. |
-| `scripts/migratePeople.ts` | Application source/config file. |
-| `scripts/migrateSchedule.ts` | Application source/config file. |
-| `scripts/run-audit.ts` | Application source/config file. |
-| `scripts/syncCrossProject.ts` | Application source/config file. |
-| `scripts/test_generate_report.js` | Application source/config file. |
-| `scripts/test_generate_report.ts` | Application source/config file. |
-| `scripts/tsconfig.cjs.json` | Relevant project file. |
-| `scripts/verifyReconstruction.ts` | Application source/config file. |
-| `scripts/zirowork_audit.py` | Python source file. |
+| `scripts/README.md` | Scripts documentation. |
+| `.github/workflows/ci.yml` | CI workflow. |
+| `.github/workflows/release-checklist.yml` | Release checklist workflow. |
+| `lib/data/_client.ts` | Data layer browser/server client factory. |
+| `lib/data/families.ts` | Family data queries — app-side aggregation (Phase D: move to views). |
+| `lib/data/students.ts` | Student data queries. |
+| `lib/data/getTenantContext.ts` | Tenant context resolution. |
+| `src/lib/crm/enrollmentEngine.ts` | Enrollment logic — delegates to `enroll_student` RPC. |
+| `src/lib/crm/studentLifecycle.ts` | Student lifecycle logic. |
+| `src/app/api/crm/teachers/[id]/students/route.ts` | Route or API handler. |
+| `src/app/api/crm/teachers/[id]/w9/route.ts` | Route or API handler. |
+| `src/app/api/dashboard/metrics/route.ts` | Route or API handler. |
+| `src/app/api/expenses/route.ts` | Route or API handler. |
+| `src/lib/billing/billingOps.ts` | Billing operations. |
+| `src/lib/billing/square.ts` | Square billing integration. |
+| `supabase/schema.sql` | Database schema (CREATE TABLE only; RLS policies are in migrations). |
+| `docs/zirowork-architecture.md` | Architecture documentation. |
+| `docs/runtime-governance.md` | Runtime governance documentation. |
 | `src/proxy.ts` | Application source/config file. |
-| `supabase/schema.sql` | Database schema, migration, or ORM configuration. |
-| `supabase/seed_orchestrator_v2.sql` | Relevant project file. |
-| `supabase/seed_orchestrator_v3.sql` | Relevant project file. |
-| `.github/workflows/ci.yml` | Agent/workflow orchestration logic. |
-| `.github/workflows/release-checklist.yml` | Agent/workflow orchestration logic. |
-| `lib/data/_client.ts` | Application source/config file. |
-| `lib/data/_missingTable.ts` | Application source/config file. |
-| `lib/data/aiConversations.ts` | Application source/config file. |
-| `lib/data/assessmentAttempts.ts` | Application source/config file. |
-| `lib/data/assessmentQuestions.ts` | Application source/config file. |
-| `lib/data/assessmentRubric.ts` | Application source/config file. |
-| `lib/data/assessments.ts` | Application source/config file. |
-| `lib/data/attendanceReasons.ts` | Application source/config file. |
-| `lib/data/attendanceRecords.ts` | Application source/config file. |
-| `lib/data/attendanceSessions.ts` | Application source/config file. |
-| `lib/data/auditLogs.ts` | Application source/config file. |
-| `lib/data/automationLogs.ts` | Application source/config file. |
-| `lib/data/automationRules.ts` | Application source/config file. |
-| `lib/data/automationRuns.ts` | Application source/config file. |
-| `lib/data/automationWorkflows.ts` | Agent/workflow orchestration logic. |
-| `lib/data/billingPlans.ts` | Application source/config file. |
-| `lib/data/billingSettings.ts` | Application source/config file. |
-| `lib/data/brandingDomains.ts` | Application source/config file. |
-| `lib/data/brandingEmailIdentities.ts` | Email or notification logic. |
-| `lib/data/brandingLayoutConfigs.ts` | Application source/config file. |
-| `lib/data/brandingProfiles.ts` | Application source/config file. |
-| `lib/data/brandingThemes.ts` | Application source/config file. |
-| `lib/data/calendarFeeds.ts` | Application source/config file. |
-| `lib/data/contacts.ts` | Application source/config file. |
-| `lib/data/contentAssets.ts` | Application source/config file. |
-| `lib/data/contentCollections.ts` | Application source/config file. |
-| `lib/data/contentEmbeddings.ts` | Application source/config file. |
-| `lib/data/contentFolders.ts` | Application source/config file. |
-| `lib/data/contentItems.ts` | Application source/config file. |
-| `lib/data/contentTags.ts` | Application source/config file. |
-| `lib/data/contentVersions.ts` | Application source/config file. |
 
 ## Directory Map
 
+- `.agent/failure-index.md`
+- `.agent/repo-digest.md`
+- `.agent/session-log.md`
 - `.env.example`
+- `.github/workflows/ci.yml`
+- `.github/workflows/release-checklist.yml`
 - `.gitignore`
 - `CLAUDE.md`
 - `NAVIGATION_ROUTING_AUDIT.md`
 - `README.md`
-- `eslint.config.mjs`
-- `next.config.ts`
-- `package-lock.json`
-- `package.json`
-- `playwright.config.ts`
-- `pnpm-lock.yaml`
-- `postcss.config.mjs`
-- `tsconfig.json`
-- `vercel.json`
-- `vitest.config.ts`
-- `.github/workflows/ci.yml`
-- `.github/workflows/release-checklist.yml`
 - `docs/PHASE_3_CREW_SUMMARY.md`
 - `docs/ZIROWORK_BRAND_SSOT.md`
 - `docs/migration-lineage.md`
@@ -154,6 +134,7 @@ Read this digest before opening source files. Use it to choose exact paths for t
 - `docs/star-operating-model.md`
 - `docs/zirowork-architecture.md`
 - `docs/zirowork_brand_manifest.json`
+- `eslint.config.mjs`
 - `lib/data/_client.ts`
 - `lib/data/_missingTable.ts`
 - `lib/data/aiConversations.ts`
@@ -255,6 +236,11 @@ Read this digest before opening source files. Use it to choose exact paths for t
 - `lib/data/tenants.ts`
 - `lib/data/units.ts`
 - `lib/data/usageRecords.ts`
+- `next.config.ts`
+- `package.json`
+- `playwright.config.ts`
+- `pnpm-lock.yaml`
+- `postcss.config.mjs`
 - `scripts/README.md`
 - `scripts/apply-crm-normalization.ts`
 - `scripts/apply-gngbyy-cleanup.ts`
@@ -263,39 +249,18 @@ Read this digest before opening source files. Use it to choose exact paths for t
 - `scripts/apply-sql-to-target.mjs`
 - `scripts/apply_report_schema.ts`
 - `scripts/auditCrossProject.ts`
-- `scripts/check_all_schedule.ts`
-- `scripts/check_models.py`
-- `scripts/create_test_student.js`
-- `scripts/debug_schedule_data.ts`
-- `scripts/diag-families.ts`
-- `scripts/find_any_nathan_student.ts`
 - `scripts/fix-tenant-id.ts`
 - `scripts/generate-target-bootstrap-sql.mjs`
 - `scripts/generate-target-column-parity-sql.mjs`
-- `scripts/generate_report_pdf.py`
-- `scripts/get_nathan_schedule.ts`
-- `scripts/get_nathan_schedule_2027.ts`
-- `scripts/get_nathan_today_final.ts`
-- `scripts/get_nathan_weekly.ts`
-- `scripts/lessonpreneur-worker.js`
-- `scripts/link_nina_report.ts`
-- `scripts/list_all_teachers.ts`
-- `scripts/manual_report_nina.ts`
-- `scripts/manual_report_nina_v2.ts`
 - `scripts/migrateLocationsToStudios.ts`
 - `scripts/migratePeople.ts`
 - `scripts/migrateSchedule.ts`
 - `scripts/release-checklist.mjs`
 - `scripts/run-audit.mjs`
 - `scripts/run-audit.ts`
-- `scripts/seed-agent-pngs.mjs`
-- `scripts/smoke-routes.mjs`
 - `scripts/syncCrossProject.ts`
-- `scripts/test_generate_report.js`
-- `scripts/test_generate_report.ts`
 - `scripts/tsconfig.cjs.json`
 - `scripts/verifyReconstruction.ts`
-- `scripts/ziro-auto-run.mjs`
 - `scripts/zirowork_audit.py`
 - `scripts/lib/crossProjectSupabase.ts`
 - `scripts/schema/lessonpreneur-public-tables-complete.json`
@@ -308,69 +273,84 @@ Read this digest before opening source files. Use it to choose exact paths for t
 - `src/proxy.ts`
 - `src/actions/ziro/index.ts`
 - `src/actions/ziro/runTurn.ts`
-- `src/app/global-error.tsx`
-- `src/app/globals.css`
-- `src/app/layout.tsx`
-- `src/app/not-found.tsx`
-- `src/app/opengraph-image.tsx`
-- `src/app/sitemap.ts`
-- `src/app/(app)/error.tsx`
-- `src/app/(app)/forbidden.tsx`
-- `src/app/(app)/layout.tsx`
-- `src/app/(app)/loading.tsx`
-- `src/app/(app)/not-found.tsx`
-- `src/app/(app)/unauthorized.tsx`
-- `src/app/(app)/admin/_nav.tsx`
-- `src/app/(app)/admin/error.tsx`
+- `src/lib/supabase.ts`
+- `src/lib/supabaseAuthenticated.ts`
+- `src/lib/supabase.browser.ts`
+- `src/lib/auth/guards.ts`
+- `src/lib/auth/session.ts`
+- `src/lib/auth/permissions.ts`
+- `src/lib/auth/roles.ts`
+- `src/lib/billing/billingOps.ts`
+- `src/lib/billing/square.ts`
+- `src/lib/billing/stripe.ts`
+- `src/lib/billing/service.ts`
+- `src/lib/crm/enrollmentEngine.ts`
+- `src/lib/crm/studentLifecycle.ts`
+- `src/lib/crm/leadLifecycle.ts`
+- `src/lib/crm/index.ts`
+- `src/lib/security/tenantIsolation.ts`
+- `src/lib/security/webhook.ts`
+- `src/lib/types/supabase.ts`
+- `src/lib/types/entities.ts`
+- `src/lib/types/crm.ts`
+- `src/lib/data/supabaseTenant.ts`
+- `src/app/(app)/admin/page.tsx`
 - `src/app/(app)/admin/guard.ts`
 - `src/app/(app)/admin/layout.tsx`
-- `src/app/(app)/admin/page.tsx`
-- `src/app/(app)/admin/api/dashboard/route.ts`
-- `src/app/(app)/admin/api/system/dead-letter/[id]/requeue/route.ts`
-- `src/app/(app)/admin/audit/page.tsx`
-- `src/app/(app)/admin/branding/BrandingForbidden.tsx`
-- `src/app/(app)/admin/branding/guard.ts`
-- `src/app/(app)/admin/branding/layout.tsx`
-- `src/app/(app)/admin/branding/page.tsx`
-- `src/app/(app)/admin/branding/tenant.ts`
-- `src/app/(app)/admin/branding/components/BrandingDashboard.tsx`
-- `src/app/(app)/admin/branding/components/BrandingPreview.tsx`
-- `src/app/(app)/admin/branding/components/BrandingShell.tsx`
-- `src/app/(app)/admin/branding/components/BrandingSidebar.tsx`
-- `src/app/(app)/admin/branding/components/BrandingStyleTag.tsx`
-- `src/app/(app)/admin/branding/components/ColorPicker.tsx`
-- `src/app/(app)/admin/branding/components/DomainManager.tsx`
-- `src/app/(app)/admin/branding/components/DomainManagerClient.tsx`
-- `src/app/(app)/admin/branding/components/DomainStatusBadge.tsx`
-- `src/app/(app)/admin/branding/components/EmailIdentityClient.tsx`
-- `src/app/(app)/admin/branding/components/EmailIdentityForm.tsx`
-- `src/app/(app)/admin/branding/components/EmailIdentityTester.tsx`
-- `src/app/(app)/admin/branding/components/FaviconUploader.tsx`
-- `src/app/(app)/admin/branding/components/LogoUploader.tsx`
-- `src/app/(app)/admin/branding/components/PortalLayoutForm.tsx`
-- `src/app/(app)/admin/branding/components/PortalLayoutPreview.tsx`
-- `src/app/(app)/admin/branding/components/ThemeEditor.tsx`
-- `src/app/(app)/admin/branding/components/ThemeEditorClient.tsx`
-- `src/app/(app)/admin/branding/components/ThemePreviewCard.tsx`
-- `src/app/(app)/admin/branding/components/index.ts`
-- `src/app/(app)/admin/branding/domain/page.tsx`
-- `src/app/(app)/admin/branding/domains/page.tsx`
-- `src/app/(app)/admin/branding/email/page.tsx`
-- `src/app/(app)/admin/branding/layouts/page.tsx`
-- `src/app/(app)/admin/branding/preview/page.tsx`
-- `src/app/(app)/admin/branding/theme/page.tsx`
-- `src/app/(app)/admin/components/AuditLogTable.tsx`
-- `src/app/(app)/admin/components/ColorPicker.tsx`
-- `src/app/(app)/admin/components/DataTable.tsx`
-- `src/app/(app)/admin/components/FeatureFlagToggle.tsx`
-- `src/app/(app)/admin/components/InvoiceAgingChart.tsx`
-- `src/app/(app)/admin/components/KpiCard.tsx`
-- `src/app/(app)/admin/components/LogoUploader.tsx`
-- `src/app/(app)/admin/components/PermissionMatrix.tsx`
-- `src/app/(app)/admin/components/RoleEditor.tsx`
-- `src/app/(app)/admin/components/RoleSwitcher.tsx`
-- `src/app/(app)/admin/components/ScheduleHeatmap.tsx`
-- `... additional files omitted from digest`
+- `src/app/(app)/billing/components/PaymentEntryModal.tsx`
+- `src/app/(app)/billing/payments/page.tsx`
+- `src/app/(app)/teacher/components/ScheduleList.tsx`
+- `src/app/api/activity-log/route.ts`
+- `src/app/api/agreements/route.ts`
+- `src/app/api/crm/families/[id]/square-invoices/route.ts`
+- `src/app/api/crm/families/[id]/teachers/route.ts`
+- `src/app/api/crm/schedule/series/route.ts`
+- `src/app/api/crm/students/[id]/files/route.ts`
+- `src/app/api/crm/students/[id]/notes/route.ts`
+- `src/app/api/crm/students/[id]/schedule/route.ts`
+- `src/app/api/crm/teachers/[id]/students/route.ts`
+- `src/app/api/crm/teachers/[id]/w9/route.ts`
+- `src/app/api/crm/teachers/route.ts`
+- `src/app/api/dashboard/metrics/route.ts`
+- `src/app/api/dashboard/revenue-gaps/route.ts`
+- `src/app/api/expenses/route.ts`
+- `src/app/api/expenses/[id]/route.ts`
+- `src/app/api/families/search/route.ts`
+- `src/app/api/integrations/square/bookings-webhook/route.ts`
+- `src/app/api/integrations/square/sync/route.ts`
+- `src/app/api/integrations/square/webhook/route.ts`
+- `src/app/api/internal/square-audit/route.ts`
+- `src/app/api/internal/square-bridge-families/route.ts`
+- `src/app/api/invoices/billing-summary/route.ts`
+- `src/app/api/invoices/create/route.ts`
+- `src/app/api/invoices/[id]/pdf/route.ts`
+- `src/app/api/leads/[id]/promote/route.ts`
+- `src/app/api/locations/route.ts`
+- `src/app/api/payroll/route.ts`
+- `src/app/api/schedule/availability/route.ts`
+- `src/app/api/schedule/recurring-lessons/route.ts`
+- `src/app/api/schedule-blocks/auto-checkin/route.ts`
+- `src/app/api/schedule-blocks/book-session/route.ts`
+- `src/app/api/schedule-blocks/cancel-session/route.ts`
+- `src/app/api/settings/services/route.ts`
+- `src/app/api/auth/whoami/route.ts`
+- `src/app/api/billing/payments/route.ts`
+- `src/app/api/billing/stripe/webhook/route.ts`
+- `src/app/api/branding/email-identity/route.ts`
+- `src/app/api/debug/auth/route.ts`
+- `supabase/schema.sql`
+- `supabase/migrations/20260421120000_add_booked_session_to_block_type.sql`
+- `supabase/migrations/20260422000002_billing_schema_v2.sql`
+- `supabase/migrations/20260519100000_baseline_catch_up.sql`
+- `supabase/migrations/20260519110000_drop_dead_columns.sql`
+- `supabase/migrations/20260519120000_read_optimization_views.sql`
+- `supabase/migrations/20260519130000_write_optimization_triggers_rpcs.sql`
+- `supabase/migrations/20260519140000_phase4_wave1_rls_financial_tier.sql`
+- `supabase/migrations/20260519160000_phase4_wave2_rls_crm_operational_tier.sql`
+- `supabase/migrations/20260519170000_phase4_wave3_final_sweep_rls.sql`
+- `supabase/migrations/20260520014704_tenant_context_pre_request.sql`
+- `supabase/migrations/20260520020432_tenant_context_pre_request.sql`
+- ... additional files omitted from digest
 
 ## Approval / Danger Zones
 
@@ -398,27 +378,11 @@ Any change touching these areas should be treated as higher risk and should not 
 - `src/app/(app)/billing/components/PaymentEntryModal.tsx`
 - `src/app/(app)/billing/components/PaymentTable.tsx`
 - `src/app/(app)/billing/payments/page.tsx`
-- `src/app/(app)/email-preview/_client.tsx`
-- `src/app/(app)/email-preview/page.tsx`
-- `src/app/(app)/email-templates/_client.tsx`
-- `src/app/(app)/email-templates/page.tsx`
 - `src/app/(app)/inventory/api/checkout/route.ts`
-- `src/app/(app)/inventory/components/CheckoutForm.tsx`
-- `src/app/(app)/inventory/components/CheckoutList.tsx`
-- `src/app/(app)/unauthorized.tsx`
-- `src/app/(auth)/forgot-password/ForgotPasswordForm.tsx`
-- `src/app/(auth)/forgot-password/page.tsx`
-- `src/app/(auth)/layout.tsx`
 - `src/app/(auth)/login/LoginForm.tsx`
-- `src/app/(auth)/login/LoginPageClient.tsx`
-- `src/app/(auth)/login/page.tsx`
-- `src/app/(auth)/reset-password/ResetPasswordForm.tsx`
-- `src/app/(auth)/reset-password/page.tsx`
-- `src/app/(sandbox)/sandbox/email/page.tsx`
 - `src/app/api/auth/whoami/route.ts`
 - `src/app/api/billing/payments/route.ts`
 - `src/app/api/billing/stripe/webhook/route.ts`
-- `src/app/api/branding/_auth.ts`
 - `src/app/api/branding/email-identity/route.ts`
 - `src/app/api/branding/email-identity/test/route.ts`
 - `src/app/api/crm/families/[id]/square-invoices/route.ts`
@@ -426,6 +390,18 @@ Any change touching these areas should be treated as higher risk and should not 
 - `src/app/api/integrations/square/bookings-webhook/route.ts`
 - `src/app/api/integrations/square/callback/route.ts`
 - `src/app/api/integrations/square/sync/route.ts`
+- `supabase/migrations/` — all files (T5 surface — any live migration requires `GO T5 [migration name]`)
+
+## Service-Role Status (Phase B — In Progress)
+
+38 routes still use service-role as of commit `83eec1a`. Classification and conversion is Phase B work.
+
+| Status | Count | Notes |
+|---|---|---|
+| Converted to authenticated client | ~29 | CRM, dashboard, expenses (Manus Phase 5) |
+| Still using service-role | ~38 | Needs classification pass (Phase B) |
+| Legitimate exceptions (estimate) | ~10 | Square webhooks, internal tools, debug, intake |
+| Should be converted (estimate) | ~28 | Schedule, families, invoices, locations, payroll, recruitment, leads |
 
 ## Ignored Zones
 
