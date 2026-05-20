@@ -20,7 +20,7 @@ export async function listProfiles(
   filter?: ProfileFilter,
   opts?: ListOptions,
 ): Promise<Profile[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -58,7 +58,7 @@ export async function getProfileById(
   id: string,
   tenantId: string,
 ): Promise<Profile | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -74,7 +74,7 @@ export async function getProfilesByIds(
   tenantId: string,
 ): Promise<Profile[]> {
   if (!ids || ids.length === 0) return [];
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")

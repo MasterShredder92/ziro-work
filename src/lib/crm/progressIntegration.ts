@@ -17,7 +17,7 @@ export async function getStudentProgressSummary(
   tenantId: string,
   studentId: string,
 ): Promise<StudentProgressSummary> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const summary: StudentProgressSummary = {
     goalsCount: 0,
     completedGoals: 0,

@@ -56,7 +56,7 @@ export async function listSkills(
 ): Promise<ProgressSkillRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*");
       if (tenantId) query = query.eq("tenant_id", tenantId);
       if (filter.goal_id) query = query.eq("goal_id", filter.goal_id);
@@ -122,7 +122,7 @@ export async function upsertSkill(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(input.tenant_id);
+      const supabase = await clientFor(input.tenant_id);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

@@ -88,7 +88,7 @@ export async function listExportJobs(
     if (typeof opts?.limit === "number") return rows.slice(0, opts.limit);
     return rows;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (filter?.reportId) q = q.eq("report_id", filter.reportId);
   if (filter?.status) q = q.eq("status", filter.status);
@@ -117,7 +117,7 @@ export async function getExportJob(
     const j = store().get(id);
     return j && j.tenant_id === tenantId ? j : null;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -162,7 +162,7 @@ export async function createExportJob(
     store().set(row.id, row);
     return row;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert(row)
@@ -192,7 +192,7 @@ export async function updateExportJob(
     store().set(id, merged);
     return merged;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .update(next)

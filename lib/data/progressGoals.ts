@@ -56,7 +56,7 @@ export async function listGoals(
 ): Promise<ProgressGoalRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*");
       if (tenantId) query = query.eq("tenant_id", tenantId);
       if (filter.student_id) query = query.eq("student_id", filter.student_id);
@@ -121,7 +121,7 @@ export async function upsertGoal(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(input.tenant_id);
+      const supabase = await clientFor(input.tenant_id);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

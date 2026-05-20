@@ -55,7 +55,7 @@ export async function listAttendanceReasons(
 ): Promise<AttendanceReasonRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*");
       if (tenantId) query = query.eq("tenant_id", tenantId);
       if (filter.category) query = query.eq("category", filter.category);
@@ -100,7 +100,7 @@ export async function getAttendanceReasonById(
 ): Promise<AttendanceReasonRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", id);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -144,7 +144,7 @@ export async function upsertAttendanceReason(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(input.tenant_id);
+      const supabase = await clientFor(input.tenant_id);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -169,7 +169,7 @@ export async function deleteAttendanceReason(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

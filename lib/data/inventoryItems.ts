@@ -152,7 +152,7 @@ export async function listInventoryItems(
 ): Promise<InventoryItemRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.category) query = query.eq("category", filter.category);
       if (filter?.status) query = query.eq("status", filter.status);
@@ -194,7 +194,7 @@ export async function getInventoryItem(
 ): Promise<InventoryItemRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", itemId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -221,7 +221,7 @@ export async function upsertInventoryItem(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: familyId } = await ctx.params;
     const { tenantId, session } = resolved.context;
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
 
     // Verify family exists
     const { data: family, error: famErr } = await supabase
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: familyId } = await ctx.params;
     const { tenantId, session } = resolved.context;
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
 
     // Verify family exists
     const { data: family, error: famErr } = await supabase
@@ -151,7 +151,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: familyId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
 
     const { searchParams } = new URL(req.url);
     const fileId = searchParams.get("fileId");

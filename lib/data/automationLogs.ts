@@ -70,7 +70,7 @@ export async function listAutomationLogs(
 ): Promise<AutomationLogRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.runId) query = query.eq("run_id", filter.runId);
       if (filter?.workflowId) query = query.eq("workflow_id", filter.workflowId);
@@ -109,7 +109,7 @@ export async function insertAutomationLog(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .insert(row)

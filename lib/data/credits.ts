@@ -36,7 +36,7 @@ export async function listCredits(
   filter?: CreditFilter,
   opts?: ListOptions,
 ): Promise<CreditRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (filter?.family_id) query = query.eq("family_id", filter.family_id);
   if (filter?.student_id) query = query.eq("student_id", filter.student_id);
@@ -56,7 +56,7 @@ export async function createCredit(
   tenantId: string,
   input: CreditInsert,
 ): Promise<CreditRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     status: "active",
     applied_cents: 0,
@@ -77,7 +77,7 @@ export async function updateCredit(
   tenantId: string,
   patch: CreditUpdate,
 ): Promise<CreditRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -91,7 +91,7 @@ export async function updateCredit(
 }
 
 export async function deleteCredit(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

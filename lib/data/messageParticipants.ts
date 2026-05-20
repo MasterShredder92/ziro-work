@@ -72,7 +72,7 @@ export async function listParticipants(
 ): Promise<MessageParticipantRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.thread_id) query = query.eq("thread_id", filter.thread_id);
       if (filter?.profile_id) query = query.eq("profile_id", filter.profile_id);
@@ -109,7 +109,7 @@ export async function upsertParticipant(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -134,7 +134,7 @@ export async function removeParticipant(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

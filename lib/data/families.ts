@@ -23,7 +23,7 @@ function escapeIlikeTerm(term: string) {
 }
 
 export async function getFamiliesForTenant(tenantId: string): Promise<FamilyRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -36,7 +36,7 @@ export async function getFamilyById(
   id: string,
   tenantId?: string,
 ): Promise<FamilyRow | null> {
-  const supabase = clientFor(tenantId ?? "");
+  const supabase = await clientFor(tenantId ?? "");
   let q = supabase.from(TABLE).select("*").eq("id", id);
   if (tenantId) q = q.eq("tenant_id", tenantId);
   const { data, error } = await q.maybeSingle();
@@ -73,7 +73,7 @@ export async function listFamilies(
   filter?: FamilyFilter,
   opts?: ListOptions,
 ): Promise<FamilyRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -120,7 +120,7 @@ export async function createFamily(
   tenantId: string,
   input: Record<string, unknown> | Omit<FamilyInsert, "tenant_id">,
 ): Promise<FamilyRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId } as never)
@@ -134,7 +134,7 @@ export async function deleteFamily(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()
@@ -148,7 +148,7 @@ export async function updateFamily(
   tenantId: string,
   input: Record<string, unknown> | FamilyUpdate,
 ): Promise<FamilyRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)

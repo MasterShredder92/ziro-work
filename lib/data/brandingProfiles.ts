@@ -246,7 +246,7 @@ export async function listBrandingProfiles(
 ): Promise<BrandingProfileRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
         orderBy: opts?.orderBy ?? "updated_at",
@@ -281,7 +281,7 @@ export async function getBrandingProfileById(
 ): Promise<BrandingProfileRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", id);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -316,7 +316,7 @@ export async function upsertBrandingProfile(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -344,7 +344,7 @@ export async function deleteBrandingProfile(
 ): Promise<boolean> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

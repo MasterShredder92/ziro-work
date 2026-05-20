@@ -98,7 +98,7 @@ export async function listFiles(
 ): Promise<FileObjectRow[]> {
   if (tableMissing(FILES_TABLE)) return listFromStore(tenantId, filter);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase.from(FILES_TABLE).select("*").eq("tenant_id", tenantId);
     if (filter?.folderId !== undefined) {
       if (filter.folderId === null) query = query.is("folder_id", null);
@@ -142,7 +142,7 @@ export async function findFileByFolderAndName(
     return null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase
       .from(FILES_TABLE)
       .select("*")
@@ -173,7 +173,7 @@ export async function getFile(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FILES_TABLE)
       .select("*")
@@ -250,7 +250,7 @@ export async function upsertFile(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FILES_TABLE)
       .upsert(next, { onConflict: "id" })
@@ -277,7 +277,7 @@ export async function deleteFile(id: string, tenantId: string): Promise<void> {
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(FILES_TABLE)
       .update({ status: "deleted", updated_at: nowIso() })
@@ -303,7 +303,7 @@ export async function hardDeleteFile(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(FILES_TABLE)
       .delete()

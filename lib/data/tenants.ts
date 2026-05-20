@@ -77,7 +77,7 @@ function merge(existing: TenantRow | undefined, input: UpsertTenantInput): Tenan
 export async function getTenant(id: string): Promise<TenantRow | null> {
   if (tableMissing(TABLE)) return store().get(id) ?? null;
   try {
-    const supabase = clientFor(id);
+    const supabase = await clientFor(id);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -101,7 +101,7 @@ export async function listTenants(): Promise<TenantRow[]> {
     );
   }
   try {
-    const supabase = clientFor(null);
+    const supabase = await clientFor(null);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -125,7 +125,7 @@ export async function upsertTenant(input: UpsertTenantInput): Promise<TenantRow>
     return next;
   }
   try {
-    const supabase = clientFor(next.id);
+    const supabase = await clientFor(next.id);
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(next, { onConflict: "id" })

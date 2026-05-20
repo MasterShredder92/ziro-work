@@ -54,7 +54,7 @@ export async function listStudents(
   filter?: StudentFilter,
   opts?: ListOptions,
 ): Promise<Student[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -85,7 +85,7 @@ export async function getStudentsByIds(
   ids: string[],
 ): Promise<Student[]> {
   if (ids.length === 0) return [];
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -99,7 +99,7 @@ export async function getStudentById(
   id: string,
   tenantId: string,
 ): Promise<Student | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -114,7 +114,7 @@ export async function createStudent(
   tenantId: string,
   input: Record<string, unknown> | Omit<StudentInsert, "tenant_id">,
 ): Promise<Student> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId } as never)
@@ -129,7 +129,7 @@ export async function updateStudent(
   tenantId: string,
   input: Record<string, unknown> | StudentUpdate,
 ): Promise<Student> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -146,7 +146,7 @@ export async function deleteStudent(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

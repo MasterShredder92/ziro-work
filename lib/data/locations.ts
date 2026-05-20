@@ -20,7 +20,7 @@ export async function listLocations(
   filter?: LocationFilter,
   opts?: ListOptions,
 ): Promise<Location[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -58,7 +58,7 @@ export async function getLocationById(
   id: string,
   tenantId: string,
 ): Promise<Location | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -73,7 +73,7 @@ export async function createLocation(
   tenantId: string,
   input: Omit<LocationInsert, "tenant_id">,
 ): Promise<Location> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -88,7 +88,7 @@ export async function updateLocation(
   tenantId: string,
   input: LocationUpdate,
 ): Promise<Location> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)

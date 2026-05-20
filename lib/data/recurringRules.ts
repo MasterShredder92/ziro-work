@@ -75,7 +75,7 @@ export async function listRecurringRules(
 ): Promise<RecurringRule[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
         orderBy: opts?.orderBy ?? "start_date",
@@ -104,7 +104,7 @@ export async function getRecurringRule(
 ): Promise<RecurringRule | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -131,7 +131,7 @@ export async function createRecurringRule(
   const row = ruleToRow(tenantId, input);
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .insert(row)
@@ -166,7 +166,7 @@ export async function updateRecurringRule(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .update(update)
@@ -197,7 +197,7 @@ export async function deleteRecurringRule(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

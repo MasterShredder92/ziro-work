@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     if (!locationId) return badRequest("location_id required");
 
-    const db = clientFor(tenantId);
+    const db = await clientFor(tenantId);
 
     let query = db
       .from("teacher_room_assignments")
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     if (day_of_week && !VALID_DAYS.includes(day_of_week as DayOfWeek))
       return badRequest(`day_of_week must be one of: ${VALID_DAYS.join(", ")}`);
 
-    const db = clientFor(tenantId);
+    const db = await clientFor(tenantId);
 
     if (is_recurring && day_of_week) {
       // 1. Remove any existing assignment for THIS teacher on this day at this location
@@ -198,7 +198,7 @@ export async function DELETE(req: NextRequest) {
     if (!roomId || !locationId || !dayOfWeek)
       return badRequest("room_id, location_id, and day_of_week required");
 
-    const db = clientFor(tenantId);
+    const db = await clientFor(tenantId);
 
     let query = db
       .from("teacher_room_assignments")

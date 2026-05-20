@@ -69,7 +69,7 @@ export async function listWidgetsByReport(
       .filter((w) => w.tenant_id === tenantId && w.report_id === reportId)
       .sort((a, b) => a.position - b.position);
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const q = applyListOptions(
     supabase
       .from(TABLE)
@@ -97,7 +97,7 @@ export async function getWidget(
     const w = store().get(id);
     return w && w.tenant_id === tenantId ? w : null;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -139,7 +139,7 @@ export async function upsertWidget(
     return row;
   }
 
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .upsert(row, { onConflict: "id" })
@@ -166,7 +166,7 @@ export async function deleteWidget(
     store().delete(id);
     return true;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()
@@ -194,7 +194,7 @@ export async function deleteWidgetsByReport(
     }
     return;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

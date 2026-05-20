@@ -106,7 +106,7 @@ export async function listReports(
     if (typeof opts?.limit === "number") return rows.slice(0, opts.limit);
     return rows;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (!filter?.includeArchived) q = q.neq("status", "archived");
   if (filter?.status) q = q.eq("status", filter.status);
@@ -137,7 +137,7 @@ export async function getReport(
     const r = store().get(id);
     return r && r.tenant_id === tenantId ? r : null;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -184,7 +184,7 @@ export async function createReport(
     return row;
   }
 
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert(row)
@@ -216,7 +216,7 @@ export async function updateReport(
     return merged;
   }
 
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .update(next)
@@ -244,7 +244,7 @@ export async function deleteReport(
     store().delete(id);
     return true;
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

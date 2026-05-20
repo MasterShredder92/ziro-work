@@ -107,7 +107,7 @@ export async function listFeatureFlags(
 ): Promise<FeatureFlagRow[]> {
   if (tableMissing(TABLE)) return listFromStore(tenantId);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -133,7 +133,7 @@ export async function getFeatureFlag(
     return row && row.tenant_id === tenantId ? row : null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -162,7 +162,7 @@ export async function getFeatureFlagByKey(
     return null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -193,7 +193,7 @@ export async function upsertFeatureFlag(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(next, { onConflict: "id" })
@@ -221,7 +221,7 @@ export async function deleteFeatureFlag(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(TABLE)
       .delete()

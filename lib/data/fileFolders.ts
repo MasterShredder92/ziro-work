@@ -57,7 +57,7 @@ export async function listFolders(
 ): Promise<FileFolderRow[]> {
   if (tableMissing(TABLE)) return listFromStore(tenantId, parentId);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
     if (parentId !== undefined) {
       if (parentId === null) query = query.is("parent_id", null);
@@ -85,7 +85,7 @@ export async function getFolder(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -152,7 +152,7 @@ export async function upsertFolder(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(next, { onConflict: "id" })
@@ -180,7 +180,7 @@ export async function deleteFolder(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(TABLE)
       .delete()

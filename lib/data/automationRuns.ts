@@ -110,7 +110,7 @@ export async function listAutomationRuns(
 ): Promise<AutomationRunRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.workflowId) query = query.eq("workflow_id", filter.workflowId);
       if (filter?.status) query = query.eq("status", filter.status);
@@ -149,7 +149,7 @@ export async function getAutomationRun(
 ): Promise<AutomationRunRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -181,7 +181,7 @@ export async function upsertAutomationRun(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

@@ -37,7 +37,7 @@ export async function listLineItems(
   invoiceId: string,
   opts?: ListOptions,
 ): Promise<InvoiceLineItemRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const query = supabase
     .from(TABLE)
     .select("*")
@@ -58,7 +58,7 @@ export async function createLineItem(
   tenantId: string,
   input: InvoiceLineItemInsert,
 ): Promise<InvoiceLineItemRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const qty = input.quantity ?? 1;
   const unit = input.unit_amount_cents ?? 0;
   const amount = input.amount_cents ?? Math.round(qty * unit);
@@ -86,7 +86,7 @@ export async function createLineItemsBulk(
   items: InvoiceLineItemInsert[],
 ): Promise<InvoiceLineItemRow[]> {
   if (items.length === 0) return [];
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const rows = items.map((item) => {
     const qty = item.quantity ?? 1;
     const unit = item.unit_amount_cents ?? 0;
@@ -112,7 +112,7 @@ export async function updateLineItem(
   tenantId: string,
   patch: InvoiceLineItemUpdate,
 ): Promise<InvoiceLineItemRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -126,7 +126,7 @@ export async function updateLineItem(
 }
 
 export async function deleteLineItem(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()
@@ -139,7 +139,7 @@ export async function deleteLineItemsForInvoice(
   invoiceId: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

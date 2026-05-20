@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     if (!q) return ok({ items: [] });
 
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from("vw_student_family_search")
       .select(

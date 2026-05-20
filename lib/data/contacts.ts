@@ -156,7 +156,7 @@ export async function listContacts(
   filter?: ContactFilter,
   limit = 200,
 ): Promise<Contact[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const kinds = kindsFromFilter(filter);
   const results: Contact[] = [];
   const search = filter?.search?.trim();
@@ -249,7 +249,7 @@ export async function getContactById(
 ): Promise<Contact | null> {
   const [kind, sourceId] = contactId.split(":");
   if (!kind || !sourceId) return null;
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   switch (kind as ContactKind) {
     case "student": {
       const { data, error } = await supabase
@@ -317,7 +317,7 @@ export async function createContact(
   tenantId: string,
   input: CreateContactInput,
 ): Promise<Contact> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   switch (input.kind) {
     case "lead": {
       const { data, error } = await supabase
@@ -422,7 +422,7 @@ export async function updateContact(
 ): Promise<Contact | null> {
   const [kind, sourceId] = contactId.split(":");
   if (!kind || !sourceId) return null;
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
 
   const nameFields: Record<string, unknown> = {};
   if (input.firstName !== undefined) nameFields.first_name = input.firstName;
@@ -509,7 +509,7 @@ export async function archiveContact(
 ): Promise<void> {
   const [kind, sourceId] = contactId.split(":");
   if (!kind || !sourceId) return;
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const nowIso = new Date().toISOString();
   switch (kind as ContactKind) {
     case "student":
@@ -571,7 +571,7 @@ export async function mergeContacts(
       `Cannot merge contacts of different kinds: ${keepKind} vs ${removeKind}`,
     );
   }
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const keep = await getContactById(tenantId, keepContactId);
   const remove = await getContactById(tenantId, removeContactId);
   if (!keep || !remove) return keep;

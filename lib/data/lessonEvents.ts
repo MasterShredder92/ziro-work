@@ -131,7 +131,7 @@ export async function listLessonEvents(
 ): Promise<LessonEvent[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.teacher_id) q = q.eq("teacher_id", filter.teacher_id);
       if (filter?.student_id) q = q.eq("student_id", filter.student_id);
@@ -174,7 +174,7 @@ export async function getLessonEvent(
 ): Promise<LessonEvent | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -201,7 +201,7 @@ export async function createLessonEvent(
   const row = eventToRow(tenantId, input);
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .insert(row)
@@ -242,7 +242,7 @@ export async function updateLessonEvent(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .update(update)
@@ -273,7 +273,7 @@ export async function deleteLessonEvent(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()
@@ -298,7 +298,7 @@ export async function deleteLessonEventsByRecurrence(
 ): Promise<number> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let q = supabase
         .from(TABLE)
         .delete({ count: "exact" })

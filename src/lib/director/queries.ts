@@ -69,7 +69,7 @@ export async function getDirectorLocation(
   tenantId: string,
   locationId: string,
 ): Promise<DirectorLocation> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("locations")
     .select("id,name,tenant_id")
@@ -90,7 +90,7 @@ export async function getDirectorLocation(
 export async function listLocations(
   tenantId: string,
 ): Promise<DirectorLocation[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("locations")
     .select("id,name,is_active,tenant_id")
@@ -142,7 +142,7 @@ export async function getDirectorTeachers(
   tenantId: string,
   locationId: string,
 ): Promise<DirectorTeacherRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
 
   const { data: linkRows, error: linkErr } = await supabase
     .from("teacher_locations")

@@ -80,7 +80,7 @@ export async function listRoomBookings(
 ): Promise<RoomBooking[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.room_id) q = q.eq("room_id", filter.room_id);
       if (filter?.event_id) q = q.eq("event_id", filter.event_id);
@@ -120,7 +120,7 @@ export async function getRoomBooking(
 ): Promise<RoomBooking | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -147,7 +147,7 @@ export async function createRoomBooking(
   const row = toRow(tenantId, input);
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .insert(row)
@@ -181,7 +181,7 @@ export async function updateRoomBooking(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .update(update)
@@ -212,7 +212,7 @@ export async function deleteRoomBooking(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

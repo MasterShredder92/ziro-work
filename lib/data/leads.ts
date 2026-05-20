@@ -21,7 +21,7 @@ export async function listLeads(
   filter?: LeadFilter,
   opts?: ListOptions,
 ): Promise<Lead[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -54,7 +54,7 @@ export async function getLeadById(
   id: string,
   tenantId: string,
 ): Promise<Lead | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -69,7 +69,7 @@ export async function createLead(
   tenantId: string,
   input: Omit<LeadInsert, "tenant_id">,
 ): Promise<Lead> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -84,7 +84,7 @@ export async function updateLead(
   tenantId: string,
   input: LeadUpdate,
 ): Promise<Lead> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -98,7 +98,7 @@ export async function updateLead(
 }
 
 export async function deleteLead(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

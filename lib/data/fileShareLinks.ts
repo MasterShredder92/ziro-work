@@ -57,7 +57,7 @@ export async function listShareLinks(
     return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
     if (filter?.fileId) query = query.eq("file_id", filter.fileId);
     if (filter?.folderId) query = query.eq("folder_id", filter.folderId);
@@ -84,7 +84,7 @@ export async function getShareLink(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -177,7 +177,7 @@ export async function upsertShareLink(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(next, { onConflict: "id" })
@@ -224,7 +224,7 @@ export async function deleteShareLink(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(TABLE)
       .delete()

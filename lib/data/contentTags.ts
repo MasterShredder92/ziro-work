@@ -73,7 +73,7 @@ export async function listContentTags(
 ): Promise<ContentTagRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -99,7 +99,7 @@ export async function getContentTag(
 ): Promise<ContentTagRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", tagId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -138,7 +138,7 @@ export async function upsertContentTag(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -163,7 +163,7 @@ export async function deleteContentTag(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).delete().eq("id", tagId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { error } = await query;

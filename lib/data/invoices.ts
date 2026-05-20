@@ -69,7 +69,7 @@ export async function listInvoices(
   filter?: InvoiceFilter,
   opts?: ListOptions,
 ): Promise<InvoiceRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -101,7 +101,7 @@ export async function getInvoiceById(
   id: string,
   tenantId: string,
 ): Promise<InvoiceRow | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -116,7 +116,7 @@ export async function createInvoice(
   tenantId: string,
   input: InvoiceInsert,
 ): Promise<InvoiceRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     status: "draft",
     currency: "USD",
@@ -137,7 +137,7 @@ export async function updateInvoice(
   tenantId: string,
   patch: InvoiceUpdate,
 ): Promise<InvoiceRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -151,7 +151,7 @@ export async function updateInvoice(
 }
 
 export async function deleteInvoice(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

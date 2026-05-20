@@ -123,7 +123,7 @@ export async function listRoles(
 ): Promise<RoleRow[]> {
   if (tableMissing(TABLE)) return listFromStore(tenantId, filter);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -149,7 +149,7 @@ export async function getRole(
     return row && row.tenant_id === tenantId ? row : null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -178,7 +178,7 @@ export async function getRoleByKey(
     return null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -207,7 +207,7 @@ export async function upsertRole(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(next, { onConflict: "id" })
@@ -235,7 +235,7 @@ export async function deleteRole(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(TABLE)
       .delete()

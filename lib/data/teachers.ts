@@ -140,7 +140,7 @@ export async function createTeacher(
   tenantId: string,
   input: Omit<TeacherInsert, "tenant_id">,
 ): Promise<Teacher> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload: TeacherInsert = {
     ...input,
     tenant_id: tenantId,
@@ -160,7 +160,7 @@ export async function updateTeacher(
   tenantId: string,
   input: TeacherUpdate,
 ): Promise<Teacher> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from("teachers")
@@ -177,7 +177,7 @@ export async function deleteTeacher(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from("teachers")
     .delete()

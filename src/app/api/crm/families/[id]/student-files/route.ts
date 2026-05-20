@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
     const { id: familyId } = await ctx.params;
     const { tenantId } = resolved.context;
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
 
     // Verify family exists
     const { data: family, error: famErr } = await supabase

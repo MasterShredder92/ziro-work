@@ -47,7 +47,7 @@ export async function listLessons(
 ): Promise<LessonRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("unit_id", unitId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
 
@@ -80,7 +80,7 @@ export async function getLesson(
 ): Promise<LessonRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", lessonId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();

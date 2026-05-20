@@ -57,7 +57,7 @@ export async function listAssessmentQuestions(
 ): Promise<AssessmentQuestionRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase
         .from(TABLE)
         .select("*")
@@ -116,7 +116,7 @@ export async function upsertAssessmentQuestion(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

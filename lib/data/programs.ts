@@ -43,7 +43,7 @@ export async function listPrograms(
 ): Promise<ProgramRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (typeof filter?.is_active === "boolean")
         query = query.eq("is_active", filter.is_active);
@@ -79,7 +79,7 @@ export async function getProgram(
 ): Promise<ProgramRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", programId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();

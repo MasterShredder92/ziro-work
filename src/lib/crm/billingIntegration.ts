@@ -19,7 +19,7 @@ export async function getFamilyBillingSummary(
   tenantId: string,
   familyId: string,
 ): Promise<FamilyBillingSummary | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("families")
     .select(
@@ -64,7 +64,7 @@ export async function listStudentsForFamily(
   tenantId: string,
   familyId: string,
 ): Promise<FamilyStudentRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("students")
     .select(

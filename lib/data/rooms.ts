@@ -15,7 +15,7 @@ export async function listRooms(
   filter?: RoomFilter,
   opts?: ListOptions,
 ): Promise<Room[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -43,7 +43,7 @@ export async function getRoomById(
   id: string,
   tenantId: string,
 ): Promise<Room | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -58,7 +58,7 @@ export async function createRoom(
   tenantId: string,
   input: Omit<RoomInsert, "tenant_id">,
 ): Promise<Room> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -73,7 +73,7 @@ export async function updateRoom(
   tenantId: string,
   input: RoomUpdate,
 ): Promise<Room> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)

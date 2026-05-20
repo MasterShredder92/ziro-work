@@ -46,7 +46,7 @@ export async function listPayments(
   filter?: PaymentFilter,
   opts?: ListOptions,
 ): Promise<PaymentRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (filter?.invoice_id) query = query.eq("invoice_id", filter.invoice_id);
   if (filter?.family_id) query = query.eq("family_id", filter.family_id);
@@ -70,7 +70,7 @@ export async function getPaymentById(
   id: string,
   tenantId: string,
 ): Promise<PaymentRow | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -85,7 +85,7 @@ export async function createPayment(
   tenantId: string,
   input: PaymentInsert,
 ): Promise<PaymentRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     currency: "USD",
     method: "manual",
@@ -109,7 +109,7 @@ export async function updatePayment(
   tenantId: string,
   patch: PaymentUpdate,
 ): Promise<PaymentRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -123,7 +123,7 @@ export async function updatePayment(
 }
 
 export async function deletePayment(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

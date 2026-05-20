@@ -26,7 +26,7 @@ export type BillingSettingsUpdate = Partial<
 export async function getBillingSettings(
   tenantId: string,
 ): Promise<BillingSettingsRow | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -40,7 +40,7 @@ export async function upsertBillingSettings(
   tenantId: string,
   patch: BillingSettingsUpdate,
 ): Promise<BillingSettingsRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = {
     tenant_id: tenantId,
     ...patch,

@@ -28,7 +28,7 @@ export async function listPlans(
   tenantId: string,
   opts?: ListOptions & { activeOnly?: boolean },
 ): Promise<PlanRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (opts?.activeOnly) query = query.eq("is_active", true);
   const ordered = applyListOptions(query, {
@@ -46,7 +46,7 @@ export async function getPlanById(
   tenantId: string,
   planId: string,
 ): Promise<PlanRow | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -58,7 +58,7 @@ export async function getPlanById(
 }
 
 export async function createPlan(tenantId: string, input: PlanInsert): Promise<PlanRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     price_monthly: 0,
     price_yearly: 0,
@@ -78,7 +78,7 @@ export async function updatePlan(
   planId: string,
   patch: PlanUpdate,
 ): Promise<PlanRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .update({ ...patch, updated_at: new Date().toISOString() })

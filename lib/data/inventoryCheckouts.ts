@@ -101,7 +101,7 @@ export async function listInventoryCheckouts(
 ): Promise<InventoryCheckoutRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*");
       if (tenantId) query = query.eq("tenant_id", tenantId);
       if (filter.item_id) query = query.eq("item_id", filter.item_id);
@@ -145,7 +145,7 @@ export async function getInventoryCheckout(
 ): Promise<InventoryCheckoutRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", checkoutId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -175,7 +175,7 @@ export async function upsertInventoryCheckout(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

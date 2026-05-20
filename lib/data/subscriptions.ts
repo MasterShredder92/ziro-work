@@ -55,7 +55,7 @@ export async function listSubscriptions(
   filter?: SubscriptionFilter,
   opts?: ListOptions,
 ): Promise<SubscriptionRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (filter?.family_id) query = query.eq("family_id", filter.family_id);
   if (filter?.student_id) query = query.eq("student_id", filter.student_id);
@@ -79,7 +79,7 @@ export async function getSubscriptionById(
   id: string,
   tenantId: string,
 ): Promise<SubscriptionRow | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -94,7 +94,7 @@ export async function createSubscription(
   tenantId: string,
   input: SubscriptionInsert,
 ): Promise<SubscriptionRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     status: "active",
     quantity: 1,
@@ -115,7 +115,7 @@ export async function updateSubscription(
   tenantId: string,
   patch: SubscriptionUpdate,
 ): Promise<SubscriptionRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -129,7 +129,7 @@ export async function updateSubscription(
 }
 
 export async function deleteSubscription(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

@@ -18,7 +18,7 @@ export async function listIntakeSubmissions(
   filter?: IntakeSubmissionFilter,
   opts?: ListOptions,
 ): Promise<IntakeSubmission[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -47,7 +47,7 @@ export async function getIntakeSubmissionById(
   id: string,
   tenantId: string,
 ): Promise<IntakeSubmission | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -62,7 +62,7 @@ export async function createIntakeSubmission(
   tenantId: string,
   input: Omit<IntakeSubmissionInsert, "tenant_id">,
 ): Promise<IntakeSubmission> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -77,7 +77,7 @@ export async function updateIntakeSubmission(
   tenantId: string,
   input: IntakeSubmissionUpdate,
 ): Promise<IntakeSubmission> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .update(input)

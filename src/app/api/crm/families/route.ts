@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const data = await listFamilies(tenantId, filter);
 
     if (data.length > 0) {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const familyIds = data.map((f) => f.id);
       // Pull from schedules SSOT — join students + teachers for Name • Instrument • Teacher display
       const { data: scheduleRows } = await supabase

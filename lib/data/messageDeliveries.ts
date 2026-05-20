@@ -90,7 +90,7 @@ export async function listDeliveries(
 ): Promise<MessageDeliveryRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.message_id) query = query.eq("message_id", filter.message_id);
       if (filter?.thread_id) query = query.eq("thread_id", filter.thread_id);
@@ -136,7 +136,7 @@ export async function upsertDelivery(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

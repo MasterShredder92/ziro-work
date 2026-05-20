@@ -39,7 +39,7 @@ export async function listMaterials(
 ): Promise<MaterialRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("lesson_id", lessonId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
 

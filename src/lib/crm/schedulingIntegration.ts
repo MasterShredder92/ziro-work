@@ -21,7 +21,7 @@ export async function getStudentSchedule(
   tenantId: string,
   studentId: string,
 ): Promise<StudentScheduleEntry[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("schedule_blocks")
     .select("*")
@@ -46,7 +46,7 @@ export async function getTeacherSchedule(
   tenantId: string,
   teacherId: string,
 ): Promise<StudentScheduleEntry[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("schedule_blocks")
     .select("*")
@@ -77,7 +77,7 @@ export async function batchNextLessonSummariesForStudents(
   const out: Record<string, string | null> = {};
   if (studentIds.length === 0) return out;
   for (const id of studentIds) out[id] = null;
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("schedule_blocks")
     .select("*")
@@ -127,7 +127,7 @@ export async function batchTeacherScheduleHeadlines(
   const out: Record<string, string | null> = {};
   if (teacherIds.length === 0) return out;
   for (const id of teacherIds) out[id] = null;
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("schedule_blocks")
     .select("*")
@@ -163,7 +163,7 @@ export async function assignTeacherToStudent(
   studentId: string,
   teacherId: string | null,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from("students")
     .update({
@@ -185,7 +185,7 @@ export async function getNextLessonLabelsForStudents(
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   if (studentIds.length === 0) return out;
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("schedule_blocks")

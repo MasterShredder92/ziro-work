@@ -102,7 +102,7 @@ export async function listTeacherAvailability(
 ): Promise<TeacherAvailability[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.teacher_id) q = q.eq("teacher_id", filter.teacher_id);
       if (filter?.location_id) q = q.eq("location_id", filter.location_id);
@@ -149,7 +149,7 @@ export async function getTeacherAvailabilityById(
 ): Promise<TeacherAvailability | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -176,7 +176,7 @@ export async function createTeacherAvailability(
   const insertRow = toInsertRow(tenantId, input);
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .insert(insertRow)  // no id field — DB generates UUID
@@ -215,7 +215,7 @@ export async function updateTeacherAvailability(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .update(update)
@@ -252,7 +252,7 @@ export async function replaceTeacherAvailabilityForLocation(
   locationId: string,
   slots: Array<TeacherAvailabilityInsert & { locationId?: string }>,
 ): Promise<TeacherAvailability[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
 
   // Step A: DELETE all existing rows for this teacher+location
   const { error: delError } = await supabase
@@ -294,7 +294,7 @@ export async function deleteTeacherAvailability(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

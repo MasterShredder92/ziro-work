@@ -45,7 +45,7 @@ export async function listAssessmentRubric(
 ): Promise<AssessmentRubricRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase
         .from(TABLE)
         .select("*")
@@ -99,7 +99,7 @@ export async function upsertAssessmentRubricCriterion(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

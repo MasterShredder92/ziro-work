@@ -105,7 +105,7 @@ export async function listAuditLogs(
 ): Promise<AuditLogRow[]> {
   if (tableMissing(TABLE)) return listFromStore(tenantId, filter);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase
       .from(TABLE)
       .select("*")
@@ -161,7 +161,7 @@ export async function insertAuditLog(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .insert(row)
@@ -194,7 +194,7 @@ export async function purgeOlderThan(
     return removed;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error, count } = await supabase
       .from(TABLE)
       .delete({ count: "exact" })

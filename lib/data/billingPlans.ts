@@ -37,7 +37,7 @@ export async function listBillingPlans(
   tenantId: string,
   opts?: ListOptions & { activeOnly?: boolean },
 ): Promise<BillingPlanRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (opts?.activeOnly) query = query.eq("active", true);
   const ordered = applyListOptions(query, {
@@ -55,7 +55,7 @@ export async function getBillingPlanById(
   id: string,
   tenantId: string,
 ): Promise<BillingPlanRow | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -70,7 +70,7 @@ export async function createBillingPlan(
   tenantId: string,
   input: BillingPlanInsert,
 ): Promise<BillingPlanRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     kind: "fixed",
     interval: "month",
@@ -95,7 +95,7 @@ export async function updateBillingPlan(
   tenantId: string,
   patch: BillingPlanUpdate,
 ): Promise<BillingPlanRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -109,7 +109,7 @@ export async function updateBillingPlan(
 }
 
 export async function deleteBillingPlan(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

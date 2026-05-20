@@ -144,7 +144,7 @@ export async function listForms(
 ): Promise<FormRow[]> {
   if (tableMissing(FORMS_TABLE)) return listFormsFromStore(tenantId, filter);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase
       .from(FORMS_TABLE)
       .select("*")
@@ -175,7 +175,7 @@ export async function getForm(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FORMS_TABLE)
       .select("*")
@@ -210,7 +210,7 @@ export async function getPublicFormBySlug(
     return null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FORMS_TABLE)
       .select("*")
@@ -291,7 +291,7 @@ export async function upsertForm(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FORMS_TABLE)
       .upsert(next, { onConflict: "id" })
@@ -324,7 +324,7 @@ export async function deleteForm(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(FORMS_TABLE)
       .delete()
@@ -357,7 +357,7 @@ export async function listFormFields(
 ): Promise<FormFieldRow[]> {
   if (tableMissing(FIELDS_TABLE)) return listFieldsFromStore(formId, tenantId);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FIELDS_TABLE)
       .select("*")
@@ -403,7 +403,7 @@ async function getFieldById(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FIELDS_TABLE)
       .select("*")
@@ -468,7 +468,7 @@ export async function upsertFormField(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(FIELDS_TABLE)
       .upsert(next, { onConflict: "id" })
@@ -496,7 +496,7 @@ export async function deleteFormField(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(FIELDS_TABLE)
       .delete()
@@ -534,7 +534,7 @@ export async function listFormSubmissions(
   if (tableMissing(SUBMISSIONS_TABLE))
     return listSubmissionsFromStore(tenantId, filter);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase
       .from(SUBMISSIONS_TABLE)
       .select("*")
@@ -566,7 +566,7 @@ export async function getFormSubmission(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(SUBMISSIONS_TABLE)
       .select("*")
@@ -628,7 +628,7 @@ export async function upsertFormSubmission(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(SUBMISSIONS_TABLE)
       .upsert(next, { onConflict: "id" })

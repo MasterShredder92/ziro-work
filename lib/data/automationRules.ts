@@ -92,7 +92,7 @@ export async function listAutomationRules(
 ): Promise<AutomationRuleRow[]> {
   if (!tableMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -127,7 +127,7 @@ export async function getAutomationRule(
 ): Promise<AutomationRuleRow | null> {
   if (!tableMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -169,7 +169,7 @@ export async function upsertAutomationRule(
 
   if (!tableMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -202,7 +202,7 @@ export async function deleteAutomationRule(
 ): Promise<void> {
   if (!tableMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

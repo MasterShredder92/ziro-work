@@ -19,7 +19,7 @@ export async function countActiveEnrollmentsByTeacherIds(
   teacherIds: string[],
 ): Promise<Record<string, number>> {
   if (teacherIds.length === 0) return {};
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("teacher_id")
@@ -42,7 +42,7 @@ export async function countEnrollmentsByTeacherIds(
   teacherIds: string[],
 ): Promise<Record<string, number>> {
   if (teacherIds.length === 0) return {};
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("teacher_id")
@@ -63,7 +63,7 @@ export async function listEnrollments(
   filter?: EnrollmentFilter,
   opts?: ListOptions,
 ): Promise<Enrollment[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
 
   if (filter?.student_id) query = query.eq("student_id", filter.student_id);
@@ -86,7 +86,7 @@ export async function getEnrollmentById(
   id: string,
   tenantId: string,
 ): Promise<Enrollment | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -101,7 +101,7 @@ export async function createEnrollment(
   tenantId: string,
   input: Omit<EnrollmentInsert, "tenant_id">,
 ): Promise<Enrollment> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -116,7 +116,7 @@ export async function updateEnrollment(
   tenantId: string,
   input: EnrollmentUpdate,
 ): Promise<Enrollment> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -133,7 +133,7 @@ export async function deleteEnrollment(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

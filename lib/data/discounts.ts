@@ -29,7 +29,7 @@ export async function listDiscounts(
   tenantId: string,
   opts?: ListOptions,
 ): Promise<DiscountRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   const ordered = applyListOptions(query, {
     orderBy: opts?.orderBy ?? "created_at",
@@ -46,7 +46,7 @@ export async function createDiscount(
   tenantId: string,
   input: DiscountInsert,
 ): Promise<DiscountRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     kind: "percent",
     applies_to: "invoice",
@@ -68,7 +68,7 @@ export async function updateDiscount(
   tenantId: string,
   patch: DiscountUpdate,
 ): Promise<DiscountRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const body = { ...patch, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -82,7 +82,7 @@ export async function updateDiscount(
 }
 
 export async function deleteDiscount(id: string, tenantId: string): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

@@ -15,7 +15,7 @@ function serverNowMs(): number {
 }
 
 async function fetchLastMessageAtByFamily(tenantId: string): Promise<Record<string, string>> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("studio_messages")
     .select("family_id, created_at")

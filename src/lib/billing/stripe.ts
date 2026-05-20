@@ -1,6 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
-import { clientFor } from "@data/_client";
+import { serviceClient } from "@data/_client";
 import { getTenant } from "@data/tenants";
 import type { Plan } from "@/lib/billing/types";
 // automation removed — stub
@@ -91,7 +91,7 @@ export async function syncStripeSubscription(
     },
   });
 
-  const supabase = clientFor(input.tenantId);
+  const supabase = serviceClient();
   await supabase
     .from("subscriptions")
     .update({
@@ -132,7 +132,7 @@ export async function syncStripeInvoice(
     },
   });
 
-  const supabase = clientFor(input.tenantId);
+  const supabase = serviceClient();
   await supabase
     .from("invoices")
     .update({
@@ -153,7 +153,7 @@ async function handleInvoicePaid(event: Stripe.Event) {
   const tenantId = invoice.metadata?.tenant_id;
   const invoiceId = invoice.metadata?.invoice_id;
   if (!tenantId || !invoiceId) return;
-  const supabase = clientFor(tenantId);
+  const supabase = serviceClient();
   await supabase
     .from("invoices")
     .update({
@@ -176,7 +176,7 @@ async function handleInvoiceFailed(event: Stripe.Event) {
   const tenantId = invoice.metadata?.tenant_id;
   const invoiceId = invoice.metadata?.invoice_id;
   if (!tenantId || !invoiceId) return;
-  const supabase = clientFor(tenantId);
+  const supabase = serviceClient();
   await supabase
     .from("invoices")
     .update({
@@ -202,7 +202,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event) {
   const tenantId = stripeSub.metadata?.tenant_id;
   const subscriptionId = stripeSub.metadata?.subscription_id;
   if (!tenantId || !subscriptionId) return;
-  const supabase = clientFor(tenantId);
+  const supabase = serviceClient();
   await supabase
     .from("subscriptions")
     .update({

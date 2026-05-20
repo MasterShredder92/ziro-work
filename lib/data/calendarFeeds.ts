@@ -76,7 +76,7 @@ export async function listCalendarFeeds(
 ): Promise<CalendarFeed[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let q = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.owner_type) q = q.eq("owner_type", filter.owner_type);
       if (filter?.owner_id) q = q.eq("owner_id", filter.owner_id);
@@ -115,7 +115,7 @@ export async function getCalendarFeed(
 ): Promise<CalendarFeed | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -142,7 +142,7 @@ export async function createCalendarFeed(
   const row = toRow(tenantId, input);
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .insert(row)
@@ -175,7 +175,7 @@ export async function updateCalendarFeed(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .update(update)
@@ -206,7 +206,7 @@ export async function deleteCalendarFeed(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

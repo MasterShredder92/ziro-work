@@ -80,7 +80,7 @@ export async function listLessonActivities(
 ): Promise<LessonActivityRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("plan_id", planId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
@@ -113,7 +113,7 @@ export async function upsertLessonActivity(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

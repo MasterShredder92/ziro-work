@@ -117,7 +117,7 @@ export async function listAutomationWorkflows(
 ): Promise<AutomationWorkflowRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.status) query = query.eq("status", filter.status);
       if (filter?.triggerType)
@@ -160,7 +160,7 @@ export async function getAutomationWorkflow(
 ): Promise<AutomationWorkflowRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .select("*")
@@ -192,7 +192,7 @@ export async function upsertAutomationWorkflow(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -216,7 +216,7 @@ export async function deleteAutomationWorkflow(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

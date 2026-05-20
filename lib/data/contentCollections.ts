@@ -69,7 +69,7 @@ export async function listContentCollections(
 ): Promise<ContentCollectionRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
         orderBy: opts?.orderBy ?? "updated_at",
@@ -98,7 +98,7 @@ export async function getContentCollection(
 ): Promise<ContentCollectionRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", collectionId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -131,7 +131,7 @@ export async function upsertContentCollection(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

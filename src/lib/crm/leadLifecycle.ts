@@ -76,7 +76,7 @@ async function updateLeadSubmissionLink(
   leadIds: string[],
 ): Promise<void> {
   const { clientFor } = await import("@data/_client");
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   await supabase
     .from("intake_submissions")
     .update({ lead_ids: leadIds })

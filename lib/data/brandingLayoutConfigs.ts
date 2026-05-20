@@ -129,7 +129,7 @@ export async function listBrandingLayouts(
 ): Promise<BrandingLayoutConfigRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
         orderBy: opts?.orderBy ?? "updated_at",
@@ -173,7 +173,7 @@ export async function upsertBrandingLayout(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "tenant_id,scope" })
@@ -201,7 +201,7 @@ export async function deleteBrandingLayout(
 ): Promise<boolean> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

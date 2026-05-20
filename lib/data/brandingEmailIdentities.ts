@@ -78,7 +78,7 @@ export async function listBrandingEmailIdentities(
 ): Promise<BrandingEmailIdentityRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
         orderBy: opts?.orderBy ?? "updated_at",
@@ -113,7 +113,7 @@ export async function getBrandingEmailIdentity(
 ): Promise<BrandingEmailIdentityRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", id);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -143,7 +143,7 @@ export async function upsertBrandingEmailIdentity(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -171,7 +171,7 @@ export async function deleteBrandingEmailIdentity(
 ): Promise<boolean> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

@@ -26,7 +26,7 @@ export async function listTasks(
   filter?: TaskFilter,
   opts?: ListOptions,
 ): Promise<Task[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -64,7 +64,7 @@ export async function getTaskById(
   id: string,
   tenantId: string,
 ): Promise<Task | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -79,7 +79,7 @@ export async function createTask(
   tenantId: string,
   input: Omit<TaskInsert, "tenant_id">,
 ): Promise<Task> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -94,7 +94,7 @@ export async function updateTask(
   tenantId: string,
   input: TaskUpdate,
 ): Promise<Task> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -136,7 +136,7 @@ export async function deleteTask(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

@@ -16,7 +16,7 @@ export async function listRelationshipsForFamily(
   tenantId: string,
   familyId: string,
 ): Promise<Relationship[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
 
   const { data: familyRow, error: familyErr } = await supabase
     .from("families")
@@ -71,7 +71,7 @@ export async function addStudentToFamily(
   studentId: string,
   familyId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from("students")
     .update({ family_id: familyId, updated_at: new Date().toISOString() })
@@ -84,7 +84,7 @@ export async function removeStudentFromFamily(
   tenantId: string,
   studentId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from("students")
     .update({ family_id: null, updated_at: new Date().toISOString() })
@@ -104,7 +104,7 @@ export async function setPrimaryGuardian(
     relationship?: string | null;
   },
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -132,7 +132,7 @@ export async function listFamiliesForStudent(
   tenantId: string,
   studentId: string,
 ): Promise<string[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from("students")
     .select("family_id")

@@ -17,7 +17,7 @@ export async function listSquareInvoices(
   filter?: SquareInvoiceFilter,
   opts?: ListOptions,
 ): Promise<SquareInvoice[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(INVOICES)
     .select("*")
@@ -42,7 +42,7 @@ export async function listSquarePayments(
   tenantId: string,
   opts?: ListOptions,
 ): Promise<SquarePayment[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const query = supabase
     .from(PAYMENTS)
     .select("*")
@@ -64,7 +64,7 @@ export async function listSquareRefunds(
   tenantId: string,
   opts?: ListOptions,
 ): Promise<SquareRefund[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const query = supabase
     .from(REFUNDS)
     .select("*")

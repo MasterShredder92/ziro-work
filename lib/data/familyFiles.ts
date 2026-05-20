@@ -22,7 +22,7 @@ export async function listFilesForFamily(
   tenantId: string,
   familyId: string,
 ): Promise<FamilyFileRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")

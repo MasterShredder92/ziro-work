@@ -166,7 +166,7 @@ export async function listTemplates(
 
   if (!templatesMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase
         .from(TEMPLATES_TABLE)
         .select("*")
@@ -207,7 +207,7 @@ export async function getTemplate(
 ): Promise<TemplateRow | null> {
   if (!templatesMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TEMPLATES_TABLE)
         .select("*")
@@ -247,7 +247,7 @@ export async function upsertTemplate(
 
   if (!templatesMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TEMPLATES_TABLE)
         .upsert(row, { onConflict: "id" })
@@ -278,7 +278,7 @@ export async function deleteTemplate(
 ): Promise<void> {
   if (!templatesMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TEMPLATES_TABLE)
         .delete()
@@ -311,7 +311,7 @@ export async function listTemplateVersions(
 ): Promise<TemplateVersionRow[]> {
   if (!versionsMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TEMPLATE_VERSIONS_TABLE)
         .select("*")
@@ -345,7 +345,7 @@ export async function getTemplateVersion(
 ): Promise<TemplateVersionRow | null> {
   if (!versionsMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TEMPLATE_VERSIONS_TABLE)
         .select("*")
@@ -384,7 +384,7 @@ export async function upsertTemplateVersion(
 
   if (!versionsMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TEMPLATE_VERSIONS_TABLE)
         .upsert(row, { onConflict: "id" })

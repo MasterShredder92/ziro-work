@@ -111,7 +111,7 @@ export async function listPermissionAssignments(
 ): Promise<PermissionAssignmentRow[]> {
   if (tableMissing(TABLE)) return listFromStore(tenantId, filter);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     let query = supabase
       .from(TABLE)
       .select("*")
@@ -143,7 +143,7 @@ export async function getPermissionAssignment(
     return row && row.tenant_id === tenantId ? row : null;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -174,7 +174,7 @@ export async function upsertPermissionAssignment(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(next, { onConflict: "id" })
@@ -202,7 +202,7 @@ export async function deletePermissionAssignment(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(TABLE)
       .delete()

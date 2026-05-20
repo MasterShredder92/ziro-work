@@ -21,7 +21,7 @@ export async function listAIConversations(
   filter?: AIConversationFilter,
   opts?: ListOptions,
 ): Promise<AIConversation[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(CONVERSATIONS)
     .select("*")
@@ -47,7 +47,7 @@ export async function getAIConversationById(
   id: string,
   tenantId: string,
 ): Promise<AIConversation | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(CONVERSATIONS)
     .select("*")
@@ -62,7 +62,7 @@ export async function createAIConversation(
   tenantId: string,
   input: Omit<AIConversationInsert, "tenant_id">,
 ): Promise<AIConversation> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(CONVERSATIONS)
     .insert({ ...input, tenant_id: tenantId })
@@ -77,7 +77,7 @@ export async function updateAIConversation(
   tenantId: string,
   input: AIConversationUpdate,
 ): Promise<AIConversation> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(CONVERSATIONS)
@@ -94,7 +94,7 @@ export async function touchAIConversation(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(CONVERSATIONS)
     .update({ updated_at: new Date().toISOString() })
@@ -108,7 +108,7 @@ export async function listAIMessages(
   tenantId: string,
   opts?: ListOptions,
 ): Promise<AIMessage[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const query = supabase
     .from(MESSAGES)
     .select("*")
@@ -133,7 +133,7 @@ export async function appendAIMessage(
   tenantId: string,
   input: Omit<AIMessageInsert, "tenant_id" | "seq"> & { seq?: number },
 ): Promise<AIMessage> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
 
   let seq = input.seq;
   if (typeof seq !== "number") {
@@ -163,7 +163,7 @@ export async function deleteAIConversation(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   await supabase
     .from(MESSAGES)
     .delete()

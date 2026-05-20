@@ -24,7 +24,7 @@ export async function listScheduleBlocks(
   filter?: ScheduleBlockFilter,
   opts?: ListOptions,
 ): Promise<ScheduleBlock[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -57,7 +57,7 @@ export async function getScheduleBlockById(
   id: string,
   tenantId: string,
 ): Promise<ScheduleBlock | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -72,7 +72,7 @@ export async function createScheduleBlock(
   tenantId: string,
   input: Omit<ScheduleBlockInsert, "tenant_id">,
 ): Promise<ScheduleBlock> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -87,7 +87,7 @@ export async function updateScheduleBlock(
   tenantId: string,
   input: ScheduleBlockUpdate,
 ): Promise<ScheduleBlock> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from(TABLE)
@@ -104,7 +104,7 @@ export async function deleteScheduleBlock(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()
@@ -121,7 +121,7 @@ export async function findConflictingBlocks(
   endTime: string,
   excludeBlockId?: string,
 ): Promise<ScheduleBlock[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")

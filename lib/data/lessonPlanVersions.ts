@@ -110,7 +110,7 @@ export async function listLessonPlanVersions(
 ): Promise<LessonPlanVersionRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*");
       if (tenantId) query = query.eq("tenant_id", tenantId);
       if (filter.plan_id) query = query.eq("plan_id", filter.plan_id);
@@ -151,7 +151,7 @@ export async function upsertLessonPlanVersion(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

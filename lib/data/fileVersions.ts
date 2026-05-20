@@ -52,7 +52,7 @@ export async function listFileVersions(
 ): Promise<FileVersionRow[]> {
   if (tableMissing(TABLE)) return listFromStore(fileId, tenantId);
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -80,7 +80,7 @@ export async function getFileVersion(
     return row;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
@@ -138,7 +138,7 @@ export async function createFileVersion(
     return next;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { data, error } = await supabase
       .from(TABLE)
       .insert(next)
@@ -166,7 +166,7 @@ export async function deleteFileVersion(
     return;
   }
   try {
-    const supabase = clientFor(tenantId);
+    const supabase = await clientFor(tenantId);
     const { error } = await supabase
       .from(TABLE)
       .delete()

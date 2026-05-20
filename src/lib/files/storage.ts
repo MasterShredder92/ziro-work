@@ -244,7 +244,7 @@ export async function uploadBlob(input: UploadInput): Promise<StoredBlob> {
 
   if (!storageMissing()) {
     try {
-      const supabase = clientFor(input.tenantId);
+      const supabase = await clientFor(input.tenantId);
       const { error } = await supabase.storage
         .from(bucket)
         .upload(storageKey, input.bytes, {
@@ -286,7 +286,7 @@ export async function readBlob(
 ): Promise<Uint8Array | null> {
   if (!storageMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase.storage
         .from(bucket)
         .download(storageKey);
@@ -309,7 +309,7 @@ export async function deleteBlob(
 ): Promise<void> {
   if (!storageMissing()) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase.storage.from(bucket).remove([storageKey]);
       if (error) throw error;
       return;
@@ -357,7 +357,7 @@ export async function createSignedUrl(
   if (!storageMissing()) {
     try {
       const signed = await withBackoff(async () => {
-        const supabase = clientFor(tenantId);
+        const supabase = await clientFor(tenantId);
         const { data, error } = await supabase.storage
           .from(bucket)
           .createSignedUrl(storageKey, ttl, { download: opts?.download });

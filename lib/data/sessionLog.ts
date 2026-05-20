@@ -22,7 +22,7 @@ export async function listSessionLog(
   filter?: SessionLogFilter,
   opts?: ListOptions,
 ): Promise<SessionLog[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase
     .from(TABLE)
     .select("*")
@@ -53,7 +53,7 @@ export async function getSessionLogById(
   id: string,
   tenantId: string,
 ): Promise<SessionLog | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -68,7 +68,7 @@ export async function getSessionLogByBlockId(
   scheduleBlockId: string,
   tenantId: string,
 ): Promise<SessionLog | null> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -83,7 +83,7 @@ export async function createSessionLog(
   tenantId: string,
   input: Omit<SessionLogInsert, "tenant_id">,
 ): Promise<SessionLog> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ ...input, tenant_id: tenantId })
@@ -98,7 +98,7 @@ export async function updateSessionLog(
   tenantId: string,
   input: SessionLogUpdate,
 ): Promise<SessionLog> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { data, error } = await supabase
     .from(TABLE)
     .update(input)
@@ -114,7 +114,7 @@ export async function deleteSessionLog(
   id: string,
   tenantId: string,
 ): Promise<void> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const { error } = await supabase
     .from(TABLE)
     .delete()

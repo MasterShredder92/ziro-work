@@ -173,7 +173,7 @@ export async function listContentItems(
 ): Promise<ContentItemRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.folderId === null) query = query.is("folder_id", null);
       else if (filter?.folderId) query = query.eq("folder_id", filter.folderId);
@@ -246,7 +246,7 @@ export async function getContentItem(
 ): Promise<ContentItemRow | null> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("id", itemId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { data, error } = await query.maybeSingle();
@@ -279,7 +279,7 @@ export async function upsertContentItem(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })
@@ -304,7 +304,7 @@ export async function deleteContentItem(
 ): Promise<void> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).delete().eq("id", itemId);
       if (tenantId) query = query.eq("tenant_id", tenantId);
       const { error } = await query;

@@ -168,7 +168,7 @@ export async function listBrandingThemes(
   let remote: BrandingThemeRow[] = [];
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       const ordered = applyListOptions(query, {
         orderBy: opts?.orderBy ?? "updated_at",
@@ -239,7 +239,7 @@ export async function upsertBrandingTheme(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "tenant_id,theme_key" })
@@ -267,7 +267,7 @@ export async function deleteBrandingTheme(
 ): Promise<boolean> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { error } = await supabase
         .from(TABLE)
         .delete()

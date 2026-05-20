@@ -87,7 +87,7 @@ export async function listChannels(
 ): Promise<MessageChannelRow[]> {
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
       if (filter?.channel_type) query = query.eq("channel_type", filter.channel_type);
       if (typeof filter?.is_active === "boolean")
@@ -130,7 +130,7 @@ export async function upsertChannel(
 
   if (!tableMissing(TABLE)) {
     try {
-      const supabase = clientFor(tenantId);
+      const supabase = await clientFor(tenantId);
       const { data, error } = await supabase
         .from(TABLE)
         .upsert(row, { onConflict: "id" })

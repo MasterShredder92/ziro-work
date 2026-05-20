@@ -24,7 +24,7 @@ export async function recordUsage(
   tenantId: string,
   input: UsageRecordInsert,
 ): Promise<UsageRecordRow> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   const payload = {
     tenant_id: tenantId,
     timestamp: new Date().toISOString(),
@@ -42,7 +42,7 @@ export async function listUsageRecords(
   filter?: { metric?: string; from?: string; to?: string },
   opts?: ListOptions,
 ): Promise<UsageRecordRow[]> {
-  const supabase = clientFor(tenantId);
+  const supabase = await clientFor(tenantId);
   let query = supabase.from(TABLE).select("*").eq("tenant_id", tenantId);
   if (filter?.metric) query = query.eq("metric", filter.metric);
   if (filter?.from) query = query.gte("timestamp", filter.from);
