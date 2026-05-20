@@ -210,3 +210,24 @@ vault_users, vault_products, vault_product_modules, vault_user_products, vault_u
 **Blocked on:** Nothing
 **Next move:** Tenant isolation hardening is complete across all phases (4 Waves + B+C + D + E). All user-facing data paths are RLS-bound.
 **Token cost:** Low
+
+## 2026-05-20 — Phase F: assertServiceRoleAllowed Annotation for 30 Service-Role Lib Modules (COMPLETE)
+
+**Commit:** 885a176
+
+**Problem discovered:** CI guardrail extended to `src/lib/` in Phase E (commit a2d0a5a) but 29 pre-existing `src/lib/` modules and 1 `lib/data/` module used `getServiceClient()` without `assertServiceRoleAllowed()`. All 3 CI guard steps would have failed on push to origin. TSC passed (TypeScript doesn't check this); only GitHub Actions would surface the failure.
+
+**Changes:**
+- 30 files modified: all `src/lib/` and `lib/data/` modules that legitimately call `getServiceClient()` for internal/background operations (billing, scheduling, audit, lifecycle, CRM, search, auth helpers, observability, queue, ratelimit, data layer)
+- Each file: added `import { assertServiceRoleAllowed } from "@/lib/supabaseAuthenticated"` and a `assertServiceRoleAllowed("file — reason")` call at the first `getServiceClient()` call site within the module
+
+**CI guardrail status post-Phase F:**
+- `src/app/api/` guard: 0 violations
+- `lib/data/` guard: 0 violations
+- `src/lib/` guard: 0 violations
+
+**Changed:** 30 files (60 insertions)
+**Verified:** TSC = 0 errors; all three CI guardrail checks pass clean locally
+**Blocked on:** Nothing
+**Next move:** Repo is CI-green end-to-end. Ready to push 10-commit stack (Phases B–F) to origin.
+**Token cost:** Low
